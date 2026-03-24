@@ -31,9 +31,13 @@ Confirmed in source and tests today:
 - opportunity package export helper
 - generic scenario-envelope core and generic scenario builders
 - industry-universe scenario-plan builder
+- connection-approval scenario-plan builder
+- opportunity-package handoff plan builder
 - bounded industry-universe orchestration helper
+- bounded connection-approval orchestration helper
+- bounded explicit-opportunity package handoff runner
 - richer scenario verification bundle support
-- bounded adapter seam and `industry-universe-plan` CLI command
+- bounded adapter seam and `industry-universe-plan`, `connection-approval-plan`, and `opportunity-package-handoff-plan` CLI commands
 - typed verification-bundle export helper
 - bounded CLI commands for a small subset of operations
 
@@ -41,9 +45,10 @@ Confirmed in source and tests today:
 
 These exist, but should not be overstated:
 
-- scenario support currently includes one bounded orchestration slice, not a general workflow layer
+- scenario support currently includes two bounded orchestration slices plus one downstream handoff slice, not a general workflow layer
+- package handoff support starts from a known `opportunityId`; it does not create or discover one after approval
 - verification packaging is richer than the original typed export helper, but not a full review-packet workflow layer
-- adapter support is currently a local seam plus one planning/export command, not a complete MCP/runtime bridge
+- adapter support is currently a local seam plus bounded planning/export commands, not a complete MCP/runtime bridge
 - CLI support is still limited and does not cover the broader business-chain helper families
 - current docs describe a broader destination than the code delivers today
 
@@ -51,6 +56,7 @@ These exist, but should not be overstated:
 
 These should still be treated as next-step work, not shipped capability:
 
+- approval -> opportunity creation or discovery behavior
 - higher-level orchestration helpers across multiple business chains
 - review-packet builders beyond one verification export helper
 - MCP/tool adapters and other runtime adapter layers beyond the current local seam

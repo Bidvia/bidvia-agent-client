@@ -128,6 +128,23 @@ export interface BidviaApproveConnectionRequestInput {
   now: string;
 }
 
+export interface BidviaConnectionApprovalScenarioPlanInput {
+  scenarioId: string;
+  scenarioLabel: string;
+  sourceRefs: string[];
+  evidenceRefs: string[];
+  traceIds: string[];
+  workflowIds: string[];
+  createConnectionRequest: BidviaCreateConnectionRequestInput;
+  approveConnectionRequest: BidviaApproveConnectionRequestInput;
+}
+
+export interface BidviaConnectionApprovalScenarioPlan {
+  envelope: BidviaScenarioEnvelope;
+  createConnectionRequestInput: BidviaCreateConnectionRequestInput;
+  approveConnectionRequestInput: BidviaApproveConnectionRequestInput;
+}
+
 export interface BidviaExportOpportunityPackageInput {
   opportunityId: string;
   renderTemplateId: string;

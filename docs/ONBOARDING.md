@@ -48,7 +48,7 @@ Think about this repo in this order:
 
 ## Scenario planning and bounded orchestration preview
 
-The repo now includes a generic scenario boundary plus one bounded industry-universe slice.
+The repo now includes a generic scenario boundary plus two bounded orchestration slices and one bounded downstream handoff slice.
 This is still not a full orchestration layer or adapter/runtime platform.
 It is the first stable SDK-local container for:
 
@@ -57,24 +57,40 @@ It is the first stable SDK-local container for:
 - trace and workflow continuity
 - expected route chains for reviewable flows
 
-The current bounded slice supports:
+The current bounded slices support:
 
 - scenario planning/building for industry-universe work
 - limited listing -> activate -> match orchestration through the SDK
+- scenario planning/building for match -> connection-request -> approval work
+- bounded connection-approval orchestration through the SDK
+- explicit-opportunity package-export handoff planning from a known `opportunityId`
 - review-safe scenario verification bundle generation
-- a bounded CLI planning command
+- bounded CLI preview commands
+
+Still deferred on purpose:
+
+- approval -> opportunity creation or discovery behavior
+- broader multi-business-chain orchestration
+- richer review-packet workflows
+- MCP/runtime expansion beyond the current local seam
 
 Runnable repo-local example:
 
 ```bash
 npx tsx examples/industry-universe-agent.ts
+npx tsx examples/connection-approval-agent.ts
+npx tsx examples/opportunity-package-handoff.ts
 ```
 
 Built CLI preview after `npm run build`:
 
 ```bash
 node dist/cli.js industry-universe-plan
+node dist/cli.js connection-approval-plan
+node dist/cli.js opportunity-package-handoff-plan
 ```
+
+The package handoff preview is intentionally downstream-only. It requires an externally known `opportunityId` and does not imply that this repo can create or discover one after approval.
 
 ## Internal team agent path
 

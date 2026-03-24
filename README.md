@@ -23,7 +23,7 @@ In practical terms, the long-term target shape is a six-layer operating kit:
 5. **Verification layer** — verification bundles, review packets, and verification-safe exports
 6. **Adapter layer** — CLI and future tool/adaptor surfaces for agent runtimes
 
-The current V11 repository state only implements part of that target shape. The implemented slice is still centered on the execution layer, but it now also includes a generic scenario boundary, one bounded industry-universe orchestration slice, richer scenario verification bundles, and a local adapter seam plus bounded CLI planning command rather than a complete multi-layer operating kit.
+The current V11 repository state only implements part of that target shape. The implemented slice is still centered on the execution layer, but it now also includes a generic scenario boundary, two bounded orchestration slices, one bounded downstream handoff slice, richer scenario verification bundles, and a local adapter seam plus bounded CLI preview commands rather than a complete multi-layer operating kit.
 
 ## V11 boundary
 
@@ -43,9 +43,10 @@ Today this repo already helps an agent or agent developer with:
 - registration-bound heartbeat, sync, evidence, and proposal operations
 - commercial-action helper flows proven in production
 - listing/match/connection/approval/package helper slices proven in production
-- generic scenario-envelope builders plus an industry-universe planning/orchestration slice
+- generic scenario-envelope builders plus bounded industry-universe and connection-approval orchestration slices
+- explicit-opportunity package-export handoff planning for downstream review-safe export
 - richer scenario verification bundles alongside the legacy export helper
-- one bounded adapter seam and an `industry-universe-plan` CLI preview command
+- one bounded adapter seam and bounded CLI preview commands for `industry-universe-plan`, `connection-approval-plan`, and `opportunity-package-handoff-plan`
 - typed verification-bundle export for controlled verification runs
 
 ## Product layers
@@ -64,10 +65,12 @@ Today this repo already helps an agent or agent developer with:
 - the first usable V11 execution layer is present
 - helper coverage already includes production-proven route families beyond the initial atomic agent routes
 - a generic scenario boundary now exists for planning multi-step reviewable flows
-- scenario orchestration now exists for one bounded industry-universe slice only; it is not yet a general workflow layer
+- scenario orchestration now exists for bounded `listing -> activate -> match-candidates` and `match -> connection-request -> approval` slices only, it is not yet a general workflow layer
+- explicit-opportunity package-export handoff support exists, but it starts from a known `opportunityId` and does not create or discover one after approval
 - richer scenario verification packaging exists, but not a full review-packet or verification workflow layer yet
 - a local adapter seam exists, but not a complete MCP/runtime bridge
-- CLI commands exist for the currently exposed bounded operations
+- CLI preview commands exist for the currently exposed bounded operations
+- broader multi-business-chain orchestration, approval-to-opportunity behavior, richer review packets, and MCP/runtime expansion remain deferred
 - local contract tests run in `npm test`
 - implementation remains bounded to the frozen V11 core contract and should stay aligned with Bidvia core launch/version docs
 - the repo is not yet the full operating kit vision; it is still a partial V11 execution-layer slice of that broader product

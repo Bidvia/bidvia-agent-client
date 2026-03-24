@@ -6,7 +6,11 @@ import { buildHeartbeatInput } from './heartbeat.js';
 import { buildSyncUploadInput } from './sync.js';
 import { buildEvidenceSubmissionInput } from './evidence.js';
 import { buildProposalSubmissionInput } from './proposals.js';
-import { industryUniverseScenarioAdapter } from './adapters.js';
+import {
+  connectionApprovalScenarioAdapter,
+  industryUniverseScenarioAdapter,
+  opportunityPackageHandoffAdapter,
+} from './adapters.js';
 
 const [, , command = 'help'] = process.argv;
 
@@ -89,8 +93,63 @@ async function main() {
     return;
   }
 
+  if (command === 'connection-approval-plan') {
+    const result = await connectionApprovalScenarioAdapter.run(client, {
+      scenarioId: 'scenario-connection-approval-cli-1',
+      scenarioLabel: 'connection-approval-cli-preview',
+      sourceRefs: ['source://market/soda-ash-light'],
+      evidenceRefs: ['evidence://cli/soda-ash-light'],
+      traceIds: ['trace-cli-1'],
+      workflowIds: ['wf-cli-1'],
+      createConnectionRequest: {
+        sourceMatchId: 'match-cli-1',
+        requesterActorId: 'actor-cli-1',
+        requesterCompanyId: 'company-cli-1',
+        riskTier: 'medium',
+        policyVersion: 'policy-cli-v1',
+        approvalMatrixVersion: 'matrix-cli-v1',
+        actionType: 'buyer_contact_request',
+        now,
+      },
+      approveConnectionRequest: {
+        approvalRequestId: 'approval-cli-1',
+        actorId: 'actor-cli-1',
+        decision: 'approve',
+        now,
+      },
+    });
+    console.log(JSON.stringify(result, null, 2));
+    return;
+  }
+
+  if (command === 'opportunity-package-handoff-plan') {
+    const result = await opportunityPackageHandoffAdapter.run(client, {
+      scenarioId: 'scenario-opportunity-package-handoff-cli-1',
+      scenarioLabel: 'opportunity-package-handoff-cli-preview',
+      sourceRefs: ['source://market/soda-ash-light'],
+      evidenceRefs: ['evidence://cli/soda-ash-light'],
+      traceIds: ['trace-cli-1'],
+      workflowIds: ['wf-cli-1'],
+      exportOpportunityPackage: {
+        opportunityId: 'opportunity-cli-1',
+        renderTemplateId: 'template-cli-1',
+        contentRef: 'content://packages/opportunity-cli-1',
+        redactionProfile: 'review-safe',
+        targetSystem: 'downstream-dataroom',
+        operationType: 'export',
+        nodeId: 'node-cli-1',
+        runtimeId: 'runtime-cli-1',
+        agentId: 'agent-cli-1',
+        boundAccountId: 'account-cli-1',
+        now,
+      },
+    });
+    console.log(JSON.stringify(result, null, 2));
+    return;
+  }
+
   console.log('bidvia-agent-client');
-  console.log('Available commands: heartbeat, sync-upload, evidence, proposal, industry-universe-plan');
+  console.log('Available commands: heartbeat, sync-upload, evidence, proposal, industry-universe-plan, connection-approval-plan, opportunity-package-handoff-plan');
 }
 
 void main();

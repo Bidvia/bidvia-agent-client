@@ -29,6 +29,8 @@ Current progress:
 - connection request helper added
 - approval decision helper added
 - opportunity package export helper added
+- bounded connection-approval orchestration helper added
+- explicit-opportunity package handoff helper added
 
 ### A2. Add verification bundle output
 
@@ -79,6 +81,8 @@ Current progress:
 - generic scenario envelope core added
 - generic scenario builders added
 - industry-universe scenario plan builder added
+- connection-approval scenario plan builder added
+- opportunity-package handoff plan builder added
 
 ### B2. Add commercial-action helper family
 
@@ -115,6 +119,8 @@ Add CLI flows for:
 Current progress:
 
 - bounded `industry-universe-plan` CLI command added for review-safe planning output
+- bounded `connection-approval-plan` CLI command added for review-safe planning output
+- bounded `opportunity-package-handoff-plan` CLI command added for review-safe planning output
 
 ## Priority C — Structural upgrades
 
@@ -138,6 +144,8 @@ while preserving idempotency keys and trace continuity.
 Current progress:
 
 - bounded `listing -> activate -> match-candidates` scenario orchestration helper added
+- bounded `match -> connection-request -> approval` scenario orchestration helper added
+- bounded explicit-`opportunityId` package-export handoff added
 
 ### C3. Add production-vs-sandbox mode distinctions
 
@@ -153,8 +161,13 @@ and emit different default verbosity and safety prompts accordingly.
 
 The next post-V11 client iteration should start with:
 
-1. broader orchestration beyond the first industry-universe slice
+1. broader orchestration beyond the current industry-universe, connection-approval, and explicit-opportunity handoff slices
 2. richer review-packet / verification workflows
 3. adapter / MCP expansion beyond the local seam
 
 Those three are now the clearest remaining gaps after the first scenario-driven client slice landed.
+
+Keep the honesty boundary intact while doing that work:
+
+- do not imply approval creates or discovers an `opportunityId`
+- keep broader multi-business-chain orchestration deferred until the missing platform seam is real
