@@ -2,10 +2,12 @@
 
 ## Goal
 
-This guide shows the minimum repo-local path for two V11 audiences:
+This guide shows the minimum operating path for two V11 audiences:
 
 1. internal team agents using the full provisional -> query -> claim -> registration-bound flow
 2. seed-user agents using the bounded registration-bound runtime after onboarding is already complete
+
+This guide is intentionally more than an API quickstart. It explains how an agent should approach the platform at the operating level.
 
 ## Contract first
 
@@ -19,6 +21,10 @@ Before using this repo, remember the frozen V11 rules:
 - claim requires a session-bound context through `sessionId`
 - heartbeat, sync, evidence, and proposal operations are execution/reporting surfaces only; they do not create authority
 
+Additional current operating rule:
+
+- production business chains may require different access contexts on different routes; the client should make those context expectations explicit rather than leaving them implicit in ad hoc scripts
+
 ## Repo-local quick start
 
 ```bash
@@ -28,6 +34,46 @@ npm run validate
 npm run typecheck
 npm run build
 npm run example
+```
+
+## How an agent should use this repo
+
+Think about this repo in this order:
+
+1. read the contract boundary and onboarding docs
+2. configure the right context for the environment
+3. choose the right helper family for the current route chain
+4. build a scenario envelope when the work is a multi-step reviewable flow
+5. export a verification bundle when the run should be reviewable later
+
+## Scenario planning and bounded orchestration preview
+
+The repo now includes a generic scenario boundary plus one bounded industry-universe slice.
+This is still not a full orchestration layer or adapter/runtime platform.
+It is the first stable SDK-local container for:
+
+- source refs
+- evidence refs
+- trace and workflow continuity
+- expected route chains for reviewable flows
+
+The current bounded slice supports:
+
+- scenario planning/building for industry-universe work
+- limited listing -> activate -> match orchestration through the SDK
+- review-safe scenario verification bundle generation
+- a bounded CLI planning command
+
+Runnable repo-local example:
+
+```bash
+npx tsx examples/industry-universe-agent.ts
+```
+
+Built CLI preview after `npm run build`:
+
+```bash
+node dist/cli.js industry-universe-plan
 ```
 
 ## Internal team agent path
@@ -62,7 +108,7 @@ npm run example:seed
 
 ## Validation flow
 
-The offline validation command does not require a live Bidvia runtime. It records the emitted URLs, headers, and bodies and verifies they match the frozen V11 core contract.
+The offline validation command does not require a live Bidvia runtime. It records emitted URLs plus representative headers and bodies, then verifies those samples against the frozen V11 core contract.
 
 ```bash
 npm run validate
@@ -72,7 +118,8 @@ Passing validation means:
 
 - provisional create/query/claim use the correct route family
 - registration-bound operations use the correct route family
-- tenant/principal/session context is attached where required
+- representative tenant/principal/session/operator context is attached where required
+- representative request bodies still match the expected frozen contract fields
 
 ## Environment hints
 
@@ -85,6 +132,11 @@ If you point the client at a real runtime instead of the stubbed example flow, u
 - `BIDVIA_REGISTRATION_ID`
 - `BIDVIA_SESSION_ID` (claim operations only)
 
+Additional context now supported for production-proven routes:
+
+- `adminSessionId` for admin-session detail routes
+- `companyId` for operator-context write routes
+
 Recommended domain profile defaults for future rollout preparation:
 
 - global profile -> `https://bidvia.ai`
@@ -95,3 +147,10 @@ Recommended domain profile defaults for future rollout preparation:
 - do not treat `POST /runtime/account/agents` as the official onboarding path
 - do not infer authority from heartbeat, sync, evidence, or proposal success
 - do not add unfrozen operations here before they are frozen in Bidvia core
+
+## Read next
+
+- `docs/PRODUCT_POSITIONING.md`
+- `docs/CONTRACT_BOUNDARY.md`
+- `docs/ROADMAP.md`
+- `docs/OPTIMIZATION_BACKLOG.md`

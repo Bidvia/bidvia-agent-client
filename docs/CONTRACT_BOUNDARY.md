@@ -21,6 +21,8 @@
 - example implementations
 - local validation helpers
 - onboarding guidance for internal team agents and seed-user agents
+- scenario packaging and verification-bundle export on the agent side
+- agent-side operating guidance for how to use frozen production contracts safely
 
 ## Hard rules
 
@@ -37,6 +39,9 @@
 - evidence
 - proposal
 - review-safe status operations
+- production-proven commercial-action helper family
+- production-proven listing / match / connection / approval / package helper slices
+- verification bundle export
 
 ## Current frozen route families
 

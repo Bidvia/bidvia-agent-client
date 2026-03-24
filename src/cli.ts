@@ -6,6 +6,7 @@ import { buildHeartbeatInput } from './heartbeat.js';
 import { buildSyncUploadInput } from './sync.js';
 import { buildEvidenceSubmissionInput } from './evidence.js';
 import { buildProposalSubmissionInput } from './proposals.js';
+import { industryUniverseScenarioAdapter } from './adapters.js';
 
 const [, , command = 'help'] = process.argv;
 
@@ -49,8 +50,47 @@ async function main() {
     return;
   }
 
+  if (command === 'industry-universe-plan') {
+    const result = await industryUniverseScenarioAdapter.run(client, {
+      scenarioId: 'scenario-industry-universe-cli-1',
+      scenarioLabel: 'industry-universe-cli-preview',
+      sourceRefs: ['source://market/soda-ash-light'],
+      evidenceRefs: ['evidence://cli/soda-ash-light'],
+      traceIds: ['trace-cli-1'],
+      workflowIds: ['wf-cli-1'],
+      createListing: {
+        listingId: 'listing-cli-1',
+        listingType: 'supply',
+        category: 'basic inorganic industrial chemical',
+        sku: 'sodium-carbonate-soda-ash-light',
+        quantityValue: '15',
+        quantityUnit: 'tons',
+        regionSummary: 'China -> Vietnam',
+        verificationStatus: 'verified',
+        freshnessTs: now,
+        traceId: 'trace-cli-1',
+        idempotencyKey: 'listing-cli-1',
+        now,
+      },
+      activateListing: {
+        now,
+      },
+      generateMatchCandidates: {
+        upstreamDecision: 'READY_FOR_ROUTING',
+        requiredEvidenceLevel: 1,
+        detectedEvidenceLevel: 1,
+        workflowRunId: 'wf-cli-1',
+        triggerEventId: 'evt-cli-1',
+        topN: 10,
+        now,
+      },
+    });
+    console.log(JSON.stringify(result, null, 2));
+    return;
+  }
+
   console.log('bidvia-agent-client');
-  console.log('Available commands: heartbeat, sync-upload, evidence, proposal');
+  console.log('Available commands: heartbeat, sync-upload, evidence, proposal, industry-universe-plan');
 }
 
 void main();

@@ -1,0 +1,160 @@
+# Optimization Backlog
+
+## Why this file exists
+
+This backlog collects the concrete lessons from the V11 production verification waves and translates them into practical next improvements for `Bidvia-agent-client`.
+
+The focus is not theoretical SDK perfection.
+The focus is what the production verification actually proved was missing or awkward.
+
+## Priority A — High-value near-term improvements
+
+### A1. Add business-chain helpers
+
+Current client helpers stop at atomic route calls.
+Add higher-level SDK helpers for:
+
+- listing creation + activation
+- match generation
+- connection request creation
+- approval follow-through
+- opportunity package export
+- commercial-action continuation
+
+Current progress:
+
+- listing creation helper added
+- listing activation helper added
+- match generation helper added
+- connection request helper added
+- approval decision helper added
+- opportunity package export helper added
+
+### A2. Add verification bundle output
+
+Add a production-safe verification mode that emits:
+
+- source refs
+- evidence refs
+- trace ids
+- workflow ids
+- record ids generated during the run
+- final checkpoint-ready JSON output
+
+Current progress:
+
+- typed verification bundle export helper added
+- richer scenario verification bundle added
+- legacy export compatibility preserved
+
+### A3. Make access-context requirements explicit
+
+The client should clearly encode when a route needs:
+
+- admin session
+- operator principal headers
+- session-bound enterprise context
+
+This should be discoverable in the SDK surface, not learned only from runtime failures.
+
+Current progress:
+
+- admin-session commercial action status helper added
+- operator-context commercial action create helper added
+
+## Priority B — Operational ergonomics
+
+### B1. Add scenario envelopes
+
+Introduce a typed scenario object that carries:
+
+- product family
+- source packet refs
+- evidence refs
+- expected route chain
+- resulting production ids
+
+Current progress:
+
+- generic scenario envelope core added
+- generic scenario builders added
+- industry-universe scenario plan builder added
+
+### B2. Add commercial-action helper family
+
+Wrap the production-proven `commercial-actions` path into dedicated helpers for:
+
+- create
+- policy check
+- request approval
+- execute
+- status
+- receipt
+- audit
+
+Current progress:
+
+- create
+- policy check
+- request approval
+- execute
+- status
+- receipt
+- audit
+
+### B3. Add CLI support for business verification flows
+
+Current CLI is still limited to low-level operations.
+Add CLI flows for:
+
+- onboarding wave execution
+- listing wave execution
+- commercial-action wave execution
+- verification export
+
+Current progress:
+
+- bounded `industry-universe-plan` CLI command added for review-safe planning output
+
+## Priority C — Structural upgrades
+
+### C1. Add route capability metadata
+
+The client should ship a machine-readable route capability map so a caller can discover:
+
+- write/read scope
+- required context
+- fail-close expectations
+- whether the route is atomic or chain-level
+
+### C2. Add replay-safe orchestration helpers
+
+The client should support replay-safe orchestration for a chain like:
+
+- `listing -> match -> connection -> approval -> package -> commercial-action`
+
+while preserving idempotency keys and trace continuity.
+
+Current progress:
+
+- bounded `listing -> activate -> match-candidates` scenario orchestration helper added
+
+### C3. Add production-vs-sandbox mode distinctions
+
+The client should make it obvious when an operation is being executed against:
+
+- local sandbox
+- sim
+- production
+
+and emit different default verbosity and safety prompts accordingly.
+
+## Current recommendation
+
+The next post-V11 client iteration should start with:
+
+1. broader orchestration beyond the first industry-universe slice
+2. richer review-packet / verification workflows
+3. adapter / MCP expansion beyond the local seam
+
+Those three are now the clearest remaining gaps after the first scenario-driven client slice landed.
