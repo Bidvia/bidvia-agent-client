@@ -66,6 +66,11 @@ test('industry universe adapter returns review safe plan', async () => {
   assert.match(industryUniverseScenarioAdapter.describe(), /industry universe/i);
   assert.equal(result.scenarioPlan.envelope.scenarioFamily, 'industry-universe');
   assert.equal(result.verificationBundle.verificationMode, 'review-safe');
+  assert.equal(result.reviewPacket.scenarioFamily, 'industry-universe');
+  assert.equal(result.reviewPacket.verificationMode, 'review-safe');
+  assert.equal(result.reviewPacket.status, 'pending-review');
+  assert.notEqual(result.exportedReviewPacket, result.reviewPacket);
+  assert.deepEqual(result.exportedReviewPacket, result.reviewPacket);
   assert.equal(calls.length, 0);
 });
 
@@ -117,6 +122,11 @@ test('connection approval adapter returns review safe plan', async () => {
   assert.match(connectionApprovalScenarioAdapter.describe(), /connection approval/i);
   assert.equal(result.scenarioPlan.envelope.scenarioFamily, 'connection-approval');
   assert.equal(result.verificationBundle.verificationMode, 'review-safe');
+  assert.equal(result.reviewPacket.scenarioFamily, 'connection-approval');
+  assert.equal(result.reviewPacket.verificationMode, 'review-safe');
+  assert.equal(result.reviewPacket.status, 'pending-review');
+  assert.notEqual(result.exportedReviewPacket, result.reviewPacket);
+  assert.deepEqual(result.exportedReviewPacket, result.reviewPacket);
   assert.deepEqual(
     result.scenarioPlan.envelope.expectedRouteChain.map((step) => step.routeKey),
     ['createConnectionRequest', 'approveConnectionRequest'],
@@ -169,6 +179,11 @@ test('opportunity package handoff adapter returns review safe plan', async () =>
   assert.match(opportunityPackageHandoffAdapter.describe(), /package handoff/i);
   assert.equal(result.scenarioPlan.envelope.scenarioFamily, 'opportunity-package-handoff');
   assert.equal(result.verificationBundle.verificationMode, 'review-safe');
+  assert.equal(result.reviewPacket.scenarioFamily, 'opportunity-package-handoff');
+  assert.equal(result.reviewPacket.verificationMode, 'review-safe');
+  assert.equal(result.reviewPacket.status, 'pending-review');
+  assert.notEqual(result.exportedReviewPacket, result.reviewPacket);
+  assert.deepEqual(result.exportedReviewPacket, result.reviewPacket);
   assert.deepEqual(
     result.scenarioPlan.envelope.expectedRouteChain.map((step) => step.routeKey),
     ['exportOpportunityPackage'],

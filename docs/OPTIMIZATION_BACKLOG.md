@@ -30,6 +30,8 @@ Current progress:
 - approval decision helper added
 - opportunity package export helper added
 - bounded connection-approval orchestration helper added
+- bounded commercial-action continuation helper added
+- honest cross-chain coordinator helper added across shipped slices only
 - explicit-opportunity package handoff helper added
 
 ### A2. Add verification bundle output
@@ -47,6 +49,8 @@ Current progress:
 
 - typed verification bundle export helper added
 - richer scenario verification bundle added
+- bounded review-packet preview and export support added for the shipped scenario slices
+- richer reviewer-facing review-packet detail added from existing scenario and verification facts
 - legacy export compatibility preserved
 
 ### A3. Make access-context requirements explicit
@@ -105,6 +109,18 @@ Current progress:
 - status
 - receipt
 - audit
+- bounded commercial-action continuation scenario plan, runner, and readback helper added
+- repo-local `examples/commercial-action-continuation.ts` added for slice discoverability
+
+Current progress:
+
+- create
+- policy check
+- request approval
+- execute
+- status
+- receipt
+- audit
 
 ### B3. Add CLI support for business verification flows
 
@@ -126,12 +142,24 @@ Current progress:
 
 ### C1. Add route capability metadata
 
-The client should ship a machine-readable route capability map so a caller can discover:
+The client now ships a machine-readable route capability map so a caller can discover:
 
 - write/read scope
 - required context
 - fail-close expectations
 - whether the route is atomic or chain-level
+
+Current progress:
+
+- static route capability registry added in `src/capabilities.ts`
+- repo-local lookup helper added for shipped helper metadata
+- access-context discovery is now machine-readable without requiring callers to inspect `src/client.ts` directly
+
+Still deferred on purpose:
+
+- runtime capability negotiation
+- server-provided capability discovery
+- request generation from metadata
 
 ### C2. Add replay-safe orchestration helpers
 
@@ -146,6 +174,8 @@ Current progress:
 - bounded `listing -> activate -> match-candidates` scenario orchestration helper added
 - bounded `match -> connection-request -> approval` scenario orchestration helper added
 - bounded explicit-`opportunityId` package-export handoff added
+- cross-chain coordinator plan plus pre-handoff/post-handoff runners added with an explicit approval-to-opportunity external handoff boundary
+- repo-local `examples/multi-business-chain-coordinator.ts` added for coordinator discoverability
 
 ### C3. Add production-vs-sandbox mode distinctions
 
@@ -157,17 +187,48 @@ The client should make it obvious when an operation is being executed against:
 
 and emit different default verbosity and safety prompts accordingly.
 
+Current progress:
+
+- `resolveBidviaEnvironmentMode(...)` added for `local` / `sim` / `production` classification
+- `resolveBidviaEnvironmentModeFromEnv(...)` added for env-driven classification visibility
+- read-only `environment-mode` CLI command added for repo-local inspection
+
+Still deferred on purpose:
+
+- environment-specific execution policy
+- behavior changes driven by environment mode
+- broader runtime or transport control logic
+
+### C4. Add MCP-facing descriptor/catalog layer
+
+The client now ships a static MCP-facing descriptor/catalog layer so callers can export bounded tool metadata for the currently shipped scenario slices.
+
+Current progress:
+
+- static MCP-facing tool catalog added in `src/mcp.ts`
+- repo-local lookup and export helpers added for bounded MCP-friendly tool descriptors
+- shipped coverage is limited to plan-preview, review-packet-preview, and review-packet-export descriptors for existing bounded slices
+
+Still deferred on purpose:
+
+- live MCP server implementation
+- stdio or other transport support
+- protocol negotiation runtime
+- remote registry or server discovery
+
 ## Current recommendation
 
 The next post-V11 client iteration should start with:
 
-1. broader orchestration beyond the current industry-universe, connection-approval, and explicit-opportunity handoff slices
-2. richer review-packet / verification workflows
-3. adapter / MCP expansion beyond the local seam
+1. broader orchestration beyond the current industry-universe, connection-approval, commercial-action continuation, coordinator path, and explicit-opportunity handoff slices
+2. review-packet workflow improvements beyond the current bounded preview and export layer
+3. live adapter / MCP expansion beyond the current static descriptor/catalog layer
 
 Those three are now the clearest remaining gaps after the first scenario-driven client slice landed.
 
 Keep the honesty boundary intact while doing that work:
 
 - do not imply approval creates or discovers an `opportunityId`
+- do not imply bounded commercial-action continuation creates autonomous governance authority
+- do not imply the shipped coordinator crosses the approval -> opportunity seam automatically
 - keep broader multi-business-chain orchestration deferred until the missing platform seam is real

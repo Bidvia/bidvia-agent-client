@@ -26,6 +26,8 @@ Confirmed in source and tests today:
 - onboarding / provisional -> query -> claim helpers
 - heartbeat / sync / evidence / proposal helpers
 - commercial-action helper family
+- bounded commercial-action continuation slice
+- one honest cross-chain coordinator layer across shipped slices
 - listing -> activate -> match helper slice
 - connection -> approval helper slice
 - opportunity package export helper
@@ -35,9 +37,17 @@ Confirmed in source and tests today:
 - opportunity-package handoff plan builder
 - bounded industry-universe orchestration helper
 - bounded connection-approval orchestration helper
+- bounded commercial-action continuation runner and review readback helper
+- cross-chain coordinator pre-handoff and post-handoff runners
 - bounded explicit-opportunity package handoff runner
 - richer scenario verification bundle support
+- derived review-packet builders plus bounded preview and export support with richer reviewer-facing detail
+- machine-readable static capability registry for shipped helpers and scenario route keys
+- static MCP-facing tool descriptor/catalog support for shipped bounded slices
+- environment mode classification for `local`, `sim`, and `production`
 - bounded adapter seam and `industry-universe-plan`, `connection-approval-plan`, and `opportunity-package-handoff-plan` CLI commands
+- read-only `environment-mode` CLI command
+- bounded `industry-universe-review-packet-preview`, `industry-universe-review-packet-export`, `connection-approval-review-packet-preview`, `connection-approval-review-packet-export`, `opportunity-package-handoff-review-packet-preview`, and `opportunity-package-handoff-review-packet-export` CLI commands
 - typed verification-bundle export helper
 - bounded CLI commands for a small subset of operations
 
@@ -46,9 +56,14 @@ Confirmed in source and tests today:
 These exist, but should not be overstated:
 
 - scenario support currently includes two bounded orchestration slices plus one downstream handoff slice, not a general workflow layer
+- scenario support currently includes three bounded orchestration slices plus one downstream handoff slice, not a general workflow layer
+- cross-chain coordination now exists for one honest broader shipped path, but it still stops at an explicit approval-to-opportunity external handoff boundary
 - package handoff support starts from a known `opportunityId`; it does not create or discover one after approval
-- verification packaging is richer than the original typed export helper, but not a full review-packet workflow layer
-- adapter support is currently a local seam plus bounded planning/export commands, not a complete MCP/runtime bridge
+- commercial-action continuation support is bounded to one review-safe continuation slice over existing helper methods; it does not imply autonomous governance
+- verification packaging now includes bounded review-packet preview and export with richer reviewer-facing route and record detail, but it is still derived only from existing scenario and verification facts
+- capability discovery is now machine-readable through a static repo-local registry, but it remains descriptive-only and does not negotiate with a runtime
+- adapter support now includes a static MCP-facing descriptor/catalog layer, but it is still not a live MCP server or complete MCP/runtime bridge
+- environment mode support is classification-only visibility over the current base URL/profile inputs, not execution policy or runtime control
 - CLI support is still limited and does not cover the broader business-chain helper families
 - current docs describe a broader destination than the code delivers today
 
@@ -57,9 +72,11 @@ These exist, but should not be overstated:
 These should still be treated as next-step work, not shipped capability:
 
 - approval -> opportunity creation or discovery behavior
-- higher-level orchestration helpers across multiple business chains
-- review-packet builders beyond one verification export helper
-- MCP/tool adapters and other runtime adapter layers beyond the current local seam
+- higher-level orchestration helpers across multiple business chains beyond the shipped coordinator path
+- broader review-packet workflow expansion beyond the current bounded preview and export layer
+- runtime capability negotiation or server-provided capability discovery
+- live MCP server work, transport support, negotiation/runtime loops, and broader MCP/tool adapters beyond the current static catalog layer
+- broader environment-specific policy logic or runtime behavior changes driven by environment mode
 - richer CLI flows for business verification waves
 
 ## Immediate takeover sequence
@@ -69,8 +86,11 @@ Follow this order:
 1. keep docs aligned with actual implementation scope
 2. use the generic scenario core as the basis for additional scenario families or refinements
 3. broaden orchestration only after the scenario contract remains stable
-4. grow verification packaging from richer bundles into review-packet workflows
-5. extend adapter / MCP surfaces beyond the current local seam only after the core scenario boundary stays stable
+4. grow verification packaging beyond the current review-packet preview and export layer only when a broader workflow need is real
+5. extend adapter / MCP surfaces beyond the current static descriptor/catalog layer only after the core scenario boundary stays stable
+
+The current repo-local commercial-action example is `examples/commercial-action-continuation.ts`.
+The current repo-local cross-chain coordinator example is `examples/multi-business-chain-coordinator.ts`.
 
 ## Why scenario envelope comes first
 

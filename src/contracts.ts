@@ -1,3 +1,12 @@
+import type {
+  BidviaOpportunityPackageHandoffPlan,
+  BidviaOpportunityPackageHandoffPlanInput,
+} from './handoffs.js';
+import type {
+  BidviaIndustryUniverseScenarioPlan,
+  BidviaIndustryUniverseScenarioPlanInput,
+} from './universe.js';
+
 export interface BidviaClientContext {
   tenantId: string;
   principalId?: string;
@@ -77,6 +86,27 @@ export interface BidviaCommercialActionExecuteInput {
   resultStatus: string;
   auditId: string;
   now: string;
+}
+
+export interface BidviaCommercialActionScenarioPlanInput {
+  scenarioId: string;
+  scenarioLabel: string;
+  sourceRefs: string[];
+  evidenceRefs: string[];
+  traceIds: string[];
+  workflowIds: string[];
+  createCommercialAction: BidviaCommercialActionCreateInput;
+  policyCheckCommercialAction: BidviaCommercialActionPolicyCheckInput;
+  requestCommercialActionApproval: BidviaCommercialActionRequestApprovalInput;
+  executeCommercialAction: BidviaCommercialActionExecuteInput;
+}
+
+export interface BidviaCommercialActionScenarioPlan {
+  envelope: BidviaScenarioEnvelope;
+  createCommercialActionInput: BidviaCommercialActionCreateInput;
+  policyCheckCommercialActionInput: BidviaCommercialActionPolicyCheckInput;
+  requestCommercialActionApprovalInput: BidviaCommercialActionRequestApprovalInput;
+  executeCommercialActionInput: BidviaCommercialActionExecuteInput;
 }
 
 export interface BidviaCreateListingInput {
@@ -161,9 +191,44 @@ export interface BidviaExportOpportunityPackageInput {
 
 export type BidviaScenarioContextKey = keyof BidviaClientContext;
 
+export const bidviaRouteCapabilityHttpMethods = ['GET', 'POST'] as const;
+
+export type BidviaRouteCapabilityHttpMethod = (typeof bidviaRouteCapabilityHttpMethods)[number];
+
+export const bidviaRouteCapabilityAccessContextFamilies = [
+  'tenant',
+  'registration',
+  'session',
+  'admin-session',
+  'operator-company',
+  'scenario',
+] as const;
+
+export type BidviaRouteCapabilityAccessContextFamily =
+  (typeof bidviaRouteCapabilityAccessContextFamilies)[number];
+
+export const bidviaRouteCapabilityScopes = ['read', 'write'] as const;
+
+export type BidviaRouteCapabilityScope = (typeof bidviaRouteCapabilityScopes)[number];
+
+export const bidviaRouteCapabilityLevels = ['atomic-route', 'chain-step', 'scenario-helper'] as const;
+
+export type BidviaRouteCapabilityLevel = (typeof bidviaRouteCapabilityLevels)[number];
+
 export interface BidviaScenarioRouteStep {
   routeKey: string;
   requiredContext: BidviaScenarioContextKey[];
+}
+
+export interface BidviaRouteCapability {
+  helperKey: string;
+  routePathTemplate: string;
+  httpMethod: BidviaRouteCapabilityHttpMethod;
+  accessContextFamily: BidviaRouteCapabilityAccessContextFamily;
+  requiredContext: BidviaScenarioContextKey[];
+  scope: BidviaRouteCapabilityScope;
+  level: BidviaRouteCapabilityLevel;
+  scenarioRouteSteps?: BidviaScenarioRouteStep[];
 }
 
 export interface BidviaScenarioEnvelopeRecordIds {
@@ -208,4 +273,115 @@ export interface BidviaScenarioVerificationBundle extends BidviaVerificationBund
   verificationMode: BidviaVerificationMode;
   expectedRouteChain: BidviaScenarioRouteStep[];
   completedRouteChain: BidviaScenarioRouteStep[];
+}
+
+export const bidviaReviewPacketStatuses = ['complete', 'partial', 'pending-review'] as const;
+
+export type BidviaReviewPacketStatus = (typeof bidviaReviewPacketStatuses)[number];
+
+export const bidviaReviewPacketSectionKeys = ['scenario', 'routes', 'records'] as const;
+
+export type BidviaReviewPacketSectionKey = (typeof bidviaReviewPacketSectionKeys)[number];
+
+export interface BidviaReviewPacketSummary {
+  sourceRefCount: number;
+  evidenceRefCount: number;
+  workflowIdCount: number;
+  expectedRouteCount: number;
+  completedRouteCount: number;
+}
+
+export type BidviaReviewPacketRecordGroupKey = keyof BidviaScenarioEnvelopeRecordIds;
+
+export interface BidviaReviewPacketRouteDetail {
+  routeKey: string;
+  requiredContext: BidviaScenarioContextKey[];
+  completed: boolean;
+}
+
+export interface BidviaReviewPacketRecordDetail {
+  recordGroupKey: BidviaReviewPacketRecordGroupKey;
+  count: number;
+  ids: string[];
+}
+
+export interface BidviaReviewPacketDetail {
+  routeDetails: BidviaReviewPacketRouteDetail[];
+  recordDetails: BidviaReviewPacketRecordDetail[];
+}
+
+export interface BidviaReviewPacketSection {
+  sectionKey: BidviaReviewPacketSectionKey;
+  title: string;
+  entries: string[];
+}
+
+export interface BidviaReviewPacket {
+  scenarioId: string;
+  scenarioLabel: string;
+  scenarioFamily: string;
+  verificationMode: BidviaVerificationMode;
+  status: BidviaReviewPacketStatus;
+  summary: BidviaReviewPacketSummary;
+  details: BidviaReviewPacketDetail;
+  sections: BidviaReviewPacketSection[];
+}
+
+export const bidviaMcpToolOutputModes = [
+  'plan-preview',
+  'review-packet-preview',
+  'review-packet-export',
+] as const;
+
+export type BidviaMcpToolOutputMode = (typeof bidviaMcpToolOutputModes)[number];
+
+export interface BidviaMcpToolInputSchemaRef {
+  schemaKey: string;
+}
+
+export interface BidviaMcpToolHelperRef {
+  helperKey: string;
+  capabilityKey?: string;
+}
+
+export interface BidviaMcpToolDescriptor {
+  toolName: string;
+  description: string;
+  inputSchemaRef: BidviaMcpToolInputSchemaRef;
+  outputMode: BidviaMcpToolOutputMode;
+  helperRef: BidviaMcpToolHelperRef;
+}
+
+export const bidviaCoordinatorExternalHandoffStatuses = ['requires-caller-known-ids'] as const;
+
+export type BidviaCoordinatorExternalHandoffStatus =
+  (typeof bidviaCoordinatorExternalHandoffStatuses)[number];
+
+export interface BidviaApprovalOpportunityExternalHandoffBoundary {
+  boundaryKey: 'approval-to-opportunity';
+  status: BidviaCoordinatorExternalHandoffStatus;
+  approvalRequestId: string;
+  requiredKnownIds: ['opportunityId'];
+  suppliedKnownIds: {
+    opportunityId: string;
+  };
+}
+
+export interface BidviaMultiBusinessChainCoordinatorPlanInput {
+  coordinatorId: string;
+  coordinatorLabel: string;
+  industryUniverse: BidviaIndustryUniverseScenarioPlanInput;
+  connectionApproval: BidviaConnectionApprovalScenarioPlanInput;
+  opportunityPackageHandoff: BidviaOpportunityPackageHandoffPlanInput;
+  commercialActionContinuation?: BidviaCommercialActionScenarioPlanInput;
+}
+
+export interface BidviaMultiBusinessChainCoordinatorPlan {
+  coordinatorId: string;
+  coordinatorLabel: string;
+  industryUniverse: BidviaIndustryUniverseScenarioPlan;
+  connectionApproval: BidviaConnectionApprovalScenarioPlan;
+  externalHandoffBoundary: BidviaApprovalOpportunityExternalHandoffBoundary;
+  opportunityPackageHandoff: BidviaOpportunityPackageHandoffPlan;
+  commercialActionContinuation?: BidviaCommercialActionScenarioPlan;
 }

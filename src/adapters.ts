@@ -1,5 +1,8 @@
 import { BidviaClient } from './client.js';
-import type { BidviaScenarioVerificationBundle } from './contracts.js';
+import type {
+  BidviaReviewPacket,
+  BidviaScenarioVerificationBundle,
+} from './contracts.js';
 import {
   buildConnectionApprovalScenarioPlan,
 } from './connection.js';
@@ -22,7 +25,9 @@ import type {
   BidviaIndustryUniverseScenarioPlanInput,
 } from './universe.js';
 import {
+  buildReviewPacket,
   buildScenarioVerificationBundle,
+  exportReviewPacket,
 } from './verification.js';
 
 export interface BidviaScenarioAdapter<Input, Output> {
@@ -34,16 +39,22 @@ export interface BidviaScenarioAdapter<Input, Output> {
 export interface BidviaIndustryUniverseAdapterResult {
   scenarioPlan: BidviaIndustryUniverseScenarioPlan;
   verificationBundle: BidviaScenarioVerificationBundle;
+  reviewPacket: BidviaReviewPacket;
+  exportedReviewPacket: BidviaReviewPacket;
 }
 
 export interface BidviaConnectionApprovalAdapterResult {
   scenarioPlan: BidviaConnectionApprovalScenarioPlan;
   verificationBundle: BidviaScenarioVerificationBundle;
+  reviewPacket: BidviaReviewPacket;
+  exportedReviewPacket: BidviaReviewPacket;
 }
 
 export interface BidviaOpportunityPackageHandoffAdapterResult {
   scenarioPlan: BidviaOpportunityPackageHandoffPlan;
   verificationBundle: BidviaScenarioVerificationBundle;
+  reviewPacket: BidviaReviewPacket;
+  exportedReviewPacket: BidviaReviewPacket;
 }
 
 export const industryUniverseScenarioAdapter: BidviaScenarioAdapter<
@@ -60,10 +71,16 @@ export const industryUniverseScenarioAdapter: BidviaScenarioAdapter<
       scenario: scenarioPlan.envelope,
       verificationMode: 'review-safe',
     });
+    const reviewPacket = buildReviewPacket({
+      scenario: scenarioPlan.envelope,
+      bundle: verificationBundle,
+    });
 
     return {
       scenarioPlan,
       verificationBundle,
+      reviewPacket,
+      exportedReviewPacket: exportReviewPacket(reviewPacket),
     };
   },
 };
@@ -82,10 +99,16 @@ export const connectionApprovalScenarioAdapter: BidviaScenarioAdapter<
       scenario: scenarioPlan.envelope,
       verificationMode: 'review-safe',
     });
+    const reviewPacket = buildReviewPacket({
+      scenario: scenarioPlan.envelope,
+      bundle: verificationBundle,
+    });
 
     return {
       scenarioPlan,
       verificationBundle,
+      reviewPacket,
+      exportedReviewPacket: exportReviewPacket(reviewPacket),
     };
   },
 };
@@ -104,10 +127,16 @@ export const opportunityPackageHandoffAdapter: BidviaScenarioAdapter<
       scenario: scenarioPlan.envelope,
       verificationMode: 'review-safe',
     });
+    const reviewPacket = buildReviewPacket({
+      scenario: scenarioPlan.envelope,
+      bundle: verificationBundle,
+    });
 
     return {
       scenarioPlan,
       verificationBundle,
+      reviewPacket,
+      exportedReviewPacket: exportReviewPacket(reviewPacket),
     };
   },
 };

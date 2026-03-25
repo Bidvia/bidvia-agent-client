@@ -41,12 +41,15 @@ Today this repo already helps an agent or agent developer with:
 
 - official onboarding and claim flows
 - registration-bound heartbeat, sync, evidence, and proposal operations
-- commercial-action helper flows proven in production
+- commercial-action helper flows plus one bounded commercial-action continuation slice proven in production
 - listing/match/connection/approval/package helper slices proven in production
-- generic scenario-envelope builders plus bounded industry-universe and connection-approval orchestration slices
+- generic scenario-envelope builders plus bounded industry-universe, connection-approval, commercial-action continuation, and one honest cross-chain coordinator layer across shipped slices
 - explicit-opportunity package-export handoff planning for downstream review-safe export
-- richer scenario verification bundles alongside the legacy export helper
-- one bounded adapter seam and bounded CLI preview commands for `industry-universe-plan`, `connection-approval-plan`, and `opportunity-package-handoff-plan`
+- richer scenario verification bundles plus derived review-packet preview and export support with richer reviewer-facing packet detail
+- machine-readable static capability metadata for shipped helpers and scenario route keys
+- static MCP-facing tool descriptors and catalog exports for the shipped bounded slices
+- environment mode classification for `local`, `sim`, and `production` plus a read-only CLI visibility command
+- one bounded adapter seam and bounded CLI preview commands for scenario plans plus review-packet preview and export across `industry-universe`, `connection-approval`, and `opportunity-package-handoff`
 - typed verification-bundle export for controlled verification runs
 
 ## Product layers
@@ -65,12 +68,16 @@ Today this repo already helps an agent or agent developer with:
 - the first usable V11 execution layer is present
 - helper coverage already includes production-proven route families beyond the initial atomic agent routes
 - a generic scenario boundary now exists for planning multi-step reviewable flows
-- scenario orchestration now exists for bounded `listing -> activate -> match-candidates` and `match -> connection-request -> approval` slices only, it is not yet a general workflow layer
+- scenario orchestration now exists for bounded `listing -> activate -> match-candidates`, `match -> connection-request -> approval`, and `commercial-action` continuation slices only, it is not yet a general workflow layer
+- a bounded commercial-action continuation plan, write runner, review readback helper, and repo-local example now exist without introducing autonomous governance or a new runtime layer
+- one honest broader cross-chain coordinator layer now exists for the shipped slices, but it still pauses at the explicit approval-to-opportunity external handoff boundary instead of crossing that seam automatically
 - explicit-opportunity package-export handoff support exists, but it starts from a known `opportunityId` and does not create or discover one after approval
-- richer scenario verification packaging exists, but not a full review-packet or verification workflow layer yet
-- a local adapter seam exists, but not a complete MCP/runtime bridge
-- CLI preview commands exist for the currently exposed bounded operations
-- broader multi-business-chain orchestration, approval-to-opportunity behavior, richer review packets, and MCP/runtime expansion remain deferred
+- richer scenario verification packaging and bounded review-packet preview and export now exist for the shipped scenario slices, including richer reviewer-facing route and record detail derived from existing facts only
+- machine-readable capability discovery now exists through the static repo-local registry in `src/capabilities.ts`
+- environment mode classification now exists through `resolveBidviaEnvironmentMode(...)`, `resolveBidviaEnvironmentModeFromEnv(...)`, and the read-only `environment-mode` CLI command
+- a local adapter seam plus static MCP-facing descriptor/catalog layer now exist, but not a live MCP server or complete MCP/runtime bridge
+- CLI preview and export commands exist for the currently exposed bounded operations
+- broader multi-business-chain orchestration beyond the shipped coordinator path, approval-to-opportunity creation or discovery behavior, and MCP/runtime expansion remain deferred
 - local contract tests run in `npm test`
 - implementation remains bounded to the frozen V11 core contract and should stay aligned with Bidvia core launch/version docs
 - the repo is not yet the full operating kit vision; it is still a partial V11 execution-layer slice of that broader product
@@ -89,6 +96,8 @@ npm run example
 ## Environment and profile handling
 
 Environment/profile support exists for development convenience and controlled execution. It is not the main product identity of this repo.
+
+The shipped environment-mode layer is classification-only. It helps callers see whether the current base URL resolves to `local`, `sim`, or `production`, but it does not change request behavior or enforce environment-specific policy by itself.
 
 - `global` -> `https://bidvia.ai`
 - `china` -> `https://bidvia.cn`

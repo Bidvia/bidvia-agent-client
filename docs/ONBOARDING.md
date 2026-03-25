@@ -42,13 +42,62 @@ Think about this repo in this order:
 
 1. read the contract boundary and onboarding docs
 2. configure the right context for the environment
-3. choose the right helper family for the current route chain
-4. build a scenario envelope when the work is a multi-step reviewable flow
-5. export a verification bundle when the run should be reviewable later
+3. use the read-only `environment-mode` command when you need visibility into whether the current base URL resolves to `local`, `sim`, or `production`
+4. choose the right helper family for the current route chain
+5. check the static capability registry when you need machine-readable route or access-context expectations
+6. check the static MCP-facing tool catalog when you need export-only tool descriptors for shipped bounded slices
+7. build a scenario envelope when the work is a multi-step reviewable flow
+8. export a verification bundle when the run should be reviewable later
+
+## Environment mode visibility
+
+The repo now ships environment mode classification in `src/config.ts` through `resolveBidviaEnvironmentMode(...)` and `resolveBidviaEnvironmentModeFromEnv(...)`.
+
+It is intentionally visibility-only. Use it to classify the current base URL as one of:
+
+- `local`
+- `sim`
+- `production`
+
+If you want a repo-local view of that classification, use the read-only CLI command:
+
+```bash
+node dist/cli.js environment-mode
+```
+
+This layer does not change request payloads, enforce execution policy, or add environment-specific runtime controls. It only surfaces classification from the current base URL/profile inputs.
+
+## Capability discovery
+
+The repo now ships a static capability registry in `src/capabilities.ts` so callers can discover current helper metadata without reading `src/client.ts` line by line.
+
+It is intentionally descriptive-only. Use it to inspect repo-local facts such as:
+
+- route path templates
+- HTTP methods
+- access-context families
+- required context keys
+- whether a helper is an atomic route or a bounded scenario helper
+
+This registry does not negotiate with a live runtime, fetch server-provided capabilities, or generate requests from metadata. It is a machine-readable map of the shipped client surface only.
+
+## MCP-facing catalog discovery
+
+The repo also ships a static MCP-facing tool catalog in `src/mcp.ts` so callers can export descriptor metadata for the currently shipped bounded slices.
+
+It is intentionally export-only. Use it to inspect repo-local facts such as:
+
+- shipped MCP-facing tool names
+- tool descriptions
+- input schema references
+- output modes for plan preview, review-packet preview, and review-packet export
+- bounded helper and capability references behind each descriptor
+
+This catalog does not make the repo an MCP server. It does not open a transport, perform protocol negotiation, or discover remote registries. It is a static descriptor/catalog layer for future integration work only.
 
 ## Scenario planning and bounded orchestration preview
 
-The repo now includes a generic scenario boundary plus two bounded orchestration slices and one bounded downstream handoff slice.
+The repo now includes a generic scenario boundary plus three bounded orchestration slices, one honest cross-chain coordinator layer, and one bounded downstream handoff slice.
 This is still not a full orchestration layer or adapter/runtime platform.
 It is the first stable SDK-local container for:
 
@@ -63,15 +112,17 @@ The current bounded slices support:
 - limited listing -> activate -> match orchestration through the SDK
 - scenario planning/building for match -> connection-request -> approval work
 - bounded connection-approval orchestration through the SDK
+- scenario planning/building for bounded commercial-action continuation work
+- bounded commercial-action continuation orchestration plus review-oriented readback through the SDK
+- cross-chain coordination across the shipped slices up to an explicit approval-to-opportunity external handoff boundary
 - explicit-opportunity package-export handoff planning from a known `opportunityId`
 - review-safe scenario verification bundle generation
-- bounded CLI preview commands
+- bounded review-packet preview and export commands plus a repo-local review-packet example
 
 Still deferred on purpose:
 
 - approval -> opportunity creation or discovery behavior
-- broader multi-business-chain orchestration
-- richer review-packet workflows
+- broader multi-business-chain orchestration beyond the shipped coordinator path
 - MCP/runtime expansion beyond the current local seam
 
 Runnable repo-local example:
@@ -79,18 +130,41 @@ Runnable repo-local example:
 ```bash
 npx tsx examples/industry-universe-agent.ts
 npx tsx examples/connection-approval-agent.ts
+npx tsx examples/commercial-action-continuation.ts
+npx tsx examples/multi-business-chain-coordinator.ts
 npx tsx examples/opportunity-package-handoff.ts
+npx tsx examples/review-packet-preview.ts
 ```
 
 Built CLI preview after `npm run build`:
 
 ```bash
 node dist/cli.js industry-universe-plan
+node dist/cli.js industry-universe-review-packet-preview
+node dist/cli.js industry-universe-review-packet-export
 node dist/cli.js connection-approval-plan
+node dist/cli.js connection-approval-review-packet-preview
+node dist/cli.js connection-approval-review-packet-export
 node dist/cli.js opportunity-package-handoff-plan
+node dist/cli.js opportunity-package-handoff-review-packet-preview
+node dist/cli.js opportunity-package-handoff-review-packet-export
 ```
 
 The package handoff preview is intentionally downstream-only. It requires an externally known `opportunityId` and does not imply that this repo can create or discover one after approval.
+
+The review-packet commands are intentionally bounded. They only preview or export JSON derived from existing scenario plans and verification bundles. The richer packet structure now includes reviewer-facing route coverage and recorded-id detail, but it still does not execute runtime work, create new platform authority, or widen the current local adapter seam.
+
+The current review-packet preview and export surfaces stay review-oriented only. They expose richer detail for humans and downstream tooling, not signing, policy authority, or server-truth semantics.
+
+The capability registry follows the same honesty boundary. It helps callers discover access-context expectations locally, but it does not imply runtime negotiation, server truth discovery, or MCP/runtime expansion.
+
+The MCP-facing catalog follows the same boundary. It makes the shipped bounded slices legible in an MCP-friendly descriptor format, but it does not imply a live MCP server, hosted tool runtime, transport support, or negotiation loop.
+
+The commercial-action continuation slice follows the same honesty boundary. It is a bounded continuation over already-shipped commercial-action helpers, with review-safe scenario output and readback, not an autonomous governance or runtime-expansion layer.
+
+The environment-mode layer follows the same boundary. It improves visibility into the current environment classification, but it does not introduce environment-aware execution policy, runtime switching logic, or any broader transport/runtime expansion.
+
+The cross-chain coordinator follows the same boundary. It composes the already-shipped slices and makes the approval-to-opportunity seam explicit as an external handoff boundary; it does not imply automatic seam crossing, server-side discovery, autonomous governance, or a broader runtime layer.
 
 ## Internal team agent path
 
