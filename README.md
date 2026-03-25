@@ -43,13 +43,14 @@ Today this repo already helps an agent or agent developer with:
 - registration-bound heartbeat, sync, evidence, and proposal operations
 - commercial-action helper flows plus one bounded commercial-action continuation slice proven in production
 - listing/match/connection/approval/package helper slices proven in production
-- generic scenario-envelope builders plus bounded industry-universe, connection-approval, commercial-action continuation, and one honest cross-chain coordinator layer across shipped slices
+- generic scenario-envelope builders plus bounded registration-lifecycle, registered-agent-operations, industry-universe, connection-approval, commercial-action continuation, and one honest cross-chain coordinator layer across shipped slices
 - explicit-opportunity package-export handoff planning for downstream review-safe export
 - richer scenario verification bundles plus derived review-packet preview and export support with richer reviewer-facing packet detail
 - machine-readable static capability metadata for shipped helpers and scenario route keys
-- static MCP-facing tool descriptors and catalog exports for the shipped bounded slices
+- local runtime-capability snapshot output for repo-known route, MCP, and local server facts
+- static MCP-facing tool descriptors and catalog exports for the shipped bounded slices, plus a bounded local stdio MCP server entrypoint
 - environment mode classification for `local`, `sim`, and `production` plus a read-only CLI visibility command
-- one bounded adapter seam and bounded CLI preview commands for scenario plans plus review-packet preview and export across `industry-universe`, `connection-approval`, and `opportunity-package-handoff`
+- one bounded adapter seam and bounded CLI preview commands for scenario plans, review-packet preview/export, and operator-facing verification wave previews across shipped slices
 - typed verification-bundle export for controlled verification runs
 
 ## Product layers
@@ -68,16 +69,19 @@ Today this repo already helps an agent or agent developer with:
 - the first usable V11 execution layer is present
 - helper coverage already includes production-proven route families beyond the initial atomic agent routes
 - a generic scenario boundary now exists for planning multi-step reviewable flows
+- a bounded registration-lifecycle scenario family now exists for onboarding plus registration-bound helper review flows only
+- a bounded registered-agent-operations scenario family now exists for post-onboarding registration-bound helper review flows only
 - scenario orchestration now exists for bounded `listing -> activate -> match-candidates`, `match -> connection-request -> approval`, and `commercial-action` continuation slices only, it is not yet a general workflow layer
 - a bounded commercial-action continuation plan, write runner, review readback helper, and repo-local example now exist without introducing autonomous governance or a new runtime layer
 - one honest broader cross-chain coordinator layer now exists for the shipped slices, but it still pauses at the explicit approval-to-opportunity external handoff boundary instead of crossing that seam automatically
 - explicit-opportunity package-export handoff support exists, but it starts from a known `opportunityId` and does not create or discover one after approval
 - richer scenario verification packaging and bounded review-packet preview and export now exist for the shipped scenario slices, including richer reviewer-facing route and record detail derived from existing facts only
 - machine-readable capability discovery now exists through the static repo-local registry in `src/capabilities.ts`
+- local runtime-capability snapshot output now exists through `buildLocalRuntimeCapabilitySnapshot(...)`, the read-only `runtime-capabilities` CLI command, and `examples/runtime-capabilities.ts`
 - environment mode classification now exists through `resolveBidviaEnvironmentMode(...)`, `resolveBidviaEnvironmentModeFromEnv(...)`, and the read-only `environment-mode` CLI command
-- a local adapter seam plus static MCP-facing descriptor/catalog layer now exist, but not a live MCP server or complete MCP/runtime bridge
-- CLI preview and export commands exist for the currently exposed bounded operations
-- broader multi-business-chain orchestration beyond the shipped coordinator path, approval-to-opportunity creation or discovery behavior, and MCP/runtime expansion remain deferred
+- a local adapter seam plus static MCP-facing descriptor/catalog layer now exist, and `src/mcp-server.ts` can serve the shipped tools through a bounded local stdio loop, but not as a hosted MCP server or complete MCP/runtime bridge
+- CLI preview and export commands exist for the currently exposed bounded operations, including bounded `multi-business-chain-verification-wave-preview` and `commercial-action-verification-wave-preview` flows
+- broader multi-business-chain orchestration beyond the shipped coordinator path, approval-to-opportunity creation or discovery behavior, server-provided runtime negotiation, hosted MCP/runtime expansion, and remote registry behavior remain deferred
 - local contract tests run in `npm test`
 - implementation remains bounded to the frozen V11 core contract and should stay aligned with Bidvia core launch/version docs
 - the repo is not yet the full operating kit vision; it is still a partial V11 execution-layer slice of that broader product
@@ -97,10 +101,21 @@ npm run example
 
 Environment/profile support exists for development convenience and controlled execution. It is not the main product identity of this repo.
 
+For production launch guidance, the canonical HTTPS API domains are:
+
+- global canonical API -> `https://api.bidvia.ai`
+- china canonical API -> `https://api.bidvia.cn`
+
+Production integrations should prefer an explicit `BIDVIA_BASE_URL` pointing at those canonical `api.*` domains.
+
+For a read-only local launch verification check, use `launch-topology-smoke`. It prints JSON with the resolved base URL, resolved environment mode, canonical `api.*` production domains, and the current compatibility profile mappings.
+
 The shipped environment-mode layer is classification-only. It helps callers see whether the current base URL resolves to `local`, `sim`, or `production`, but it does not change request behavior or enforce environment-specific policy by itself.
 
-- `global` -> `https://bidvia.ai`
-- `china` -> `https://bidvia.cn`
+- `global` profile compatibility mapping -> `https://bidvia.ai`
+- `china` profile compatibility mapping -> `https://bidvia.cn`
+
+That profile behavior remains in place during the compatibility window. It is still supported, but it is no longer the canonical production recommendation.
 
 Priority rule:
 
@@ -111,8 +126,9 @@ Priority rule:
 
 For open-source users, the primary recommendation is still:
 
-- use explicit production `baseUrl` when you know the real deployment entrypoint
+- use explicit production `baseUrl` when you know the real deployment entrypoint, and prefer `https://api.bidvia.ai` or `https://api.bidvia.cn`
 - treat profile switching as a convenience layer, not as the full product model
+- use `launch-topology-smoke` when you want one local read-only check that the launch topology guidance and compatibility mapping are being interpreted as expected
 
 ## Repository principles
 

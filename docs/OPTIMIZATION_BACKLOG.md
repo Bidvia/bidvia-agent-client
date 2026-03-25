@@ -84,6 +84,12 @@ Current progress:
 
 - generic scenario envelope core added
 - generic scenario builders added
+- registration-lifecycle scenario plan builder added
+- bounded registration-lifecycle runner added
+- repo-local `examples/registration-lifecycle-scenario.ts` added for lifecycle discoverability
+- registered-agent-operations scenario plan builder added
+- bounded registered-agent-operations runner added
+- repo-local `examples/registered-agent-operations-scenario.ts` added for post-onboarding operations discoverability
 - industry-universe scenario plan builder added
 - connection-approval scenario plan builder added
 - opportunity-package handoff plan builder added
@@ -137,6 +143,8 @@ Current progress:
 - bounded `industry-universe-plan` CLI command added for review-safe planning output
 - bounded `connection-approval-plan` CLI command added for review-safe planning output
 - bounded `opportunity-package-handoff-plan` CLI command added for review-safe planning output
+- bounded `multi-business-chain-verification-wave-preview` CLI command added for operator-facing cross-chain preview output
+- bounded `commercial-action-verification-wave-preview` CLI command added for operator-facing commercial-action preview output
 
 ## Priority C — Structural upgrades
 
@@ -161,7 +169,23 @@ Still deferred on purpose:
 - server-provided capability discovery
 - request generation from metadata
 
-### C2. Add replay-safe orchestration helpers
+### C2. Add local runtime-capability snapshot output
+
+The client now ships one repo-local runtime-capability snapshot so callers can inspect current route, MCP, and local server facts in a single JSON view.
+
+Current progress:
+
+- `buildLocalRuntimeCapabilitySnapshot(...)` added in `src/runtime-capabilities.ts`
+- read-only `runtime-capabilities` CLI command added for repo-local inspection
+- repo-local `examples/runtime-capabilities.ts` added for discoverability
+
+Still deferred on purpose:
+
+- server-provided capability negotiation
+- remote capability fetch or registry sync
+- any broader runtime truth beyond local shipped knowledge
+
+### C3. Add replay-safe orchestration helpers
 
 The client should support replay-safe orchestration for a chain like:
 
@@ -177,7 +201,7 @@ Current progress:
 - cross-chain coordinator plan plus pre-handoff/post-handoff runners added with an explicit approval-to-opportunity external handoff boundary
 - repo-local `examples/multi-business-chain-coordinator.ts` added for coordinator discoverability
 
-### C3. Add production-vs-sandbox mode distinctions
+### C4. Add production-vs-sandbox mode distinctions
 
 The client should make it obvious when an operation is being executed against:
 
@@ -199,7 +223,7 @@ Still deferred on purpose:
 - behavior changes driven by environment mode
 - broader runtime or transport control logic
 
-### C4. Add MCP-facing descriptor/catalog layer
+### C5. Add MCP-facing descriptor/catalog layer
 
 The client now ships a static MCP-facing descriptor/catalog layer so callers can export bounded tool metadata for the currently shipped scenario slices.
 
@@ -207,14 +231,15 @@ Current progress:
 
 - static MCP-facing tool catalog added in `src/mcp.ts`
 - repo-local lookup and export helpers added for bounded MCP-friendly tool descriptors
-- shipped coverage is limited to plan-preview, review-packet-preview, and review-packet-export descriptors for existing bounded slices
+- bounded local stdio MCP server entrypoint added in `src/mcp-server.ts`
+- shipped server coverage is limited to `initialize`, `tools/list`, and `tools/call` for the existing bounded tools
+- shipped tool coverage is limited to plan-preview, review-packet-preview, and review-packet-export descriptors for existing bounded slices
 
 Still deferred on purpose:
 
-- live MCP server implementation
-- stdio or other transport support
-- protocol negotiation runtime
-- remote registry or server discovery
+- hosted MCP server implementation
+- remote registry or hosted discovery behavior
+- broader protocol negotiation/runtime complexity
 
 ## Current recommendation
 

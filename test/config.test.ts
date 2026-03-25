@@ -28,6 +28,8 @@ test('resolveBidviaEnvironmentMode classifies fallback, public profiles, and exp
   assert.equal(resolveBidviaEnvironmentMode({ explicitBaseUrl: 'http://127.0.0.1:8787' }), 'local');
   assert.equal(resolveBidviaEnvironmentMode({ explicitBaseUrl: 'https://bidvia.ai' }), 'production');
   assert.equal(resolveBidviaEnvironmentMode({ explicitBaseUrl: 'https://bidvia.cn' }), 'production');
+  assert.equal(resolveBidviaEnvironmentMode({ explicitBaseUrl: 'https://api.bidvia.ai' }), 'production');
+  assert.equal(resolveBidviaEnvironmentMode({ explicitBaseUrl: 'https://api.bidvia.cn' }), 'production');
   assert.equal(resolveBidviaEnvironmentMode({ explicitBaseUrl: 'https://runtime.internal.bidvia.test' }), 'sim');
 });
 

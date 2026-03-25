@@ -11,6 +11,14 @@ import {
   runCommercialActionScenario,
 } from '../src/commercial-action.js';
 import {
+  buildRegistrationLifecycleScenarioPlan,
+  runRegistrationLifecycleScenario,
+} from '../src/registration-lifecycle.js';
+import {
+  buildRegisteredAgentOperationsScenarioPlan,
+  runRegisteredAgentOperationsScenario,
+} from '../src/registered-agent-operations.js';
+import {
   buildConnectionApprovalScenarioPlan,
   runConnectionApprovalScenario,
 } from '../src/connection.js';
@@ -54,6 +62,25 @@ async function main() {
       sessionId: 'sess-validate-1',
       adminSessionId: 'admin-sess-validate-1',
       companyId: 'company-a',
+    },
+    fetchImpl,
+  });
+  const lifecycleClient = new BidviaClient({
+    baseUrl: 'http://127.0.0.1:8787',
+    context: {
+      tenantId: 'tenant-a',
+      principalId: 'actor-1',
+      registrationId: 'areg-lifecycle-validate-1',
+      sessionId: 'sess-validate-1',
+    },
+    fetchImpl,
+  });
+  const registeredOperationsClient = new BidviaClient({
+    baseUrl: 'http://127.0.0.1:8787',
+    context: {
+      tenantId: 'tenant-a',
+      principalId: 'actor-1',
+      registrationId: 'areg-registered-ops-validate-1',
     },
     fetchImpl,
   });
@@ -325,6 +352,80 @@ async function main() {
     coordinatorPlan,
     coordinatorPreHandoff.externalHandoffBoundary,
   );
+  const registrationLifecyclePlan = buildRegistrationLifecycleScenarioPlan({
+    scenarioId: 'scenario-registration-lifecycle-validate-1',
+    scenarioLabel: 'registration-lifecycle-agent-1',
+    sourceRefs: ['source://registration/bootstrap'],
+    evidenceRefs: ['evidence://registration/receipt-1'],
+    traceIds: ['trace-registration-1'],
+    workflowIds: ['wf-registration-1'],
+    createProvisionalAgent: {
+      provisionalAgentRef: 'prov-lifecycle-validate-1',
+      now: '2026-03-25T19:12:00Z',
+    },
+    queryProvisionalAgent: {
+      provisionalAgentRef: 'prov-lifecycle-validate-1',
+    },
+    claimProvisionalAgent: {
+      provisionalAgentRef: 'prov-lifecycle-validate-1',
+      claimToken: 'claim-lifecycle-validate-1',
+      now: '2026-03-25T19:13:00Z',
+    },
+    postHeartbeat: {
+      now: '2026-03-25T19:14:00Z',
+      expiresAt: '2026-03-25T19:19:00Z',
+    },
+    uploadSync: {
+      cursorRef: 'cursor-lifecycle-validate-1',
+      objectCount: 4,
+      now: '2026-03-25T19:15:00Z',
+    },
+    submitEvidence: {
+      evidenceRef: 'evidence://registration/receipt-1',
+      evidenceKind: 'provider_receipt',
+      summary: 'registration evidence payload',
+      now: '2026-03-25T19:16:00Z',
+    },
+    submitProposal: {
+      proposalType: 'template_change',
+      proposalRef: 'proposal://registration/1',
+      summary: 'registration proposal payload',
+      now: '2026-03-25T19:17:00Z',
+    },
+    registrationId: 'areg-lifecycle-validate-1',
+  });
+  await runRegistrationLifecycleScenario(lifecycleClient, registrationLifecyclePlan);
+  const registeredAgentOperationsPlan = buildRegisteredAgentOperationsScenarioPlan({
+    scenarioId: 'scenario-registered-agent-operations-validate-1',
+    scenarioLabel: 'registered-agent-operations-agent-1',
+    sourceRefs: ['source://registered-agent/runtime'],
+    evidenceRefs: ['evidence://registered-agent/receipt-1'],
+    traceIds: ['trace-registered-agent-1'],
+    workflowIds: ['wf-registered-agent-1'],
+    postHeartbeat: {
+      now: '2026-03-25T19:18:00Z',
+      expiresAt: '2026-03-25T19:23:00Z',
+    },
+    uploadSync: {
+      cursorRef: 'cursor-registered-ops-validate-1',
+      objectCount: 5,
+      now: '2026-03-25T19:19:00Z',
+    },
+    submitEvidence: {
+      evidenceRef: 'evidence://registered-agent/receipt-1',
+      evidenceKind: 'provider_receipt',
+      summary: 'registered operations evidence payload',
+      now: '2026-03-25T19:20:00Z',
+    },
+    submitProposal: {
+      proposalType: 'template_change',
+      proposalRef: 'proposal://registered-agent/1',
+      summary: 'registered operations proposal payload',
+      now: '2026-03-25T19:21:00Z',
+    },
+    registrationId: 'areg-registered-ops-validate-1',
+  });
+  await runRegisteredAgentOperationsScenario(registeredOperationsClient, registeredAgentOperationsPlan);
 
   const urls = calls.map((call) => String(call.input));
   assert.deepEqual(urls, [
@@ -359,6 +460,19 @@ async function main() {
     'http://127.0.0.1:8787/runtime/commercial-actions/commercial-action-validate-1/policy-check?tenant_id=tenant-a',
     'http://127.0.0.1:8787/runtime/commercial-actions/commercial-action-validate-1/request-approval?tenant_id=tenant-a',
     'http://127.0.0.1:8787/runtime/commercial-actions/commercial-action-validate-1/execute?tenant_id=tenant-a',
+    'http://127.0.0.1:8787/runtime/agents/provisional',
+    'http://127.0.0.1:8787/runtime/agents/provisional?provisional_agent_ref=prov-lifecycle-validate-1',
+    'http://127.0.0.1:8787/runtime/agents/provisional/claim',
+    'http://127.0.0.1:8787/runtime/agents/areg-lifecycle-validate-1/heartbeat?tenant_id=tenant-a',
+    'http://127.0.0.1:8787/runtime/agents/areg-lifecycle-validate-1/sync/upload?tenant_id=tenant-a',
+    'http://127.0.0.1:8787/runtime/agents/areg-lifecycle-validate-1/sync/download?tenant_id=tenant-a',
+    'http://127.0.0.1:8787/runtime/agents/areg-lifecycle-validate-1/evidence-submissions?tenant_id=tenant-a',
+    'http://127.0.0.1:8787/runtime/agents/areg-lifecycle-validate-1/proposals?tenant_id=tenant-a',
+    'http://127.0.0.1:8787/runtime/agents/areg-registered-ops-validate-1/heartbeat?tenant_id=tenant-a',
+    'http://127.0.0.1:8787/runtime/agents/areg-registered-ops-validate-1/sync/upload?tenant_id=tenant-a',
+    'http://127.0.0.1:8787/runtime/agents/areg-registered-ops-validate-1/sync/download?tenant_id=tenant-a',
+    'http://127.0.0.1:8787/runtime/agents/areg-registered-ops-validate-1/evidence-submissions?tenant_id=tenant-a',
+    'http://127.0.0.1:8787/runtime/agents/areg-registered-ops-validate-1/proposals?tenant_id=tenant-a',
   ]);
 
   const claimHeaders = calls[2]?.init?.headers as Record<string, string>;
@@ -369,6 +483,9 @@ async function main() {
   const createConnectionRequestHeaders = calls[18]?.init?.headers as Record<string, string>;
   const approveConnectionRequestHeaders = calls[19]?.init?.headers as Record<string, string>;
   const exportOpportunityPackageHeaders = calls[20]?.init?.headers as Record<string, string>;
+  const lifecycleClaimHeaders = calls[33]?.init?.headers as Record<string, string>;
+  const lifecycleHeartbeatHeaders = calls[34]?.init?.headers as Record<string, string>;
+  const registeredOperationsHeartbeatHeaders = calls[39]?.init?.headers as Record<string, string>;
 
   assert.equal(claimHeaders['x-bidvia-session-id'], 'sess-validate-1');
   assert.equal(heartbeatHeaders['x-authorized-tenant-id'], 'tenant-a');
@@ -381,6 +498,11 @@ async function main() {
   assert.equal(createConnectionRequestHeaders['x-authorized-tenant-id'], 'tenant-a');
   assert.equal(approveConnectionRequestHeaders['x-bidvia-principal-id'], 'actor-1');
   assert.equal(exportOpportunityPackageHeaders['x-authorized-company-id'], 'company-a');
+  assert.equal(lifecycleClaimHeaders['x-bidvia-session-id'], 'sess-validate-1');
+  assert.equal(lifecycleHeartbeatHeaders['x-authorized-tenant-id'], 'tenant-a');
+  assert.equal(lifecycleHeartbeatHeaders['x-bidvia-principal-id'], 'actor-1');
+  assert.equal(registeredOperationsHeartbeatHeaders['x-authorized-tenant-id'], 'tenant-a');
+  assert.equal(registeredOperationsHeartbeatHeaders['x-bidvia-principal-id'], 'actor-1');
 
   const claimBody = JSON.parse(String(calls[2]?.init?.body));
   const heartbeatBody = JSON.parse(String(calls[3]?.init?.body));
@@ -462,9 +584,65 @@ async function main() {
   const coordinatorCreateConnectionRequestBody = JSON.parse(String(calls[24]?.init?.body));
   const coordinatorExportOpportunityPackageBody = JSON.parse(String(calls[26]?.init?.body));
   const coordinatorCreateCommercialActionBody = JSON.parse(String(calls[27]?.init?.body));
+  const lifecycleClaimBody = JSON.parse(String(calls[33]?.init?.body));
+  const lifecycleHeartbeatBody = JSON.parse(String(calls[34]?.init?.body));
+  const lifecycleUploadSyncBody = JSON.parse(String(calls[35]?.init?.body));
+  const lifecycleEvidenceBody = JSON.parse(String(calls[37]?.init?.body));
+  const lifecycleProposalBody = JSON.parse(String(calls[38]?.init?.body));
+  const registeredOperationsHeartbeatBody = JSON.parse(String(calls[39]?.init?.body));
+  const registeredOperationsUploadSyncBody = JSON.parse(String(calls[40]?.init?.body));
+  const registeredOperationsEvidenceBody = JSON.parse(String(calls[42]?.init?.body));
+  const registeredOperationsProposalBody = JSON.parse(String(calls[43]?.init?.body));
   assert.equal(coordinatorCreateConnectionRequestBody.source_match_id, 'match-validate-1');
   assert.equal(coordinatorExportOpportunityPackageBody.render_template_id, 'template-validate-1');
   assert.equal(coordinatorCreateCommercialActionBody.subject_id, 'pkg-validate-1');
+  assert.deepEqual(lifecycleClaimBody, {
+    provisional_agent_ref: 'prov-lifecycle-validate-1',
+    claim_token: 'claim-lifecycle-validate-1',
+    now: '2026-03-25T19:13:00Z',
+  });
+  assert.deepEqual(lifecycleHeartbeatBody, {
+    now: '2026-03-25T19:14:00Z',
+    expires_at: '2026-03-25T19:19:00Z',
+  });
+  assert.deepEqual(lifecycleUploadSyncBody, {
+    cursor_ref: 'cursor-lifecycle-validate-1',
+    object_count: 4,
+    now: '2026-03-25T19:15:00Z',
+  });
+  assert.deepEqual(lifecycleEvidenceBody, {
+    evidence_ref: 'evidence://registration/receipt-1',
+    evidence_kind: 'provider_receipt',
+    summary: 'registration evidence payload',
+    now: '2026-03-25T19:16:00Z',
+  });
+  assert.deepEqual(lifecycleProposalBody, {
+    proposal_type: 'template_change',
+    proposal_ref: 'proposal://registration/1',
+    summary: 'registration proposal payload',
+    now: '2026-03-25T19:17:00Z',
+  });
+  assert.deepEqual(registeredOperationsHeartbeatBody, {
+    now: '2026-03-25T19:18:00Z',
+    expires_at: '2026-03-25T19:23:00Z',
+  });
+  assert.deepEqual(registeredOperationsUploadSyncBody, {
+    cursor_ref: 'cursor-registered-ops-validate-1',
+    object_count: 5,
+    now: '2026-03-25T19:19:00Z',
+  });
+  assert.deepEqual(registeredOperationsEvidenceBody, {
+    evidence_ref: 'evidence://registered-agent/receipt-1',
+    evidence_kind: 'provider_receipt',
+    summary: 'registered operations evidence payload',
+    now: '2026-03-25T19:20:00Z',
+  });
+  assert.deepEqual(registeredOperationsProposalBody, {
+    proposal_type: 'template_change',
+    proposal_ref: 'proposal://registered-agent/1',
+    summary: 'registered operations proposal payload',
+    now: '2026-03-25T19:21:00Z',
+  });
 
   assert.equal(reviewPacket.verificationMode, 'review-safe');
   assert.equal(reviewPacket.status, 'complete');

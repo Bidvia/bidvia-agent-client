@@ -1,4 +1,22 @@
-import type { BidviaMcpToolDescriptor } from './contracts.js';
+import type { BidviaClient } from './client.js';
+import type {
+  BidviaConnectionApprovalScenarioPlanInput,
+  BidviaMcpToolCallRequest,
+  BidviaMcpToolCallResponse,
+  BidviaMcpToolDescriptor,
+} from './contracts.js';
+import {
+  connectionApprovalScenarioAdapter,
+  industryUniverseScenarioAdapter,
+  opportunityPackageHandoffAdapter,
+} from './adapters.js';
+import type {
+  BidviaConnectionApprovalAdapterResult,
+  BidviaIndustryUniverseAdapterResult,
+  BidviaOpportunityPackageHandoffAdapterResult,
+} from './adapters.js';
+import type { BidviaOpportunityPackageHandoffPlanInput } from './handoffs.js';
+import type { BidviaIndustryUniverseScenarioPlanInput } from './universe.js';
 
 function cloneMcpToolCatalog(catalog: ReadonlyArray<BidviaMcpToolDescriptor>): BidviaMcpToolDescriptor[] {
   return structuredClone([...catalog]);
@@ -121,4 +139,157 @@ export function getMcpToolDescriptor(toolName: string): BidviaMcpToolDescriptor 
 
 export function exportMcpToolCatalog(): BidviaMcpToolDescriptor[] {
   return cloneMcpToolCatalog(bidviaMcpTools);
+}
+
+type BidviaMcpDispatchResult = {
+  scenarioPlan?: unknown;
+  reviewPacket?: unknown;
+  exportedReviewPacket?: unknown;
+};
+
+function createLocalDispatchClient(): BidviaClient {
+  return {} as BidviaClient;
+}
+
+function dispatchIndustryUniverseTool(
+  descriptor: BidviaMcpToolDescriptor,
+  input: unknown,
+): BidviaMcpToolCallResponse<BidviaMcpDispatchResult> {
+  const result = industryUniverseScenarioAdapter.run(
+    createLocalDispatchClient(),
+    input as BidviaIndustryUniverseScenarioPlanInput,
+  ) as BidviaIndustryUniverseAdapterResult;
+
+  if (descriptor.outputMode === 'plan-preview') {
+    return {
+      toolName: descriptor.toolName,
+      outputMode: descriptor.outputMode,
+      result: {
+        scenarioPlan: result.scenarioPlan,
+      },
+    };
+  }
+
+  if (descriptor.outputMode === 'review-packet-preview') {
+    return {
+      toolName: descriptor.toolName,
+      outputMode: descriptor.outputMode,
+      result: {
+        scenarioPlan: result.scenarioPlan,
+        reviewPacket: result.reviewPacket,
+      },
+    };
+  }
+
+  return {
+    toolName: descriptor.toolName,
+    outputMode: descriptor.outputMode,
+    result: {
+      scenarioPlan: result.scenarioPlan,
+      exportedReviewPacket: result.exportedReviewPacket,
+    },
+  };
+}
+
+function dispatchConnectionApprovalTool(
+  descriptor: BidviaMcpToolDescriptor,
+  input: unknown,
+): BidviaMcpToolCallResponse<BidviaMcpDispatchResult> {
+  const result = connectionApprovalScenarioAdapter.run(
+    createLocalDispatchClient(),
+    input as BidviaConnectionApprovalScenarioPlanInput,
+  ) as BidviaConnectionApprovalAdapterResult;
+
+  if (descriptor.outputMode === 'plan-preview') {
+    return {
+      toolName: descriptor.toolName,
+      outputMode: descriptor.outputMode,
+      result: {
+        scenarioPlan: result.scenarioPlan,
+      },
+    };
+  }
+
+  if (descriptor.outputMode === 'review-packet-preview') {
+    return {
+      toolName: descriptor.toolName,
+      outputMode: descriptor.outputMode,
+      result: {
+        scenarioPlan: result.scenarioPlan,
+        reviewPacket: result.reviewPacket,
+      },
+    };
+  }
+
+  return {
+    toolName: descriptor.toolName,
+    outputMode: descriptor.outputMode,
+    result: {
+      scenarioPlan: result.scenarioPlan,
+      exportedReviewPacket: result.exportedReviewPacket,
+    },
+  };
+}
+
+function dispatchOpportunityPackageHandoffTool(
+  descriptor: BidviaMcpToolDescriptor,
+  input: unknown,
+): BidviaMcpToolCallResponse<BidviaMcpDispatchResult> {
+  const result = opportunityPackageHandoffAdapter.run(
+    createLocalDispatchClient(),
+    input as BidviaOpportunityPackageHandoffPlanInput,
+  ) as BidviaOpportunityPackageHandoffAdapterResult;
+
+  if (descriptor.outputMode === 'plan-preview') {
+    return {
+      toolName: descriptor.toolName,
+      outputMode: descriptor.outputMode,
+      result: {
+        scenarioPlan: result.scenarioPlan,
+      },
+    };
+  }
+
+  if (descriptor.outputMode === 'review-packet-preview') {
+    return {
+      toolName: descriptor.toolName,
+      outputMode: descriptor.outputMode,
+      result: {
+        scenarioPlan: result.scenarioPlan,
+        reviewPacket: result.reviewPacket,
+      },
+    };
+  }
+
+  return {
+    toolName: descriptor.toolName,
+    outputMode: descriptor.outputMode,
+    result: {
+      scenarioPlan: result.scenarioPlan,
+      exportedReviewPacket: result.exportedReviewPacket,
+    },
+  };
+}
+
+export function dispatchMcpToolCall(
+  request: BidviaMcpToolCallRequest,
+): BidviaMcpToolCallResponse<BidviaMcpDispatchResult> {
+  const descriptor = getMcpToolDescriptor(request.toolName);
+  if (!descriptor) {
+    throw new Error(`unknown MCP tool: ${request.toolName}`);
+  }
+
+  if (descriptor.helperRef.helperKey === 'buildIndustryUniverseScenarioPlan') {
+    return dispatchIndustryUniverseTool(descriptor, request.arguments);
+  }
+
+  if (descriptor.helperRef.helperKey === 'buildConnectionApprovalScenarioPlan') {
+    return dispatchConnectionApprovalTool(descriptor, request.arguments);
+  }
+
+  if (descriptor.helperRef.helperKey === 'buildOpportunityPackageHandoffPlan') {
+    return dispatchOpportunityPackageHandoffTool(descriptor, request.arguments);
+  }
+
+  throw new Error(`unsupported MCP helper dispatch: ${descriptor.helperRef.helperKey}`);
 }

@@ -10,6 +10,8 @@ const LOCAL_BASE_URLS = new Set([
 const PRODUCTION_BASE_URLS = new Set([
   'https://bidvia.ai',
   'https://bidvia.cn',
+  'https://api.bidvia.ai',
+  'https://api.bidvia.cn',
 ]);
 
 export interface ResolveBidviaBaseUrlOptions {

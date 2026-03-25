@@ -2,6 +2,7 @@ import type {
   BidviaOpportunityPackageHandoffPlan,
   BidviaOpportunityPackageHandoffPlanInput,
 } from './handoffs.js';
+import type { BidviaEnvironmentMode } from './config.js';
 import type {
   BidviaIndustryUniverseScenarioPlan,
   BidviaIndustryUniverseScenarioPlanInput,
@@ -50,6 +51,62 @@ export interface BidviaProposalSubmissionInput {
   proposalRef: string;
   summary: string;
   now: string;
+}
+
+export interface BidviaQueryProvisionalAgentInput {
+  provisionalAgentRef: string;
+}
+
+export interface BidviaRegistrationLifecycleScenarioPlanInput {
+  scenarioId: string;
+  scenarioLabel: string;
+  sourceRefs: string[];
+  evidenceRefs: string[];
+  traceIds: string[];
+  workflowIds: string[];
+  createProvisionalAgent: BidviaProvisionalAgentCreateInput;
+  queryProvisionalAgent: BidviaQueryProvisionalAgentInput;
+  claimProvisionalAgent: BidviaProvisionalAgentClaimInput;
+  postHeartbeat: BidviaHeartbeatInput;
+  uploadSync: BidviaSyncUploadInput;
+  submitEvidence: BidviaEvidenceSubmissionInput;
+  submitProposal: BidviaProposalSubmissionInput;
+  registrationId: string;
+}
+
+export interface BidviaRegistrationLifecycleScenarioPlan {
+  envelope: BidviaScenarioEnvelope;
+  createProvisionalAgentInput: BidviaProvisionalAgentCreateInput;
+  queryProvisionalAgentRef: string;
+  claimProvisionalAgentInput: BidviaProvisionalAgentClaimInput;
+  postHeartbeatInput: BidviaHeartbeatInput;
+  uploadSyncInput: BidviaSyncUploadInput;
+  submitEvidenceInput: BidviaEvidenceSubmissionInput;
+  submitProposalInput: BidviaProposalSubmissionInput;
+  registrationId: string;
+}
+
+export interface BidviaRegisteredAgentOperationsScenarioPlanInput {
+  scenarioId: string;
+  scenarioLabel: string;
+  sourceRefs: string[];
+  evidenceRefs: string[];
+  traceIds: string[];
+  workflowIds: string[];
+  postHeartbeat: BidviaHeartbeatInput;
+  uploadSync: BidviaSyncUploadInput;
+  submitEvidence: BidviaEvidenceSubmissionInput;
+  submitProposal: BidviaProposalSubmissionInput;
+  registrationId: string;
+}
+
+export interface BidviaRegisteredAgentOperationsScenarioPlan {
+  envelope: BidviaScenarioEnvelope;
+  postHeartbeatInput: BidviaHeartbeatInput;
+  uploadSyncInput: BidviaSyncUploadInput;
+  submitEvidenceInput: BidviaEvidenceSubmissionInput;
+  submitProposalInput: BidviaProposalSubmissionInput;
+  registrationId: string;
 }
 
 export interface BidviaCommercialActionCreateInput {
@@ -232,6 +289,7 @@ export interface BidviaRouteCapability {
 }
 
 export interface BidviaScenarioEnvelopeRecordIds {
+  registrations?: string[];
   listings?: string[];
   matches?: string[];
   connections?: string[];
@@ -352,6 +410,17 @@ export interface BidviaMcpToolDescriptor {
   helperRef: BidviaMcpToolHelperRef;
 }
 
+export interface BidviaMcpToolCallRequest {
+  toolName: string;
+  arguments: unknown;
+}
+
+export interface BidviaMcpToolCallResponse<Result = unknown> {
+  toolName: string;
+  outputMode: BidviaMcpToolOutputMode;
+  result: Result;
+}
+
 export const bidviaCoordinatorExternalHandoffStatuses = ['requires-caller-known-ids'] as const;
 
 export type BidviaCoordinatorExternalHandoffStatus =
@@ -384,4 +453,45 @@ export interface BidviaMultiBusinessChainCoordinatorPlan {
   externalHandoffBoundary: BidviaApprovalOpportunityExternalHandoffBoundary;
   opportunityPackageHandoff: BidviaOpportunityPackageHandoffPlan;
   commercialActionContinuation?: BidviaCommercialActionScenarioPlan;
+}
+
+export const bidviaRuntimeCapabilityKnowledgeSources = [
+  'local-static',
+  'deferred-server-negotiation',
+] as const;
+
+export type BidviaRuntimeCapabilityKnowledgeSource =
+  (typeof bidviaRuntimeCapabilityKnowledgeSources)[number];
+
+export interface BidviaLocalRouteCapabilityKnowledge {
+  source: 'local-static';
+  items: BidviaRouteCapability[];
+}
+
+export interface BidviaLocalMcpToolKnowledge {
+  source: 'local-static';
+  items: BidviaMcpToolDescriptor[];
+}
+
+export interface BidviaLocalMcpServerAvailability {
+  source: 'local-static';
+  available: true;
+  transport: 'stdio';
+  entrypoint: 'src/mcp-server.ts';
+  supportedMethods: ['initialize', 'tools/list', 'tools/call'];
+}
+
+export interface BidviaDeferredServerCapabilityNegotiation {
+  source: 'deferred-server-negotiation';
+  status: 'deferred';
+  serverProvidedCapabilitiesKnown: false;
+}
+
+export interface BidviaLocalRuntimeCapabilitySnapshot {
+  baseUrl: string;
+  environmentMode: BidviaEnvironmentMode;
+  routeCapabilities: BidviaLocalRouteCapabilityKnowledge;
+  mcpTools: BidviaLocalMcpToolKnowledge;
+  localMcpServer: BidviaLocalMcpServerAvailability;
+  deferredServerNegotiation: BidviaDeferredServerCapabilityNegotiation;
 }

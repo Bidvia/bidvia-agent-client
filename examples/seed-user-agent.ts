@@ -1,5 +1,4 @@
 import { BidviaClient } from '../src/client.js';
-import { resolveBidviaBaseUrl } from '../src/config.js';
 import { buildEvidenceSubmissionInput } from '../src/evidence.js';
 import { buildProposalSubmissionInput } from '../src/proposals.js';
 
@@ -20,7 +19,7 @@ function createFetchStub(label: string): typeof fetch {
 
 async function main() {
   const client = new BidviaClient({
-    baseUrl: resolveBidviaBaseUrl({ profile: 'china' }),
+    baseUrl: 'https://api.bidvia.cn',
     context: {
       tenantId: 'tenant-a',
       principalId: 'actor-seed-1',

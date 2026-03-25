@@ -1,5 +1,4 @@
 import { BidviaClient } from '../src/client.js';
-import { resolveBidviaBaseUrl } from '../src/config.js';
 import { buildHeartbeatInput } from '../src/heartbeat.js';
 import { buildSyncUploadInput } from '../src/sync.js';
 
@@ -20,7 +19,7 @@ function createFetchStub(label: string): typeof fetch {
 
 async function main() {
   const client = new BidviaClient({
-    baseUrl: resolveBidviaBaseUrl({ profile: 'global' }),
+    baseUrl: 'https://api.bidvia.ai',
     context: {
       tenantId: 'tenant-a',
       principalId: 'actor-internal-1',

@@ -20,13 +20,14 @@ The repo now includes a first usable V11 execution-layer wave inside that broade
 1. frozen core-aligned onboarding / query / claim request formation
 2. frozen registration-bound heartbeat / sync / evidence / proposal request formation
 3. production-proven business-chain helper slices for listing/match, connection/approval, package export, and commercial actions
-4. generic scenario-envelope builders plus bounded industry-universe, connection-approval, and commercial-action continuation scenario slices, plus one honest cross-chain coordinator layer across those shipped slices
+4. generic scenario-envelope builders plus bounded registration-lifecycle, registered-agent-operations, industry-universe, connection-approval, and commercial-action continuation scenario slices, plus one honest cross-chain coordinator layer across those shipped slices
 5. richer scenario verification bundle support, derived review-packet builders with reviewer-facing detail, and stable review-packet export compatibility
-6. bounded CLI preview and export commands for scenario plans plus review packets across industry-universe, connection-approval, and explicit-opportunity package handoff planning
+6. bounded CLI preview and export commands for scenario plans, review packets, and business verification wave previews across shipped slices
 7. machine-readable static capability metadata for shipped helpers and scenario route keys
-8. static MCP-facing tool descriptors and catalog exports for the shipped bounded slices
-9. environment mode classification for `local`, `sim`, and `production` plus a read-only CLI visibility command
-10. contract tests plus stubbed local example flows
+8. local runtime-capability snapshot output for repo-known route, MCP, and local server facts
+9. static MCP-facing tool descriptors and catalog exports for the shipped bounded slices plus a bounded local stdio MCP server entrypoint
+10. environment mode classification for `local`, `sim`, and `production` plus a read-only CLI visibility command
+11. contract tests plus stubbed local example flows
 
 ## Planned next layers
 
@@ -71,6 +72,12 @@ The client needs a first-class envelope for:
 Current progress:
 
 - generic scenario envelope core added
+- registration-lifecycle scenario plan builder added
+- bounded registration-lifecycle runner added
+- repo-local `examples/registration-lifecycle-scenario.ts` added for the shipped lifecycle path
+- registered-agent-operations scenario plan builder added
+- bounded registered-agent-operations runner added
+- repo-local `examples/registered-agent-operations-scenario.ts` added for the shipped post-onboarding path
 - industry-universe scenario plan builder added
 - bounded listing -> activate -> match scenario orchestration helper added
 - connection-approval scenario plan builder added
@@ -86,6 +93,8 @@ Current deferral boundary:
 - no approval -> opportunity creation or discovery helper exists in this repo yet
 - no automatic approval -> opportunity seam crossing exists in this repo yet
 - no broader multi-business-chain orchestration layer exists beyond the current coordinator path yet
+- no new marketplace, approval, or autonomous-governance authority is introduced by the registration-lifecycle family
+- no onboarding, approval, marketplace, or autonomous-governance authority is introduced by the registered-agent operations family
 
 ### 3. Access-context switching
 
@@ -106,7 +115,23 @@ Current deferral boundary:
 - no runtime capability negotiation exists in this repo yet
 - no server-provided capability discovery exists in this repo yet
 
-### 4. Environment mode visibility
+### 4. Local runtime-capability snapshot
+
+The client can now publish one repo-local capability snapshot without claiming that the server negotiated or provided it.
+
+Current progress:
+
+- `buildLocalRuntimeCapabilitySnapshot(...)` added in `src/runtime-capabilities.ts`
+- read-only `runtime-capabilities` CLI command added in `src/cli.ts`
+- repo-local `examples/runtime-capabilities.ts` added for discoverability
+
+Current deferral boundary:
+
+- no server-provided runtime negotiation exists in this repo yet
+- no remote capability fetch exists in this repo yet
+- no broader runtime truth is implied beyond shipped local knowledge
+
+### 5. Environment mode visibility
 
 The client can now classify the current base URL into a simple environment mode without claiming control over runtime behavior.
 
@@ -122,7 +147,7 @@ Current deferral boundary:
 - no runtime behavior changes are introduced by environment mode classification
 - no broader transport/runtime expansion exists through this visibility layer
 
-### 5. Production-safe verification mode
+### 6. Production-safe verification mode
 
 The client should gain a bounded verification mode that can:
 
@@ -138,7 +163,7 @@ Current progress:
 - richer reviewer-facing review-packet detail added for route coverage and recorded ids derived from existing scenario and bundle facts
 - legacy verification export preserved for compatibility
 
-### 6. Commercial-action support
+### 7. Commercial-action support
 
 Wave-3 proved that `commercial-actions` is a real production path now.
 The client should grow dedicated helpers for:
@@ -160,7 +185,7 @@ Current deferral boundary:
 - no autonomous governance or self-authorizing execution layer exists in this repo yet
 - no broader multi-business-chain orchestration layer exists around the current continuation slice yet
 
-### 7. MCP-facing adapter catalog
+### 8. MCP-facing adapter catalog
 
 The current bounded adapter seam can now be described through static MCP-facing tool descriptors without turning the repo into a runtime server.
 
@@ -168,12 +193,30 @@ Current progress:
 
 - static MCP-facing tool catalog added in `src/mcp.ts`
 - shipped bounded slices now expose exportable descriptor metadata for plan preview and review-packet preview/export modes
+- bounded local stdio MCP server entrypoint added in `src/mcp-server.ts`
+- shipped local loop is limited to `initialize`, `tools/list`, and `tools/call`
 
 Current deferral boundary:
 
-- no live MCP server exists in this repo yet
-- no stdio or other MCP transport exists in this repo yet
-- no MCP protocol negotiation runtime exists in this repo yet
+- no hosted MCP server exists in this repo yet
+- no remote registry or hosted discovery behavior exists in this repo yet
+- no broader MCP protocol/runtime complexity exists beyond the local stdio loop
+
+### 9. Operator-facing verification wave previews
+
+The current CLI can now preview bounded business verification waves without claiming a broader orchestration engine.
+
+Current progress:
+
+- `multi-business-chain-verification-wave-preview` added in `src/cli.ts`
+- `commercial-action-verification-wave-preview` added in `src/cli.ts`
+- both commands stay preview-oriented and print review-safe JSON only
+
+Current deferral boundary:
+
+- no live wave execution engine exists in the CLI yet
+- no approval-to-opportunity seam crossing happens through the preview flows
+- no broader runtime or MCP behavior is introduced by these commands
 
 ## V11 rule
 

@@ -2,6 +2,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import type {
+  BidviaReviewPacket,
+  BidviaMcpToolCallRequest,
+  BidviaMcpToolCallResponse,
   BidviaMcpToolDescriptor,
   BidviaMcpToolOutputMode,
 } from '../src/contracts.ts';
@@ -10,9 +13,11 @@ import {
 } from '../src/contracts.ts';
 import {
   bidviaMcpTools,
+  dispatchMcpToolCall,
   exportMcpToolCatalog,
   getMcpToolDescriptor,
 } from '../src/mcp.ts';
+import type { BidviaIndustryUniverseScenarioPlan } from '../src/universe.ts';
 
 test('MCP descriptor contract exposes bounded output modes for shipped slices', () => {
   assert.deepEqual(bidviaMcpToolOutputModes, [
@@ -130,4 +135,117 @@ test('MCP tool catalog export returns stable machine-readable descriptor data', 
     },
   });
   assert.equal(bidviaMcpTools.some((tool) => tool.toolName === 'mutated-tool'), false);
+});
+
+test('MCP tool-call contracts represent bounded local dispatch requests and responses', () => {
+  const request: BidviaMcpToolCallRequest = {
+    toolName: 'industry-universe-plan-preview',
+    arguments: {
+      scenarioId: 'scenario-industry-universe-1',
+    },
+  };
+  const response: BidviaMcpToolCallResponse = {
+    toolName: 'industry-universe-plan-preview',
+    outputMode: 'plan-preview',
+    result: {
+      scenarioPlan: {
+        scenarioLabel: 'industry-universe-soda-ash-light',
+      },
+    },
+  };
+
+  assert.equal(request.toolName, 'industry-universe-plan-preview');
+  assert.equal(response.outputMode, 'plan-preview');
+});
+
+test('dispatchMcpToolCall routes shipped preview/export tools through existing bounded adapter behavior', () => {
+  const planPreview = dispatchMcpToolCall({
+    toolName: 'industry-universe-plan-preview',
+    arguments: {
+      scenarioId: 'scenario-industry-universe-1',
+      scenarioLabel: 'industry-universe-soda-ash-light',
+      sourceRefs: ['source://market/soda-ash-light'],
+      evidenceRefs: ['evidence://supply/soda-ash-light'],
+      traceIds: ['trace-1'],
+      workflowIds: ['wf-1'],
+      createListing: {
+        listingId: 'listing-1',
+        listingType: 'supply',
+        category: 'basic inorganic industrial chemical',
+        sku: 'sodium-carbonate-soda-ash-light',
+        quantityValue: '15',
+        quantityUnit: 'tons',
+        regionSummary: 'China -> Vietnam',
+        verificationStatus: 'verified',
+        freshnessTs: '2026-03-27T10:00:00Z',
+        traceId: 'trace-1',
+        idempotencyKey: 'listing-1',
+        now: '2026-03-27T10:00:00Z',
+      },
+      activateListing: {
+        now: '2026-03-27T10:01:00Z',
+      },
+      generateMatchCandidates: {
+        upstreamDecision: 'READY_FOR_ROUTING',
+        requiredEvidenceLevel: 1,
+        detectedEvidenceLevel: 1,
+        workflowRunId: 'wf-1',
+        triggerEventId: 'evt-1',
+        topN: 10,
+        now: '2026-03-27T10:02:00Z',
+      },
+    },
+  });
+  const packetExport = dispatchMcpToolCall({
+    toolName: 'connection-approval-review-packet-export',
+    arguments: {
+      scenarioId: 'scenario-connection-approval-1',
+      scenarioLabel: 'connection-approval-soda-ash-light',
+      sourceRefs: ['source://market/soda-ash-light'],
+      evidenceRefs: ['evidence://approval/approval-1'],
+      traceIds: ['trace-2'],
+      workflowIds: ['wf-2'],
+      createConnectionRequest: {
+        sourceMatchId: 'match-1',
+        requesterActorId: 'actor-1',
+        requesterCompanyId: 'company-1',
+        riskTier: 'medium',
+        policyVersion: 'policy-v1',
+        approvalMatrixVersion: 'matrix-v1',
+        actionType: 'buyer_contact_request',
+        now: '2026-03-27T10:03:00Z',
+      },
+      approveConnectionRequest: {
+        approvalRequestId: 'approval-1',
+        actorId: 'actor-1',
+        decision: 'approve',
+        now: '2026-03-27T10:04:00Z',
+      },
+    },
+  });
+
+  const planPreviewResult = planPreview.result as {
+    scenarioPlan: BidviaIndustryUniverseScenarioPlan;
+  };
+  const packetExportResult = packetExport.result as {
+    exportedReviewPacket: BidviaReviewPacket;
+  };
+
+  assert.equal(planPreview.toolName, 'industry-universe-plan-preview');
+  assert.equal(planPreview.outputMode, 'plan-preview');
+  assert.equal(planPreviewResult.scenarioPlan.envelope.scenarioFamily, 'industry-universe');
+  assert.equal(packetExport.toolName, 'connection-approval-review-packet-export');
+  assert.equal(packetExport.outputMode, 'review-packet-export');
+  assert.equal(packetExportResult.exportedReviewPacket.scenarioFamily, 'connection-approval');
+  assert.ok(Array.isArray(packetExportResult.exportedReviewPacket.details.routeDetails));
+});
+
+test('dispatchMcpToolCall rejects unknown tools outside the static catalog', () => {
+  assert.throws(
+    () => dispatchMcpToolCall({
+      toolName: 'missing-tool',
+      arguments: {},
+    }),
+    /unknown MCP tool: missing-tool/,
+  );
 });

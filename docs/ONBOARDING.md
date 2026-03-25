@@ -43,11 +43,13 @@ Think about this repo in this order:
 1. read the contract boundary and onboarding docs
 2. configure the right context for the environment
 3. use the read-only `environment-mode` command when you need visibility into whether the current base URL resolves to `local`, `sim`, or `production`
-4. choose the right helper family for the current route chain
-5. check the static capability registry when you need machine-readable route or access-context expectations
-6. check the static MCP-facing tool catalog when you need export-only tool descriptors for shipped bounded slices
-7. build a scenario envelope when the work is a multi-step reviewable flow
-8. export a verification bundle when the run should be reviewable later
+4. use the read-only `runtime-capabilities` command when you need one local JSON view of repo-known runtime-facing facts
+5. choose the right helper family for the current route chain
+6. check the static capability registry when you need machine-readable route or access-context expectations
+7. check the local runtime-capability snapshot when you need one JSON view of repo-known route, MCP, and local server facts
+8. check the static MCP-facing tool catalog when you need export-only tool descriptors for shipped bounded slices
+9. build a scenario envelope when the work is a multi-step reviewable flow
+10. export a verification bundle when the run should be reviewable later
 
 ## Environment mode visibility
 
@@ -67,6 +69,28 @@ node dist/cli.js environment-mode
 
 This layer does not change request payloads, enforce execution policy, or add environment-specific runtime controls. It only surfaces classification from the current base URL/profile inputs.
 
+For global launch production guidance, prefer explicit canonical API domains:
+
+- global canonical API -> `https://api.bidvia.ai`
+- china canonical API -> `https://api.bidvia.cn`
+
+Set `BIDVIA_BASE_URL` explicitly to one of those canonical `api.*` domains in production when you know the real deployment entrypoint.
+
+If you want a read-only local check of the finalized launch topology guidance, use:
+
+```bash
+node dist/cli.js launch-topology-smoke
+```
+
+That command prints local JSON only: resolved `baseUrl`, resolved `environmentMode`, canonical global/china API domains, and the current compatibility profile mappings.
+
+During the compatibility window, the `global` and `china` profiles still keep the root-domain compatibility mapping:
+
+- `global` profile compatibility mapping -> `https://bidvia.ai`
+- `china` profile compatibility mapping -> `https://bidvia.cn`
+
+That compatibility behavior remains supported for now, but the canonical production recommendation is the explicit `api.*` base URL. The shipped runtime model also stays the same: local stdio MCP server plus remote HTTPS API.
+
 ## Capability discovery
 
 The repo now ships a static capability registry in `src/capabilities.ts` so callers can discover current helper metadata without reading `src/client.ts` line by line.
@@ -80,6 +104,32 @@ It is intentionally descriptive-only. Use it to inspect repo-local facts such as
 - whether a helper is an atomic route or a bounded scenario helper
 
 This registry does not negotiate with a live runtime, fetch server-provided capabilities, or generate requests from metadata. It is a machine-readable map of the shipped client surface only.
+
+## Local runtime-capability snapshot
+
+The repo now ships `buildLocalRuntimeCapabilitySnapshot(...)` in `src/runtime-capabilities.ts` so callers can inspect one repo-local JSON snapshot of current runtime-facing knowledge.
+
+That snapshot includes only shipped local facts such as:
+
+- resolved base URL and environment mode
+- static route capability metadata
+- static MCP tool metadata
+- bounded local MCP server availability and supported methods
+- an explicit deferred marker for server-provided negotiation
+
+If you want that snapshot from the command line, use the read-only CLI command:
+
+```bash
+node dist/cli.js runtime-capabilities
+```
+
+If you want a runnable repo-local example, use:
+
+```bash
+npx tsx examples/runtime-capabilities.ts
+```
+
+This layer is intentionally local and descriptive. It does not negotiate with a server, fetch remote capability state, or imply any server-provided runtime truth.
 
 ## MCP-facing catalog discovery
 
@@ -95,9 +145,23 @@ It is intentionally export-only. Use it to inspect repo-local facts such as:
 
 This catalog does not make the repo an MCP server. It does not open a transport, perform protocol negotiation, or discover remote registries. It is a static descriptor/catalog layer for future integration work only.
 
+## Local MCP server entrypoint
+
+The repo now also ships a bounded local stdio MCP server entrypoint in `src/mcp-server.ts`.
+
+It is intentionally limited to the local request loop for:
+
+- `initialize`
+- `tools/list`
+- `tools/call`
+
+That local server uses the shipped tool catalog from `src/mcp.ts` and dispatches only the current bounded MCP-facing tools. It is useful when you want a repo-local MCP server surface for the already-shipped plan-preview and review-packet preview/export tools.
+
+This server remains deliberately narrow. It does not add hosted runtime behavior, remote registry features, broader protocol/runtime complexity, or any MCP authority beyond the shipped local tool loop.
+
 ## Scenario planning and bounded orchestration preview
 
-The repo now includes a generic scenario boundary plus three bounded orchestration slices, one honest cross-chain coordinator layer, and one bounded downstream handoff slice.
+The repo now includes a generic scenario boundary plus one bounded onboarding-plus-registration scenario family, one bounded post-onboarding registered-agent operations family, three bounded orchestration slices, one honest cross-chain coordinator layer, and one bounded downstream handoff slice.
 This is still not a full orchestration layer or adapter/runtime platform.
 It is the first stable SDK-local container for:
 
@@ -108,6 +172,10 @@ It is the first stable SDK-local container for:
 
 The current bounded slices support:
 
+- scenario planning/building for onboarding plus registration-bound lifecycle work
+- bounded registration-lifecycle execution through the SDK over the shipped provisional/query/claim and registration-bound helpers only
+- scenario planning/building for post-onboarding registered-agent operations work
+- bounded registered-agent operations execution through the SDK over the shipped registration-bound helpers only
 - scenario planning/building for industry-universe work
 - limited listing -> activate -> match orchestration through the SDK
 - scenario planning/building for match -> connection-request -> approval work
@@ -133,6 +201,8 @@ npx tsx examples/connection-approval-agent.ts
 npx tsx examples/commercial-action-continuation.ts
 npx tsx examples/multi-business-chain-coordinator.ts
 npx tsx examples/opportunity-package-handoff.ts
+npx tsx examples/registered-agent-operations-scenario.ts
+npx tsx examples/registration-lifecycle-scenario.ts
 npx tsx examples/review-packet-preview.ts
 ```
 
@@ -148,9 +218,13 @@ node dist/cli.js connection-approval-review-packet-export
 node dist/cli.js opportunity-package-handoff-plan
 node dist/cli.js opportunity-package-handoff-review-packet-preview
 node dist/cli.js opportunity-package-handoff-review-packet-export
+node dist/cli.js multi-business-chain-verification-wave-preview
+node dist/cli.js commercial-action-verification-wave-preview
 ```
 
 The package handoff preview is intentionally downstream-only. It requires an externally known `opportunityId` and does not imply that this repo can create or discover one after approval.
+
+The verification-wave preview commands are intentionally bounded and operator-facing. `multi-business-chain-verification-wave-preview` previews the shipped coordinator path plus its explicit approval-to-opportunity handoff boundary, while `commercial-action-verification-wave-preview` previews the shipped commercial-action continuation wave. Neither command executes the wave, crosses the missing seam, or creates any new platform authority.
 
 The review-packet commands are intentionally bounded. They only preview or export JSON derived from existing scenario plans and verification bundles. The richer packet structure now includes reviewer-facing route coverage and recorded-id detail, but it still does not execute runtime work, create new platform authority, or widen the current local adapter seam.
 
@@ -158,13 +232,21 @@ The current review-packet preview and export surfaces stay review-oriented only.
 
 The capability registry follows the same honesty boundary. It helps callers discover access-context expectations locally, but it does not imply runtime negotiation, server truth discovery, or MCP/runtime expansion.
 
+The runtime-capability snapshot follows the same boundary. It combines repo-local shipped knowledge into one JSON surface, but it does not add server-provided negotiation, remote discovery, or broader runtime authority.
+
 The MCP-facing catalog follows the same boundary. It makes the shipped bounded slices legible in an MCP-friendly descriptor format, but it does not imply a live MCP server, hosted tool runtime, transport support, or negotiation loop.
+
+The local MCP server follows the same boundary. It is a local stdio server for the shipped tool catalog only, not a hosted service, not a remote registry participant, and not a broader MCP runtime platform.
 
 The commercial-action continuation slice follows the same honesty boundary. It is a bounded continuation over already-shipped commercial-action helpers, with review-safe scenario output and readback, not an autonomous governance or runtime-expansion layer.
 
 The environment-mode layer follows the same boundary. It improves visibility into the current environment classification, but it does not introduce environment-aware execution policy, runtime switching logic, or any broader transport/runtime expansion.
 
 The cross-chain coordinator follows the same boundary. It composes the already-shipped slices and makes the approval-to-opportunity seam explicit as an external handoff boundary; it does not imply automatic seam crossing, server-side discovery, autonomous governance, or a broader runtime layer.
+
+The registration-lifecycle scenario family follows the same boundary. It is limited to the shipped onboarding and registration-bound helper path only, with review-safe verification output; it does not imply marketplace behavior, approval authority, autonomous execution, or a broader runtime layer.
+
+The registered-agent operations scenario family follows the same boundary. It is explicitly post-onboarding and limited to the shipped registration-bound helper path only, with review-safe verification output; it does not add onboarding behavior back in or imply approval, marketplace, autonomous, or broader runtime semantics.
 
 ## Internal team agent path
 
@@ -228,6 +310,11 @@ Additional context now supported for production-proven routes:
 - `companyId` for operator-context write routes
 
 Recommended domain profile defaults for future rollout preparation:
+
+- global canonical API -> `https://api.bidvia.ai`
+- china canonical API -> `https://api.bidvia.cn`
+
+Compatibility mapping still retained during launch window:
 
 - global profile -> `https://bidvia.ai`
 - china profile -> `https://bidvia.cn`
