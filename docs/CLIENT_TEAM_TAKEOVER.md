@@ -50,12 +50,14 @@ Confirmed in source and tests today:
 - derived review-packet builders plus bounded preview and export support with richer reviewer-facing detail
 - machine-readable static capability registry for shipped helpers and scenario route keys
 - local runtime-capability snapshot output for repo-known runtime-facing facts
+- server-capability payload parsing and normalization into the repo capability shape
 - static MCP-facing tool descriptor/catalog support for shipped bounded slices
 - bounded local stdio MCP server entrypoint for the shipped MCP-facing tools
 - environment mode classification for `local`, `sim`, and `production`
 - bounded adapter seam and `industry-universe-plan`, `connection-approval-plan`, and `opportunity-package-handoff-plan` CLI commands
 - read-only `environment-mode` CLI command
 - read-only `runtime-capabilities` CLI command
+- read-only `server-capabilities` CLI command
 - bounded `industry-universe-review-packet-preview`, `industry-universe-review-packet-export`, `connection-approval-review-packet-preview`, `connection-approval-review-packet-export`, `opportunity-package-handoff-review-packet-preview`, and `opportunity-package-handoff-review-packet-export` CLI commands
 - bounded `multi-business-chain-verification-wave-preview` and `commercial-action-verification-wave-preview` CLI commands
 - typed verification-bundle export helper
@@ -75,6 +77,7 @@ These exist, but should not be overstated:
 - verification packaging now includes bounded review-packet preview and export with richer reviewer-facing route and record detail, but it is still derived only from existing scenario and verification facts
 - capability discovery is now machine-readable through a static repo-local registry, but it remains descriptive-only and does not negotiate with a runtime
 - runtime-capability visibility now includes one repo-local snapshot surface, but it is still local knowledge only and not server-provided negotiation
+- server-capability visibility now includes one local parse/normalize surface, but it still does not perform live negotiation or remote discovery
 - adapter support now includes a static MCP-facing descriptor/catalog layer plus a bounded local stdio MCP server loop, but it is still not a hosted MCP server or complete MCP/runtime bridge
 - environment mode support is classification-only visibility over the current base URL/profile inputs, not execution policy or runtime control
 - verification-wave CLI support is preview-only and does not turn the repo into a live orchestration engine
@@ -108,6 +111,7 @@ The current repo-local cross-chain coordinator example is `examples/multi-busine
 The current repo-local registration lifecycle example is `examples/registration-lifecycle-scenario.ts`.
 The current repo-local registered-agent operations example is `examples/registered-agent-operations-scenario.ts`.
 The current repo-local runtime capability example is `examples/runtime-capabilities.ts`.
+The current repo-local server capability example is `examples/server-capabilities.ts`.
 
 ## Why scenario envelope comes first
 

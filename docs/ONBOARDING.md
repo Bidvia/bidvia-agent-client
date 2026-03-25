@@ -47,9 +47,10 @@ Think about this repo in this order:
 5. choose the right helper family for the current route chain
 6. check the static capability registry when you need machine-readable route or access-context expectations
 7. check the local runtime-capability snapshot when you need one JSON view of repo-known route, MCP, and local server facts
-8. check the static MCP-facing tool catalog when you need export-only tool descriptors for shipped bounded slices
-9. build a scenario envelope when the work is a multi-step reviewable flow
-10. export a verification bundle when the run should be reviewable later
+8. check the local server-capability normalization surface when you need to parse one sample server-derived capability payload into repo shape
+9. check the static MCP-facing tool catalog when you need export-only tool descriptors for shipped bounded slices
+10. build a scenario envelope when the work is a multi-step reviewable flow
+11. export a verification bundle when the run should be reviewable later
 
 ## Environment mode visibility
 
@@ -130,6 +131,31 @@ npx tsx examples/runtime-capabilities.ts
 ```
 
 This layer is intentionally local and descriptive. It does not negotiate with a server, fetch remote capability state, or imply any server-provided runtime truth.
+
+## Server-capability normalization
+
+The repo now also ships `normalizeServerCapabilityPayload(...)` in `src/server-capabilities.ts` so callers can parse one server-derived capability payload into the repo’s normalized capability shape.
+
+This is intentionally a local parse/normalize layer only. It helps when you already have a payload and want to translate:
+
+- snake_case server fields into repo capability structures
+- route capability entries into repo route capability metadata
+- MCP tool entries into repo MCP descriptor shapes
+- bounded MCP server availability into the repo’s normalized view
+
+If you want a local JSON view of that normalized shape, use the read-only CLI command:
+
+```bash
+node dist/cli.js server-capabilities
+```
+
+If you want a runnable repo-local example, use:
+
+```bash
+npx tsx examples/server-capabilities.ts
+```
+
+This surface does not contact a server, perform live negotiation, or discover remote capability state. It only normalizes a local sample payload into the server-derived snapshot shape.
 
 ## MCP-facing catalog discovery
 
@@ -233,6 +259,8 @@ The current review-packet preview and export surfaces stay review-oriented only.
 The capability registry follows the same honesty boundary. It helps callers discover access-context expectations locally, but it does not imply runtime negotiation, server truth discovery, or MCP/runtime expansion.
 
 The runtime-capability snapshot follows the same boundary. It combines repo-local shipped knowledge into one JSON surface, but it does not add server-provided negotiation, remote discovery, or broader runtime authority.
+
+The server-capability normalization layer follows the same boundary. It parses server-derived payload shape locally, but it does not add live server negotiation, remote discovery, or broader runtime authority.
 
 The MCP-facing catalog follows the same boundary. It makes the shipped bounded slices legible in an MCP-friendly descriptor format, but it does not imply a live MCP server, hosted tool runtime, transport support, or negotiation loop.
 

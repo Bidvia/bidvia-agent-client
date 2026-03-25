@@ -185,7 +185,23 @@ Still deferred on purpose:
 - remote capability fetch or registry sync
 - any broader runtime truth beyond local shipped knowledge
 
-### C3. Add replay-safe orchestration helpers
+### C3. Add server-capability parsing layer
+
+The client now ships a local server-capability parsing layer so callers can normalize one server-derived capability payload into the repo’s internal capability shape.
+
+Current progress:
+
+- `normalizeServerCapabilityPayload(...)` added in `src/server-capabilities.ts`
+- read-only `server-capabilities` CLI command added for local normalization output
+- repo-local `examples/server-capabilities.ts` added for discoverability
+
+Still deferred on purpose:
+
+- live server capability negotiation
+- remote capability discovery
+- any fetch-driven or runtime-driven server normalization loop
+
+### C4. Add replay-safe orchestration helpers
 
 The client should support replay-safe orchestration for a chain like:
 
@@ -201,7 +217,7 @@ Current progress:
 - cross-chain coordinator plan plus pre-handoff/post-handoff runners added with an explicit approval-to-opportunity external handoff boundary
 - repo-local `examples/multi-business-chain-coordinator.ts` added for coordinator discoverability
 
-### C4. Add production-vs-sandbox mode distinctions
+### C5. Add production-vs-sandbox mode distinctions
 
 The client should make it obvious when an operation is being executed against:
 
@@ -223,7 +239,7 @@ Still deferred on purpose:
 - behavior changes driven by environment mode
 - broader runtime or transport control logic
 
-### C5. Add MCP-facing descriptor/catalog layer
+### C6. Add MCP-facing descriptor/catalog layer
 
 The client now ships a static MCP-facing descriptor/catalog layer so callers can export bounded tool metadata for the currently shipped scenario slices.
 

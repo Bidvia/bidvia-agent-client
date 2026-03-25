@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { BidviaClient } from './client.js';
+import type { BidviaServerCapabilityPayload } from './contracts.js';
 import {
   resolveBidviaBaseUrlFromEnv,
   resolveBidviaEnvironmentModeFromEnv,
@@ -16,6 +17,7 @@ import {
 } from './adapters.js';
 import { buildCommercialActionScenarioPlan } from './commercial-action.js';
 import { buildMultiBusinessChainCoordinatorPlan } from './coordinator.js';
+import { normalizeServerCapabilityPayload } from './server-capabilities.js';
 import { buildLocalRuntimeCapabilitySnapshot } from './runtime-capabilities.js';
 import {
   buildReviewPacket,
@@ -26,6 +28,42 @@ const [, , command = 'help'] = process.argv;
 
 function printJson(value: unknown): void {
   console.log(JSON.stringify(value, null, 2));
+}
+
+function buildSampleServerCapabilityPayload(): BidviaServerCapabilityPayload {
+  return {
+    environment_mode: 'production' as const,
+    route_capabilities: [
+      {
+        helper_key: 'postHeartbeat',
+        route_path_template: '/runtime/agents/:registrationId/heartbeat',
+        http_method: 'POST' as const,
+        access_context_family: 'registration' as const,
+        required_context: ['tenantId', 'registrationId', 'principalId'],
+        scope: 'write' as const,
+        level: 'atomic-route' as const,
+      },
+    ],
+    mcp_tools: [
+      {
+        tool_name: 'industry-universe-plan-preview',
+        description: 'Previews the bounded industry universe scenario plan payload.',
+        input_schema_ref: {
+          schema_key: 'BidviaIndustryUniverseScenarioPlanInput',
+        },
+        output_mode: 'plan-preview' as const,
+        helper_ref: {
+          helper_key: 'buildIndustryUniverseScenarioPlan',
+          capability_key: 'buildIndustryUniverseScenarioPlan',
+        },
+      },
+    ],
+    mcp_server: {
+      available: true,
+      transport: 'stdio' as const,
+      supported_methods: ['initialize', 'tools/list', 'tools/call'] as const,
+    },
+  };
 }
 
 function createClient() {
@@ -67,6 +105,11 @@ async function main() {
         china: 'https://bidvia.cn',
       },
     });
+    return;
+  }
+
+  if (command === 'server-capabilities') {
+    printJson(normalizeServerCapabilityPayload(buildSampleServerCapabilityPayload()));
     return;
   }
 
@@ -526,7 +569,7 @@ async function main() {
   }
 
   console.log('bidvia-agent-client');
-  console.log('Available commands: environment-mode, runtime-capabilities, launch-topology-smoke, heartbeat, sync-upload, evidence, proposal, industry-universe-plan, industry-universe-review-packet-preview, industry-universe-review-packet-export, connection-approval-plan, connection-approval-review-packet-preview, connection-approval-review-packet-export, opportunity-package-handoff-plan, opportunity-package-handoff-review-packet-preview, opportunity-package-handoff-review-packet-export, multi-business-chain-verification-wave-preview, commercial-action-verification-wave-preview');
+  console.log('Available commands: environment-mode, runtime-capabilities, launch-topology-smoke, server-capabilities, heartbeat, sync-upload, evidence, proposal, industry-universe-plan, industry-universe-review-packet-preview, industry-universe-review-packet-export, connection-approval-plan, connection-approval-review-packet-preview, connection-approval-review-packet-export, opportunity-package-handoff-plan, opportunity-package-handoff-review-packet-preview, opportunity-package-handoff-review-packet-export, multi-business-chain-verification-wave-preview, commercial-action-verification-wave-preview');
 }
 
 void main();

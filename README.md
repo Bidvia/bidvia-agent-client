@@ -48,6 +48,7 @@ Today this repo already helps an agent or agent developer with:
 - richer scenario verification bundles plus derived review-packet preview and export support with richer reviewer-facing packet detail
 - machine-readable static capability metadata for shipped helpers and scenario route keys
 - local runtime-capability snapshot output for repo-known route, MCP, and local server facts
+- server-capability payload parsing and normalization for server-derived capability shapes
 - static MCP-facing tool descriptors and catalog exports for the shipped bounded slices, plus a bounded local stdio MCP server entrypoint
 - environment mode classification for `local`, `sim`, and `production` plus a read-only CLI visibility command
 - one bounded adapter seam and bounded CLI preview commands for scenario plans, review-packet preview/export, and operator-facing verification wave previews across shipped slices
@@ -78,10 +79,11 @@ Today this repo already helps an agent or agent developer with:
 - richer scenario verification packaging and bounded review-packet preview and export now exist for the shipped scenario slices, including richer reviewer-facing route and record detail derived from existing facts only
 - machine-readable capability discovery now exists through the static repo-local registry in `src/capabilities.ts`
 - local runtime-capability snapshot output now exists through `buildLocalRuntimeCapabilitySnapshot(...)`, the read-only `runtime-capabilities` CLI command, and `examples/runtime-capabilities.ts`
+- server-capability parsing now exists through `normalizeServerCapabilityPayload(...)`, the read-only `server-capabilities` CLI command, and `examples/server-capabilities.ts`
 - environment mode classification now exists through `resolveBidviaEnvironmentMode(...)`, `resolveBidviaEnvironmentModeFromEnv(...)`, and the read-only `environment-mode` CLI command
 - a local adapter seam plus static MCP-facing descriptor/catalog layer now exist, and `src/mcp-server.ts` can serve the shipped tools through a bounded local stdio loop, but not as a hosted MCP server or complete MCP/runtime bridge
 - CLI preview and export commands exist for the currently exposed bounded operations, including bounded `multi-business-chain-verification-wave-preview` and `commercial-action-verification-wave-preview` flows
-- broader multi-business-chain orchestration beyond the shipped coordinator path, approval-to-opportunity creation or discovery behavior, server-provided runtime negotiation, hosted MCP/runtime expansion, and remote registry behavior remain deferred
+- broader multi-business-chain orchestration beyond the shipped coordinator path, approval-to-opportunity creation or discovery behavior, live server-provided runtime negotiation, hosted MCP/runtime expansion, and remote registry behavior remain deferred
 - local contract tests run in `npm test`
 - implementation remains bounded to the frozen V11 core contract and should stay aligned with Bidvia core launch/version docs
 - the repo is not yet the full operating kit vision; it is still a partial V11 execution-layer slice of that broader product

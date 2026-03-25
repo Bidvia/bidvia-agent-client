@@ -22,3 +22,4 @@ export * from './proposals.js';
 export * from './registration-lifecycle.js';
 export * from './registered-agent-operations.js';
 export * from './runtime-capabilities.js';
+export * from './server-capabilities.js';

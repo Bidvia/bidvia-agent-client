@@ -495,3 +495,70 @@ export interface BidviaLocalRuntimeCapabilitySnapshot {
   localMcpServer: BidviaLocalMcpServerAvailability;
   deferredServerNegotiation: BidviaDeferredServerCapabilityNegotiation;
 }
+
+export interface BidviaServerCapabilityPayloadRouteCapability {
+  helper_key: string;
+  route_path_template: string;
+  http_method: BidviaRouteCapabilityHttpMethod;
+  access_context_family: BidviaRouteCapabilityAccessContextFamily;
+  required_context: BidviaScenarioContextKey[];
+  scope: BidviaRouteCapabilityScope;
+  level: BidviaRouteCapabilityLevel;
+}
+
+export interface BidviaServerCapabilityPayloadMcpTool {
+  tool_name: string;
+  description: string;
+  input_schema_ref: {
+    schema_key: string;
+  };
+  output_mode: BidviaMcpToolOutputMode;
+  helper_ref: {
+    helper_key: string;
+    capability_key?: string;
+  };
+}
+
+export interface BidviaServerCapabilityPayloadMcpServer {
+  available: boolean;
+  transport: 'stdio';
+  supported_methods: ['initialize', 'tools/list', 'tools/call'];
+}
+
+export interface BidviaServerCapabilityPayload {
+  environment_mode?: BidviaEnvironmentMode;
+  route_capabilities: BidviaServerCapabilityPayloadRouteCapability[];
+  mcp_tools: BidviaServerCapabilityPayloadMcpTool[];
+  mcp_server: BidviaServerCapabilityPayloadMcpServer;
+}
+
+export interface BidviaServerDerivedRouteCapabilityKnowledge {
+  source: 'server-derived';
+  items: BidviaRouteCapability[];
+}
+
+export interface BidviaServerDerivedMcpToolKnowledge {
+  source: 'server-derived';
+  items: BidviaMcpToolDescriptor[];
+}
+
+export interface BidviaServerDerivedMcpServerAvailability {
+  source: 'server-derived';
+  available: boolean;
+  transport: 'stdio';
+  supportedMethods: ['initialize', 'tools/list', 'tools/call'];
+}
+
+export interface BidviaServerProvidedCapabilityNegotiation {
+  source: 'server-derived';
+  status: 'provided';
+  serverProvidedCapabilitiesKnown: true;
+}
+
+export interface BidviaNormalizedServerCapabilitySnapshot {
+  environmentMode: BidviaEnvironmentMode;
+  routeCapabilities: BidviaServerDerivedRouteCapabilityKnowledge;
+  mcpTools: BidviaServerDerivedMcpToolKnowledge;
+  localMcpServer: BidviaServerDerivedMcpServerAvailability;
+  serverNegotiation: BidviaServerProvidedCapabilityNegotiation;
+}

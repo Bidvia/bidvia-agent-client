@@ -25,9 +25,10 @@ The repo now includes a first usable V11 execution-layer wave inside that broade
 6. bounded CLI preview and export commands for scenario plans, review packets, and business verification wave previews across shipped slices
 7. machine-readable static capability metadata for shipped helpers and scenario route keys
 8. local runtime-capability snapshot output for repo-known route, MCP, and local server facts
-9. static MCP-facing tool descriptors and catalog exports for the shipped bounded slices plus a bounded local stdio MCP server entrypoint
-10. environment mode classification for `local`, `sim`, and `production` plus a read-only CLI visibility command
-11. contract tests plus stubbed local example flows
+9. server-capability payload parsing and normalization into the repo capability shape
+10. static MCP-facing tool descriptors and catalog exports for the shipped bounded slices plus a bounded local stdio MCP server entrypoint
+11. environment mode classification for `local`, `sim`, and `production` plus a read-only CLI visibility command
+12. contract tests plus stubbed local example flows
 
 ## Planned next layers
 
@@ -131,7 +132,23 @@ Current deferral boundary:
 - no remote capability fetch exists in this repo yet
 - no broader runtime truth is implied beyond shipped local knowledge
 
-### 5. Environment mode visibility
+### 5. Server-capability normalization
+
+The client can now normalize one server-derived capability payload into the repo’s capability model without claiming that it negotiated or fetched that payload itself.
+
+Current progress:
+
+- `normalizeServerCapabilityPayload(...)` added in `src/server-capabilities.ts`
+- read-only `server-capabilities` CLI command added in `src/cli.ts`
+- repo-local `examples/server-capabilities.ts` added for discoverability
+
+Current deferral boundary:
+
+- no live server negotiation exists in this repo yet
+- no remote capability discovery exists in this repo yet
+- no network fetch is introduced by the normalization layer
+
+### 6. Environment mode visibility
 
 The client can now classify the current base URL into a simple environment mode without claiming control over runtime behavior.
 
@@ -147,7 +164,7 @@ Current deferral boundary:
 - no runtime behavior changes are introduced by environment mode classification
 - no broader transport/runtime expansion exists through this visibility layer
 
-### 6. Production-safe verification mode
+### 7. Production-safe verification mode
 
 The client should gain a bounded verification mode that can:
 
@@ -163,7 +180,7 @@ Current progress:
 - richer reviewer-facing review-packet detail added for route coverage and recorded ids derived from existing scenario and bundle facts
 - legacy verification export preserved for compatibility
 
-### 7. Commercial-action support
+### 8. Commercial-action support
 
 Wave-3 proved that `commercial-actions` is a real production path now.
 The client should grow dedicated helpers for:
@@ -185,7 +202,7 @@ Current deferral boundary:
 - no autonomous governance or self-authorizing execution layer exists in this repo yet
 - no broader multi-business-chain orchestration layer exists around the current continuation slice yet
 
-### 8. MCP-facing adapter catalog
+### 9. MCP-facing adapter catalog
 
 The current bounded adapter seam can now be described through static MCP-facing tool descriptors without turning the repo into a runtime server.
 
@@ -202,7 +219,7 @@ Current deferral boundary:
 - no remote registry or hosted discovery behavior exists in this repo yet
 - no broader MCP protocol/runtime complexity exists beyond the local stdio loop
 
-### 9. Operator-facing verification wave previews
+### 10. Operator-facing verification wave previews
 
 The current CLI can now preview bounded business verification waves without claiming a broader orchestration engine.
 
