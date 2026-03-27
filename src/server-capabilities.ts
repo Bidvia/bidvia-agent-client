@@ -5,6 +5,23 @@ import type {
   BidviaServerCapabilityPayload,
 } from './contracts.js';
 
+const runtimeCapabilitySnapshotSchemaVersion = '2026-03-27';
+const serverCapabilityPayloadVersion = 'server-capability-payload';
+const serverDerivedFallbackPolicy = 'retain-server-derived-snapshot-until-replaced';
+
+function buildServerDerivedMetadata(lastUpdatedAt: string) {
+  return {
+    schemaVersion: runtimeCapabilitySnapshotSchemaVersion,
+    version: serverCapabilityPayloadVersion,
+    etag: null,
+    lastUpdatedAt,
+    ttl: null,
+    expiresAt: null,
+    stale: false,
+    fallbackPolicy: serverDerivedFallbackPolicy,
+  };
+}
+
 function normalizeRouteCapabilities(
   routeCapabilities: BidviaServerCapabilityPayload['route_capabilities'],
 ): BidviaRouteCapability[] {
@@ -39,26 +56,32 @@ function normalizeMcpTools(
 export function normalizeServerCapabilityPayload(
   payload: BidviaServerCapabilityPayload,
 ): BidviaNormalizedServerCapabilitySnapshot {
+  const lastUpdatedAt = new Date().toISOString();
+
   return {
     environmentMode: payload.environment_mode ?? 'production',
     routeCapabilities: {
       source: 'server-derived',
+      ...buildServerDerivedMetadata(lastUpdatedAt),
       items: normalizeRouteCapabilities(payload.route_capabilities),
-    },
+    } as BidviaNormalizedServerCapabilitySnapshot['routeCapabilities'],
     mcpTools: {
       source: 'server-derived',
+      ...buildServerDerivedMetadata(lastUpdatedAt),
       items: normalizeMcpTools(payload.mcp_tools),
-    },
+    } as BidviaNormalizedServerCapabilitySnapshot['mcpTools'],
     localMcpServer: {
       source: 'server-derived',
+      ...buildServerDerivedMetadata(lastUpdatedAt),
       available: payload.mcp_server.available,
       transport: payload.mcp_server.transport,
-      supportedMethods: payload.mcp_server.supported_methods,
-    },
+      supportedMethods: [...payload.mcp_server.supported_methods],
+    } as BidviaNormalizedServerCapabilitySnapshot['localMcpServer'],
     serverNegotiation: {
       source: 'server-derived',
+      ...buildServerDerivedMetadata(lastUpdatedAt),
       status: 'provided',
       serverProvidedCapabilitiesKnown: true,
-    },
+    } as BidviaNormalizedServerCapabilitySnapshot['serverNegotiation'],
   };
 }

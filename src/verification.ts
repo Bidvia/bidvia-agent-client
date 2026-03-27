@@ -152,6 +152,8 @@ function buildRecordsSection(recordIds: BidviaVerificationBundleRecordIds): Bidv
     sectionKey: 'records',
     title: 'Recorded ids',
     entries: [
+      ...(recordIds.proposals ?? []),
+      ...(recordIds.reviews ?? []),
       ...(recordIds.listings ?? []),
       ...(recordIds.matches ?? []),
       ...(recordIds.connections ?? []),
@@ -177,6 +179,8 @@ function buildRouteDetails(
 
 function buildRecordDetails(recordIds: BidviaVerificationBundleRecordIds): BidviaReviewPacketRecordDetail[] {
   const recordGroupKeys: BidviaReviewPacketRecordGroupKey[] = [
+    'proposals',
+    'reviews',
     'listings',
     'matches',
     'connections',
@@ -233,6 +237,11 @@ export interface BuildScenarioVerificationBundleInput {
 export interface BuildReviewPacketInput {
   scenario: BidviaScenarioEnvelope;
   bundle: BidviaScenarioVerificationBundle;
+}
+
+export interface BidviaScenarioReviewResult {
+  verificationBundle: BidviaScenarioVerificationBundle;
+  reviewPacket: BidviaReviewPacket;
 }
 
 export function buildScenarioVerificationBundle(
@@ -295,6 +304,25 @@ export function buildReviewPacket(input: BuildReviewPacketInput): BidviaReviewPa
       buildRecordsSection(input.bundle.recordIds),
     ],
   });
+}
+
+export function buildCompletedScenarioReviewResult(
+  scenario: BidviaScenarioEnvelope,
+): BidviaScenarioReviewResult {
+  const verificationBundle = buildScenarioVerificationBundle({
+    scenario,
+    verificationMode: 'review-safe',
+    completedRouteChain: scenario.expectedRouteChain,
+    recordIds: scenario.recordIds,
+  });
+
+  return {
+    verificationBundle,
+    reviewPacket: buildReviewPacket({
+      scenario,
+      bundle: verificationBundle,
+    }),
+  };
 }
 
 export function exportLegacyVerificationBundle(bundle: BidviaVerificationBundle): BidviaVerificationBundle {

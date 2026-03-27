@@ -46,13 +46,53 @@ test('normalizeServerCapabilityPayload maps server-provided capability payloads 
   assert.equal(snapshot.environmentMode, 'production');
   assert.equal(snapshot.routeCapabilities.source, 'server-derived');
   assert.equal(snapshot.routeCapabilities.items[0]?.helperKey, 'postHeartbeat');
+  assert.equal(snapshot.routeCapabilities.schemaVersion, '2026-03-27');
+  assert.equal(snapshot.routeCapabilities.version, 'server-capability-payload');
+  assert.equal(snapshot.routeCapabilities.etag, null);
+  assert.match(snapshot.routeCapabilities.lastUpdatedAt, /^\d{4}-\d{2}-\d{2}T/);
+  assert.equal(snapshot.routeCapabilities.ttl, null);
+  assert.equal(snapshot.routeCapabilities.expiresAt, null);
+  assert.equal(snapshot.routeCapabilities.stale, false);
+  assert.equal(snapshot.routeCapabilities.fallbackPolicy, 'retain-server-derived-snapshot-until-replaced');
   assert.equal(snapshot.mcpTools.source, 'server-derived');
   assert.equal(snapshot.mcpTools.items[0]?.toolName, 'industry-universe-plan-preview');
+  assert.equal(snapshot.mcpTools.schemaVersion, '2026-03-27');
+  assert.equal(snapshot.mcpTools.version, 'server-capability-payload');
+  assert.equal(snapshot.mcpTools.etag, null);
+  assert.match(snapshot.mcpTools.lastUpdatedAt, /^\d{4}-\d{2}-\d{2}T/);
+  assert.equal(snapshot.mcpTools.ttl, null);
+  assert.equal(snapshot.mcpTools.expiresAt, null);
+  assert.equal(snapshot.mcpTools.stale, false);
+  assert.equal(snapshot.mcpTools.fallbackPolicy, 'retain-server-derived-snapshot-until-replaced');
+  assert.deepEqual(snapshot.localMcpServer, {
+    source: 'server-derived',
+    schemaVersion: '2026-03-27',
+    version: 'server-capability-payload',
+    etag: null,
+    lastUpdatedAt: snapshot.localMcpServer.lastUpdatedAt,
+    ttl: null,
+    expiresAt: null,
+    stale: false,
+    fallbackPolicy: 'retain-server-derived-snapshot-until-replaced',
+    available: true,
+    transport: 'stdio',
+    supportedMethods: ['initialize', 'tools/list', 'tools/call'],
+  });
+  assert.match(snapshot.localMcpServer.lastUpdatedAt, /^\d{4}-\d{2}-\d{2}T/);
   assert.deepEqual(snapshot.serverNegotiation, {
     source: 'server-derived',
+    schemaVersion: '2026-03-27',
+    version: 'server-capability-payload',
+    etag: null,
+    lastUpdatedAt: snapshot.serverNegotiation.lastUpdatedAt,
+    ttl: null,
+    expiresAt: null,
+    stale: false,
+    fallbackPolicy: 'retain-server-derived-snapshot-until-replaced',
     status: 'provided',
     serverProvidedCapabilitiesKnown: true,
   });
+  assert.match(snapshot.serverNegotiation.lastUpdatedAt, /^\d{4}-\d{2}-\d{2}T/);
 });
 
 test('normalizeServerCapabilityPayload keeps local and deferred server knowledge distinct in type and shape', () => {
@@ -69,8 +109,19 @@ test('normalizeServerCapabilityPayload keeps local and deferred server knowledge
   assert.equal(snapshot.routeCapabilities.source, 'server-derived');
   assert.equal(snapshot.mcpTools.source, 'server-derived');
   assert.equal(snapshot.localMcpServer.source, 'server-derived');
+  assert.equal(snapshot.routeCapabilities.fallbackPolicy, 'retain-server-derived-snapshot-until-replaced');
+  assert.equal(snapshot.mcpTools.stale, false);
+  assert.equal(snapshot.localMcpServer.ttl, null);
   assert.deepEqual(snapshot.serverNegotiation, {
     source: 'server-derived',
+    schemaVersion: '2026-03-27',
+    version: 'server-capability-payload',
+    etag: null,
+    lastUpdatedAt: snapshot.serverNegotiation.lastUpdatedAt,
+    ttl: null,
+    expiresAt: null,
+    stale: false,
+    fallbackPolicy: 'retain-server-derived-snapshot-until-replaced',
     status: 'provided',
     serverProvidedCapabilitiesKnown: true,
   });

@@ -17,15 +17,40 @@ test('buildLocalRuntimeCapabilitySnapshot derives a machine-readable local capab
   assert.equal(snapshot.environmentMode, 'production');
   assert.equal(snapshot.routeCapabilities.source, 'local-static');
   assert.equal(snapshot.routeCapabilities.items.length > 0, true);
+  assert.equal(snapshot.routeCapabilities.schemaVersion, '2026-03-27');
+  assert.equal(snapshot.routeCapabilities.version, 'local-runtime-capability-snapshot');
+  assert.equal(snapshot.routeCapabilities.revision, 'repo-route-capabilities');
+  assert.match(snapshot.routeCapabilities.lastUpdatedAt, /^\d{4}-\d{2}-\d{2}T/);
+  assert.equal(snapshot.routeCapabilities.ttl, null);
+  assert.equal(snapshot.routeCapabilities.expiresAt, null);
+  assert.equal(snapshot.routeCapabilities.stale, false);
+  assert.equal(snapshot.routeCapabilities.fallbackPolicy, 'prefer-local-static-until-server-negotiation');
   assert.equal(snapshot.mcpTools.source, 'local-static');
   assert.equal(snapshot.mcpTools.items.length, 9);
+  assert.equal(snapshot.mcpTools.schemaVersion, '2026-03-27');
+  assert.equal(snapshot.mcpTools.version, 'local-runtime-capability-snapshot');
+  assert.equal(snapshot.mcpTools.revision, 'repo-mcp-tools');
+  assert.match(snapshot.mcpTools.lastUpdatedAt, /^\d{4}-\d{2}-\d{2}T/);
+  assert.equal(snapshot.mcpTools.ttl, null);
+  assert.equal(snapshot.mcpTools.expiresAt, null);
+  assert.equal(snapshot.mcpTools.stale, false);
+  assert.equal(snapshot.mcpTools.fallbackPolicy, 'prefer-local-static-until-server-negotiation');
   assert.deepEqual(snapshot.localMcpServer, {
     source: 'local-static',
+    schemaVersion: '2026-03-27',
+    version: 'local-runtime-capability-snapshot',
+    revision: 'repo-local-mcp-server',
+    lastUpdatedAt: snapshot.localMcpServer.lastUpdatedAt,
+    ttl: null,
+    expiresAt: null,
+    stale: false,
+    fallbackPolicy: 'prefer-local-static-until-server-negotiation',
     available: true,
     transport: 'stdio',
     entrypoint: 'src/mcp-server.ts',
     supportedMethods: ['initialize', 'tools/list', 'tools/call'],
   });
+  assert.match(snapshot.localMcpServer.lastUpdatedAt, /^\d{4}-\d{2}-\d{2}T/);
 });
 
 test('buildLocalRuntimeCapabilitySnapshot keeps deferred server negotiation explicit and separate from local facts', () => {
@@ -36,9 +61,18 @@ test('buildLocalRuntimeCapabilitySnapshot keeps deferred server negotiation expl
   assert.equal(snapshot.environmentMode, 'sim');
   assert.deepEqual(snapshot.deferredServerNegotiation, {
     source: 'deferred-server-negotiation',
+    schemaVersion: '2026-03-27',
+    version: 'local-runtime-capability-snapshot',
+    revision: 'deferred-server-negotiation',
+    lastUpdatedAt: snapshot.deferredServerNegotiation.lastUpdatedAt,
+    ttl: null,
+    expiresAt: null,
+    stale: false,
+    fallbackPolicy: 'await-explicit-server-negotiation',
     status: 'deferred',
     serverProvidedCapabilitiesKnown: false,
   });
+  assert.match(snapshot.deferredServerNegotiation.lastUpdatedAt, /^\d{4}-\d{2}-\d{2}T/);
   assert.equal(snapshot.localMcpServer.available, true);
   assert.equal(snapshot.routeCapabilities.items.some((capability) => capability.helperKey === 'postHeartbeat'), true);
 });

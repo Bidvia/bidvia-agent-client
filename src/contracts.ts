@@ -7,6 +7,11 @@ import type {
   BidviaIndustryUniverseScenarioPlan,
   BidviaIndustryUniverseScenarioPlanInput,
 } from './universe.js';
+import type {
+  BidviaTaskAckShell,
+  BidviaTaskLeaseShell,
+  BidviaTaskOfferShell,
+} from './task-participation.js';
 
 export interface BidviaClientContext {
   tenantId: string;
@@ -290,6 +295,8 @@ export interface BidviaRouteCapability {
 
 export interface BidviaScenarioEnvelopeRecordIds {
   registrations?: string[];
+  proposals?: string[];
+  reviews?: string[];
   listings?: string[];
   matches?: string[];
   connections?: string[];
@@ -393,6 +400,14 @@ export const bidviaMcpToolOutputModes = [
 
 export type BidviaMcpToolOutputMode = (typeof bidviaMcpToolOutputModes)[number];
 
+export const bidviaMcpServerSupportedMethods = [
+  'initialize',
+  'tools/list',
+  'tools/call',
+] as const;
+
+export type BidviaMcpServerSupportedMethod = (typeof bidviaMcpServerSupportedMethods)[number];
+
 export interface BidviaMcpToolInputSchemaRef {
   schemaKey: string;
 }
@@ -455,6 +470,180 @@ export interface BidviaMultiBusinessChainCoordinatorPlan {
   commercialActionContinuation?: BidviaCommercialActionScenarioPlan;
 }
 
+export const bidviaNormalizationLayers = [
+  'canonical-input',
+  'normalized-working-view',
+  'cached-working-view',
+  'local-snapshot-metadata',
+  'cache-metadata',
+  'freshness-metadata',
+] as const;
+
+export type BidviaNormalizationLayer = (typeof bidviaNormalizationLayers)[number];
+
+export const bidviaNormalizationSnapshotSources = [
+  'local-static',
+  'server-derived',
+  'deferred-server-negotiation',
+] as const;
+
+export type BidviaNormalizationSnapshotSource =
+  (typeof bidviaNormalizationSnapshotSources)[number];
+
+export interface BidviaCanonicalInput<Value> {
+  layer: 'canonical-input';
+  value: Value;
+}
+
+export interface BidviaNormalizedWorkingView<CanonicalValue, NormalizedValue> {
+  layer: 'normalized-working-view';
+  canonical: BidviaCanonicalInput<CanonicalValue>;
+  value: NormalizedValue;
+}
+
+export interface BidviaLocalSnapshotMetadata {
+  layer: 'local-snapshot-metadata';
+  source: BidviaNormalizationSnapshotSource;
+  schemaVersion: string;
+  capturedAt: string;
+}
+
+export interface BidviaCacheMetadata {
+  layer: 'cache-metadata';
+  cacheKey: string;
+  cachedAt: string;
+}
+
+export interface BidviaFreshnessMetadata {
+  layer: 'freshness-metadata';
+  observedAt: string;
+  stale: boolean;
+  expiresAt?: string;
+}
+
+export interface BidviaCachedWorkingView<CanonicalValue, NormalizedValue> {
+  layer: 'cached-working-view';
+  canonical: BidviaCanonicalInput<CanonicalValue>;
+  normalized: BidviaNormalizedWorkingView<CanonicalValue, NormalizedValue>;
+  snapshot: BidviaLocalSnapshotMetadata;
+  cache: BidviaCacheMetadata;
+  freshness: BidviaFreshnessMetadata;
+}
+
+export const bidviaGovernedAgentStateKinds = [
+  'registration',
+  'identity',
+  'binding',
+  'participation-state',
+  'presence',
+  'readiness',
+  'authority',
+] as const;
+
+export type BidviaGovernedAgentStateKind = (typeof bidviaGovernedAgentStateKinds)[number];
+
+export const bidviaAgentRegistrationStatuses = [
+  'unregistered',
+  'provisional',
+  'claimed',
+  'registered',
+  'revoked',
+] as const;
+
+export type BidviaAgentRegistrationStatus = (typeof bidviaAgentRegistrationStatuses)[number];
+
+export const bidviaAgentBindingStatuses = [
+  'unbound',
+  'tenant-bound',
+  'registration-bound',
+] as const;
+
+export type BidviaAgentBindingStatus = (typeof bidviaAgentBindingStatuses)[number];
+
+export const bidviaParticipationStatuses = [
+  'not-participating',
+  'eligible',
+  'invited',
+  'accepted',
+  'leased',
+  'timed-out',
+  'completed',
+] as const;
+
+export type BidviaParticipationStatus = (typeof bidviaParticipationStatuses)[number];
+
+export const bidviaPresenceStatuses = ['unknown', 'online', 'offline'] as const;
+
+export type BidviaPresenceStatus = (typeof bidviaPresenceStatuses)[number];
+
+export const bidviaReadinessStatuses = ['unknown', 'ready', 'not-ready'] as const;
+
+export type BidviaReadinessStatus = (typeof bidviaReadinessStatuses)[number];
+
+export const bidviaAuthorityStatuses = [
+  'unknown',
+  'none',
+  'self-asserted',
+  'delegated',
+  'governed',
+] as const;
+
+export type BidviaAuthorityStatus = (typeof bidviaAuthorityStatuses)[number];
+
+export interface BidviaAgentRegistrationState {
+  kind: 'registration';
+  status: BidviaAgentRegistrationStatus;
+  registrationId?: string;
+}
+
+export interface BidviaAgentIdentityRecord {
+  agentId: string;
+  principalId?: string;
+  tenantId?: string;
+  registrationId?: string;
+}
+
+export interface BidviaAgentIdentityState<
+  CanonicalIdentity = BidviaAgentIdentityRecord,
+  NormalizedIdentity = CanonicalIdentity,
+> {
+  kind: 'identity';
+  identity: BidviaCachedWorkingView<CanonicalIdentity, NormalizedIdentity>;
+}
+
+export interface BidviaAgentBindingState {
+  kind: 'binding';
+  status: BidviaAgentBindingStatus;
+  tenantId?: string;
+  registrationId?: string;
+}
+
+export interface BidviaAgentParticipationState {
+  kind: 'participation-state';
+  status: BidviaParticipationStatus;
+  taskId?: string;
+}
+
+export interface BidviaAgentPresenceState {
+  kind: 'presence';
+  status: BidviaPresenceStatus;
+  observedAt: string;
+}
+
+export interface BidviaAgentReadinessState {
+  kind: 'readiness';
+  status: BidviaReadinessStatus;
+  observedAt: string;
+  rationale?: string;
+}
+
+export interface BidviaAgentAuthorityState {
+  kind: 'authority';
+  status: BidviaAuthorityStatus;
+  observedAt: string;
+  grantedBy?: string;
+}
+
 export const bidviaRuntimeCapabilityKnowledgeSources = [
   'local-static',
   'deferred-server-negotiation',
@@ -463,25 +652,46 @@ export const bidviaRuntimeCapabilityKnowledgeSources = [
 export type BidviaRuntimeCapabilityKnowledgeSource =
   (typeof bidviaRuntimeCapabilityKnowledgeSources)[number];
 
-export interface BidviaLocalRouteCapabilityKnowledge {
+export interface BidviaCapabilitySnapshotFreshnessMetadata {
+  schemaVersion: string;
+  version: string;
+  lastUpdatedAt: string;
+  ttl: null;
+  expiresAt: null;
+  stale: boolean;
+  fallbackPolicy: string;
+}
+
+export interface BidviaLocalCapabilitySnapshotMetadata
+  extends BidviaCapabilitySnapshotFreshnessMetadata {
+  revision: string;
+}
+
+export interface BidviaServerCapabilitySnapshotMetadata
+  extends BidviaCapabilitySnapshotFreshnessMetadata {
+  etag: string | null;
+}
+
+export interface BidviaLocalRouteCapabilityKnowledge extends BidviaLocalCapabilitySnapshotMetadata {
   source: 'local-static';
   items: BidviaRouteCapability[];
 }
 
-export interface BidviaLocalMcpToolKnowledge {
+export interface BidviaLocalMcpToolKnowledge extends BidviaLocalCapabilitySnapshotMetadata {
   source: 'local-static';
   items: BidviaMcpToolDescriptor[];
 }
 
-export interface BidviaLocalMcpServerAvailability {
+export interface BidviaLocalMcpServerAvailability extends BidviaLocalCapabilitySnapshotMetadata {
   source: 'local-static';
   available: true;
   transport: 'stdio';
   entrypoint: 'src/mcp-server.ts';
-  supportedMethods: ['initialize', 'tools/list', 'tools/call'];
+  supportedMethods: BidviaMcpServerSupportedMethod[];
 }
 
-export interface BidviaDeferredServerCapabilityNegotiation {
+export interface BidviaDeferredServerCapabilityNegotiation
+  extends BidviaLocalCapabilitySnapshotMetadata {
   source: 'deferred-server-negotiation';
   status: 'deferred';
   serverProvidedCapabilitiesKnown: false;
@@ -522,7 +732,7 @@ export interface BidviaServerCapabilityPayloadMcpTool {
 export interface BidviaServerCapabilityPayloadMcpServer {
   available: boolean;
   transport: 'stdio';
-  supported_methods: ['initialize', 'tools/list', 'tools/call'];
+  supported_methods: BidviaMcpServerSupportedMethod[];
 }
 
 export interface BidviaServerCapabilityPayload {
@@ -532,24 +742,28 @@ export interface BidviaServerCapabilityPayload {
   mcp_server: BidviaServerCapabilityPayloadMcpServer;
 }
 
-export interface BidviaServerDerivedRouteCapabilityKnowledge {
+export interface BidviaServerDerivedRouteCapabilityKnowledge
+  extends BidviaServerCapabilitySnapshotMetadata {
   source: 'server-derived';
   items: BidviaRouteCapability[];
 }
 
-export interface BidviaServerDerivedMcpToolKnowledge {
+export interface BidviaServerDerivedMcpToolKnowledge
+  extends BidviaServerCapabilitySnapshotMetadata {
   source: 'server-derived';
   items: BidviaMcpToolDescriptor[];
 }
 
-export interface BidviaServerDerivedMcpServerAvailability {
+export interface BidviaServerDerivedMcpServerAvailability
+  extends BidviaServerCapabilitySnapshotMetadata {
   source: 'server-derived';
   available: boolean;
   transport: 'stdio';
-  supportedMethods: ['initialize', 'tools/list', 'tools/call'];
+  supportedMethods: BidviaMcpServerSupportedMethod[];
 }
 
-export interface BidviaServerProvidedCapabilityNegotiation {
+export interface BidviaServerProvidedCapabilityNegotiation
+  extends BidviaServerCapabilitySnapshotMetadata {
   source: 'server-derived';
   status: 'provided';
   serverProvidedCapabilitiesKnown: true;
@@ -561,4 +775,315 @@ export interface BidviaNormalizedServerCapabilitySnapshot {
   mcpTools: BidviaServerDerivedMcpToolKnowledge;
   localMcpServer: BidviaServerDerivedMcpServerAvailability;
   serverNegotiation: BidviaServerProvidedCapabilityNegotiation;
+}
+
+export const bidviaCapabilityTruthEffectiveSources = [
+  'server-derived',
+  'dependency-gated',
+] as const;
+
+export type BidviaCapabilityTruthEffectiveSource =
+  (typeof bidviaCapabilityTruthEffectiveSources)[number];
+
+export interface BidviaProvidedCoreCapabilityTruthRefresh {
+  source: 'server-derived';
+  status: 'provided';
+  serverProvidedCapabilitiesKnown: true;
+}
+
+export interface BidviaBlockedCoreCapabilityTruthRefresh {
+  source: 'dependency-gated';
+  status: 'blocked';
+  blockedBy: 'bidvia-core-capability-truth';
+  reason: 'Frozen core capability truth is unavailable.';
+  serverProvidedCapabilitiesKnown: false;
+}
+
+export type BidviaCoreCapabilityTruthRefresh =
+  | BidviaProvidedCoreCapabilityTruthRefresh
+  | BidviaBlockedCoreCapabilityTruthRefresh;
+
+export interface BidviaRemoteCapabilityRefreshInput {
+  localSnapshot: BidviaLocalRuntimeCapabilitySnapshot;
+  coreCapabilityPayload?: BidviaServerCapabilityPayload;
+}
+
+export interface BidviaRemoteRouteCapabilityRefreshState {
+  localSnapshot: BidviaLocalRouteCapabilityKnowledge;
+  coreSnapshot: BidviaServerDerivedRouteCapabilityKnowledge | null;
+  effectiveSource: BidviaCapabilityTruthEffectiveSource;
+  effectiveItems: BidviaRouteCapability[];
+}
+
+export interface BidviaRemoteMcpToolRefreshState {
+  localSnapshot: BidviaLocalMcpToolKnowledge;
+  coreSnapshot: BidviaServerDerivedMcpToolKnowledge | null;
+  effectiveSource: BidviaCapabilityTruthEffectiveSource;
+  effectiveItems: BidviaMcpToolDescriptor[];
+}
+
+export interface BidviaRemoteMcpServerEffectiveValue {
+  available: boolean;
+  transport: 'stdio';
+  supportedMethods: BidviaMcpServerSupportedMethod[];
+}
+
+export interface BidviaRemoteMcpServerRefreshState {
+  localSnapshot: BidviaLocalMcpServerAvailability;
+  coreSnapshot: BidviaServerDerivedMcpServerAvailability | null;
+  effectiveSource: BidviaCapabilityTruthEffectiveSource;
+  effectiveValue: BidviaRemoteMcpServerEffectiveValue;
+}
+
+export interface BidviaRemoteCapabilityRefreshSnapshot {
+  baseUrl: string;
+  environmentMode: BidviaEnvironmentMode;
+  routeCapabilities: BidviaRemoteRouteCapabilityRefreshState;
+  mcpTools: BidviaRemoteMcpToolRefreshState;
+  localMcpServer: BidviaRemoteMcpServerRefreshState;
+  coreTruthRefresh: BidviaCoreCapabilityTruthRefresh;
+}
+
+export interface BidviaPricingBasisObject {
+  pricingBasisId: string;
+  basisType: string;
+  label: string;
+  observedAt: string;
+  termsSummary?: string;
+}
+
+export interface BidviaPricingRuleAtom {
+  pricingRuleAtomId: string;
+  ruleType: string;
+  label: string;
+  operator: string;
+  operandDescription: string;
+}
+
+export interface BidviaPricingQuotationMethodModule {
+  quotationMethodModuleId: string;
+  methodType: string;
+  label: string;
+  pricingBasisIds: string[];
+  pricingRuleAtomIds: string[];
+}
+
+export interface BidviaPricingQuoteTemplate {
+  quoteTemplateId: string;
+  templateType: string;
+  label: string;
+  quotationMethodModuleId: string;
+  requiredFieldLabels: string[];
+}
+
+export interface BidviaPricingQuotationObject {
+  quotationObjectId: string;
+  quoteTemplateId: string;
+  quotationMethodModuleId: string;
+  pricingBasisId: string;
+  pricingRuleAtomIds: string[];
+  presentedAt: string;
+  status: string;
+  displaySummary?: string;
+}
+
+export interface BidviaPricingConsumption {
+  pricingBasis: BidviaPricingBasisObject;
+  ruleAtoms: BidviaPricingRuleAtom[];
+  quotationMethodModule: BidviaPricingQuotationMethodModule;
+  quoteTemplate: BidviaPricingQuoteTemplate;
+  quotationObject: BidviaPricingQuotationObject;
+}
+
+export interface BidviaPricingExplanationDependencySummary {
+  pricingBasisLabel: string;
+  quotationMethodModuleLabel: string;
+  quoteTemplateLabel: string;
+  quotationObjectStatus: string;
+  pricingRuleAtomLabels: string[];
+}
+
+export interface BidviaPricingExplanation {
+  pricingBasisId: string;
+  quotationMethodModuleId: string;
+  quoteTemplateId: string;
+  quotationObjectId: string;
+  pricingRuleAtomIds: string[];
+  dependencySummary: BidviaPricingExplanationDependencySummary;
+  explanationLines: string[];
+}
+
+export interface BidviaFileResource {
+  fileResourceId: string;
+  storageRef: string;
+  fileName: string;
+  mimeType: string;
+  byteSize: number;
+  observedAt: string;
+}
+
+export interface BidviaDocumentArtifact {
+  documentArtifactId: string;
+  fileResourceId: string;
+  artifactType: string;
+  title: string;
+  observedAt: string;
+}
+
+export interface BidviaEvidenceAsset {
+  evidenceAssetId: string;
+  assetKind: string;
+  fileResourceId: string;
+  documentArtifactId?: string;
+  summary: string;
+  observedAt: string;
+  ownerRef?: string;
+  lineageRefs: string[];
+}
+
+export interface BidviaMediaAsset {
+  mediaAssetId: string;
+  mediaType: string;
+  fileResourceId: string;
+  previewRef?: string;
+  observedAt: string;
+}
+
+export interface BidviaAttachmentBinding {
+  attachmentBindingId: string;
+  targetRef: string;
+  assetRef: string;
+  role: string;
+  visibility: string;
+  ownerRef?: string;
+  lineageRefs: string[];
+  intendedGovernanceEffect?: string;
+  observedAt: string;
+}
+
+export interface BidviaAssetConsumption {
+  fileResource: BidviaFileResource;
+  documentArtifact: BidviaDocumentArtifact;
+  evidenceAsset: BidviaEvidenceAsset;
+  mediaAsset: BidviaMediaAsset;
+  attachmentBinding: BidviaAttachmentBinding;
+}
+
+export interface BidviaAssetExplanationBindingContext {
+  targetRef: string;
+  role: string;
+  visibility: string;
+  ownerRef?: string;
+  lineageRefs: string[];
+  intendedGovernanceEffect?: string;
+}
+
+export interface BidviaAssetExplanation {
+  fileResourceId: string;
+  documentArtifactId: string;
+  evidenceAssetId: string;
+  mediaAssetId: string;
+  attachmentBindingId: string;
+  bindingContext: BidviaAssetExplanationBindingContext;
+  explanationLines: string[];
+}
+
+export const bidviaGovernedProposalSurfaceKinds = [
+  'proposal-recommendation',
+  'review-assessment',
+  'authorized-use',
+] as const;
+
+export type BidviaGovernedProposalSurfaceKind =
+  (typeof bidviaGovernedProposalSurfaceKinds)[number];
+
+export const bidviaGovernedParticipationAuthorities = [
+  'recommendation',
+  'assessment',
+  'authorized-use',
+] as const;
+
+export type BidviaGovernedParticipationAuthority =
+  (typeof bidviaGovernedParticipationAuthorities)[number];
+
+export interface BidviaProposalRecommendationInput {
+  authorityScope: BidviaGovernedParticipationAuthority;
+  proposalType: string;
+  proposalRef: string;
+  recommendationRef: string;
+  summary: string;
+  now: string;
+  taskOffer: BidviaTaskOfferShell;
+}
+
+export interface BidviaProposalReviewAssessmentInput {
+  authorityScope: BidviaGovernedParticipationAuthority;
+  proposalRef: string;
+  reviewRef: string;
+  assessment: string;
+  summary: string;
+  now: string;
+  taskAck: BidviaTaskAckShell;
+}
+
+export interface BidviaAuthorizedUseInput {
+  authorityScope: BidviaGovernedParticipationAuthority;
+  proposalRef: string;
+  authorizationRef: string;
+  receiptId: string;
+  usageSummary: string;
+  now: string;
+  taskLease: BidviaTaskLeaseShell;
+}
+
+export interface BidviaGovernedProposalRecommendation {
+  kind: 'proposal-recommendation';
+  authorityScope: 'recommendation';
+  proposalType: string;
+  proposalRef: string;
+  recommendationRef: string;
+  summary: string;
+  now: string;
+  taskOffer: BidviaTaskOfferShell;
+}
+
+export interface BidviaGovernedProposalReviewAssessment {
+  kind: 'review-assessment';
+  authorityScope: 'assessment';
+  proposalRef: string;
+  reviewRef: string;
+  assessment: string;
+  summary: string;
+  now: string;
+  taskAck: BidviaTaskAckShell;
+}
+
+export interface BidviaGovernedAuthorizedUseReceipt {
+  kind: 'authorized-use';
+  authorityScope: 'authorized-use';
+  proposalRef: string;
+  authorizationRef: string;
+  receiptId: string;
+  usageSummary: string;
+  now: string;
+  taskLease: BidviaTaskLeaseShell;
+}
+
+export interface BidviaGovernedProposalReviewUsePlanInput {
+  scenarioId: string;
+  scenarioLabel: string;
+  sourceRefs: string[];
+  evidenceRefs: string[];
+  traceIds: string[];
+  workflowIds: string[];
+  proposalRecommendation: BidviaProposalRecommendationInput;
+  reviewAssessment: BidviaProposalReviewAssessmentInput;
+  authorizedUse: BidviaAuthorizedUseInput;
+}
+
+export interface BidviaGovernedProposalReviewUsePlan {
+  envelope: BidviaScenarioEnvelope;
+  proposalRecommendation: BidviaGovernedProposalRecommendation;
+  reviewAssessment: BidviaGovernedProposalReviewAssessment;
+  authorizedUse: BidviaGovernedAuthorizedUseReceipt;
 }
