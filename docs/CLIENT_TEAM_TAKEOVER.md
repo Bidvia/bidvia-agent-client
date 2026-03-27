@@ -15,7 +15,7 @@ It separates what is actually implemented today from what is only positioned or 
 ## Current truth
 
 `Bidvia-agent-client` is already positioned as an agent-side operating kit.
-But the current repo is still only a partial V11 implementation slice.
+But the current repo is still only a partial current mainline implementation slice aligned to the frozen Bidvia Commercial Universe V1 / Core V12 handoff boundary.
 
 Treat the six-layer model in `docs/REPOSITORY_STRUCTURE_PROPOSAL.md` as the future target shape, not as the current implementation state.
 
@@ -23,6 +23,12 @@ Treat the six-layer model in `docs/REPOSITORY_STRUCTURE_PROPOSAL.md` as the futu
 
 Confirmed in source and tests today:
 
+- canonical ingestion/normalization helpers plus freshness-aware local working-view metadata
+- governed agent-state helpers that split registration, identity, binding, participation-state, presence, readiness, and authority
+- task-participation helpers for offer/claim/ack/lease/timeout/retry-aware local participation shells
+- pricing explanation helpers for pricing basis, rule atoms, quotation methods, quote templates, and quotation objects
+- asset/media/evidence/document/attachment consumption helpers with role-preserving explanation output
+- review-safe governed proposal, review, and authorized-use helpers
 - onboarding / provisional -> query -> claim helpers
 - heartbeat / sync / evidence / proposal helpers
 - bounded registration-lifecycle scenario family
@@ -51,6 +57,7 @@ Confirmed in source and tests today:
 - machine-readable static capability registry for shipped helpers and scenario route keys
 - local runtime-capability snapshot output for repo-known runtime-facing facts
 - server-capability payload parsing and normalization into the repo capability shape
+- dependency-gated remote capability refresh seam across local snapshot and optional core payload shape
 - static MCP-facing tool descriptor/catalog support for shipped bounded slices
 - bounded local stdio MCP server entrypoint for the shipped MCP-facing tools
 - environment mode classification for `local`, `sim`, and `production`
@@ -67,7 +74,6 @@ Confirmed in source and tests today:
 
 These exist, but should not be overstated:
 
-- scenario support currently includes two bounded orchestration slices plus one downstream handoff slice, not a general workflow layer
 - scenario support currently includes three bounded orchestration slices plus one downstream handoff slice, not a general workflow layer
 - registration-lifecycle support is bounded to onboarding plus registration-bound helper review flows only; it does not imply any new marketplace, approval, or autonomous-runtime behavior
 - registered-agent-operations support is bounded to post-onboarding registration-bound helper review flows only; it does not add onboarding back in or imply any approval, marketplace, or broader runtime behavior
@@ -78,11 +84,20 @@ These exist, but should not be overstated:
 - capability discovery is now machine-readable through a static repo-local registry, but it remains descriptive-only and does not negotiate with a runtime
 - runtime-capability visibility now includes one repo-local snapshot surface, but it is still local knowledge only and not server-provided negotiation
 - server-capability visibility now includes one local parse/normalize surface, but it still does not perform live negotiation or remote discovery
+- dependency-gated remote capability refresh now has a local merge seam, but that seam is not the same thing as integrated Core truth and it stays blocked until Bidvia Core provides authoritative capability truth and freshness semantics
 - adapter support now includes a static MCP-facing descriptor/catalog layer plus a bounded local stdio MCP server loop, but it is still not a hosted MCP server or complete MCP/runtime bridge
 - environment mode support is classification-only visibility over the current base URL/profile inputs, not execution policy or runtime control
 - verification-wave CLI support is preview-only and does not turn the repo into a live orchestration engine
 - CLI support is still limited and does not cover the broader business-chain helper families
 - current docs describe a broader destination than the code delivers today
+
+Use this release-language split when you describe the repo externally:
+
+- shipped and tested local surfaces
+- implemented but dependency-gated seams
+- deferred Core/runtime/control-plane areas
+
+That split matters most for capability refresh. The seam is shipped. Core-owned truth is not.
 
 ## Not yet implemented
 
@@ -91,10 +106,14 @@ These should still be treated as next-step work, not shipped capability:
 - approval -> opportunity creation or discovery behavior
 - higher-level orchestration helpers across multiple business chains beyond the shipped coordinator path
 - broader review-packet workflow expansion beyond the current bounded preview and export layer
-- server-provided runtime capability negotiation or remote capability discovery
+- frozen server-provided runtime capability truth, live negotiation, or remote capability discovery
 - hosted MCP server work, remote registry behavior, and broader MCP/tool runtime loops beyond the current local stdio server layer
 - broader environment-specific policy logic or runtime behavior changes driven by environment mode
 - richer CLI flows for business verification waves
+
+Also still deferred:
+
+- any claim that the client owns authority, freshness truth, or server truth on its own
 
 ## Immediate takeover sequence
 

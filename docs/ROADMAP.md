@@ -15,20 +15,35 @@ That means the repo should eventually cover:
 
 ## Current delivered slice
 
-The repo now includes a first usable V11 execution-layer wave inside that broader product direction:
+The repo now includes a current mainline public consumer execution-layer wave, aligned to the frozen Bidvia Commercial Universe V1 / Core V12 handoff boundary, inside that broader product direction:
 
 1. frozen core-aligned onboarding / query / claim request formation
 2. frozen registration-bound heartbeat / sync / evidence / proposal request formation
-3. production-proven business-chain helper slices for listing/match, connection/approval, package export, and commercial actions
-4. generic scenario-envelope builders plus bounded registration-lifecycle, registered-agent-operations, industry-universe, connection-approval, and commercial-action continuation scenario slices, plus one honest cross-chain coordinator layer across those shipped slices
-5. richer scenario verification bundle support, derived review-packet builders with reviewer-facing detail, and stable review-packet export compatibility
-6. bounded CLI preview and export commands for scenario plans, review packets, and business verification wave previews across shipped slices
-7. machine-readable static capability metadata for shipped helpers and scenario route keys
-8. local runtime-capability snapshot output for repo-known route, MCP, and local server facts
-9. server-capability payload parsing and normalization into the repo capability shape
-10. static MCP-facing tool descriptors and catalog exports for the shipped bounded slices plus a bounded local stdio MCP server entrypoint
-11. environment mode classification for `local`, `sim`, and `production` plus a read-only CLI visibility command
-12. contract tests plus stubbed local example flows
+3. canonical ingestion/normalization plus freshness-aware local working-view and snapshot discipline
+4. governed agent-state and task-participation helpers that keep authority separate from presence, readiness, and cache-like signals
+5. pricing plus media/evidence/document/attachment consumption helpers that explain structure without claiming final platform truth
+6. review-safe governed proposal / review / authorized-use workflow helpers
+7. production-proven business-chain helper slices for listing/match, connection/approval, package export, and commercial actions
+8. generic scenario-envelope builders plus bounded registration-lifecycle, registered-agent-operations, industry-universe, connection-approval, and commercial-action continuation scenario slices, plus one honest cross-chain coordinator layer across those shipped slices
+9. richer scenario verification bundle support, derived review-packet builders with reviewer-facing detail, and stable review-packet export compatibility
+10. bounded CLI preview and export commands for scenario plans, review packets, and business verification wave previews across shipped slices
+11. machine-readable static capability metadata for shipped helpers and scenario route keys
+12. local runtime-capability snapshot output for repo-known route, MCP, and local server facts
+13. server-capability payload parsing and normalization into the repo capability shape
+14. dependency-gated remote capability refresh seam between local snapshot and optional core capability payload
+15. static MCP-facing tool descriptors and catalog exports for the shipped bounded slices plus a bounded local stdio MCP server entrypoint
+16. environment mode classification for `local`, `sim`, and `production` plus a read-only CLI visibility command
+17. contract tests plus stubbed local example flows
+
+## Release-language guardrail
+
+For the current release train, describe the delivered slice in three separate buckets:
+
+1. shipped local surfaces that are implemented and tested here
+2. implemented seams that stay dependency-gated until Bidvia Core provides frozen truth
+3. deferred runtime and control-plane areas that are still outside the repo boundary
+
+The remote capability refresh path belongs in bucket 2. It is a shipped seam, but not a claim of integrated Core truth, live negotiation, remote discovery, hosted MCP/runtime behavior, or remote registry behavior.
 
 ## Planned next layers
 
@@ -38,7 +53,7 @@ The repo now includes a first usable V11 execution-layer wave inside that broade
 4. broader CLI flows for business verification waves
 5. live MCP server, transport, negotiation, and broader adapter/runtime surfaces beyond the current static catalog layer
 
-## Production verification lessons from V11 wave-1/2/3
+## Production verification lessons from the earlier V11 wave-1/2/3 work
 
 The first production verification waves exposed a clear next backlog for the client.
 
@@ -148,7 +163,25 @@ Current deferral boundary:
 - no remote capability discovery exists in this repo yet
 - no network fetch is introduced by the normalization layer
 
-### 6. Environment mode visibility
+### 6. Dependency-gated remote capability refresh
+
+The client can now wire together local snapshot knowledge and an optional server-derived payload shape, but only through a dependency-gated seam rather than a fully integrated Core truth path.
+
+Current progress:
+
+- `refreshRemoteCapabilityTruth(...)` added in `src/remote-capability-refresh.ts`
+- local snapshot and normalized server payload can now be merged into one effective view shape
+- the seam reports an explicit blocked `dependency-gated` state when frozen core capability truth is unavailable
+- the seam stays fail-closed when Core-owned truth is missing, so callers can see the blocked boundary without treating local data as server truth
+
+Current deferral boundary:
+
+- no frozen Bidvia Core capability truth source exists in this repo yet
+- no integrated live refresh loop exists in this repo yet
+- no authority ownership shifts from Core to client through this seam
+- no live remote negotiation, hosted MCP/runtime bridging, or remote registry behavior is introduced by this seam
+
+### 7. Environment mode visibility
 
 The client can now classify the current base URL into a simple environment mode without claiming control over runtime behavior.
 
@@ -164,7 +197,7 @@ Current deferral boundary:
 - no runtime behavior changes are introduced by environment mode classification
 - no broader transport/runtime expansion exists through this visibility layer
 
-### 7. Production-safe verification mode
+### 8. Production-safe verification mode
 
 The client should gain a bounded verification mode that can:
 
@@ -180,7 +213,7 @@ Current progress:
 - richer reviewer-facing review-packet detail added for route coverage and recorded ids derived from existing scenario and bundle facts
 - legacy verification export preserved for compatibility
 
-### 8. Commercial-action support
+### 9. Commercial-action support
 
 Wave-3 proved that `commercial-actions` is a real production path now.
 The client should grow dedicated helpers for:
@@ -202,7 +235,7 @@ Current deferral boundary:
 - no autonomous governance or self-authorizing execution layer exists in this repo yet
 - no broader multi-business-chain orchestration layer exists around the current continuation slice yet
 
-### 9. MCP-facing adapter catalog
+### 10. MCP-facing adapter catalog
 
 The current bounded adapter seam can now be described through static MCP-facing tool descriptors without turning the repo into a runtime server.
 
@@ -219,7 +252,7 @@ Current deferral boundary:
 - no remote registry or hosted discovery behavior exists in this repo yet
 - no broader MCP protocol/runtime complexity exists beyond the local stdio loop
 
-### 10. Operator-facing verification wave previews
+### 11. Operator-facing verification wave previews
 
 The current CLI can now preview bounded business verification waves without claiming a broader orchestration engine.
 
@@ -235,11 +268,11 @@ Current deferral boundary:
 - no approval-to-opportunity seam crossing happens through the preview flows
 - no broader runtime or MCP behavior is introduced by these commands
 
-## V11 rule
+## Current release rule
 
-The first real implementation wave in this repo belongs to `V11` and must follow frozen core-side agent access contracts before adding CLI or SDK behavior.
+The current mainline release in this repo is aligned to the frozen Bidvia Commercial Universe V1 / Core V12 handoff boundary and must follow those frozen handoff contracts before adding CLI or SDK behavior.
 
-Required V11 direction:
+Required current-release direction:
 
 1. consume frozen onboarding / claim / heartbeat / sync / evidence / proposal contracts from core
 2. provide first usable CLI and SDK helpers for those allowed operations only

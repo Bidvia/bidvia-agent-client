@@ -2,16 +2,21 @@
 
 ## Goal
 
-This guide shows the minimum operating path for two V11 audiences:
+This guide shows the minimum operating path for two current mainline audiences:
 
 1. internal team agents using the full provisional -> query -> claim -> registration-bound flow
 2. seed-user agents using the bounded registration-bound runtime after onboarding is already complete
 
 This guide is intentionally more than an API quickstart. It explains how an agent should approach the platform at the operating level.
 
+If your dominant path is a local OpenClaw Gateway / node-host install, use the dedicated package docs instead of reconstructing that flow from this file:
+
+- `docs/OPENCLAW_GATEWAY_ONBOARDING.md` for the install/configure order
+- `docs/OPENCLAW_GATEWAY_SMOKE.md` for the detailed smoke procedure
+
 ## Contract first
 
-Before using this repo, remember the frozen V11 rules:
+Before using this repo, remember the frozen Bidvia Commercial Universe V1 / Core V12 handoff rules:
 
 - official onboarding path is `provisional -> query -> claim`
 - registration-bound operations require:
@@ -91,6 +96,8 @@ During the compatibility window, the `global` and `china` profiles still keep th
 - `china` profile compatibility mapping -> `https://bidvia.cn`
 
 That compatibility behavior remains supported for now, but the canonical production recommendation is the explicit `api.*` base URL. The shipped runtime model also stays the same: local stdio MCP server plus remote HTTPS API.
+
+For the dedicated local/Gateway operator path, keep using the separate OpenClaw Gateway package docs above. They stay bounded to local stdio MCP plus remote HTTPS API and do not imply any hosted runtime behavior.
 
 ## Capability discovery
 
@@ -308,7 +315,7 @@ npm run example:seed
 
 ## Validation flow
 
-The offline validation command does not require a live Bidvia runtime. It records emitted URLs plus representative headers and bodies, then verifies those samples against the frozen V11 core contract.
+The offline validation command does not require a live Bidvia runtime. It records emitted URLs plus representative headers and bodies, then verifies those samples against the frozen Bidvia Commercial Universe V1 / Core V12 handoff contract docs.
 
 ```bash
 npm run validate

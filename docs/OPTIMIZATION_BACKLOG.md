@@ -2,10 +2,12 @@
 
 ## Why this file exists
 
-This backlog collects the concrete lessons from the V11 production verification waves and translates them into practical next improvements for `Bidvia-agent-client`.
+This backlog collects the concrete lessons from the earlier V11 production verification waves and translates them into practical next improvements for `Bidvia-agent-client`.
 
 The focus is not theoretical SDK perfection.
 The focus is what the production verification actually proved was missing or awkward.
+
+This file is backlog-only. It should not be read as a release claim. Shipped local surfaces, implemented but dependency-gated seams, and deferred Core/runtime areas need to stay clearly separated.
 
 ## Priority A — High-value near-term improvements
 
@@ -194,12 +196,19 @@ Current progress:
 - `normalizeServerCapabilityPayload(...)` added in `src/server-capabilities.ts`
 - read-only `server-capabilities` CLI command added for local normalization output
 - repo-local `examples/server-capabilities.ts` added for discoverability
+- `refreshRemoteCapabilityTruth(...)` added as a dependency-gated seam between local snapshot knowledge and optional server-derived payload shape
 
 Still deferred on purpose:
 
-- live server capability negotiation
+- frozen server-provided capability truth and live server capability negotiation
 - remote capability discovery
 - any fetch-driven or runtime-driven server normalization loop
+
+Release wording note:
+
+- the local normalization layer is shipped
+- the refresh seam is shipped but dependency-gated
+- integrated Core truth is still deferred
 
 ### C4. Add replay-safe orchestration helpers
 
@@ -257,9 +266,14 @@ Still deferred on purpose:
 - remote registry or hosted discovery behavior
 - broader protocol negotiation/runtime complexity
 
+Release wording note:
+
+- the shipped local stdio MCP server and static descriptor/catalog layer are local operator surfaces only
+- they should not be described as hosted MCP, remote registry, or control-plane behavior
+
 ## Current recommendation
 
-The next post-V11 client iteration should start with:
+The next client iteration from the current mainline release should start with:
 
 1. broader orchestration beyond the current industry-universe, connection-approval, commercial-action continuation, coordinator path, and explicit-opportunity handoff slices
 2. review-packet workflow improvements beyond the current bounded preview and export layer
