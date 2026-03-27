@@ -2,291 +2,112 @@
 
 ## Product direction
 
-The long-term product direction is an agent operating kit, not only a route-wrapper SDK.
-
-That means the repo should eventually cover:
-
-- operating guidance
-- context/environment handling
-- execution helpers
-- scenario envelopes
-- verification export
-- adapter/tooling surfaces
-
-## Current delivered slice
-
-The repo now includes a current mainline public consumer execution-layer wave, aligned to the frozen Bidvia Commercial Universe V1 / Core V12 handoff boundary, inside that broader product direction:
-
-1. frozen core-aligned onboarding / query / claim request formation
-2. frozen registration-bound heartbeat / sync / evidence / proposal request formation
-3. canonical ingestion/normalization plus freshness-aware local working-view and snapshot discipline
-4. governed agent-state and task-participation helpers that keep authority separate from presence, readiness, and cache-like signals
-5. pricing plus media/evidence/document/attachment consumption helpers that explain structure without claiming final platform truth
-6. review-safe governed proposal / review / authorized-use workflow helpers
-7. production-proven business-chain helper slices for listing/match, connection/approval, package export, and commercial actions
-8. generic scenario-envelope builders plus bounded registration-lifecycle, registered-agent-operations, industry-universe, connection-approval, and commercial-action continuation scenario slices, plus one honest cross-chain coordinator layer across those shipped slices
-9. richer scenario verification bundle support, derived review-packet builders with reviewer-facing detail, and stable review-packet export compatibility
-10. bounded CLI preview and export commands for scenario plans, review packets, and business verification wave previews across shipped slices
-11. machine-readable static capability metadata for shipped helpers and scenario route keys
-12. local runtime-capability snapshot output for repo-known route, MCP, and local server facts
-13. server-capability payload parsing and normalization into the repo capability shape
-14. dependency-gated remote capability refresh seam between local snapshot and optional core capability payload
-15. static MCP-facing tool descriptors and catalog exports for the shipped bounded slices plus a bounded local stdio MCP server entrypoint
-16. environment mode classification for `local`, `sim`, and `production` plus a read-only CLI visibility command
-17. contract tests plus stubbed local example flows
+`Bidvia-agent-client` is on a long path toward a governed operating kit for agents connecting to the Bidvia platform.
 
-## Release-language guardrail
+The roadmap is not a backlog ledger. It is the long-horizon blueprint for how this repo should evolve without overstating what is already shipped, what is only wired as a dependency-gated seam, and what still belongs to future Core, runtime, or control-plane work.
 
-For the current release train, describe the delivered slice in three separate buckets:
+## Current mainline boundary
 
-1. shipped local surfaces that are implemented and tested here
-2. implemented seams that stay dependency-gated until Bidvia Core provides frozen truth
-3. deferred runtime and control-plane areas that are still outside the repo boundary
+The current mainline is still a partial current slice aligned to the frozen Bidvia Commercial Universe V1 / Core V12 handoff boundary.
 
-The remote capability refresh path belongs in bucket 2. It is a shipped seam, but not a claim of integrated Core truth, live negotiation, remote discovery, hosted MCP/runtime behavior, or remote registry behavior.
+That current slice is centered on the execution layer, with adjacent scenario, verification, and local adapter surfaces where those layers are already proven and bounded.
 
-## Planned next layers
+Today the mainline already includes:
 
-1. broader scenario families beyond the currently delivered bounded slices
-2. richer business-chain orchestration beyond the current bounded listing/match and connection-approval scenario paths
-3. broader review-packet and verification workflow improvements beyond the current bounded preview and export layer
-4. broader CLI flows for business verification waves
-5. live MCP server, transport, negotiation, and broader adapter/runtime surfaces beyond the current static catalog layer
+- shipped local helpers for onboarding, claim, heartbeat, sync, evidence, proposal, and related governed execution flows
+- shipped local helper coverage for pricing, media, evidence, document, attachment, proposal, review, and authorized-use explanation surfaces
+- shipped local scenario-envelope builders plus bounded scenario families for registration lifecycle, registered-agent operations, industry-universe, connection approval, commercial-action continuation, and one honest cross-chain coordinator path across shipped slices
+- shipped local review-packet, verification-bundle, CLI preview/export, static capability metadata, local runtime snapshot, server-capability normalization, static MCP catalog, bounded local stdio MCP server, and environment-mode visibility surfaces
 
-## Production verification lessons from the earlier V11 wave-1/2/3 work
+This is meaningful progress, but it is still not the full operating-kit destination. The repo remains bounded by frozen Core contracts and must not claim platform authority, hosted runtime behavior, integrated Core truth, or a general workflow engine.
 
-The first production verification waves exposed a clear next backlog for the client.
+## Release-language split for the current mainline
 
-### 1. Business-chain helpers above atomic routes
+Keep every roadmap claim inside one of these three buckets:
 
-Current client scope is still mostly atomic:
+### Shipped local surfaces
 
-- onboarding / claim
-- heartbeat
-- sync
-- evidence
-- proposal
+These are implemented and should be described as local repo-owned surfaces:
 
-Production wave-2 and wave-3 proved that real business verification quickly needs higher-level orchestration helpers for:
+- governed execution helpers and bounded business-chain helpers already present in code and tests
+- bounded scenario planning and bounded orchestration slices already present in code and tests
+- verification-bundle and review-packet packaging already present in code and tests
+- static capability metadata, local runtime-capability snapshot output, server-capability normalization, static MCP-facing catalog output, bounded local stdio MCP server, and read-only environment-mode visibility
+- local operator and integrator surfaces, including the current OpenClaw Gateway path where the repo already provides local guidance and bounded tooling support
 
-- `listing -> activate -> match-candidates`
-- `match -> connection-request -> approval`
-- explicit-opportunity `package-export`
-- `commercial-actions` continuation
+### Implemented but dependency-gated seams
 
-### 2. Scenario and evidence envelopes
+These are implemented seams that must stay fail-closed until Bidvia Core provides frozen truth:
 
-Production real-data verification required carrying more than route payloads.
-The client needs a first-class envelope for:
+- `refreshRemoteCapabilityTruth(...)` is implemented, but it is blocked until frozen Core capability truth and freshness semantics exist
+- the seam can merge local snapshot knowledge with a server-derived capability payload shape, but it must not be described as integrated Core truth, live negotiation, remote discovery, hosted MCP/runtime behavior, or remote registry behavior
 
-- source references
-- evidence references
-- product-family identity
-- workflow/trace continuity
-- runtime record ids produced at each step
+### Deferred Core, runtime, and control-plane areas
 
-Current progress:
+These remain outside the shipped mainline boundary:
 
-- generic scenario envelope core added
-- registration-lifecycle scenario plan builder added
-- bounded registration-lifecycle runner added
-- repo-local `examples/registration-lifecycle-scenario.ts` added for the shipped lifecycle path
-- registered-agent-operations scenario plan builder added
-- bounded registered-agent-operations runner added
-- repo-local `examples/registered-agent-operations-scenario.ts` added for the shipped post-onboarding path
-- industry-universe scenario plan builder added
-- bounded listing -> activate -> match scenario orchestration helper added
-- connection-approval scenario plan builder added
-- bounded match -> connection-request -> approval orchestration helper added
-- commercial-action continuation scenario plan builder added
-- bounded commercial-action continuation runner and review readback helper added
-- cross-chain coordinator plan builder plus pre-handoff and post-handoff runners added
-- repo-local `examples/multi-business-chain-coordinator.ts` added for the shipped coordinator path
-- explicit-opportunity package handoff plan/runner added
+- integrated Core-owned capability truth and live refresh behavior
+- hosted MCP/runtime expansion, remote registry behavior, and broader runtime negotiation loops
+- approval-to-opportunity creation or discovery behavior after the current coordinator handoff boundary
+- broader control-plane ownership, client-owned authority, or any claim that bounded orchestration is a general workflow engine
 
-Current deferral boundary:
+## Long-horizon blueprint
 
-- no approval -> opportunity creation or discovery helper exists in this repo yet
-- no automatic approval -> opportunity seam crossing exists in this repo yet
-- no broader multi-business-chain orchestration layer exists beyond the current coordinator path yet
-- no new marketplace, approval, or autonomous-governance authority is introduced by the registration-lifecycle family
-- no onboarding, approval, marketplace, or autonomous-governance authority is introduced by the registered-agent operations family
+The approved order is Track 1 first, then Track 2, with explicit L1, L2, and L3 levels across that evolution.
 
-### 3. Access-context switching
+### L1. Integration productization completion
 
-Production routes are not uniform today:
+L1 completes Track 1. The goal is for this repo to become the most reliable Bidvia integration product for external users, operators, and OpenClaw Gateway paths while staying inside the frozen current-mainline authority boundary.
 
-- some write-side routes accept explicit operator principal headers
-- some read-side routes require admin-session wrapping
+#### Track 1. Integration productization for external users, operators, and OpenClaw Gateway paths
 
-The client should make that split explicit instead of leaving callers to remember route-by-route access semantics.
+Track 1 focuses on turning the current partial slice into a clear, dependable integration product.
 
-Current progress:
+Primary outcomes:
 
-- static route capability metadata added in `src/capabilities.ts`
-- required context and access-context family are now discoverable through a repo-local machine-readable registry
+- make the shipped local surfaces easier for external integrators and operators to understand, adopt, and verify
+- keep the OpenClaw Gateway path visible as a local operator path, not as a hosted control-plane claim
+- improve packaging, docs, bounded CLI/operator flows, and bounded scenario ergonomics around the surfaces that are already real
+- widen coverage across bounded business-chain and review-safe operational slices only when those slices remain honest about current authority boundaries
 
-Current deferral boundary:
+Track 1 is complete when the repo presents a stable integration product around its shipped local surfaces, with clear operator guidance, bounded orchestration support, and no confusion between local tooling ergonomics and platform truth ownership.
 
-- no runtime capability negotiation exists in this repo yet
-- no server-provided capability discovery exists in this repo yet
+### L2. Core truth consumption closure
 
-### 4. Local runtime-capability snapshot
+L2 begins Track 2. The goal is to close the gap between local descriptive surfaces and frozen Core truth consumption, without shifting authority ownership away from Core.
 
-The client can now publish one repo-local capability snapshot without claiming that the server negotiated or provided it.
+#### Track 2. Core collaboration closure for capability truth, presence and notification semantics, and multi-agent coordination
 
-Current progress:
+Track 2 focuses on the seams that cannot become fully real until Bidvia Core exposes frozen truth.
 
-- `buildLocalRuntimeCapabilitySnapshot(...)` added in `src/runtime-capabilities.ts`
-- read-only `runtime-capabilities` CLI command added in `src/cli.ts`
-- repo-local `examples/runtime-capabilities.ts` added for discoverability
+Primary outcomes:
 
-Current deferral boundary:
+- consume frozen Core capability truth so local capability views no longer stop at descriptive local knowledge
+- move capability refresh from an implemented but blocked seam toward a real Core-truth consumption path, while preserving fail-closed behavior until truth is available
+- close remaining semantics around presence, notifications, task participation, and other coordination surfaces that require Core-owned truth to be trustworthy
+- strengthen multi-agent coordination only where Core semantics are frozen and where the client still remains an integration product, not an authority owner
 
-- no server-provided runtime negotiation exists in this repo yet
-- no remote capability fetch exists in this repo yet
-- no broader runtime truth is implied beyond shipped local knowledge
+L2 is complete when the client can consume frozen Core truth for the collaboration semantics it already describes, especially capability truth and coordination semantics, without overstating client ownership.
 
-### 5. Server-capability normalization
+### L3. Runtime, adapter, and multi-agent collaboration expansion
 
-The client can now normalize one server-derived capability payload into the repo’s capability model without claiming that it negotiated or fetched that payload itself.
+L3 is the final long-horizon level. It expands only after L1 productization and L2 Core-truth consumption closure are in place.
 
-Current progress:
+Primary outcomes:
 
-- `normalizeServerCapabilityPayload(...)` added in `src/server-capabilities.ts`
-- read-only `server-capabilities` CLI command added in `src/cli.ts`
-- repo-local `examples/server-capabilities.ts` added for discoverability
+- broaden runtime and adapter surfaces beyond the current bounded local adapter seam, only where the Core boundary is already stable
+- extend multi-agent collaboration patterns beyond the current bounded orchestration slices, without turning the repo into an unfounded workflow-engine claim
+- grow richer operator and integration surfaces across runtime-aware and collaboration-aware paths while keeping the release-language split explicit
 
-Current deferral boundary:
+L3 is where future runtime and adapter expansion can happen, but it must stay downstream of the earlier levels and must remain honest about what is local, what is dependency-gated, and what is still deferred.
 
-- no live server negotiation exists in this repo yet
-- no remote capability discovery exists in this repo yet
-- no network fetch is introduced by the normalization layer
+## Strategic reading rule
 
-### 6. Dependency-gated remote capability refresh
+Read this roadmap top-down:
 
-The client can now wire together local snapshot knowledge and an optional server-derived payload shape, but only through a dependency-gated seam rather than a fully integrated Core truth path.
+1. current mainline, partial slice at the frozen Commercial Universe V1 / Core V12 handoff boundary
+2. Track 1 first, productize the integration surface for external users, operators, and OpenClaw Gateway paths
+3. Track 2 second, close Core collaboration seams once frozen truth exists
+4. L3 only after L1 and L2, for broader runtime, adapter, and multi-agent expansion
 
-Current progress:
-
-- `refreshRemoteCapabilityTruth(...)` added in `src/remote-capability-refresh.ts`
-- local snapshot and normalized server payload can now be merged into one effective view shape
-- the seam reports an explicit blocked `dependency-gated` state when frozen core capability truth is unavailable
-- the seam stays fail-closed when Core-owned truth is missing, so callers can see the blocked boundary without treating local data as server truth
-
-Current deferral boundary:
-
-- no frozen Bidvia Core capability truth source exists in this repo yet
-- no integrated live refresh loop exists in this repo yet
-- no authority ownership shifts from Core to client through this seam
-- no live remote negotiation, hosted MCP/runtime bridging, or remote registry behavior is introduced by this seam
-
-### 7. Environment mode visibility
-
-The client can now classify the current base URL into a simple environment mode without claiming control over runtime behavior.
-
-Current progress:
-
-- `resolveBidviaEnvironmentMode(...)` added in `src/config.ts`
-- `resolveBidviaEnvironmentModeFromEnv(...)` added in `src/config.ts`
-- read-only `environment-mode` CLI command added in `src/cli.ts`
-
-Current deferral boundary:
-
-- no environment-specific execution policy exists in this repo yet
-- no runtime behavior changes are introduced by environment mode classification
-- no broader transport/runtime expansion exists through this visibility layer
-
-### 8. Production-safe verification mode
-
-The client should gain a bounded verification mode that can:
-
-- log every record id created
-- preserve source/evidence links
-- mark scenario waves clearly
-- export a verification bundle for later review
-
-Current progress:
-
-- richer scenario verification bundle added
-- bounded review-packet builders, previews, and exports added for shipped scenario slices
-- richer reviewer-facing review-packet detail added for route coverage and recorded ids derived from existing scenario and bundle facts
-- legacy verification export preserved for compatibility
-
-### 9. Commercial-action support
-
-Wave-3 proved that `commercial-actions` is a real production path now.
-The client should grow dedicated helpers for:
-
-- create
-- policy-check
-- request-approval
-- execute
-- status / receipt / audit readback
-
-Current progress:
-
-- dedicated create/policy-check/request-approval/execute/status/receipt/audit helpers added
-- bounded commercial-action continuation plan, sequential write runner, and review readback helper added
-- repo-local `examples/commercial-action-continuation.ts` added for the shipped slice
-
-Current deferral boundary:
-
-- no autonomous governance or self-authorizing execution layer exists in this repo yet
-- no broader multi-business-chain orchestration layer exists around the current continuation slice yet
-
-### 10. MCP-facing adapter catalog
-
-The current bounded adapter seam can now be described through static MCP-facing tool descriptors without turning the repo into a runtime server.
-
-Current progress:
-
-- static MCP-facing tool catalog added in `src/mcp.ts`
-- shipped bounded slices now expose exportable descriptor metadata for plan preview and review-packet preview/export modes
-- bounded local stdio MCP server entrypoint added in `src/mcp-server.ts`
-- shipped local loop is limited to `initialize`, `tools/list`, and `tools/call`
-
-Current deferral boundary:
-
-- no hosted MCP server exists in this repo yet
-- no remote registry or hosted discovery behavior exists in this repo yet
-- no broader MCP protocol/runtime complexity exists beyond the local stdio loop
-
-### 11. Operator-facing verification wave previews
-
-The current CLI can now preview bounded business verification waves without claiming a broader orchestration engine.
-
-Current progress:
-
-- `multi-business-chain-verification-wave-preview` added in `src/cli.ts`
-- `commercial-action-verification-wave-preview` added in `src/cli.ts`
-- both commands stay preview-oriented and print review-safe JSON only
-
-Current deferral boundary:
-
-- no live wave execution engine exists in the CLI yet
-- no approval-to-opportunity seam crossing happens through the preview flows
-- no broader runtime or MCP behavior is introduced by these commands
-
-## Current release rule
-
-The current mainline release in this repo is aligned to the frozen Bidvia Commercial Universe V1 / Core V12 handoff boundary and must follow those frozen handoff contracts before adding CLI or SDK behavior.
-
-Required current-release direction:
-
-1. consume frozen onboarding / claim / heartbeat / sync / evidence / proposal contracts from core
-2. provide first usable CLI and SDK helpers for those allowed operations only
-3. provide examples and local validation tooling for internal team agents and seed-user agents
-4. do not widen into marketplace, autonomous governance, or unfrozen agent powers
-
-## Authority split
-
-- `Bidvia` core owns route truth, fail-close behavior, authority boundaries, and durable state
-- `Bidvia-agent-client` owns tooling ergonomics, examples, local validation, and onboarding guidance
-
-## Non-goals for the initial scaffold
-
-- production-ready SDK guarantees
-- frozen public API guarantees
-- complete MCP/A2A bridge implementation
-- marketplace or autonomous governance tooling
+That ordering keeps the roadmap honest. It protects the repo from claiming hosted runtime ownership, remote registry behavior, integrated Core truth, or client-owned authority before those boundaries are actually real.
