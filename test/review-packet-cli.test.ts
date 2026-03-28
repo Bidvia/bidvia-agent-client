@@ -2,6 +2,16 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import path from 'node:path';
+import { pathToFileURL } from 'node:url';
+
+import { shouldRunCliMain } from '../src/cli.ts';
+
+test('shouldRunCliMain matches relative built cli argv entries', () => {
+  assert.equal(
+    shouldRunCliMain('dist/cli.js', pathToFileURL(path.join(process.cwd(), 'dist', 'cli.js')).href),
+    true,
+  );
+});
 
 test('industry-universe-review-packet-preview prints review packet json', () => {
   const tsxCliPath = path.join(process.cwd(), 'node_modules', 'tsx', 'dist', 'cli.mjs');
@@ -16,6 +26,27 @@ test('industry-universe-review-packet-preview prints review packet json', () => 
   assert.equal(output.scenarioFamily, 'industry-universe');
   assert.equal(output.verificationMode, 'review-safe');
   assert.equal(output.status, 'pending-review');
+  assert.equal(output.details.boundary.serverTruthClaimed, false);
+  assert.equal(output.details.boundary.adjudicationOutcomeIncluded, false);
+  assert.equal(output.summary.pendingRouteCount, 3);
+  assert.deepEqual(
+    output.sections.map((section: { sectionKey: string }) => section.sectionKey),
+    ['scenario', 'evidence', 'traceability', 'routes', 'verification', 'records'],
+  );
+});
+
+test('root cli wrapper forwards review packet preview commands', () => {
+  const tsxCliPath = path.join(process.cwd(), 'node_modules', 'tsx', 'dist', 'cli.mjs');
+  const result = spawnSync(process.execPath, [tsxCliPath, 'cli.ts', 'industry-universe-review-packet-preview'], {
+    cwd: process.cwd(),
+    env: process.env,
+    encoding: 'utf8',
+  });
+
+  assert.equal(result.status, 0, result.stderr || result.stdout);
+  const output = JSON.parse(result.stdout);
+  assert.equal(output.scenarioFamily, 'industry-universe');
+  assert.equal(output.details.boundary.serverTruthClaimed, false);
 });
 
 test('industry-universe-review-packet-export prints exported review packet json', () => {
@@ -31,4 +62,11 @@ test('industry-universe-review-packet-export prints exported review packet json'
   assert.equal(output.scenarioFamily, 'industry-universe');
   assert.equal(output.verificationMode, 'review-safe');
   assert.equal(output.status, 'pending-review');
+  assert.equal(output.details.boundary.serverTruthClaimed, false);
+  assert.equal(output.details.boundary.adjudicationOutcomeIncluded, false);
+  assert.equal(output.summary.pendingRouteCount, 3);
+  assert.deepEqual(
+    output.sections.map((section: { sectionKey: string }) => section.sectionKey),
+    ['scenario', 'evidence', 'traceability', 'routes', 'verification', 'records'],
+  );
 });

@@ -6,6 +6,8 @@ import type {
   BidviaRouteCapabilityLevel,
 } from '../src/contracts.ts';
 import {
+  bidviaLocalCapabilityRiskTiers,
+  bidviaLocalCapabilityTiers,
   bidviaRouteCapabilityAccessContextFamilies,
   bidviaRouteCapabilityHttpMethods,
   bidviaRouteCapabilityLevels,
@@ -17,6 +19,18 @@ import {
 } from '../src/capabilities.ts';
 
 test('capability contract exposes bounded descriptive metadata labels', () => {
+  assert.deepEqual(bidviaLocalCapabilityTiers, [
+    'L0-observe-only',
+    'L1-review-safe',
+    'L2-registration-runtime',
+    'L3-governed-commercial',
+  ]);
+  assert.deepEqual(bidviaLocalCapabilityRiskTiers, [
+    'observe-only',
+    'review-safe',
+    'runtime-execution',
+    'governed-commercial',
+  ]);
   assert.deepEqual(bidviaRouteCapabilityHttpMethods, ['GET', 'POST']);
   assert.deepEqual(bidviaRouteCapabilityAccessContextFamilies, [
     'tenant',
@@ -40,6 +54,8 @@ test('capability contract represents atomic-route metadata without runtime behav
     requiredContext: ['tenantId', 'registrationId'],
     scope: 'write',
     level,
+    localCapabilityTier: 'L2-registration-runtime',
+    localCapabilityRiskTier: 'runtime-execution',
   };
 
   assert.equal(capability.helperKey, 'submitProposal');
@@ -49,6 +65,8 @@ test('capability contract represents atomic-route metadata without runtime behav
   assert.deepEqual(capability.requiredContext, ['tenantId', 'registrationId']);
   assert.equal(capability.scope, 'write');
   assert.equal(capability.level, 'atomic-route');
+  assert.equal(capability.localCapabilityTier, 'L2-registration-runtime');
+  assert.equal(capability.localCapabilityRiskTier, 'runtime-execution');
 });
 
 test('capability contract represents scenario-helper metadata with scenario route facts', () => {
@@ -60,6 +78,8 @@ test('capability contract represents scenario-helper metadata with scenario rout
     requiredContext: ['tenantId'],
     scope: 'write',
     level: 'scenario-helper',
+    localCapabilityTier: 'L1-review-safe',
+    localCapabilityRiskTier: 'review-safe',
     scenarioRouteSteps: [
       {
         routeKey: 'createListing',
@@ -75,9 +95,19 @@ test('capability contract represents scenario-helper metadata with scenario rout
   assert.equal(capability.helperKey, 'industryUniverseScenarioPlan');
   assert.equal(capability.accessContextFamily, 'scenario');
   assert.equal(capability.level, 'scenario-helper');
+  assert.equal(capability.localCapabilityTier, 'L1-review-safe');
+  assert.equal(capability.localCapabilityRiskTier, 'review-safe');
   assert.deepEqual(
     capability.scenarioRouteSteps?.map((routeStep) => routeStep.routeKey),
     ['createListing', 'activateListing'],
+  );
+});
+
+test('capability registry gives every shipped route complete local tier and risk metadata', () => {
+  assert.equal(bidviaRouteCapabilities.every((capability) => capability.localCapabilityTier !== undefined), true);
+  assert.equal(
+    bidviaRouteCapabilities.every((capability) => capability.localCapabilityRiskTier !== undefined),
+    true,
   );
 });
 
@@ -128,6 +158,8 @@ test('capability registry lookup returns descriptive admin and operator route me
     requiredContext: ['tenantId', 'adminSessionId'],
     scope: 'read',
     level: 'atomic-route',
+    localCapabilityTier: 'L0-observe-only',
+    localCapabilityRiskTier: 'observe-only',
   });
 
   assert.deepEqual(getRouteCapability('createListing'), {
@@ -138,6 +170,8 @@ test('capability registry lookup returns descriptive admin and operator route me
     requiredContext: ['tenantId', 'principalId', 'companyId'],
     scope: 'write',
     level: 'atomic-route',
+    localCapabilityTier: 'L3-governed-commercial',
+    localCapabilityRiskTier: 'governed-commercial',
   });
 });
 
@@ -150,6 +184,8 @@ test('capability registry lookup returns shipped scenario-helper route metadata'
     requiredContext: ['tenantId', 'principalId', 'companyId'],
     scope: 'write',
     level: 'scenario-helper',
+    localCapabilityTier: 'L1-review-safe',
+    localCapabilityRiskTier: 'review-safe',
     scenarioRouteSteps: [
       {
         routeKey: 'createListing',

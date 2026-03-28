@@ -31,6 +31,8 @@ test('BidviaClient uses the frozen provisional->query->claim onboarding contract
   await client.createProvisionalAgent({
     provisionalAgentRef: 'prov-agent-1',
     now: '2026-03-25T18:00:00Z',
+  }, {
+    timeoutMs: 250,
   });
   await client.queryProvisionalAgent('prov-agent-1');
   await client.claimProvisionalAgent({

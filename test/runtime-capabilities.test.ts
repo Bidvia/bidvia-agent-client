@@ -25,8 +25,13 @@ test('buildLocalRuntimeCapabilitySnapshot derives a machine-readable local capab
   assert.equal(snapshot.routeCapabilities.expiresAt, null);
   assert.equal(snapshot.routeCapabilities.stale, false);
   assert.equal(snapshot.routeCapabilities.fallbackPolicy, 'prefer-local-static-until-server-negotiation');
+  assert.equal(snapshot.routeCapabilities.items.every((capability) => capability.localCapabilityTier !== undefined), true);
+  assert.equal(
+    snapshot.routeCapabilities.items.every((capability) => capability.localCapabilityRiskTier !== undefined),
+    true,
+  );
   assert.equal(snapshot.mcpTools.source, 'local-static');
-  assert.equal(snapshot.mcpTools.items.length, 9);
+  assert.equal(snapshot.mcpTools.items.length, 13);
   assert.equal(snapshot.mcpTools.schemaVersion, '2026-03-27');
   assert.equal(snapshot.mcpTools.version, 'local-runtime-capability-snapshot');
   assert.equal(snapshot.mcpTools.revision, 'repo-mcp-tools');
@@ -35,6 +40,8 @@ test('buildLocalRuntimeCapabilitySnapshot derives a machine-readable local capab
   assert.equal(snapshot.mcpTools.expiresAt, null);
   assert.equal(snapshot.mcpTools.stale, false);
   assert.equal(snapshot.mcpTools.fallbackPolicy, 'prefer-local-static-until-server-negotiation');
+  assert.equal(snapshot.mcpTools.items.every((tool) => tool.localCapabilityTier !== undefined), true);
+  assert.equal(snapshot.mcpTools.items.every((tool) => tool.localCapabilityRiskTier !== undefined), true);
   assert.deepEqual(snapshot.localMcpServer, {
     source: 'local-static',
     schemaVersion: '2026-03-27',
@@ -75,4 +82,37 @@ test('buildLocalRuntimeCapabilitySnapshot keeps deferred server negotiation expl
   assert.match(snapshot.deferredServerNegotiation.lastUpdatedAt, /^\d{4}-\d{2}-\d{2}T/);
   assert.equal(snapshot.localMcpServer.available, true);
   assert.equal(snapshot.routeCapabilities.items.some((capability) => capability.helperKey === 'postHeartbeat'), true);
+  assert.deepEqual(
+    snapshot.routeCapabilities.items.find((capability) => capability.helperKey === 'postHeartbeat'),
+    {
+      helperKey: 'postHeartbeat',
+      routePathTemplate: '/runtime/agents/:registrationId/heartbeat',
+      httpMethod: 'POST',
+      accessContextFamily: 'registration',
+      requiredContext: ['tenantId', 'registrationId', 'principalId'],
+      scope: 'write',
+      level: 'atomic-route',
+      localCapabilityTier: 'L2-registration-runtime',
+      localCapabilityRiskTier: 'runtime-execution',
+    },
+  );
+  assert.deepEqual(
+    snapshot.mcpTools.items.find((tool) => tool.toolName === 'industry-universe-plan-preview'),
+    {
+      toolName: 'industry-universe-plan-preview',
+      description: 'Previews the bounded industry universe scenario plan payload.',
+      inputSchemaRef: {
+        schemaKey: 'BidviaIndustryUniverseScenarioPlanInput',
+      },
+      outputMode: 'plan-preview',
+      helperRef: {
+        helperKey: 'buildIndustryUniverseScenarioPlan',
+        capabilityKey: 'buildIndustryUniverseScenarioPlan',
+      },
+      localCapabilityTier: 'L1-review-safe',
+      localCapabilityRiskTier: 'review-safe',
+      accessContextFamily: 'scenario',
+      requiredContext: ['tenantId', 'principalId', 'companyId'],
+    },
+  );
 });

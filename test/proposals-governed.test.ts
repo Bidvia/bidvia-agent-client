@@ -241,11 +241,15 @@ test('buildGovernedProposalReviewUseResult returns review-safe recommendation as
     result.reviewPacket.details.recordDetails.map((detail) => detail.recordGroupKey),
     ['proposals', 'reviews', 'approvals', 'receipts'],
   );
-  assert.deepEqual(result.reviewPacket.sections[2]?.entries, [
-    'proposal://governed/1',
-    'review://governed/1',
-    'authorization://governed/1',
-    'receipt-governed-1',
+  assert.deepEqual(
+    result.reviewPacket.sections.map((section) => section.sectionKey),
+    ['scenario', 'evidence', 'traceability', 'routes', 'verification', 'records'],
+  );
+  assert.deepEqual(result.reviewPacket.sections[5]?.entries, [
+    'proposals:proposal://governed/1',
+    'reviews:review://governed/1',
+    'approvals:authorization://governed/1',
+    'receipts:receipt-governed-1',
   ]);
   assert.equal(result.proposalRecommendation.kind, 'proposal-recommendation');
   assert.equal(result.reviewAssessment.kind, 'review-assessment');

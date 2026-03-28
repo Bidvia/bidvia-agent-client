@@ -65,11 +65,28 @@ test('refreshRemoteCapabilityTruth consumes provided frozen core payloads and me
       requiredContext: ['tenantId'],
       scope: 'read',
       level: 'atomic-route',
+      localCapabilityTier: 'L0-observe-only',
+      localCapabilityRiskTier: 'observe-only',
     },
   ]);
   assert.equal(refreshed.routeCapabilities.localSnapshot.items.some((capability) => capability.helperKey === 'postHeartbeat'), true);
   assert.equal(refreshed.mcpTools.effectiveSource, 'server-derived');
-  assert.equal(refreshed.mcpTools.coreSnapshot?.items[0]?.toolName, 'capability-truth-refresh-preview');
+  assert.deepEqual(refreshed.mcpTools.coreSnapshot?.items[0], {
+    toolName: 'capability-truth-refresh-preview',
+    description: 'Explains the dependency-gated capability refresh seam.',
+    inputSchemaRef: {
+      schemaKey: 'BidviaRemoteCapabilityRefreshInput',
+    },
+    outputMode: 'plan-preview',
+    helperRef: {
+      helperKey: 'refreshRemoteCapabilityTruth',
+      capabilityKey: 'refreshRemoteCapabilityTruth',
+    },
+    localCapabilityTier: 'L1-review-safe',
+    localCapabilityRiskTier: 'review-safe',
+    accessContextFamily: 'scenario',
+    requiredContext: [],
+  });
   assert.equal(refreshed.localMcpServer.effectiveSource, 'server-derived');
   assert.equal(refreshed.localMcpServer.effectiveValue.available, false);
 });

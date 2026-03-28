@@ -1,7 +1,16 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { spawn } from 'node:child_process';
-import path from 'node:path';
+import { PassThrough } from 'node:stream';
+
+import { runLocalMcpServer } from '../src/mcp-server.ts';
+
+const runLocalMcpServerWithDependencies = runLocalMcpServer as unknown as (
+  input: NodeJS.ReadableStream,
+  output: NodeJS.WritableStream,
+  dependencies: {
+    createExecutionClient: () => unknown;
+  },
+) => void;
 
 function encodeFrame(message: unknown): string {
   const body = JSON.stringify(message);
@@ -98,22 +107,30 @@ function createIndustryUniverseArguments() {
   };
 }
 
-test('local MCP stdio server handles initialize, tools/list, tools/call, and unknown tool failure', async () => {
-  const tsxCliPath = path.join(process.cwd(), 'node_modules', 'tsx', 'dist', 'cli.mjs');
-  const child = spawn(process.execPath, [tsxCliPath, 'src/mcp-server.ts'], {
-    cwd: process.cwd(),
-    env: process.env,
-    stdio: ['pipe', 'pipe', 'pipe'],
+test('local MCP stdio server exposes bounded tool metadata and handles review-safe and execution calls', async () => {
+  const input = new PassThrough();
+  const output = new PassThrough();
+
+  runLocalMcpServerWithDependencies(input, output, {
+    createExecutionClient: () => ({
+      async postHeartbeat(receivedInput: { expiresAt: string }) {
+        return {
+          ok: true,
+          route: 'heartbeat',
+          expiresAt: receivedInput.expiresAt,
+        };
+      },
+    }) as never,
   });
 
   try {
-    child.stdin.write(encodeFrame({
+    input.write(encodeFrame({
       jsonrpc: '2.0',
       id: 1,
       method: 'initialize',
       params: {},
     }));
-    const initializeResponse = await readFrame(child.stdout);
+    const initializeResponse = await readFrame(output);
     assert.deepEqual(initializeResponse, {
       jsonrpc: '2.0',
       id: 1,
@@ -129,13 +146,24 @@ test('local MCP stdio server handles initialize, tools/list, tools/call, and unk
       },
     });
 
-    child.stdin.write(encodeFrame({
+    input.write(encodeFrame({
       jsonrpc: '2.0',
       id: 2,
       method: 'tools/list',
       params: {},
     }));
-    const listResponse = await readFrame(child.stdout) as { result: { tools: Array<{ name: string }> } };
+    const listResponse = await readFrame(output) as {
+      result: {
+        tools: Array<{
+          name: string;
+          outputMode: string;
+          localCapabilityTier: string;
+          localCapabilityRiskTier: string;
+          accessContextFamily: string;
+          requiredContext: string[];
+        }>;
+      };
+    };
     assert.deepEqual(listResponse.result.tools.map((tool) => tool.name), [
       'industry-universe-plan-preview',
       'industry-universe-review-packet-preview',
@@ -146,9 +174,32 @@ test('local MCP stdio server handles initialize, tools/list, tools/call, and unk
       'opportunity-package-handoff-plan-preview',
       'opportunity-package-handoff-review-packet-preview',
       'opportunity-package-handoff-review-packet-export',
+      'heartbeat-execution',
+      'sync-upload-execution',
+      'evidence-execution',
+      'proposal-execution',
     ]);
+    assert.deepEqual(
+      listResponse.result.tools.find((tool) => tool.name === 'heartbeat-execution'),
+      {
+        name: 'heartbeat-execution',
+        description: 'Executes the real remote heartbeat over the local registration-bound client seam.',
+        inputSchema: {
+          schemaKey: 'BidviaHeartbeatInput',
+        },
+        outputMode: 'execution-result',
+        helperRef: {
+          helperKey: 'heartbeat-execution',
+          capabilityKey: 'postHeartbeat',
+        },
+        localCapabilityTier: 'L2-registration-runtime',
+        localCapabilityRiskTier: 'runtime-execution',
+        accessContextFamily: 'registration',
+        requiredContext: ['tenantId', 'registrationId', 'principalId'],
+      },
+    );
 
-    child.stdin.write(encodeFrame({
+    input.write(encodeFrame({
       jsonrpc: '2.0',
       id: 3,
       method: 'tools/call',
@@ -157,31 +208,109 @@ test('local MCP stdio server handles initialize, tools/list, tools/call, and unk
         arguments: createIndustryUniverseArguments(),
       },
     }));
-    const callResponse = await readFrame(child.stdout) as { result: { content: Array<{ text: string }> } };
+    const callResponse = await readFrame(output) as { result: { content: Array<{ text: string }> } };
     const callPayload = JSON.parse(callResponse.result.content[0]!.text);
     assert.equal(callPayload.toolName, 'industry-universe-review-packet-export');
     assert.equal(callPayload.outputMode, 'review-packet-export');
     assert.equal(callPayload.result.exportedReviewPacket.scenarioFamily, 'industry-universe');
 
-    child.stdin.write(encodeFrame({
+    input.write(encodeFrame({
       jsonrpc: '2.0',
       id: 4,
+      method: 'tools/call',
+      params: {
+        name: 'heartbeat-execution',
+        arguments: {
+          now: '2026-03-29T10:00:00Z',
+          expiresAt: '2026-03-29T10:05:00Z',
+        },
+      },
+    }));
+    const executionResponse = await readFrame(output) as { result: { content: Array<{ text: string }> } };
+    const executionPayload = JSON.parse(executionResponse.result.content[0]!.text);
+    assert.equal(executionPayload.toolName, 'heartbeat-execution');
+    assert.equal(executionPayload.outputMode, 'execution-result');
+    assert.deepEqual(executionPayload.result.executionResult, {
+      ok: true,
+      route: 'heartbeat',
+      expiresAt: '2026-03-29T10:05:00Z',
+    });
+
+    input.write(encodeFrame({
+      jsonrpc: '2.0',
+      id: 5,
       method: 'tools/call',
       params: {
         name: 'missing-tool',
         arguments: {},
       },
     }));
-    const errorResponse = await readFrame(child.stdout);
+    const errorResponse = await readFrame(output);
     assert.deepEqual(errorResponse, {
       jsonrpc: '2.0',
-      id: 4,
+      id: 5,
       error: {
         code: -32000,
         message: 'unknown MCP tool: missing-tool',
       },
     });
   } finally {
-    child.kill();
+    input.end();
+    output.end();
+  }
+});
+
+test('local MCP stdio server parses byte-accurate UTF-8 frames when requests arrive back-to-back', async () => {
+  const input = new PassThrough();
+  const output = new PassThrough();
+
+  runLocalMcpServerWithDependencies(input, output, {
+    createExecutionClient: () => ({}) as never,
+  });
+
+  try {
+    const initializeRequest = encodeFrame({
+      jsonrpc: '2.0',
+      id: 101,
+      method: 'initialize',
+      params: {
+        clientInfo: {
+          name: '本地🧪client',
+        },
+      },
+    });
+    const toolsListRequest = encodeFrame({
+      jsonrpc: '2.0',
+      id: 102,
+      method: 'tools/list',
+      params: {},
+    });
+
+    input.write(initializeRequest + toolsListRequest);
+
+    const initializeResponse = await readFrame(output) as {
+      jsonrpc: string;
+      id: number;
+      result: {
+        protocolVersion: string;
+      };
+    };
+    assert.equal(initializeResponse.jsonrpc, '2.0');
+    assert.equal(initializeResponse.id, 101);
+    assert.equal(initializeResponse.result.protocolVersion, '2024-11-05');
+
+    const listResponse = await readFrame(output) as {
+      jsonrpc: string;
+      id: number;
+      result: {
+        tools: Array<{ name: string }>;
+      };
+    };
+    assert.equal(listResponse.jsonrpc, '2.0');
+    assert.equal(listResponse.id, 102);
+    assert.ok(listResponse.result.tools.some((tool) => tool.name === 'heartbeat-execution'));
+  } finally {
+    input.end();
+    output.end();
   }
 });

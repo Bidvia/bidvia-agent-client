@@ -1,9 +1,13 @@
 import type {
+  BidviaLocalCapabilityRiskTier,
+  BidviaLocalCapabilityTier,
   BidviaMcpToolDescriptor,
   BidviaNormalizedServerCapabilitySnapshot,
   BidviaRouteCapability,
   BidviaServerCapabilityPayload,
 } from './contracts.js';
+import { getRouteCapability } from './capabilities.js';
+import { getMcpToolDescriptor } from './mcp.js';
 
 const runtimeCapabilitySnapshotSchemaVersion = '2026-03-27';
 const serverCapabilityPayloadVersion = 'server-capability-payload';
@@ -22,35 +26,117 @@ function buildServerDerivedMetadata(lastUpdatedAt: string) {
   };
 }
 
+function deriveLocalRouteClassification(routeCapability: {
+  helper_key: string;
+  access_context_family: BidviaRouteCapability['accessContextFamily'];
+  level: BidviaRouteCapability['level'];
+  scope: BidviaRouteCapability['scope'];
+}): {
+  localCapabilityTier: BidviaLocalCapabilityTier;
+  localCapabilityRiskTier: BidviaLocalCapabilityRiskTier;
+} {
+  const localCapability = getRouteCapability(routeCapability.helper_key);
+  if (localCapability) {
+    return {
+      localCapabilityTier: localCapability.localCapabilityTier,
+      localCapabilityRiskTier: localCapability.localCapabilityRiskTier,
+    };
+  }
+
+  if (routeCapability.level === 'scenario-helper') {
+    return {
+      localCapabilityTier: 'L1-review-safe',
+      localCapabilityRiskTier: 'review-safe',
+    };
+  }
+
+  if (routeCapability.scope === 'read') {
+    return {
+      localCapabilityTier: 'L0-observe-only',
+      localCapabilityRiskTier: 'observe-only',
+    };
+  }
+
+  if (
+    routeCapability.access_context_family === 'tenant'
+    || routeCapability.access_context_family === 'registration'
+    || routeCapability.access_context_family === 'session'
+  ) {
+    return {
+      localCapabilityTier: 'L2-registration-runtime',
+      localCapabilityRiskTier: 'runtime-execution',
+    };
+  }
+
+  return {
+    localCapabilityTier: 'L3-governed-commercial',
+    localCapabilityRiskTier: 'governed-commercial',
+  };
+}
+
+function deriveLocalMcpClassification(toolName: string): {
+  localCapabilityTier: BidviaLocalCapabilityTier;
+  localCapabilityRiskTier: BidviaLocalCapabilityRiskTier;
+  accessContextFamily: BidviaMcpToolDescriptor['accessContextFamily'];
+  requiredContext: BidviaMcpToolDescriptor['requiredContext'];
+} {
+  const localDescriptor = getMcpToolDescriptor(toolName);
+  if (localDescriptor) {
+    return {
+      localCapabilityTier: localDescriptor.localCapabilityTier,
+      localCapabilityRiskTier: localDescriptor.localCapabilityRiskTier,
+      accessContextFamily: localDescriptor.accessContextFamily,
+      requiredContext: [...localDescriptor.requiredContext],
+    };
+  }
+
+  return {
+    localCapabilityTier: 'L1-review-safe',
+    localCapabilityRiskTier: 'review-safe',
+    accessContextFamily: 'scenario',
+    requiredContext: [],
+  };
+}
+
 function normalizeRouteCapabilities(
   routeCapabilities: BidviaServerCapabilityPayload['route_capabilities'],
 ): BidviaRouteCapability[] {
-  return routeCapabilities.map((routeCapability) => ({
-    helperKey: routeCapability.helper_key,
-    routePathTemplate: routeCapability.route_path_template,
-    httpMethod: routeCapability.http_method,
-    accessContextFamily: routeCapability.access_context_family,
-    requiredContext: [...routeCapability.required_context],
-    scope: routeCapability.scope,
-    level: routeCapability.level,
-  }));
+  return routeCapabilities.map((routeCapability) => {
+    const classification = deriveLocalRouteClassification(routeCapability);
+
+    return {
+      helperKey: routeCapability.helper_key,
+      routePathTemplate: routeCapability.route_path_template,
+      httpMethod: routeCapability.http_method,
+      accessContextFamily: routeCapability.access_context_family,
+      requiredContext: [...routeCapability.required_context],
+      scope: routeCapability.scope,
+      level: routeCapability.level,
+      ...classification,
+    };
+  });
 }
 
 function normalizeMcpTools(
   mcpTools: BidviaServerCapabilityPayload['mcp_tools'],
 ): BidviaMcpToolDescriptor[] {
-  return mcpTools.map((mcpTool) => ({
-    toolName: mcpTool.tool_name,
-    description: mcpTool.description,
-    inputSchemaRef: {
-      schemaKey: mcpTool.input_schema_ref.schema_key,
-    },
-    outputMode: mcpTool.output_mode,
-    helperRef: {
-      helperKey: mcpTool.helper_ref.helper_key,
-      capabilityKey: mcpTool.helper_ref.capability_key,
-    },
-  }));
+  return mcpTools.map((mcpTool) => {
+    const classification = deriveLocalMcpClassification(mcpTool.tool_name);
+
+    return {
+      toolName: mcpTool.tool_name,
+      description: mcpTool.description,
+      inputSchemaRef: {
+        schemaKey: mcpTool.input_schema_ref.schema_key,
+      },
+      outputMode: mcpTool.output_mode,
+      helperRef: {
+        helperKey: mcpTool.helper_ref.helper_key,
+        capabilityKey: mcpTool.helper_ref.capability_key,
+      },
+      ...classification,
+    };
+  });
 }
 
 export function normalizeServerCapabilityPayload(

@@ -32,13 +32,30 @@ test('review packet contracts represent reviewer-ready summary and bounded statu
     summary: {
       sourceRefCount: 1,
       evidenceRefCount: 1,
+      traceIdCount: 1,
       workflowIdCount: 1,
       expectedRouteCount: 3,
       completedRouteCount: 1,
+      pendingRouteCount: 2,
+      recordGroupCount: 1,
+      totalRecordCount: 1,
     },
     details: {
+      boundary: {
+        derivedFromScenarioFacts: true,
+        derivedFromVerificationFacts: true,
+        serverTruthClaimed: false,
+        adjudicationOutcomeIncluded: false,
+      },
+      verification: {
+        expectedRouteKeys: ['createListing', 'activateListing', 'generateMatchCandidates'],
+        completedRouteKeys: ['createListing'],
+        pendingRouteKeys: ['activateListing', 'generateMatchCandidates'],
+        totalRecordCount: 1,
+      },
       routeDetails: [
         {
+          sequence: 1,
           routeKey: 'createListing',
           requiredContext: ['tenantId', 'principalId', 'companyId'],
           completed: true,
@@ -56,17 +73,39 @@ test('review packet contracts represent reviewer-ready summary and bounded statu
       {
         sectionKey: 'scenario',
         title: 'Scenario facts',
-        entries: ['source://market/soda-ash-light', 'evidence://supply/soda-ash-light'],
+        entries: ['source://market/soda-ash-light'],
+      },
+      {
+        sectionKey: 'evidence',
+        title: 'Evidence refs',
+        entries: ['evidence://supply/soda-ash-light'],
+      },
+      {
+        sectionKey: 'traceability',
+        title: 'Traceability refs',
+        entries: ['trace-1', 'wf-1'],
       },
       {
         sectionKey: 'routes',
         title: 'Route coverage',
-        entries: ['createListing', 'activateListing', 'generateMatchCandidates'],
+        entries: ['completed:createListing', 'pending-review:activateListing', 'pending-review:generateMatchCandidates'],
+      },
+      {
+        sectionKey: 'verification',
+        title: 'Verification facts',
+        entries: [
+          'verification-mode:review-safe',
+          'review-packet-status:partial',
+          'completed-routes:1/3',
+          'pending-routes:2',
+          'server-truth-claimed:false',
+          'adjudication-outcome-included:false',
+        ],
       },
       {
         sectionKey: 'records',
         title: 'Recorded ids',
-        entries: ['listing-1'],
+        entries: ['listings:listing-1'],
       },
     ],
   };
@@ -78,12 +117,17 @@ test('review packet contracts represent reviewer-ready summary and bounded statu
   assert.equal(packet.details.recordDetails[0]?.recordGroupKey, 'listings');
   assert.deepEqual(
     packet.sections.map((section) => section.sectionKey),
-    ['scenario', 'routes', 'records'],
+    ['scenario', 'evidence', 'traceability', 'routes', 'verification', 'records'],
   );
+  assert.equal(packet.details.boundary.serverTruthClaimed, false);
+  assert.deepEqual(packet.details.verification.pendingRouteKeys, ['activateListing', 'generateMatchCandidates']);
 });
 
 test('review packet section contract supports additive reviewer-facing sections', () => {
-  assert.deepEqual(bidviaReviewPacketSectionKeys, ['scenario', 'routes', 'records']);
+  assert.deepEqual(
+    bidviaReviewPacketSectionKeys,
+    ['scenario', 'evidence', 'traceability', 'routes', 'verification', 'records'],
+  );
 
   const sections: BidviaReviewPacketSection[] = [
     {
@@ -92,9 +136,14 @@ test('review packet section contract supports additive reviewer-facing sections'
       entries: ['source://market/soda-ash-light'],
     },
     {
+      sectionKey: 'verification',
+      title: 'Verification facts',
+      entries: ['server-truth-claimed:false'],
+    },
+    {
       sectionKey: 'records',
       title: 'Recorded ids',
-      entries: ['listing-1'],
+      entries: ['listings:listing-1'],
     },
   ];
 
@@ -104,9 +153,14 @@ test('review packet section contract supports additive reviewer-facing sections'
     entries: ['source://market/soda-ash-light'],
   });
   assert.deepEqual(sections[1], {
+    sectionKey: 'verification',
+    title: 'Verification facts',
+    entries: ['server-truth-claimed:false'],
+  });
+  assert.deepEqual(sections[2], {
     sectionKey: 'records',
     title: 'Recorded ids',
-    entries: ['listing-1'],
+    entries: ['listings:listing-1'],
   });
 });
 
@@ -425,23 +479,42 @@ test('buildReviewPacket derives reviewer-ready sections and complete status from
   assert.deepEqual(packet.summary, {
     sourceRefCount: 1,
     evidenceRefCount: 1,
+    traceIdCount: 1,
     workflowIdCount: 1,
     expectedRouteCount: 3,
     completedRouteCount: 3,
+    pendingRouteCount: 0,
+    recordGroupCount: 2,
+    totalRecordCount: 2,
   });
   assert.deepEqual(packet.details, {
+    boundary: {
+      derivedFromScenarioFacts: true,
+      derivedFromVerificationFacts: true,
+      serverTruthClaimed: false,
+      adjudicationOutcomeIncluded: false,
+    },
+    verification: {
+      expectedRouteKeys: ['createListing', 'activateListing', 'generateMatchCandidates'],
+      completedRouteKeys: ['createListing', 'activateListing', 'generateMatchCandidates'],
+      pendingRouteKeys: [],
+      totalRecordCount: 2,
+    },
     routeDetails: [
       {
+        sequence: 1,
         routeKey: 'createListing',
         requiredContext: ['tenantId', 'principalId', 'companyId'],
         completed: true,
       },
       {
+        sequence: 2,
         routeKey: 'activateListing',
         requiredContext: ['tenantId', 'principalId', 'companyId'],
         completed: true,
       },
       {
+        sequence: 3,
         routeKey: 'generateMatchCandidates',
         requiredContext: ['tenantId', 'principalId', 'companyId'],
         completed: true,
@@ -464,22 +537,39 @@ test('buildReviewPacket derives reviewer-ready sections and complete status from
     {
       sectionKey: 'scenario',
       title: 'Scenario facts',
-      entries: [
-        'source://market/soda-ash-light',
-        'evidence://supply/soda-ash-light',
-        'trace-1',
-        'wf-1',
-      ],
+      entries: ['source://market/soda-ash-light'],
+    },
+    {
+      sectionKey: 'evidence',
+      title: 'Evidence refs',
+      entries: ['evidence://supply/soda-ash-light'],
+    },
+    {
+      sectionKey: 'traceability',
+      title: 'Traceability refs',
+      entries: ['trace-1', 'wf-1'],
     },
     {
       sectionKey: 'routes',
       title: 'Route coverage',
-      entries: ['createListing', 'activateListing', 'generateMatchCandidates'],
+      entries: ['completed:createListing', 'completed:activateListing', 'completed:generateMatchCandidates'],
+    },
+    {
+      sectionKey: 'verification',
+      title: 'Verification facts',
+      entries: [
+        'verification-mode:review-safe',
+        'review-packet-status:complete',
+        'completed-routes:3/3',
+        'pending-routes:0',
+        'server-truth-claimed:false',
+        'adjudication-outcome-included:false',
+      ],
     },
     {
       sectionKey: 'records',
       title: 'Recorded ids',
-      entries: ['listing-1', 'match-1'],
+      entries: ['listings:listing-1', 'matches:match-1'],
     },
   ]);
 });
@@ -540,6 +630,69 @@ test('buildReviewPacket derives partial and pending-review only from completed r
   assert.equal(partialPacket.status, 'partial');
   assert.deepEqual(pendingPacket.details.routeDetails.map((detail) => detail.completed), [false, false, false]);
   assert.deepEqual(partialPacket.details.routeDetails.map((detail) => detail.completed), [true, false, false]);
+  assert.deepEqual(pendingPacket.details.verification.pendingRouteKeys, [
+    'createListing',
+    'activateListing',
+    'generateMatchCandidates',
+  ]);
+  assert.deepEqual(partialPacket.details.verification.pendingRouteKeys, [
+    'activateListing',
+    'generateMatchCandidates',
+  ]);
+});
+
+test('buildReviewPacket stays explicitly local and derived without server-owned outcomes', () => {
+  const plan = buildIndustryUniverseScenarioPlan({
+    scenarioId: 'scenario-industry-universe-1',
+    scenarioLabel: 'industry-universe-soda-ash-light',
+    sourceRefs: ['source://market/soda-ash-light'],
+    evidenceRefs: ['evidence://supply/soda-ash-light'],
+    traceIds: ['trace-1'],
+    workflowIds: ['wf-1'],
+    createListing: {
+      listingId: 'listing-1',
+      listingType: 'supply',
+      category: 'basic inorganic industrial chemical',
+      sku: 'sodium-carbonate-soda-ash-light',
+      quantityValue: '15',
+      quantityUnit: 'tons',
+      regionSummary: 'China -> Vietnam',
+      verificationStatus: 'verified',
+      freshnessTs: '2026-03-25T20:20:00Z',
+      traceId: 'trace-1',
+      idempotencyKey: 'listing-1',
+      now: '2026-03-25T20:20:00Z',
+    },
+    activateListing: {
+      now: '2026-03-25T20:21:00Z',
+    },
+    generateMatchCandidates: {
+      upstreamDecision: 'READY_FOR_ROUTING',
+      requiredEvidenceLevel: 1,
+      detectedEvidenceLevel: 1,
+      workflowRunId: 'wf-1',
+      triggerEventId: 'evt-1',
+      topN: 10,
+      now: '2026-03-25T20:22:00Z',
+    },
+  });
+
+  const packet = buildReviewPacket({
+    scenario: plan.envelope,
+    bundle: buildScenarioVerificationBundle({
+      scenario: plan.envelope,
+      verificationMode: 'review-safe',
+      completedRouteChain: [plan.envelope.expectedRouteChain[0]!],
+      recordIds: {
+        listings: ['listing-1'],
+      },
+    }),
+  });
+
+  assert.equal(packet.details.boundary.serverTruthClaimed, false);
+  assert.equal(packet.details.boundary.adjudicationOutcomeIncluded, false);
+  assert.equal(packet.sections[4]?.entries.includes('server-truth-claimed:false'), true);
+  assert.equal(packet.sections[4]?.entries.includes('adjudication-outcome-included:false'), true);
 });
 
 test('exportReviewPacket returns a stable cloned packet export', () => {

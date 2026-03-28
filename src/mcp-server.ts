@@ -1,3 +1,8 @@
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+import { BidviaClient } from './client.js';
+import { resolveBidviaBaseUrlFromEnv } from './config.js';
 import { bidviaMcpTools, dispatchMcpToolCall } from './mcp.js';
 
 interface JsonRpcRequest {
@@ -21,6 +26,18 @@ interface JsonRpcErrorResponse {
     message: string;
   };
 }
+
+export function shouldRunLocalMcpServerMain(argvEntry: string | undefined, moduleUrl: string): boolean {
+  if (!argvEntry) {
+    return false;
+  }
+
+  return path.resolve(argvEntry) === fileURLToPath(moduleUrl);
+}
+
+export type BidviaLocalMcpServerDependencies = {
+  createExecutionClient: () => BidviaClient;
+};
 
 function encodeFrame(message: JsonRpcSuccessResponse | JsonRpcErrorResponse): string {
   const body = JSON.stringify(message);
@@ -53,20 +70,32 @@ function buildToolsListResponse(id: string | number | null): JsonRpcSuccessRespo
         name: tool.toolName,
         description: tool.description,
         inputSchema: tool.inputSchemaRef,
+        outputMode: tool.outputMode,
+        helperRef: tool.helperRef,
+        localCapabilityTier: tool.localCapabilityTier,
+        localCapabilityRiskTier: tool.localCapabilityRiskTier,
+        accessContextFamily: tool.accessContextFamily,
+        requiredContext: tool.requiredContext,
       })),
     },
   };
 }
 
-function buildToolsCallResponse(
+async function buildToolsCallResponse(
   id: string | number | null,
   params: Record<string, unknown> | undefined,
-): JsonRpcSuccessResponse {
+  dependencies: BidviaLocalMcpServerDependencies,
+): Promise<JsonRpcSuccessResponse> {
   const toolName = typeof params?.name === 'string' ? params.name : '';
-  const result = dispatchMcpToolCall({
-    toolName,
-    arguments: params?.arguments,
-  });
+  const result = await dispatchMcpToolCall(
+    {
+      toolName,
+      arguments: params?.arguments,
+    },
+    {
+      createExecutionClient: dependencies.createExecutionClient,
+    },
+  );
 
   return {
     jsonrpc: '2.0',
@@ -80,6 +109,19 @@ function buildToolsCallResponse(
       ],
     },
   };
+}
+
+function createDefaultExecutionClient(): BidviaClient {
+  return new BidviaClient({
+    baseUrl: resolveBidviaBaseUrlFromEnv(),
+    context: {
+      tenantId: process.env.BIDVIA_TENANT_ID ?? 'tenant-a',
+      principalId: process.env.BIDVIA_PRINCIPAL_ID,
+      registrationId: process.env.BIDVIA_REGISTRATION_ID,
+      sessionId: process.env.BIDVIA_SESSION_ID,
+      companyId: process.env.BIDVIA_COMPANY_ID,
+    },
+  });
 }
 
 function buildMethodNotFoundResponse(id: string | number | null, method: string): JsonRpcErrorResponse {
@@ -104,7 +146,10 @@ function buildInternalErrorResponse(id: string | number | null, error: unknown):
   };
 }
 
-function handleRequest(request: JsonRpcRequest): JsonRpcSuccessResponse | JsonRpcErrorResponse {
+async function handleRequest(
+  request: JsonRpcRequest,
+  dependencies: BidviaLocalMcpServerDependencies,
+): Promise<JsonRpcSuccessResponse | JsonRpcErrorResponse> {
   const id = request.id ?? null;
 
   try {
@@ -117,7 +162,7 @@ function handleRequest(request: JsonRpcRequest): JsonRpcSuccessResponse | JsonRp
     }
 
     if (request.method === 'tools/call') {
-      return buildToolsCallResponse(id, request.params);
+      return await buildToolsCallResponse(id, request.params, dependencies);
     }
 
     return buildMethodNotFoundResponse(id, request.method);
@@ -129,38 +174,48 @@ function handleRequest(request: JsonRpcRequest): JsonRpcSuccessResponse | JsonRp
 export function runLocalMcpServer(
   input: NodeJS.ReadableStream = process.stdin,
   output: NodeJS.WritableStream = process.stdout,
+  dependencies: BidviaLocalMcpServerDependencies = {
+    createExecutionClient: createDefaultExecutionClient,
+  },
 ): void {
-  let buffer = '';
+  let buffer = Buffer.alloc(0);
+  const frameSeparator = Buffer.from('\r\n\r\n', 'utf8');
 
-  input.setEncoding?.('utf8');
   input.on('data', (chunk: string | Buffer) => {
-    buffer += chunk.toString();
+    const chunkBuffer = typeof chunk === 'string' ? Buffer.from(chunk, 'utf8') : chunk;
+    buffer = Buffer.concat([buffer, chunkBuffer]);
 
     while (true) {
-      const separatorIndex = buffer.indexOf('\r\n\r\n');
+      const separatorIndex = buffer.indexOf(frameSeparator);
       if (separatorIndex === -1) {
         return;
       }
 
-      const header = buffer.slice(0, separatorIndex);
+      const header = buffer.subarray(0, separatorIndex).toString('utf8');
       const contentLengthMatch = header.match(/Content-Length:\s*(\d+)/i);
       if (!contentLengthMatch) {
-        buffer = '';
+        buffer = Buffer.alloc(0);
         return;
       }
 
       const contentLength = Number(contentLengthMatch[1]);
       const bodyStart = separatorIndex + 4;
-      const body = buffer.slice(bodyStart);
-      if (Buffer.byteLength(body, 'utf8') < contentLength) {
+      const frameLength = bodyStart + contentLength;
+      if (buffer.length < frameLength) {
         return;
       }
 
-      const message = JSON.parse(body.slice(0, contentLength)) as JsonRpcRequest;
-      buffer = body.slice(contentLength);
-      output.write(encodeFrame(handleRequest(message)));
+      const message = JSON.parse(
+        buffer.subarray(bodyStart, frameLength).toString('utf8'),
+      ) as JsonRpcRequest;
+      buffer = buffer.subarray(frameLength);
+      void handleRequest(message, dependencies).then((response) => {
+        output.write(encodeFrame(response));
+      });
     }
   });
 }
 
-runLocalMcpServer();
+if (shouldRunLocalMcpServerMain(process.argv[1], import.meta.url)) {
+  runLocalMcpServer();
+}

@@ -9,6 +9,8 @@ export const bidviaRouteCapabilities: ReadonlyArray<BidviaRouteCapability> = [
     requiredContext: ['tenantId'],
     scope: 'write',
     level: 'atomic-route',
+    localCapabilityTier: 'L2-registration-runtime',
+    localCapabilityRiskTier: 'runtime-execution',
   },
   {
     helperKey: 'queryProvisionalAgent',
@@ -18,6 +20,8 @@ export const bidviaRouteCapabilities: ReadonlyArray<BidviaRouteCapability> = [
     requiredContext: ['tenantId'],
     scope: 'read',
     level: 'atomic-route',
+    localCapabilityTier: 'L0-observe-only',
+    localCapabilityRiskTier: 'observe-only',
   },
   {
     helperKey: 'claimProvisionalAgent',
@@ -27,6 +31,8 @@ export const bidviaRouteCapabilities: ReadonlyArray<BidviaRouteCapability> = [
     requiredContext: ['tenantId', 'sessionId'],
     scope: 'write',
     level: 'atomic-route',
+    localCapabilityTier: 'L2-registration-runtime',
+    localCapabilityRiskTier: 'runtime-execution',
   },
   {
     helperKey: 'postHeartbeat',
@@ -36,6 +42,8 @@ export const bidviaRouteCapabilities: ReadonlyArray<BidviaRouteCapability> = [
     requiredContext: ['tenantId', 'registrationId', 'principalId'],
     scope: 'write',
     level: 'atomic-route',
+    localCapabilityTier: 'L2-registration-runtime',
+    localCapabilityRiskTier: 'runtime-execution',
   },
   {
     helperKey: 'uploadSync',
@@ -45,6 +53,8 @@ export const bidviaRouteCapabilities: ReadonlyArray<BidviaRouteCapability> = [
     requiredContext: ['tenantId', 'registrationId', 'principalId'],
     scope: 'write',
     level: 'atomic-route',
+    localCapabilityTier: 'L2-registration-runtime',
+    localCapabilityRiskTier: 'runtime-execution',
   },
   {
     helperKey: 'downloadSync',
@@ -54,6 +64,8 @@ export const bidviaRouteCapabilities: ReadonlyArray<BidviaRouteCapability> = [
     requiredContext: ['tenantId', 'registrationId', 'principalId'],
     scope: 'read',
     level: 'atomic-route',
+    localCapabilityTier: 'L0-observe-only',
+    localCapabilityRiskTier: 'observe-only',
   },
   {
     helperKey: 'submitEvidence',
@@ -63,6 +75,8 @@ export const bidviaRouteCapabilities: ReadonlyArray<BidviaRouteCapability> = [
     requiredContext: ['tenantId', 'registrationId', 'principalId'],
     scope: 'write',
     level: 'atomic-route',
+    localCapabilityTier: 'L2-registration-runtime',
+    localCapabilityRiskTier: 'runtime-execution',
   },
   {
     helperKey: 'submitProposal',
@@ -72,6 +86,8 @@ export const bidviaRouteCapabilities: ReadonlyArray<BidviaRouteCapability> = [
     requiredContext: ['tenantId', 'registrationId', 'principalId'],
     scope: 'write',
     level: 'atomic-route',
+    localCapabilityTier: 'L2-registration-runtime',
+    localCapabilityRiskTier: 'runtime-execution',
   },
   {
     helperKey: 'createCommercialAction',
@@ -81,6 +97,8 @@ export const bidviaRouteCapabilities: ReadonlyArray<BidviaRouteCapability> = [
     requiredContext: ['tenantId', 'principalId', 'companyId'],
     scope: 'write',
     level: 'atomic-route',
+    localCapabilityTier: 'L3-governed-commercial',
+    localCapabilityRiskTier: 'governed-commercial',
   },
   {
     helperKey: 'getCommercialActionStatus',
@@ -90,6 +108,8 @@ export const bidviaRouteCapabilities: ReadonlyArray<BidviaRouteCapability> = [
     requiredContext: ['tenantId', 'adminSessionId'],
     scope: 'read',
     level: 'atomic-route',
+    localCapabilityTier: 'L0-observe-only',
+    localCapabilityRiskTier: 'observe-only',
   },
   {
     helperKey: 'policyCheckCommercialAction',
@@ -99,6 +119,8 @@ export const bidviaRouteCapabilities: ReadonlyArray<BidviaRouteCapability> = [
     requiredContext: ['tenantId', 'principalId', 'companyId'],
     scope: 'write',
     level: 'atomic-route',
+    localCapabilityTier: 'L3-governed-commercial',
+    localCapabilityRiskTier: 'governed-commercial',
   },
   {
     helperKey: 'requestCommercialActionApproval',
@@ -108,6 +130,8 @@ export const bidviaRouteCapabilities: ReadonlyArray<BidviaRouteCapability> = [
     requiredContext: ['tenantId', 'principalId', 'companyId'],
     scope: 'write',
     level: 'atomic-route',
+    localCapabilityTier: 'L3-governed-commercial',
+    localCapabilityRiskTier: 'governed-commercial',
   },
   {
     helperKey: 'executeCommercialAction',
@@ -117,6 +141,8 @@ export const bidviaRouteCapabilities: ReadonlyArray<BidviaRouteCapability> = [
     requiredContext: ['tenantId', 'principalId', 'companyId'],
     scope: 'write',
     level: 'atomic-route',
+    localCapabilityTier: 'L3-governed-commercial',
+    localCapabilityRiskTier: 'governed-commercial',
   },
   {
     helperKey: 'getCommercialActionReceipt',
@@ -126,6 +152,8 @@ export const bidviaRouteCapabilities: ReadonlyArray<BidviaRouteCapability> = [
     requiredContext: ['tenantId', 'adminSessionId'],
     scope: 'read',
     level: 'atomic-route',
+    localCapabilityTier: 'L0-observe-only',
+    localCapabilityRiskTier: 'observe-only',
   },
   {
     helperKey: 'getCommercialActionAudit',
@@ -135,6 +163,8 @@ export const bidviaRouteCapabilities: ReadonlyArray<BidviaRouteCapability> = [
     requiredContext: ['tenantId', 'adminSessionId'],
     scope: 'read',
     level: 'atomic-route',
+    localCapabilityTier: 'L0-observe-only',
+    localCapabilityRiskTier: 'observe-only',
   },
   {
     helperKey: 'createListing',
@@ -144,6 +174,8 @@ export const bidviaRouteCapabilities: ReadonlyArray<BidviaRouteCapability> = [
     requiredContext: ['tenantId', 'principalId', 'companyId'],
     scope: 'write',
     level: 'atomic-route',
+    localCapabilityTier: 'L3-governed-commercial',
+    localCapabilityRiskTier: 'governed-commercial',
   },
   {
     helperKey: 'activateListing',
@@ -153,6 +185,8 @@ export const bidviaRouteCapabilities: ReadonlyArray<BidviaRouteCapability> = [
     requiredContext: ['tenantId', 'principalId', 'companyId'],
     scope: 'write',
     level: 'atomic-route',
+    localCapabilityTier: 'L3-governed-commercial',
+    localCapabilityRiskTier: 'governed-commercial',
   },
   {
     helperKey: 'generateMatchCandidates',
@@ -162,6 +196,8 @@ export const bidviaRouteCapabilities: ReadonlyArray<BidviaRouteCapability> = [
     requiredContext: ['tenantId', 'principalId', 'companyId'],
     scope: 'write',
     level: 'atomic-route',
+    localCapabilityTier: 'L3-governed-commercial',
+    localCapabilityRiskTier: 'governed-commercial',
   },
   {
     helperKey: 'createConnectionRequest',
@@ -171,6 +207,8 @@ export const bidviaRouteCapabilities: ReadonlyArray<BidviaRouteCapability> = [
     requiredContext: ['tenantId', 'principalId', 'companyId'],
     scope: 'write',
     level: 'atomic-route',
+    localCapabilityTier: 'L3-governed-commercial',
+    localCapabilityRiskTier: 'governed-commercial',
   },
   {
     helperKey: 'approveConnectionRequest',
@@ -180,6 +218,8 @@ export const bidviaRouteCapabilities: ReadonlyArray<BidviaRouteCapability> = [
     requiredContext: ['tenantId', 'principalId', 'companyId'],
     scope: 'write',
     level: 'atomic-route',
+    localCapabilityTier: 'L3-governed-commercial',
+    localCapabilityRiskTier: 'governed-commercial',
   },
   {
     helperKey: 'exportOpportunityPackage',
@@ -189,6 +229,8 @@ export const bidviaRouteCapabilities: ReadonlyArray<BidviaRouteCapability> = [
     requiredContext: ['tenantId', 'principalId', 'companyId'],
     scope: 'write',
     level: 'atomic-route',
+    localCapabilityTier: 'L3-governed-commercial',
+    localCapabilityRiskTier: 'governed-commercial',
   },
   {
     helperKey: 'buildIndustryUniverseScenarioPlan',
@@ -198,6 +240,8 @@ export const bidviaRouteCapabilities: ReadonlyArray<BidviaRouteCapability> = [
     requiredContext: ['tenantId', 'principalId', 'companyId'],
     scope: 'write',
     level: 'scenario-helper',
+    localCapabilityTier: 'L1-review-safe',
+    localCapabilityRiskTier: 'review-safe',
     scenarioRouteSteps: [
       {
         routeKey: 'createListing',
@@ -221,6 +265,8 @@ export const bidviaRouteCapabilities: ReadonlyArray<BidviaRouteCapability> = [
     requiredContext: ['tenantId', 'principalId', 'companyId'],
     scope: 'write',
     level: 'scenario-helper',
+    localCapabilityTier: 'L1-review-safe',
+    localCapabilityRiskTier: 'review-safe',
     scenarioRouteSteps: [
       {
         routeKey: 'createConnectionRequest',
@@ -240,6 +286,8 @@ export const bidviaRouteCapabilities: ReadonlyArray<BidviaRouteCapability> = [
     requiredContext: ['tenantId', 'principalId', 'companyId'],
     scope: 'write',
     level: 'scenario-helper',
+    localCapabilityTier: 'L1-review-safe',
+    localCapabilityRiskTier: 'review-safe',
     scenarioRouteSteps: [
       {
         routeKey: 'exportOpportunityPackage',

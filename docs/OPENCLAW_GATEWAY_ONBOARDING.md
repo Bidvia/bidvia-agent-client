@@ -48,7 +48,7 @@ npm install
 npm run build
 ```
 
-This gives you the built CLI at `dist/cli.js` and the built local MCP server entrypoint at `dist/mcp-server.js`.
+This gives you the built CLI at `dist/cli.js` and the built local MCP server entrypoint at `dist/src/mcp-server.js`.
 
 ## Step 2 — configure the canonical Bidvia API domain
 
@@ -138,6 +138,20 @@ Use this to confirm the local parser/normalizer for server-derived payload shape
 
 If any of the four checks look wrong, stop here and fix the local install/configuration layer before attempting OpenClaw integration.
 
+If you want the full grouped command surface before you choose the next step, run:
+
+```bash
+node dist/cli.js --help
+```
+
+The current shipped local-only CLI surface includes:
+
+- read-only visibility commands
+- explicit execution commands for `heartbeat`, `sync-upload`, `evidence`, and `proposal`, each with `--dry-run`
+- review-safe scenario plan and review-packet preview/export commands
+- verification-bundle preview/export commands
+- bounded verification-wave preview commands
+
 ## Step 5 — choose the integration entry mode
 
 After the local read-only smoke checks pass, choose one of these operator paths.
@@ -162,7 +176,7 @@ Use this when the OpenClaw side is ready to consume a local stdio MCP server.
 The shipped local MCP server entrypoint is:
 
 ```bash
-node dist/mcp-server.js
+node dist/src/mcp-server.js
 ```
 
 This entrypoint is intentionally bounded to the local stdio loop only. It is not a hosted MCP service, not a remote registry participant, and not a broader runtime platform.
@@ -173,6 +187,9 @@ In practical terms, the OpenClaw side should treat it as:
 - stdio-only
 - catalog-backed
 - limited to the currently shipped tool surfaces
+- exposing both review-safe tools and explicit execution tools through the local server
+
+That local execution surface is still not login. Transport/auth-provider hardening supports the local operator path, but Core-owned auth and user login remain outside the current executable package boundary.
 
 ## Step 6 — what to hand off to the OpenClaw Gateway operator
 
@@ -194,7 +211,7 @@ For most OpenClaw Gateway installations, the safest baseline is:
 2. set explicit `BIDVIA_BASE_URL` to canonical `api.*`
 3. set the minimal shared Bidvia tenant/principal values
 4. run the four read-only smoke commands
-5. only then wire `node dist/mcp-server.js` into OpenClaw if the Gateway side is ready
+5. only then wire `node dist/src/mcp-server.js` into OpenClaw if the Gateway side is ready
 
 This order reduces ambiguity and keeps the integration bounded to shipped local surfaces.
 

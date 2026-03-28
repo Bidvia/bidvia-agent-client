@@ -649,17 +649,30 @@ async function main() {
   assert.deepEqual(reviewPacket.summary, {
     sourceRefCount: industryUniversePlan.envelope.sourceRefs.length,
     evidenceRefCount: industryUniversePlan.envelope.evidenceRefs.length,
+    traceIdCount: industryUniversePlan.envelope.traceIds.length,
     workflowIdCount: industryUniversePlan.envelope.workflowIds.length,
     expectedRouteCount: industryUniversePlan.envelope.expectedRouteChain.length,
     completedRouteCount: industryUniverseBundle.completedRouteChain.length,
+    pendingRouteCount:
+      industryUniversePlan.envelope.expectedRouteChain.length - industryUniverseBundle.completedRouteChain.length,
+    recordGroupCount: 2,
+    totalRecordCount: 2,
   });
   assert.deepEqual(reviewPacket.sections, [
     {
       sectionKey: 'scenario',
       title: 'Scenario facts',
+      entries: [...industryUniversePlan.envelope.sourceRefs],
+    },
+    {
+      sectionKey: 'evidence',
+      title: 'Evidence refs',
+      entries: [...industryUniversePlan.envelope.evidenceRefs],
+    },
+    {
+      sectionKey: 'traceability',
+      title: 'Traceability refs',
       entries: [
-        ...industryUniversePlan.envelope.sourceRefs,
-        ...industryUniversePlan.envelope.evidenceRefs,
         ...industryUniversePlan.envelope.traceIds,
         ...industryUniversePlan.envelope.workflowIds,
       ],
@@ -667,12 +680,26 @@ async function main() {
     {
       sectionKey: 'routes',
       title: 'Route coverage',
-      entries: industryUniversePlan.envelope.expectedRouteChain.map((routeStep) => routeStep.routeKey),
+      entries: industryUniversePlan.envelope.expectedRouteChain.map(
+        (routeStep) => `completed:${routeStep.routeKey}`,
+      ),
+    },
+    {
+      sectionKey: 'verification',
+      title: 'Verification facts',
+      entries: [
+        'verification-mode:review-safe',
+        'review-packet-status:complete',
+        `completed-routes:${industryUniverseBundle.completedRouteChain.length}/${industryUniversePlan.envelope.expectedRouteChain.length}`,
+        'pending-routes:0',
+        'server-truth-claimed:false',
+        'adjudication-outcome-included:false',
+      ],
     },
     {
       sectionKey: 'records',
       title: 'Recorded ids',
-      entries: ['listing-validate-1', 'match-validate-1'],
+      entries: ['listings:listing-validate-1', 'matches:match-validate-1'],
     },
   ]);
   assert.notEqual(exportedReviewPacket, reviewPacket);

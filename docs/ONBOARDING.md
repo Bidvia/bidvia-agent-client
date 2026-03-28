@@ -56,6 +56,7 @@ Think about this repo in this order:
 9. check the static MCP-facing tool catalog when you need export-only tool descriptors for shipped bounded slices
 10. build a scenario envelope when the work is a multi-step reviewable flow
 11. export a verification bundle when the run should be reviewable later
+12. use explicit local execution commands when you need the packaged operator path for heartbeat, sync-upload, evidence, or proposal
 
 ## Environment mode visibility
 
@@ -188,7 +189,7 @@ It is intentionally limited to the local request loop for:
 - `tools/list`
 - `tools/call`
 
-That local server uses the shipped tool catalog from `src/mcp.ts` and dispatches only the current bounded MCP-facing tools. It is useful when you want a repo-local MCP server surface for the already-shipped plan-preview and review-packet preview/export tools.
+That local server uses the shipped tool catalog from `src/mcp.ts` and dispatches only the current bounded MCP-facing tools. It is useful when you want a repo-local MCP server surface for the already-shipped review-safe plan and packet tools plus the explicit local execution tools.
 
 This server remains deliberately narrow. It does not add hosted runtime behavior, remote registry features, broader protocol/runtime complexity, or any MCP authority beyond the shipped local tool loop.
 
@@ -242,6 +243,7 @@ npx tsx examples/review-packet-preview.ts
 Built CLI preview after `npm run build`:
 
 ```bash
+node dist/cli.js --help
 node dist/cli.js industry-universe-plan
 node dist/cli.js industry-universe-review-packet-preview
 node dist/cli.js industry-universe-review-packet-export
@@ -251,17 +253,29 @@ node dist/cli.js connection-approval-review-packet-export
 node dist/cli.js opportunity-package-handoff-plan
 node dist/cli.js opportunity-package-handoff-review-packet-preview
 node dist/cli.js opportunity-package-handoff-review-packet-export
+node dist/cli.js registration-lifecycle-plan
+node dist/cli.js registered-agent-operations-plan
 node dist/cli.js multi-business-chain-verification-wave-preview
 node dist/cli.js commercial-action-verification-wave-preview
+node dist/cli.js verification-bundle-preview --input registration-lifecycle
+node dist/cli.js verification-bundle-export --input registered-agent-operations
+node dist/cli.js heartbeat --dry-run
+node dist/cli.js sync-upload --dry-run
+node dist/cli.js evidence --dry-run
+node dist/cli.js proposal --dry-run
 ```
 
 The package handoff preview is intentionally downstream-only. It requires an externally known `opportunityId` and does not imply that this repo can create or discover one after approval.
 
 The verification-wave preview commands are intentionally bounded and operator-facing. `multi-business-chain-verification-wave-preview` previews the shipped coordinator path plus its explicit approval-to-opportunity handoff boundary, while `commercial-action-verification-wave-preview` previews the shipped commercial-action continuation wave. Neither command executes the wave, crosses the missing seam, or creates any new platform authority.
 
+The verification-bundle preview and export commands are also review-safe only. They package the already-built scenario envelope into a local preview or exported bundle for review, not remote verification authority or hosted workflow behavior.
+
 The review-packet commands are intentionally bounded. They only preview or export JSON derived from existing scenario plans and verification bundles. The richer packet structure now includes reviewer-facing route coverage and recorded-id detail, but it still does not execute runtime work, create new platform authority, or widen the current local adapter seam.
 
 The current review-packet preview and export surfaces stay review-oriented only. They expose richer detail for humans and downstream tooling, not signing, policy authority, or server-truth semantics.
+
+The explicit execution commands follow the same honesty boundary. `heartbeat`, `sync-upload`, `evidence`, and `proposal` are packaged local operator commands, and `--dry-run` keeps them inspectable without creating a client request. That is local execution ergonomics, not login, not hosted runtime behavior, and not expanded platform authority.
 
 The capability registry follows the same honesty boundary. It helps callers discover access-context expectations locally, but it does not imply runtime negotiation, server truth discovery, or MCP/runtime expansion.
 
@@ -359,6 +373,7 @@ Compatibility mapping still retained during launch window:
 - do not treat `POST /runtime/account/agents` as the official onboarding path
 - do not infer authority from heartbeat, sync, evidence, or proposal success
 - do not add unfrozen operations here before they are frozen in Bidvia core
+- do not read local transport/auth-provider hardening as shipped login or Core-owned auth
 
 ## Read next
 

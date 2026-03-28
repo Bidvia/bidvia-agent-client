@@ -57,20 +57,23 @@ The approved order is Track 1 first, then Track 2, with explicit L1, L2, and L3 
 
 ### L1. Integration productization completion
 
-L1 completes Track 1. The goal is for this repo to become the most reliable Bidvia integration product for external users, operators, and OpenClaw Gateway paths while staying inside the frozen current-mainline authority boundary.
+L1 completes Track 1. The goal is for this repo to become the most reliable Bidvia integration product and independent platform access layer for external users, operators, and OpenClaw Gateway paths while staying inside the frozen current-mainline authority boundary.
 
 #### Track 1. Integration productization for external users, operators, and OpenClaw Gateway paths
 
-Track 1 focuses on turning the current partial slice into a clear, dependable integration product.
+Track 1 focuses on turning the current partial slice into a clear, dependable integration product without changing the repo into OpenClaw core, a hosted control plane, or a client-owned authority layer.
 
 Primary outcomes:
 
 - make the shipped local surfaces easier for external integrators and operators to understand, adopt, and verify
 - keep the OpenClaw Gateway path visible as a local operator path, not as a hosted control-plane claim
+- make the first OpenClaw-ready execution step a safe non-daemon real remote execution surface, per call and access-layer scoped, before any daemonized bridge, sidecar requirement, hosted runtime, or hosted control-plane idea is considered
+- introduce clear tool-tiering and risk-tiering language for future gating, with explicit low-risk to high-risk layers such as L0, L1, L2, and L3 tool classes, while keeping today's shipped MCP-facing surface honest about its bounded local scope
+- harden the access layer with timeout and abort controls, error normalization, a request-policy or middleware seam, and clearer operator and integrator ergonomics around the surfaces that are already real
 - improve packaging, docs, bounded CLI/operator flows, and bounded scenario ergonomics around the surfaces that are already real
 - widen coverage across bounded business-chain and review-safe operational slices only when those slices remain honest about current authority boundaries
 
-Track 1 is complete when the repo presents a stable integration product around its shipped local surfaces, with clear operator guidance, bounded orchestration support, and no confusion between local tooling ergonomics and platform truth ownership.
+Track 1 is complete when the repo presents a stable integration product around its shipped local surfaces, with clear operator guidance, bounded orchestration support, safe non-daemon real remote execution surfaces, access-layer hardening, and no confusion between local tooling ergonomics and platform truth ownership.
 
 ### L2. Core truth consumption closure
 
@@ -78,13 +81,13 @@ L2 begins Track 2. The goal is to close the gap between local descriptive surfac
 
 #### Track 2. Core collaboration closure for capability truth, presence and notification semantics, and multi-agent coordination
 
-Track 2 focuses on the seams that cannot become fully real until Bidvia Core exposes frozen truth.
+Track 2 focuses on the seams that cannot become fully real until Bidvia Core exposes frozen truth. Core truth consumption, presence and notification semantics, task semantics, and broader multi-agent coordination remain downstream of L1 and remain Core-dependent.
 
 Primary outcomes:
 
 - consume frozen Core capability truth so local capability views no longer stop at descriptive local knowledge
 - move capability refresh from an implemented but blocked seam toward a real Core-truth consumption path, while preserving fail-closed behavior until truth is available
-- close remaining semantics around presence, notifications, task participation, and other coordination surfaces that require Core-owned truth to be trustworthy
+- close remaining semantics around presence, notifications, task participation, and other coordination surfaces only where Core-owned truth makes those semantics trustworthy
 - strengthen multi-agent coordination only where Core semantics are frozen and where the client still remains an integration product, not an authority owner
 
 L2 is complete when the client can consume frozen Core truth for the collaboration semantics it already describes, especially capability truth and coordination semantics, without overstating client ownership.
@@ -96,6 +99,7 @@ L3 is the final long-horizon level. It expands only after L1 productization and 
 Primary outcomes:
 
 - broaden runtime and adapter surfaces beyond the current bounded local adapter seam, only where the Core boundary is already stable
+- consider richer adapter, runtime-bridge, or broader execution-surface expansion only after the non-daemon access-layer path and Core-truth collaboration path are already in place
 - extend multi-agent collaboration patterns beyond the current bounded orchestration slices, without turning the repo into an unfounded workflow-engine claim
 - grow richer operator and integration surfaces across runtime-aware and collaboration-aware paths while keeping the release-language split explicit
 

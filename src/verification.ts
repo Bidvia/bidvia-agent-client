@@ -1,4 +1,5 @@
 import type {
+  BidviaReviewPacketBoundaryDetail,
   BidviaReviewPacketDetail,
   BidviaReviewPacketRecordDetail,
   BidviaReviewPacketRecordGroupKey,
@@ -8,6 +9,7 @@ import type {
   BidviaReviewPacket,
   BidviaReviewPacketSection,
   BidviaReviewPacketStatus,
+  BidviaReviewPacketVerificationDetail,
   BidviaScenarioVerificationBundle,
   BidviaVerificationBundle,
   BidviaVerificationBundleRecordIds,
@@ -54,6 +56,21 @@ function freezeReviewPacketSection(section: BidviaReviewPacketSection): BidviaRe
   return Object.freeze(section);
 }
 
+function freezeReviewPacketBoundaryDetail(
+  detail: BidviaReviewPacketBoundaryDetail,
+): BidviaReviewPacketBoundaryDetail {
+  return Object.freeze(detail);
+}
+
+function freezeReviewPacketVerificationDetail(
+  detail: BidviaReviewPacketVerificationDetail,
+): BidviaReviewPacketVerificationDetail {
+  Object.freeze(detail.expectedRouteKeys);
+  Object.freeze(detail.completedRouteKeys);
+  Object.freeze(detail.pendingRouteKeys);
+  return Object.freeze(detail);
+}
+
 function freezeReviewPacketRouteDetail(detail: BidviaReviewPacketRouteDetail): BidviaReviewPacketRouteDetail {
   Object.freeze(detail.requiredContext);
   return Object.freeze(detail);
@@ -66,6 +83,8 @@ function freezeReviewPacketRecordDetail(detail: BidviaReviewPacketRecordDetail):
 
 function freezeReviewPacket(packet: BidviaReviewPacket): BidviaReviewPacket {
   Object.freeze(packet.summary);
+  freezeReviewPacketBoundaryDetail(packet.details.boundary);
+  freezeReviewPacketVerificationDetail(packet.details.verification);
   packet.details.routeDetails.forEach(freezeReviewPacketRouteDetail);
   packet.details.recordDetails.forEach(freezeReviewPacketRecordDetail);
   Object.freeze(packet.details.routeDetails);
@@ -130,39 +149,87 @@ function buildScenarioSection(scenario: BidviaScenarioEnvelope): BidviaReviewPac
   return {
     sectionKey: 'scenario',
     title: 'Scenario facts',
+    entries: [...scenario.sourceRefs],
+  };
+}
+
+function buildEvidenceSection(scenario: BidviaScenarioEnvelope): BidviaReviewPacketSection {
+  return {
+    sectionKey: 'evidence',
+    title: 'Evidence refs',
+    entries: [...scenario.evidenceRefs],
+  };
+}
+
+function buildTraceabilitySection(scenario: BidviaScenarioEnvelope): BidviaReviewPacketSection {
+  return {
+    sectionKey: 'traceability',
+    title: 'Traceability refs',
     entries: [
-      ...scenario.sourceRefs,
-      ...scenario.evidenceRefs,
       ...scenario.traceIds,
       ...scenario.workflowIds,
     ],
   };
 }
 
-function buildRoutesSection(scenario: BidviaScenarioEnvelope): BidviaReviewPacketSection {
+function buildRoutesSection(
+  expectedRouteChain: BidviaScenarioRouteStep[],
+  completedRouteChain: BidviaScenarioRouteStep[],
+): BidviaReviewPacketSection {
+  const completedRouteKeys = new Set(completedRouteChain.map((routeStep) => routeStep.routeKey));
+
   return {
     sectionKey: 'routes',
     title: 'Route coverage',
-    entries: scenario.expectedRouteChain.map((routeStep) => routeStep.routeKey),
+    entries: expectedRouteChain.map((routeStep) => {
+      const status = completedRouteKeys.has(routeStep.routeKey) ? 'completed' : 'pending-review';
+      return `${status}:${routeStep.routeKey}`;
+    }),
+  };
+}
+
+function buildVerificationSection(params: {
+  verificationMode: BidviaVerificationMode;
+  status: BidviaReviewPacketStatus;
+  expectedRouteCount: number;
+  completedRouteCount: number;
+  pendingRouteCount: number;
+}): BidviaReviewPacketSection {
+  return {
+    sectionKey: 'verification',
+    title: 'Verification facts',
+    entries: [
+      `verification-mode:${params.verificationMode}`,
+      `review-packet-status:${params.status}`,
+      `completed-routes:${params.completedRouteCount}/${params.expectedRouteCount}`,
+      `pending-routes:${params.pendingRouteCount}`,
+      'server-truth-claimed:false',
+      'adjudication-outcome-included:false',
+    ],
   };
 }
 
 function buildRecordsSection(recordIds: BidviaVerificationBundleRecordIds): BidviaReviewPacketSection {
+  const recordGroupKeys: BidviaReviewPacketRecordGroupKey[] = [
+    'proposals',
+    'reviews',
+    'listings',
+    'matches',
+    'connections',
+    'approvals',
+    'receipts',
+    'opportunities',
+    'packages',
+    'commercialActions',
+  ];
+
   return {
     sectionKey: 'records',
     title: 'Recorded ids',
-    entries: [
-      ...(recordIds.proposals ?? []),
-      ...(recordIds.reviews ?? []),
-      ...(recordIds.listings ?? []),
-      ...(recordIds.matches ?? []),
-      ...(recordIds.connections ?? []),
-      ...(recordIds.approvals ?? []),
-      ...(recordIds.receipts ?? []),
-      ...(recordIds.opportunities ?? []),
-      ...(recordIds.packages ?? []),
-      ...(recordIds.commercialActions ?? []),
-    ],
+    entries: recordGroupKeys.flatMap((recordGroupKey) => {
+      const ids = recordIds[recordGroupKey] ?? [];
+      return ids.map((id) => `${recordGroupKey}:${id}`);
+    }),
   };
 }
 
@@ -171,6 +238,7 @@ function buildRouteDetails(
   completedRouteChain: BidviaScenarioRouteStep[],
 ): BidviaReviewPacketRouteDetail[] {
   return expectedRouteChain.map((routeStep, index) => ({
+    sequence: index + 1,
     routeKey: routeStep.routeKey,
     requiredContext: [...routeStep.requiredContext],
     completed: index < completedRouteChain.length,
@@ -205,13 +273,54 @@ function buildRecordDetails(recordIds: BidviaVerificationBundleRecordIds): Bidvi
   });
 }
 
+function countRecordGroups(recordDetails: BidviaReviewPacketRecordDetail[]): number {
+  return recordDetails.length;
+}
+
+function countTotalRecords(recordDetails: BidviaReviewPacketRecordDetail[]): number {
+  return recordDetails.reduce((total, detail) => total + detail.count, 0);
+}
+
+function buildReviewPacketBoundaryDetail(): BidviaReviewPacketBoundaryDetail {
+  return {
+    derivedFromScenarioFacts: true,
+    derivedFromVerificationFacts: true,
+    serverTruthClaimed: false,
+    adjudicationOutcomeIncluded: false,
+  };
+}
+
+function buildReviewPacketVerificationDetail(
+  expectedRouteChain: BidviaScenarioRouteStep[],
+  completedRouteChain: BidviaScenarioRouteStep[],
+  totalRecordCount: number,
+): BidviaReviewPacketVerificationDetail {
+  const expectedRouteKeys = expectedRouteChain.map((routeStep) => routeStep.routeKey);
+  const completedRouteKeys = completedRouteChain.map((routeStep) => routeStep.routeKey);
+
+  return {
+    expectedRouteKeys,
+    completedRouteKeys,
+    pendingRouteKeys: expectedRouteKeys.slice(completedRouteKeys.length),
+    totalRecordCount,
+  };
+}
+
 function buildReviewPacketDetail(
   scenario: BidviaScenarioEnvelope,
   bundle: BidviaScenarioVerificationBundle,
 ): BidviaReviewPacketDetail {
+  const recordDetails = buildRecordDetails(bundle.recordIds);
+
   return {
+    boundary: buildReviewPacketBoundaryDetail(),
+    verification: buildReviewPacketVerificationDetail(
+      scenario.expectedRouteChain,
+      bundle.completedRouteChain,
+      countTotalRecords(recordDetails),
+    ),
     routeDetails: buildRouteDetails(scenario.expectedRouteChain, bundle.completedRouteChain),
-    recordDetails: buildRecordDetails(bundle.recordIds),
+    recordDetails,
   };
 }
 
@@ -283,24 +392,41 @@ export function buildReviewPacket(input: BuildReviewPacketInput): BidviaReviewPa
 
   const expectedRouteCount = input.scenario.expectedRouteChain.length;
   const completedRouteCount = input.bundle.completedRouteChain.length;
+  const pendingRouteCount = expectedRouteCount - completedRouteCount;
+  const details = buildReviewPacketDetail(input.scenario, input.bundle);
+  const totalRecordCount = countTotalRecords(details.recordDetails);
+  const status = deriveReviewPacketStatus(expectedRouteCount, completedRouteCount);
 
   return freezeReviewPacket({
     scenarioId: input.bundle.scenarioId,
     scenarioLabel: input.bundle.scenarioLabel,
     scenarioFamily: input.bundle.scenarioFamily,
     verificationMode: input.bundle.verificationMode,
-    status: deriveReviewPacketStatus(expectedRouteCount, completedRouteCount),
+    status,
     summary: {
       sourceRefCount: input.scenario.sourceRefs.length,
       evidenceRefCount: input.scenario.evidenceRefs.length,
+      traceIdCount: input.scenario.traceIds.length,
       workflowIdCount: input.scenario.workflowIds.length,
       expectedRouteCount,
       completedRouteCount,
+      pendingRouteCount,
+      recordGroupCount: countRecordGroups(details.recordDetails),
+      totalRecordCount,
     },
-    details: buildReviewPacketDetail(input.scenario, input.bundle),
+    details,
     sections: [
       buildScenarioSection(input.scenario),
-      buildRoutesSection(input.scenario),
+      buildEvidenceSection(input.scenario),
+      buildTraceabilitySection(input.scenario),
+      buildRoutesSection(input.scenario.expectedRouteChain, input.bundle.completedRouteChain),
+      buildVerificationSection({
+        verificationMode: input.bundle.verificationMode,
+        status,
+        expectedRouteCount,
+        completedRouteCount,
+        pendingRouteCount,
+      }),
       buildRecordsSection(input.bundle.recordIds),
     ],
   });

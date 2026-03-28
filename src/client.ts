@@ -1,10 +1,17 @@
 import type {
+  BidviaClientAuth,
+  BidviaClientAuthInput,
   BidviaCommercialActionCreateInput,
   BidviaCommercialActionExecuteInput,
   BidviaCommercialActionPolicyCheckInput,
   BidviaCommercialActionRequestApprovalInput,
   BidviaCommercialActionStatusInput,
   BidviaClientContext,
+  BidviaClientHeaders,
+  BidviaClientHeadersInput,
+  BidviaClientRequestPolicy,
+  BidviaClientRequestDescriptor,
+  BidviaClientTransportErrorKind,
   BidviaCreateConnectionRequestInput,
   BidviaCreateListingInput,
   BidviaEvidenceSubmissionInput,
@@ -24,7 +31,39 @@ import { exportLegacyVerificationBundle } from './verification.js';
 export interface BidviaClientOptions {
   baseUrl: string;
   context: BidviaClientContext;
+  auth?: BidviaClientAuthInput;
+  headers?: BidviaClientHeadersInput;
   fetchImpl?: typeof fetch;
+  requestPolicy?: BidviaClientRequestPolicy;
+}
+
+export class BidviaClientTransportError extends Error {
+  readonly name = 'BidviaClientTransportError';
+
+  declare readonly cause: unknown;
+
+  constructor(
+    message: string,
+    readonly kind: BidviaClientTransportErrorKind,
+    readonly status?: number,
+    options?: {
+      cause?: unknown;
+      responseBody?: unknown;
+    },
+  ) {
+    super(message, options?.cause === undefined ? undefined : { cause: options.cause });
+    this.cause = options?.cause;
+    this.responseBody = options?.responseBody;
+  }
+
+  readonly responseBody?: unknown;
+}
+
+interface BidviaRequestTransport {
+  signal?: AbortSignal;
+  cleanup: () => void;
+  didTimeout: () => boolean;
+  didAbort: () => boolean;
 }
 
 export class BidviaClient {
@@ -34,95 +73,139 @@ export class BidviaClient {
     this.fetchImpl = options.fetchImpl ?? fetch;
   }
 
-  async createProvisionalAgent(input: BidviaProvisionalAgentCreateInput) {
+  async createProvisionalAgent(
+    input: BidviaProvisionalAgentCreateInput,
+    requestPolicy?: BidviaClientRequestPolicy,
+  ) {
+    const context = this.resolveRequestContext(requestPolicy);
     return this.request('/runtime/agents/provisional', {
+      context,
       method: 'POST',
       body: {
         provisional_agent_ref: input.provisionalAgentRef,
         now: input.now,
       },
+      requestPolicy,
     });
   }
 
-  async queryProvisionalAgent(provisionalAgentRef: string) {
+  async queryProvisionalAgent(
+    provisionalAgentRef: string,
+    requestPolicy?: BidviaClientRequestPolicy,
+  ) {
+    const context = this.resolveRequestContext(requestPolicy);
     const search = new URLSearchParams({ provisional_agent_ref: provisionalAgentRef });
     return this.request(`/runtime/agents/provisional?${search.toString()}`, {
+      context,
       method: 'GET',
+      requestPolicy,
     });
   }
 
-  async claimProvisionalAgent(input: BidviaProvisionalAgentClaimInput) {
+  async claimProvisionalAgent(
+    input: BidviaProvisionalAgentClaimInput,
+    requestPolicy?: BidviaClientRequestPolicy,
+  ) {
+    const context = this.resolveRequestContext(requestPolicy);
     return this.request('/runtime/agents/provisional/claim', {
+      context,
       method: 'POST',
-      headers: this.requireSessionHeaders(),
+      headers: this.requireSessionHeaders(context),
       body: {
         provisional_agent_ref: input.provisionalAgentRef,
         claim_token: input.claimToken,
         now: input.now,
       },
+      requestPolicy,
     });
   }
 
-  async postHeartbeat(input: BidviaHeartbeatInput) {
-    return this.request(this.registrationPath('/heartbeat'), {
+  async postHeartbeat(input: BidviaHeartbeatInput, requestPolicy?: BidviaClientRequestPolicy) {
+    const context = this.resolveRequestContext(requestPolicy);
+    return this.request(this.registrationPath(context, '/heartbeat'), {
+      context,
       method: 'POST',
-      headers: this.requireRegistrationHeaders(),
+      headers: this.requireRegistrationHeaders(context),
       body: {
         now: input.now,
         expires_at: input.expiresAt,
       },
+      requestPolicy,
     });
   }
 
-  async uploadSync(input: BidviaSyncUploadInput) {
-    return this.request(this.registrationPath('/sync/upload'), {
+  async uploadSync(input: BidviaSyncUploadInput, requestPolicy?: BidviaClientRequestPolicy) {
+    const context = this.resolveRequestContext(requestPolicy);
+    return this.request(this.registrationPath(context, '/sync/upload'), {
+      context,
       method: 'POST',
-      headers: this.requireRegistrationHeaders(),
+      headers: this.requireRegistrationHeaders(context),
       body: {
         cursor_ref: input.cursorRef,
         object_count: input.objectCount,
         now: input.now,
       },
+      requestPolicy,
     });
   }
 
-  async downloadSync() {
-    return this.request(this.registrationPath('/sync/download'), {
+  async downloadSync(requestPolicy?: BidviaClientRequestPolicy) {
+    const context = this.resolveRequestContext(requestPolicy);
+    return this.request(this.registrationPath(context, '/sync/download'), {
+      context,
       method: 'GET',
-      headers: this.requireRegistrationHeaders(),
+      headers: this.requireRegistrationHeaders(context),
+      requestPolicy,
     });
   }
 
-  async submitEvidence(input: BidviaEvidenceSubmissionInput) {
-    return this.request(this.registrationPath('/evidence-submissions'), {
+  async submitEvidence(
+    input: BidviaEvidenceSubmissionInput,
+    requestPolicy?: BidviaClientRequestPolicy,
+  ) {
+    const context = this.resolveRequestContext(requestPolicy);
+    return this.request(this.registrationPath(context, '/evidence-submissions'), {
+      context,
       method: 'POST',
-      headers: this.requireRegistrationHeaders(),
+      headers: this.requireRegistrationHeaders(context),
       body: {
         evidence_ref: input.evidenceRef,
         evidence_kind: input.evidenceKind,
         summary: input.summary,
         now: input.now,
       },
+      requestPolicy,
     });
   }
 
-  async submitProposal(input: BidviaProposalSubmissionInput) {
-    return this.request(this.registrationPath('/proposals'), {
+  async submitProposal(
+    input: BidviaProposalSubmissionInput,
+    requestPolicy?: BidviaClientRequestPolicy,
+  ) {
+    const context = this.resolveRequestContext(requestPolicy);
+    return this.request(this.registrationPath(context, '/proposals'), {
+      context,
       method: 'POST',
-      headers: this.requireRegistrationHeaders(),
+      headers: this.requireRegistrationHeaders(context),
       body: {
         proposal_type: input.proposalType,
         proposal_ref: input.proposalRef,
         summary: input.summary,
         now: input.now,
       },
+      requestPolicy,
     });
   }
 
-  async createCommercialAction(input: BidviaCommercialActionCreateInput) {
-    return this.request(`/runtime/commercial-actions?tenant_id=${encodeURIComponent(this.options.context.tenantId)}`, {
+  async createCommercialAction(
+    input: BidviaCommercialActionCreateInput,
+    requestPolicy?: BidviaClientRequestPolicy,
+  ) {
+    const context = this.resolveRequestContext(requestPolicy);
+    return this.request(`/runtime/commercial-actions?tenant_id=${encodeURIComponent(context.tenantId)}`, {
+      context,
       method: 'POST',
-      headers: this.requireOperatorActionHeaders(),
+      headers: this.requireOperatorActionHeaders(context),
       body: {
         governed_action: input.governedAction,
         subject_type: input.subjectType,
@@ -131,43 +214,67 @@ export class BidviaClient {
         workflow_id: input.workflowId,
         now: input.now,
       },
+      requestPolicy,
     });
   }
 
-  async getCommercialActionStatus(input: BidviaCommercialActionStatusInput) {
-    return this.request(`/runtime/commercial-actions/${encodeURIComponent(input.commercialActionRequestId)}/status?tenant_id=${encodeURIComponent(this.options.context.tenantId)}`, {
+  async getCommercialActionStatus(
+    input: BidviaCommercialActionStatusInput,
+    requestPolicy?: BidviaClientRequestPolicy,
+  ) {
+    const context = this.resolveRequestContext(requestPolicy);
+    return this.request(`/runtime/commercial-actions/${encodeURIComponent(input.commercialActionRequestId)}/status?tenant_id=${encodeURIComponent(context.tenantId)}`, {
+      context,
       method: 'GET',
-      headers: this.requireAdminSessionHeaders(),
+      headers: this.requireAdminSessionHeaders(context),
+      requestPolicy,
     });
   }
 
-  async policyCheckCommercialAction(input: BidviaCommercialActionPolicyCheckInput) {
-    return this.request(`/runtime/commercial-actions/${encodeURIComponent(input.commercialActionRequestId)}/policy-check?tenant_id=${encodeURIComponent(this.options.context.tenantId)}`, {
+  async policyCheckCommercialAction(
+    input: BidviaCommercialActionPolicyCheckInput,
+    requestPolicy?: BidviaClientRequestPolicy,
+  ) {
+    const context = this.resolveRequestContext(requestPolicy);
+    return this.request(`/runtime/commercial-actions/${encodeURIComponent(input.commercialActionRequestId)}/policy-check?tenant_id=${encodeURIComponent(context.tenantId)}`, {
+      context,
       method: 'POST',
-      headers: this.requireOperatorActionHeaders(),
+      headers: this.requireOperatorActionHeaders(context),
       body: {
         policy_version: input.policyVersion,
         outcome: input.outcome,
         now: input.now,
       },
+      requestPolicy,
     });
   }
 
-  async requestCommercialActionApproval(input: BidviaCommercialActionRequestApprovalInput) {
-    return this.request(`/runtime/commercial-actions/${encodeURIComponent(input.commercialActionRequestId)}/request-approval?tenant_id=${encodeURIComponent(this.options.context.tenantId)}`, {
+  async requestCommercialActionApproval(
+    input: BidviaCommercialActionRequestApprovalInput,
+    requestPolicy?: BidviaClientRequestPolicy,
+  ) {
+    const context = this.resolveRequestContext(requestPolicy);
+    return this.request(`/runtime/commercial-actions/${encodeURIComponent(input.commercialActionRequestId)}/request-approval?tenant_id=${encodeURIComponent(context.tenantId)}`, {
+      context,
       method: 'POST',
-      headers: this.requireOperatorActionHeaders(),
+      headers: this.requireOperatorActionHeaders(context),
       body: {
         approval_request_id: input.approvalRequestId,
         now: input.now,
       },
+      requestPolicy,
     });
   }
 
-  async executeCommercialAction(input: BidviaCommercialActionExecuteInput) {
-    return this.request(`/runtime/commercial-actions/${encodeURIComponent(input.commercialActionRequestId)}/execute?tenant_id=${encodeURIComponent(this.options.context.tenantId)}`, {
+  async executeCommercialAction(
+    input: BidviaCommercialActionExecuteInput,
+    requestPolicy?: BidviaClientRequestPolicy,
+  ) {
+    const context = this.resolveRequestContext(requestPolicy);
+    return this.request(`/runtime/commercial-actions/${encodeURIComponent(input.commercialActionRequestId)}/execute?tenant_id=${encodeURIComponent(context.tenantId)}`, {
+      context,
       method: 'POST',
-      headers: this.requireOperatorActionHeaders(),
+      headers: this.requireOperatorActionHeaders(context),
       body: {
         approval_request_id: input.approvalRequestId,
         receipt_id: input.receiptId,
@@ -176,32 +283,50 @@ export class BidviaClient {
         audit_id: input.auditId,
         now: input.now,
       },
+      requestPolicy,
     });
   }
 
-  async getCommercialActionReceipt(input: BidviaCommercialActionStatusInput) {
-    return this.request(`/runtime/commercial-actions/${encodeURIComponent(input.commercialActionRequestId)}/receipt?tenant_id=${encodeURIComponent(this.options.context.tenantId)}`, {
+  async getCommercialActionReceipt(
+    input: BidviaCommercialActionStatusInput,
+    requestPolicy?: BidviaClientRequestPolicy,
+  ) {
+    const context = this.resolveRequestContext(requestPolicy);
+    return this.request(`/runtime/commercial-actions/${encodeURIComponent(input.commercialActionRequestId)}/receipt?tenant_id=${encodeURIComponent(context.tenantId)}`, {
+      context,
       method: 'GET',
-      headers: this.requireAdminSessionHeaders(),
+      headers: this.requireAdminSessionHeaders(context),
+      requestPolicy,
     });
   }
 
-  async getCommercialActionAudit(input: BidviaCommercialActionStatusInput) {
-    return this.request(`/runtime/commercial-actions/${encodeURIComponent(input.commercialActionRequestId)}/audit?tenant_id=${encodeURIComponent(this.options.context.tenantId)}`, {
+  async getCommercialActionAudit(
+    input: BidviaCommercialActionStatusInput,
+    requestPolicy?: BidviaClientRequestPolicy,
+  ) {
+    const context = this.resolveRequestContext(requestPolicy);
+    return this.request(`/runtime/commercial-actions/${encodeURIComponent(input.commercialActionRequestId)}/audit?tenant_id=${encodeURIComponent(context.tenantId)}`, {
+      context,
       method: 'GET',
-      headers: this.requireAdminSessionHeaders(),
+      headers: this.requireAdminSessionHeaders(context),
+      requestPolicy,
     });
   }
 
-  async createListing(input: BidviaCreateListingInput) {
-    return this.request(`/runtime/listings?tenant_id=${encodeURIComponent(this.options.context.tenantId)}`, {
+  async createListing(
+    input: BidviaCreateListingInput,
+    requestPolicy?: BidviaClientRequestPolicy,
+  ) {
+    const context = this.resolveRequestContext(requestPolicy);
+    return this.request(`/runtime/listings?tenant_id=${encodeURIComponent(context.tenantId)}`, {
+      context,
       method: 'POST',
-      headers: this.requireOperatorActionHeaders(),
+      headers: this.requireOperatorActionHeaders(context),
       body: {
         listing_id: input.listingId,
         listing_type: input.listingType,
-        company_id: this.requireCompanyId(),
-        actor_id: this.requirePrincipalId(),
+        company_id: this.requireCompanyId(context),
+        actor_id: this.requirePrincipalId(context),
         category: input.category,
         sku: input.sku,
         quantity_value: input.quantityValue,
@@ -213,25 +338,37 @@ export class BidviaClient {
         idempotency_key: input.idempotencyKey,
         now: input.now,
       },
+      requestPolicy,
     });
   }
 
-  async activateListing(input: BidviaActivateListingInput) {
-    return this.request(`/runtime/listings/${encodeURIComponent(input.listingId)}/activate?tenant_id=${encodeURIComponent(this.options.context.tenantId)}`, {
+  async activateListing(
+    input: BidviaActivateListingInput,
+    requestPolicy?: BidviaClientRequestPolicy,
+  ) {
+    const context = this.resolveRequestContext(requestPolicy);
+    return this.request(`/runtime/listings/${encodeURIComponent(input.listingId)}/activate?tenant_id=${encodeURIComponent(context.tenantId)}`, {
+      context,
       method: 'POST',
-      headers: this.requireOperatorActionHeaders(),
+      headers: this.requireOperatorActionHeaders(context),
       body: {
-        company_id: this.requireCompanyId(),
-        actor_id: this.requirePrincipalId(),
+        company_id: this.requireCompanyId(context),
+        actor_id: this.requirePrincipalId(context),
         now: input.now,
       },
+      requestPolicy,
     });
   }
 
-  async generateMatchCandidates(input: BidviaGenerateMatchCandidatesInput) {
-    return this.request(`/runtime/listings/${encodeURIComponent(input.listingId)}/match-candidates?tenant_id=${encodeURIComponent(this.options.context.tenantId)}`, {
+  async generateMatchCandidates(
+    input: BidviaGenerateMatchCandidatesInput,
+    requestPolicy?: BidviaClientRequestPolicy,
+  ) {
+    const context = this.resolveRequestContext(requestPolicy);
+    return this.request(`/runtime/listings/${encodeURIComponent(input.listingId)}/match-candidates?tenant_id=${encodeURIComponent(context.tenantId)}`, {
+      context,
       method: 'POST',
-      headers: this.requireOperatorActionHeaders(),
+      headers: this.requireOperatorActionHeaders(context),
       body: {
         upstream_decision: input.upstreamDecision,
         required_evidence_level: input.requiredEvidenceLevel,
@@ -242,13 +379,19 @@ export class BidviaClient {
         top_n: input.topN,
         now: input.now,
       },
+      requestPolicy,
     });
   }
 
-  async createConnectionRequest(input: BidviaCreateConnectionRequestInput) {
-    return this.request(`/runtime/connection-requests?tenant_id=${encodeURIComponent(this.options.context.tenantId)}`, {
+  async createConnectionRequest(
+    input: BidviaCreateConnectionRequestInput,
+    requestPolicy?: BidviaClientRequestPolicy,
+  ) {
+    const context = this.resolveRequestContext(requestPolicy);
+    return this.request(`/runtime/connection-requests?tenant_id=${encodeURIComponent(context.tenantId)}`, {
+      context,
       method: 'POST',
-      headers: this.requireOperatorActionHeaders(),
+      headers: this.requireOperatorActionHeaders(context),
       body: {
         source_match_id: input.sourceMatchId,
         requester_actor_id: input.requesterActorId,
@@ -259,25 +402,37 @@ export class BidviaClient {
         action_type: input.actionType,
         now: input.now,
       },
+      requestPolicy,
     });
   }
 
-  async approveConnectionRequest(input: BidviaApproveConnectionRequestInput) {
-    return this.request(`/runtime/approvals/${encodeURIComponent(input.approvalRequestId)}/decision?tenant_id=${encodeURIComponent(this.options.context.tenantId)}`, {
+  async approveConnectionRequest(
+    input: BidviaApproveConnectionRequestInput,
+    requestPolicy?: BidviaClientRequestPolicy,
+  ) {
+    const context = this.resolveRequestContext(requestPolicy);
+    return this.request(`/runtime/approvals/${encodeURIComponent(input.approvalRequestId)}/decision?tenant_id=${encodeURIComponent(context.tenantId)}`, {
+      context,
       method: 'POST',
-      headers: this.requireOperatorActionHeaders(),
+      headers: this.requireOperatorActionHeaders(context),
       body: {
         actor_id: input.actorId,
         decision: input.decision,
         now: input.now,
       },
+      requestPolicy,
     });
   }
 
-  async exportOpportunityPackage(input: BidviaExportOpportunityPackageInput) {
-    return this.request(`/runtime/opportunities/${encodeURIComponent(input.opportunityId)}/package-export?tenant_id=${encodeURIComponent(this.options.context.tenantId)}`, {
+  async exportOpportunityPackage(
+    input: BidviaExportOpportunityPackageInput,
+    requestPolicy?: BidviaClientRequestPolicy,
+  ) {
+    const context = this.resolveRequestContext(requestPolicy);
+    return this.request(`/runtime/opportunities/${encodeURIComponent(input.opportunityId)}/package-export?tenant_id=${encodeURIComponent(context.tenantId)}`, {
+      context,
       method: 'POST',
-      headers: this.requireOperatorActionHeaders(),
+      headers: this.requireOperatorActionHeaders(context),
       body: {
         render_template_id: input.renderTemplateId,
         content_ref: input.contentRef,
@@ -290,31 +445,39 @@ export class BidviaClient {
         bound_account_id: input.boundAccountId,
         now: input.now,
       },
+      requestPolicy,
     });
   }
 
-  private registrationPath(suffix: string) {
-    const registrationId = this.options.context.registrationId;
-    const tenantId = this.options.context.tenantId;
+  private resolveRequestContext(requestPolicy?: BidviaClientRequestPolicy): BidviaClientContext {
+    return {
+      ...this.options.context,
+      ...(requestPolicy?.context ?? {}),
+    };
+  }
+
+  private registrationPath(context: BidviaClientContext, suffix: string) {
+    const registrationId = context.registrationId;
+    const tenantId = context.tenantId;
     if (!registrationId) {
       throw new Error('registrationId is required for registration-bound operations');
     }
     return `/runtime/agents/${encodeURIComponent(registrationId)}${suffix}?tenant_id=${encodeURIComponent(tenantId)}`;
   }
 
-  private requireRegistrationHeaders() {
-    const principalId = this.options.context.principalId;
+  private requireRegistrationHeaders(context: BidviaClientContext) {
+    const principalId = context.principalId;
     if (!principalId) {
       throw new Error('principalId is required for registration-bound operations');
     }
     return {
-      'x-authorized-tenant-id': this.options.context.tenantId,
+      'x-authorized-tenant-id': context.tenantId,
       'x-bidvia-principal-id': principalId,
     };
   }
 
-  private requireSessionHeaders() {
-    const sessionId = this.options.context.sessionId;
+  private requireSessionHeaders(context: BidviaClientContext) {
+    const sessionId = context.sessionId;
     if (!sessionId) {
       throw new Error('sessionId is required for claim operations');
     }
@@ -323,8 +486,8 @@ export class BidviaClient {
     };
   }
 
-  private requireAdminSessionHeaders() {
-    const adminSessionId = this.options.context.adminSessionId;
+  private requireAdminSessionHeaders(context: BidviaClientContext) {
+    const adminSessionId = context.adminSessionId;
     if (!adminSessionId) {
       throw new Error('adminSessionId is required for admin-session routes');
     }
@@ -333,26 +496,26 @@ export class BidviaClient {
     };
   }
 
-  private requireOperatorActionHeaders() {
-    const principalId = this.requirePrincipalId();
-    const companyId = this.requireCompanyId();
+  private requireOperatorActionHeaders(context: BidviaClientContext) {
+    const principalId = this.requirePrincipalId(context);
+    const companyId = this.requireCompanyId(context);
     return {
-      'x-authorized-tenant-id': this.options.context.tenantId,
+      'x-authorized-tenant-id': context.tenantId,
       'x-bidvia-principal-id': principalId,
       'x-authorized-company-id': companyId,
     };
   }
 
-  private requirePrincipalId() {
-    const principalId = this.options.context.principalId;
+  private requirePrincipalId(context: BidviaClientContext) {
+    const principalId = context.principalId;
     if (!principalId) {
       throw new Error('principalId is required for operator-context routes');
     }
     return principalId;
   }
 
-  private requireCompanyId() {
-    const companyId = this.options.context.companyId;
+  private requireCompanyId(context: BidviaClientContext) {
+    const companyId = context.companyId;
     if (!companyId) {
       throw new Error('companyId is required for operator-context routes');
     }
@@ -360,20 +523,316 @@ export class BidviaClient {
   }
 
   private async request(path: string, params: {
+    context: BidviaClientContext;
     method: 'GET' | 'POST';
     headers?: Record<string, string>;
     body?: unknown;
+    requestPolicy?: BidviaClientRequestPolicy;
   }) {
     const url = new URL(path, this.options.baseUrl).toString();
-    const response = await this.fetchImpl(url, {
-      method: params.method,
-      headers: {
-        ...(params.body ? { 'content-type': 'application/json' } : {}),
-        ...(params.headers ?? {}),
+    const transport = this.createRequestTransport(params.requestPolicy);
+
+    try {
+      this.throwIfRequestAborted(transport);
+
+      const headers = await this.resolveRequestHeaders({
+        context: params.context,
+        path,
+        method: params.method,
+        headers: params.headers,
+        body: params.body,
+      });
+
+      this.throwIfRequestAborted(transport);
+
+      const response = await this.fetchImpl(url, {
+        method: params.method,
+        headers,
+        body: params.body ? JSON.stringify(params.body) : undefined,
+        signal: transport.signal,
+      });
+
+      return await this.parseResponse(response);
+    } catch (error) {
+      throw this.normalizeTransportError(error, transport);
+    } finally {
+      transport.cleanup();
+    }
+  }
+
+  private createRequestTransport(requestPolicy?: BidviaClientRequestPolicy): BidviaRequestTransport {
+    const timeoutMs = requestPolicy?.timeoutMs ?? this.options.requestPolicy?.timeoutMs;
+    const callerSignal = requestPolicy?.signal;
+
+    if (timeoutMs === undefined && callerSignal === undefined) {
+      return {
+        signal: undefined,
+        cleanup: () => {},
+        didTimeout: () => false,
+        didAbort: () => false,
+      };
+    }
+
+    const controller = new AbortController();
+    const cleanupCallbacks: Array<() => void> = [];
+    let timedOut = false;
+    let aborted = false;
+
+    const abortRequest = (reason?: unknown) => {
+      if (!controller.signal.aborted) {
+        controller.abort(reason);
+      }
+    };
+
+    if (callerSignal) {
+      const onAbort = () => {
+        aborted = true;
+        abortRequest(callerSignal.reason);
+      };
+
+      if (callerSignal.aborted) {
+        onAbort();
+      } else {
+        callerSignal.addEventListener('abort', onAbort, { once: true });
+        cleanupCallbacks.push(() => {
+          callerSignal.removeEventListener('abort', onAbort);
+        });
+      }
+    }
+
+    if (timeoutMs !== undefined) {
+      const timer = setTimeout(() => {
+        timedOut = true;
+        abortRequest(new DOMException(`Bidvia request timed out after ${timeoutMs}ms`, 'TimeoutError'));
+      }, timeoutMs);
+
+      cleanupCallbacks.push(() => {
+        clearTimeout(timer);
+      });
+    }
+
+    return {
+      signal: controller.signal,
+      cleanup: () => {
+        for (const cleanupCallback of cleanupCallbacks) {
+          cleanupCallback();
+        }
       },
-      body: params.body ? JSON.stringify(params.body) : undefined,
+      didTimeout: () => timedOut,
+      didAbort: () => aborted,
+    };
+  }
+
+  private throwIfRequestAborted(transport: BidviaRequestTransport) {
+    if (transport.didAbort()) {
+      throw new BidviaClientTransportError('Bidvia request was aborted', 'aborted');
+    }
+  }
+
+  private async resolveRequestHeaders(params: {
+    context: BidviaClientContext;
+    path: string;
+    method: 'GET' | 'POST';
+    headers?: BidviaClientHeaders;
+    body?: unknown;
+  }): Promise<BidviaClientHeaders> {
+    const request = this.createRequestDescriptor(params.context, params.method, params.path);
+    const auth = await this.resolveAuthInput(request);
+    const providerHeaders = await this.resolveHeadersInput(request);
+
+    return {
+      ...(params.body ? { 'content-type': 'application/json' } : {}),
+      ...this.buildAuthHeaders(auth),
+      ...(providerHeaders ?? {}),
+      ...(params.headers ?? {}),
+    };
+  }
+
+  private createRequestDescriptor(
+    context: BidviaClientContext,
+    method: 'GET' | 'POST',
+    path: string,
+  ): BidviaClientRequestDescriptor {
+    return {
+      method,
+      path,
+      context,
+    };
+  }
+
+  private async resolveAuthInput(
+    request: BidviaClientRequestDescriptor,
+  ): Promise<BidviaClientAuth | undefined> {
+    const auth = this.options.auth;
+    if (typeof auth === 'function') {
+      return auth(request);
+    }
+    return auth;
+  }
+
+  private async resolveHeadersInput(
+    request: BidviaClientRequestDescriptor,
+  ): Promise<BidviaClientHeaders | undefined> {
+    const headers = this.options.headers;
+    if (typeof headers === 'function') {
+      return headers(request);
+    }
+    return headers;
+  }
+
+  private buildAuthHeaders(auth?: BidviaClientAuth): BidviaClientHeaders {
+    const authorization = auth?.authorization ?? (auth?.bearerToken ? `Bearer ${auth.bearerToken}` : undefined);
+
+    if (!authorization) {
+      return {};
+    }
+
+    return {
+      authorization,
+    };
+  }
+
+  private async parseResponse(response: Response) {
+    const body = await this.readResponseBody(response);
+
+    if (!response.ok) {
+      throw this.createStatusError(response.status, body);
+    }
+
+    if (!body.validJson) {
+      throw new BidviaClientTransportError(
+        'Bidvia response body was not valid JSON',
+        'unknown',
+        response.status,
+        {
+          cause: body.parseError,
+          responseBody: body.rawBody,
+        },
+      );
+    }
+
+    return body.value;
+  }
+
+  private async readResponseBody(response: Response): Promise<{
+    validJson: boolean;
+    value?: unknown;
+    rawBody: string;
+    parseError?: unknown;
+  }> {
+    const rawBody = await response.text();
+    if (rawBody === '') {
+      return {
+        validJson: true,
+        value: null,
+        rawBody,
+      };
+    }
+
+    try {
+      return {
+        validJson: true,
+        value: JSON.parse(rawBody),
+        rawBody,
+      };
+    } catch (parseError) {
+      return {
+        validJson: false,
+        rawBody,
+        parseError,
+      };
+    }
+  }
+
+  private createStatusError(
+    status: number,
+    body: {
+      validJson: boolean;
+      value?: unknown;
+      rawBody: string;
+      parseError?: unknown;
+    },
+  ) {
+    const kind = this.mapStatusToErrorKind(status);
+    const message = this.extractErrorMessage(body.value) ?? `Bidvia request failed with status ${status}`;
+
+    return new BidviaClientTransportError(message, kind, status, {
+      cause: body.validJson ? undefined : body.parseError,
+      responseBody: body.validJson ? body.value : body.rawBody,
     });
-    return response.json();
+  }
+
+  private mapStatusToErrorKind(status: number): BidviaClientTransportErrorKind {
+    switch (status) {
+      case 400:
+        return 'invalid_request';
+      case 401:
+        return 'auth';
+      case 403:
+        return 'permission';
+      case 404:
+        return 'not_found';
+      case 409:
+        return 'conflict';
+      case 429:
+        return 'rate_limit';
+      default:
+        return status >= 500 ? 'server' : 'unknown';
+    }
+  }
+
+  private extractErrorMessage(value: unknown) {
+    if (!value || typeof value !== 'object') {
+      return undefined;
+    }
+
+    const message = value as {
+      message?: unknown;
+      error?: unknown;
+    };
+
+    if (typeof message.message === 'string') {
+      return message.message;
+    }
+
+    if (typeof message.error === 'string') {
+      return message.error;
+    }
+
+    return undefined;
+  }
+
+  private normalizeTransportError(error: unknown, transport: BidviaRequestTransport) {
+    if (error instanceof BidviaClientTransportError) {
+      return error;
+    }
+
+    if (transport.didTimeout()) {
+      return new BidviaClientTransportError('Bidvia request timed out', 'timeout', undefined, {
+        cause: error,
+      });
+    }
+
+    if (transport.didAbort()) {
+      return new BidviaClientTransportError('Bidvia request was aborted', 'aborted', undefined, {
+        cause: error,
+      });
+    }
+
+    if (error instanceof TypeError) {
+      return new BidviaClientTransportError('Bidvia connection failed', 'connection', undefined, {
+        cause: error,
+      });
+    }
+
+    return new BidviaClientTransportError(
+      error instanceof Error ? error.message : 'Bidvia request failed',
+      'unknown',
+      undefined,
+      {
+        cause: error,
+      },
+    );
   }
 }
 

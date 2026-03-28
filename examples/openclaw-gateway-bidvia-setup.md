@@ -32,7 +32,7 @@ npm run build
 This gives you:
 
 - `dist/cli.js`
-- `dist/mcp-server.js`
+- `dist/src/mcp-server.js`
 
 ## 3. Set the canonical Bidvia API domain
 
@@ -112,6 +112,14 @@ node dist/cli.js server-capabilities
 
 Use this to inspect the locally normalized server-derived sample shape only. It does not contact a server.
 
+### 5.5 Grouped CLI help
+
+```bash
+node dist/cli.js --help
+```
+
+Use this to confirm the current packaged command surface before deciding whether the next operator step is dry-run execution, review-safe export, or local MCP wiring.
+
 ## 6. Optional local integrity checks
 
 If you want a stronger local verification pass before Gateway wiring:
@@ -119,6 +127,22 @@ If you want a stronger local verification pass before Gateway wiring:
 ```bash
 npm test
 npm run validate
+```
+
+If you want explicit local execution payload previews without sending a request yet:
+
+```bash
+node dist/cli.js heartbeat --dry-run
+node dist/cli.js sync-upload --dry-run
+node dist/cli.js evidence --dry-run
+node dist/cli.js proposal --dry-run
+```
+
+If you want review-safe verification-bundle previews or exports:
+
+```bash
+node dist/cli.js verification-bundle-preview --input registration-lifecycle
+node dist/cli.js verification-bundle-export --input registered-agent-operations
 ```
 
 ## 7. Optional runnable local examples
@@ -137,7 +161,7 @@ These stay local and do not add hosted or remote behavior.
 If the OpenClaw side is ready to consume a local stdio MCP server, use the shipped entrypoint:
 
 ```bash
-node dist/mcp-server.js
+node dist/src/mcp-server.js
 ```
 
 Treat it as:
@@ -146,8 +170,11 @@ Treat it as:
 - stdio-only
 - catalog-backed
 - limited to the currently shipped tool surfaces
+- exposing review-safe tools and explicit execution tools from the local package surface
 
 Do **not** treat it as a hosted MCP service or remote registry participant.
+
+Transport/auth-provider hardening supports this local path, but it still does not mean login ships in the package today.
 
 ## 9. Minimal copy-paste baseline
 
@@ -168,7 +195,7 @@ If that baseline is clean, then the operator can move on to:
 
 - `npm test`
 - `npm run validate`
-- or `node dist/mcp-server.js`
+- or `node dist/src/mcp-server.js`
 
 depending on whether the next step is stronger local verification or local stdio MCP wiring.
 

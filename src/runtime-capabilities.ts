@@ -15,6 +15,14 @@ const localRuntimeCapabilitySnapshotVersion = 'local-runtime-capability-snapshot
 const localStaticFallbackPolicy = 'prefer-local-static-until-server-negotiation';
 const deferredNegotiationFallbackPolicy = 'await-explicit-server-negotiation';
 
+function cloneLocalRouteCapabilities(): BidviaLocalRuntimeCapabilitySnapshot['routeCapabilities']['items'] {
+  return structuredClone([...bidviaRouteCapabilities]);
+}
+
+function cloneLocalMcpTools(): BidviaLocalRuntimeCapabilitySnapshot['mcpTools']['items'] {
+  return structuredClone([...bidviaMcpTools]);
+}
+
 function buildLocalStaticMetadata(revision: string, lastUpdatedAt: string) {
   return {
     schemaVersion: runtimeCapabilitySnapshotSchemaVersion,
@@ -39,12 +47,12 @@ export function buildLocalRuntimeCapabilitySnapshot(
     routeCapabilities: {
       source: 'local-static',
       ...buildLocalStaticMetadata('repo-route-capabilities', lastUpdatedAt),
-      items: structuredClone([...bidviaRouteCapabilities]),
+      items: cloneLocalRouteCapabilities(),
     } as BidviaLocalRuntimeCapabilitySnapshot['routeCapabilities'],
     mcpTools: {
       source: 'local-static',
       ...buildLocalStaticMetadata('repo-mcp-tools', lastUpdatedAt),
-      items: structuredClone([...bidviaMcpTools]),
+      items: cloneLocalMcpTools(),
     } as BidviaLocalRuntimeCapabilitySnapshot['mcpTools'],
     localMcpServer: {
       source: 'local-static',

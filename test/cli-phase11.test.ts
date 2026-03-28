@@ -64,3 +64,56 @@ test('launch-topology-smoke prints read-only launch topology json', () => {
     china: 'https://bidvia.cn',
   });
 });
+
+test('registration-lifecycle-plan prints a structured local-only lifecycle plan', () => {
+  const tsxCliPath = path.join(process.cwd(), 'node_modules', 'tsx', 'dist', 'cli.mjs');
+  const result = spawnSync(process.execPath, [tsxCliPath, 'src/cli.ts', 'registration-lifecycle-plan'], {
+    cwd: process.cwd(),
+    env: process.env,
+    encoding: 'utf8',
+  });
+
+  assert.equal(result.status, 0, result.stderr || result.stdout);
+  const output = JSON.parse(result.stdout);
+  assert.equal(output.command, 'registration-lifecycle-plan');
+  assert.equal(output.scope, 'local-only');
+  assert.equal(output.scenarioPlan.envelope.scenarioFamily, 'registration-lifecycle');
+  assert.deepEqual(output.scenarioPlan.envelope.recordIds, {
+    registrations: ['areg-cli-1'],
+  });
+});
+
+test('registered-agent-operations-plan prints a structured local-only post-registration plan', () => {
+  const tsxCliPath = path.join(process.cwd(), 'node_modules', 'tsx', 'dist', 'cli.mjs');
+  const result = spawnSync(process.execPath, [tsxCliPath, 'src/cli.ts', 'registered-agent-operations-plan'], {
+    cwd: process.cwd(),
+    env: process.env,
+    encoding: 'utf8',
+  });
+
+  assert.equal(result.status, 0, result.stderr || result.stdout);
+  const output = JSON.parse(result.stdout);
+  assert.equal(output.command, 'registered-agent-operations-plan');
+  assert.equal(output.scope, 'local-only');
+  assert.equal(output.scenarioPlan.envelope.scenarioFamily, 'registered-agent-operations');
+  assert.deepEqual(output.scenarioPlan.envelope.recordIds, {
+    registrations: ['areg-cli-1'],
+  });
+});
+
+test('verification-bundle-preview prints the default review-safe verification bundle', () => {
+  const tsxCliPath = path.join(process.cwd(), 'node_modules', 'tsx', 'dist', 'cli.mjs');
+  const result = spawnSync(process.execPath, [tsxCliPath, 'src/cli.ts', 'verification-bundle-preview'], {
+    cwd: process.cwd(),
+    env: process.env,
+    encoding: 'utf8',
+  });
+
+  assert.equal(result.status, 0, result.stderr || result.stdout);
+  const output = JSON.parse(result.stdout);
+  assert.equal(output.command, 'verification-bundle-preview');
+  assert.equal(output.input, 'registration-lifecycle');
+  assert.equal(output.scope, 'review-safe');
+  assert.equal(output.verificationBundle.scenarioFamily, 'registration-lifecycle');
+  assert.equal(output.verificationBundle.verificationMode, 'review-safe');
+});

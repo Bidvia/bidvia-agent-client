@@ -2,14 +2,14 @@
 
 `bidvia-agent-client` is the open-source SDK and CLI for connecting governed agents to the Bidvia platform.
 
-Today, this package ships a usable current mainline client surface for the frozen Bidvia Commercial Universe V1 / Core V12 handoff boundary. It includes typed SDK helpers, bounded scenario and verification helpers, local CLI commands, and a local stdio MCP seam. It does not claim hosted runtime behavior, remote registry behavior, integrated Core truth beyond frozen inputs, or client-owned authority.
+Today, this package ships a usable current mainline client surface for the frozen Bidvia Commercial Universe V1 / Core V12 handoff boundary. It includes typed SDK helpers, bounded scenario and verification helpers, local CLI commands, and a local stdio MCP seam. Recent transport and auth-provider hardening support that local-only foundation, but they do not mean login is shipped. It does not claim hosted runtime behavior, remote registry behavior, integrated Core truth beyond frozen inputs, or client-owned authority.
 
 ## What ships today
 
 This package currently gives external users three practical entry points:
 
 - an SDK for Bidvia agent access routes, onboarding flows, registration-bound operations, bounded scenario planning, and verification-safe exports
-- a CLI for local visibility, bounded plan preview, review-packet preview and export, and operator-facing verification previews
+- a CLI for local visibility, local execution commands, bounded plan preview, review-packet preview and export, and operator-facing verification previews
 - a local OpenClaw Gateway and node-host path, using local stdio MCP plus the remote HTTPS Bidvia API
 
 The current mainline remains explicitly bounded to the frozen Bidvia Commercial Universe V1 / Core V12 framing. This repo can improve client ergonomics, but it must not invent platform truth or widen governance authority on its own.
@@ -82,6 +82,12 @@ Use an explicit production `baseUrl` when you know the real deployment entrypoin
 
 After a local build, the package exposes the CLI at `dist/cli.js`, and published installs expose the `bidvia-agent-client` binary.
 
+Start with grouped help when you want the current local-only command surface:
+
+```bash
+node dist/cli.js --help
+```
+
 Read-only visibility commands:
 
 ```bash
@@ -96,13 +102,31 @@ Bounded preview and export commands:
 ```bash
 node dist/cli.js industry-universe-plan
 node dist/cli.js industry-universe-review-packet-preview
+node dist/cli.js industry-universe-review-packet-export
 node dist/cli.js connection-approval-plan
+node dist/cli.js connection-approval-review-packet-preview
+node dist/cli.js connection-approval-review-packet-export
 node dist/cli.js opportunity-package-handoff-plan
+node dist/cli.js opportunity-package-handoff-review-packet-preview
+node dist/cli.js opportunity-package-handoff-review-packet-export
+node dist/cli.js registration-lifecycle-plan
+node dist/cli.js registered-agent-operations-plan
 node dist/cli.js multi-business-chain-verification-wave-preview
 node dist/cli.js commercial-action-verification-wave-preview
+node dist/cli.js verification-bundle-preview --input registration-lifecycle
+node dist/cli.js verification-bundle-export --input registered-agent-operations
 ```
 
-The CLI is intentionally local and operator-facing. It helps you inspect environment resolution, local capability views, and bounded reviewable flows. It does not turn this package into a hosted runtime.
+Local execution commands are explicit and support payload preview through `--dry-run`:
+
+```bash
+node dist/cli.js heartbeat --dry-run
+node dist/cli.js sync-upload --dry-run
+node dist/cli.js evidence --dry-run
+node dist/cli.js proposal --dry-run
+```
+
+The CLI is intentionally local and operator-facing. It helps you inspect environment resolution, local capability views, dry-run payloads, and bounded reviewable flows. It does not turn this package into a hosted runtime, and it does not mean user login is already part of the executable package surface.
 
 ## OpenClaw Gateway and local node-host path
 
@@ -112,7 +136,7 @@ This repository already supports a local OpenClaw Gateway and node-host integrat
 - local stdio MCP server
 - remote HTTPS Bidvia API
 
-It does not imply hosted MCP service, hosted Bidvia runtime behavior, or remote registry participation.
+The shipped local MCP seam exposes both review-safe tooling and explicit execution tooling, but only through a local stdio server. It does not imply hosted MCP service, hosted Bidvia runtime behavior, or remote registry participation.
 
 Start here if that is your path:
 
@@ -132,12 +156,14 @@ These are implemented in code today and available to users now. They include:
 - the typed SDK client and helper builders
 - bounded scenario planning and verification bundle support
 - review-packet preview and export helpers
+- explicit local execution commands with `--dry-run`
 - static capability metadata and local runtime-capability snapshots
 - server-capability payload normalization
 - environment-mode visibility
 - the local CLI command surface
-- the local stdio MCP descriptor and server seam
+- the local stdio MCP descriptor and server seam, including review-safe and explicit execution tools
 - OpenClaw Gateway operator documentation for the local path
+- transport/auth-provider hardening for local execution paths
 
 ### 2. Implemented but dependency-gated seams
 
@@ -152,6 +178,7 @@ These areas are outside the current shipped boundary:
 - hosted MCP and hosted runtime behavior
 - remote registry behavior
 - live remote negotiation
+- login or Core-owned auth flows beyond local transport/auth-provider seams
 - approval-to-opportunity creation or discovery beyond the explicit current handoff seam
 - broader orchestration beyond the shipped bounded slices
 - any client-owned authority or server-truth claims beyond the frozen boundary

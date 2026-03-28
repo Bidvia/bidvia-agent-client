@@ -36,6 +36,11 @@ export interface BidviaMultiBusinessChainCoordinatorPostHandoffResult {
   externalHandoffBoundary: BidviaApprovalOpportunityExternalHandoffBoundary;
 }
 
+export interface BidviaMultiBusinessChainCoordinatorResult {
+  preHandoff: BidviaMultiBusinessChainCoordinatorPreHandoffResult;
+  postHandoff: BidviaMultiBusinessChainCoordinatorPostHandoffResult;
+}
+
 function buildApprovalOpportunityExternalHandoffBoundary(
   approvalRequestId: string,
   opportunityId: string,
@@ -45,6 +50,44 @@ function buildApprovalOpportunityExternalHandoffBoundary(
     status: 'requires-caller-known-ids',
     approvalRequestId,
     requiredKnownIds: ['opportunityId'],
+    suppliedKnownIds: {
+      opportunityId,
+    },
+  };
+}
+
+function requireNonEmptyBoundaryId(value: string | undefined, fieldName: string): string {
+  const normalizedValue = value?.trim();
+  if (!normalizedValue) {
+    throw new Error(`${fieldName} is required at the approval-to-opportunity handoff boundary`);
+  }
+
+  return normalizedValue;
+}
+
+function requireMatchingExplicitApprovalOpportunityBoundary(
+  externalHandoffBoundary: BidviaApprovalOpportunityExternalHandoffBoundary,
+  plan: BidviaMultiBusinessChainCoordinatorPlan,
+): BidviaApprovalOpportunityExternalHandoffBoundary {
+  const approvalRequestId = requireNonEmptyBoundaryId(
+    externalHandoffBoundary.approvalRequestId,
+    'approvalRequestId',
+  );
+  const opportunityId = requireNonEmptyBoundaryId(
+    externalHandoffBoundary.suppliedKnownIds?.opportunityId,
+    'opportunityId',
+  );
+
+  if (externalHandoffBoundary.boundaryKey !== plan.externalHandoffBoundary.boundaryKey
+    || externalHandoffBoundary.status !== plan.externalHandoffBoundary.status
+    || approvalRequestId !== plan.externalHandoffBoundary.approvalRequestId
+    || opportunityId !== plan.externalHandoffBoundary.suppliedKnownIds.opportunityId) {
+    throw new Error('explicit approval-to-opportunity handoff boundary must match the coordinator plan');
+  }
+
+  return {
+    ...externalHandoffBoundary,
+    approvalRequestId,
     suppliedKnownIds: {
       opportunityId,
     },
@@ -137,5 +180,31 @@ export async function runMultiBusinessChainCoordinatorPostHandoff(
     opportunityPackageHandoff,
     commercialActionContinuation,
     externalHandoffBoundary,
+  };
+}
+
+type BidviaFullCoordinatorClient =
+  & BidviaPreHandoffCoordinatorClient
+  & BidviaPostHandoffCoordinatorClient;
+
+export async function runMultiBusinessChainCoordinatorWithExplicitHandoff(
+  client: BidviaFullCoordinatorClient,
+  plan: BidviaMultiBusinessChainCoordinatorPlan,
+  externalHandoffBoundary: BidviaApprovalOpportunityExternalHandoffBoundary,
+): Promise<BidviaMultiBusinessChainCoordinatorResult> {
+  const validatedExternalHandoffBoundary = requireMatchingExplicitApprovalOpportunityBoundary(
+    externalHandoffBoundary,
+    plan,
+  );
+  const preHandoff = await runMultiBusinessChainCoordinatorPreHandoff(client, plan);
+  const postHandoff = await runMultiBusinessChainCoordinatorPostHandoff(
+    client,
+    plan,
+    validatedExternalHandoffBoundary,
+  );
+
+  return {
+    preHandoff,
+    postHandoff,
   };
 }

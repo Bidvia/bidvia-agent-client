@@ -22,6 +22,56 @@ export interface BidviaClientContext {
   companyId?: string;
 }
 
+export interface BidviaClientAuth {
+  authorization?: string;
+  bearerToken?: string;
+}
+
+export interface BidviaClientRequestDescriptor {
+  method: BidviaRouteCapabilityHttpMethod;
+  path: string;
+  context: BidviaClientContext;
+}
+
+export type BidviaClientHeaders = Record<string, string>;
+
+export type BidviaClientHeadersProvider = (
+  request: BidviaClientRequestDescriptor,
+) => BidviaMaybePromise<BidviaClientHeaders | undefined>;
+
+export type BidviaClientAuthProvider = (
+  request: BidviaClientRequestDescriptor,
+) => BidviaMaybePromise<BidviaClientAuth | undefined>;
+
+export type BidviaClientAuthInput = BidviaClientAuth | BidviaClientAuthProvider;
+
+export type BidviaClientHeadersInput = BidviaClientHeaders | BidviaClientHeadersProvider;
+
+export type BidviaMaybePromise<Value> = Value | Promise<Value>;
+
+export const bidviaClientTransportErrorKinds = [
+  'aborted',
+  'timeout',
+  'connection',
+  'invalid_request',
+  'auth',
+  'permission',
+  'not_found',
+  'conflict',
+  'rate_limit',
+  'server',
+  'unknown',
+] as const;
+
+export type BidviaClientTransportErrorKind =
+  (typeof bidviaClientTransportErrorKinds)[number];
+
+export interface BidviaClientRequestPolicy {
+  timeoutMs?: number;
+  signal?: AbortSignal;
+  context?: Partial<BidviaClientContext>;
+}
+
 export interface BidviaProvisionalAgentCreateInput {
   provisionalAgentRef: string;
   now: string;
@@ -277,6 +327,24 @@ export const bidviaRouteCapabilityLevels = ['atomic-route', 'chain-step', 'scena
 
 export type BidviaRouteCapabilityLevel = (typeof bidviaRouteCapabilityLevels)[number];
 
+export const bidviaLocalCapabilityTiers = [
+  'L0-observe-only',
+  'L1-review-safe',
+  'L2-registration-runtime',
+  'L3-governed-commercial',
+] as const;
+
+export type BidviaLocalCapabilityTier = (typeof bidviaLocalCapabilityTiers)[number];
+
+export const bidviaLocalCapabilityRiskTiers = [
+  'observe-only',
+  'review-safe',
+  'runtime-execution',
+  'governed-commercial',
+] as const;
+
+export type BidviaLocalCapabilityRiskTier = (typeof bidviaLocalCapabilityRiskTiers)[number];
+
 export interface BidviaScenarioRouteStep {
   routeKey: string;
   requiredContext: BidviaScenarioContextKey[];
@@ -290,6 +358,8 @@ export interface BidviaRouteCapability {
   requiredContext: BidviaScenarioContextKey[];
   scope: BidviaRouteCapabilityScope;
   level: BidviaRouteCapabilityLevel;
+  localCapabilityTier: BidviaLocalCapabilityTier;
+  localCapabilityRiskTier: BidviaLocalCapabilityRiskTier;
   scenarioRouteSteps?: BidviaScenarioRouteStep[];
 }
 
@@ -344,21 +414,47 @@ export const bidviaReviewPacketStatuses = ['complete', 'partial', 'pending-revie
 
 export type BidviaReviewPacketStatus = (typeof bidviaReviewPacketStatuses)[number];
 
-export const bidviaReviewPacketSectionKeys = ['scenario', 'routes', 'records'] as const;
+export const bidviaReviewPacketSectionKeys = [
+  'scenario',
+  'evidence',
+  'traceability',
+  'routes',
+  'verification',
+  'records',
+] as const;
 
 export type BidviaReviewPacketSectionKey = (typeof bidviaReviewPacketSectionKeys)[number];
 
 export interface BidviaReviewPacketSummary {
   sourceRefCount: number;
   evidenceRefCount: number;
+  traceIdCount: number;
   workflowIdCount: number;
   expectedRouteCount: number;
   completedRouteCount: number;
+  pendingRouteCount: number;
+  recordGroupCount: number;
+  totalRecordCount: number;
+}
+
+export interface BidviaReviewPacketBoundaryDetail {
+  derivedFromScenarioFacts: true;
+  derivedFromVerificationFacts: true;
+  serverTruthClaimed: false;
+  adjudicationOutcomeIncluded: false;
+}
+
+export interface BidviaReviewPacketVerificationDetail {
+  expectedRouteKeys: string[];
+  completedRouteKeys: string[];
+  pendingRouteKeys: string[];
+  totalRecordCount: number;
 }
 
 export type BidviaReviewPacketRecordGroupKey = keyof BidviaScenarioEnvelopeRecordIds;
 
 export interface BidviaReviewPacketRouteDetail {
+  sequence: number;
   routeKey: string;
   requiredContext: BidviaScenarioContextKey[];
   completed: boolean;
@@ -371,6 +467,8 @@ export interface BidviaReviewPacketRecordDetail {
 }
 
 export interface BidviaReviewPacketDetail {
+  boundary: BidviaReviewPacketBoundaryDetail;
+  verification: BidviaReviewPacketVerificationDetail;
   routeDetails: BidviaReviewPacketRouteDetail[];
   recordDetails: BidviaReviewPacketRecordDetail[];
 }
@@ -396,6 +494,7 @@ export const bidviaMcpToolOutputModes = [
   'plan-preview',
   'review-packet-preview',
   'review-packet-export',
+  'execution-result',
 ] as const;
 
 export type BidviaMcpToolOutputMode = (typeof bidviaMcpToolOutputModes)[number];
@@ -423,6 +522,10 @@ export interface BidviaMcpToolDescriptor {
   inputSchemaRef: BidviaMcpToolInputSchemaRef;
   outputMode: BidviaMcpToolOutputMode;
   helperRef: BidviaMcpToolHelperRef;
+  localCapabilityTier: BidviaLocalCapabilityTier;
+  localCapabilityRiskTier: BidviaLocalCapabilityRiskTier;
+  accessContextFamily: BidviaRouteCapabilityAccessContextFamily;
+  requiredContext: BidviaScenarioContextKey[];
 }
 
 export interface BidviaMcpToolCallRequest {

@@ -69,6 +69,13 @@ test('industry universe adapter returns review safe plan', async () => {
   assert.equal(result.reviewPacket.scenarioFamily, 'industry-universe');
   assert.equal(result.reviewPacket.verificationMode, 'review-safe');
   assert.equal(result.reviewPacket.status, 'pending-review');
+  assert.equal(result.reviewPacket.summary.pendingRouteCount, 3);
+  assert.equal(result.reviewPacket.details.boundary.serverTruthClaimed, false);
+  assert.equal(result.reviewPacket.details.verification.pendingRouteKeys.length, 3);
+  assert.deepEqual(
+    result.reviewPacket.sections.map((section) => section.sectionKey),
+    ['scenario', 'evidence', 'traceability', 'routes', 'verification', 'records'],
+  );
   assert.notEqual(result.exportedReviewPacket, result.reviewPacket);
   assert.deepEqual(result.exportedReviewPacket, result.reviewPacket);
   assert.equal(calls.length, 0);
@@ -125,6 +132,12 @@ test('connection approval adapter returns review safe plan', async () => {
   assert.equal(result.reviewPacket.scenarioFamily, 'connection-approval');
   assert.equal(result.reviewPacket.verificationMode, 'review-safe');
   assert.equal(result.reviewPacket.status, 'pending-review');
+  assert.equal(result.reviewPacket.summary.pendingRouteCount, 2);
+  assert.equal(result.reviewPacket.details.boundary.serverTruthClaimed, false);
+  assert.deepEqual(result.reviewPacket.details.verification.pendingRouteKeys, [
+    'createConnectionRequest',
+    'approveConnectionRequest',
+  ]);
   assert.notEqual(result.exportedReviewPacket, result.reviewPacket);
   assert.deepEqual(result.exportedReviewPacket, result.reviewPacket);
   assert.deepEqual(
@@ -182,6 +195,9 @@ test('opportunity package handoff adapter returns review safe plan', async () =>
   assert.equal(result.reviewPacket.scenarioFamily, 'opportunity-package-handoff');
   assert.equal(result.reviewPacket.verificationMode, 'review-safe');
   assert.equal(result.reviewPacket.status, 'pending-review');
+  assert.equal(result.reviewPacket.summary.pendingRouteCount, 1);
+  assert.equal(result.reviewPacket.details.boundary.serverTruthClaimed, false);
+  assert.deepEqual(result.reviewPacket.details.verification.pendingRouteKeys, ['exportOpportunityPackage']);
   assert.notEqual(result.exportedReviewPacket, result.reviewPacket);
   assert.deepEqual(result.exportedReviewPacket, result.reviewPacket);
   assert.deepEqual(

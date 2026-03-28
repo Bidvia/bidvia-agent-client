@@ -56,7 +56,7 @@ npm run build
 
 - the package compiles
 - `dist/cli.js` exists in a current build
-- `dist/mcp-server.js` exists in a current build
+- `dist/src/mcp-server.js` exists in a current build
 
 ### If this fails
 
@@ -215,13 +215,14 @@ High-level meaning:
 ### Entrypoint
 
 ```bash
-node dist/mcp-server.js
+node dist/src/mcp-server.js
 ```
 
 ### What this proves
 
 - the built local stdio MCP server entrypoint exists
 - the Gateway-side next step can use the shipped local stdio path if desired
+- the local MCP surface remains bounded to shipped review-safe and explicit execution tools only
 
 ### Operational note
 
@@ -274,6 +275,14 @@ node dist/cli.js server-capabilities
 ```
 
 If that bundle is clean, then move on to the fuller test/validate path and the local stdio MCP entry wiring.
+
+If you want the grouped local-only command surface before or after the smoke run, use:
+
+```bash
+node dist/cli.js --help
+```
+
+That help output is the quickest way to confirm the current packaged CLI still includes read-only visibility commands, explicit execution commands with `--dry-run`, review-safe plan/review/export commands, and verification-bundle preview/export commands.
 
 ## Relationship to the main onboarding guide
 
