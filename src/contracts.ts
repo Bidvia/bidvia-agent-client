@@ -494,6 +494,7 @@ export const bidviaMcpToolOutputModes = [
   'plan-preview',
   'review-packet-preview',
   'review-packet-export',
+  'truth-fetch-result',
   'execution-result',
 ] as const;
 
@@ -750,6 +751,8 @@ export interface BidviaAgentAuthorityState {
 export interface BidviaAgentRegistrationIdentifierInput {
   agentRegistrationId: string;
 }
+
+export type BidviaTruthFetchEmptyInput = Record<string, never>;
 
 export interface BidviaAccountAgentRecord {
   agentRegistrationId: string;

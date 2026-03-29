@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { PassThrough } from 'node:stream';
 
+import { BidviaClient } from '../src/client.ts';
 import { runLocalMcpServer } from '../src/mcp-server.ts';
 
 const runLocalMcpServerWithDependencies = runLocalMcpServer as unknown as (
@@ -174,6 +175,23 @@ test('local MCP stdio server exposes bounded tool metadata and handles review-sa
       'opportunity-package-handoff-plan-preview',
       'opportunity-package-handoff-review-packet-preview',
       'opportunity-package-handoff-review-packet-export',
+      'account-agents-read',
+      'account-agent-bindings-read',
+      'account-records-read',
+      'agent-presence-read',
+      'agent-authority-read',
+      'canonical-semantic-concepts-read',
+      'canonical-semantic-concept-read',
+      'pricing-bases-read',
+      'pricing-basis-read',
+      'document-artifacts-read',
+      'document-artifact-read',
+      'media-assets-read',
+      'media-asset-read',
+      'evidence-assets-read',
+      'evidence-asset-read',
+      'attachment-bindings-read',
+      'attachment-binding-read',
       'heartbeat-execution',
       'sync-upload-execution',
       'evidence-execution',
@@ -312,5 +330,306 @@ test('local MCP stdio server parses byte-accurate UTF-8 frames when requests arr
   } finally {
     input.end();
     output.end();
+  }
+});
+
+test('local MCP stdio server default execution client supports governance truth-fetch session and admin-session reads from env context', async () => {
+  const input = new PassThrough();
+  const output = new PassThrough();
+  const originalEnv = {
+    BIDVIA_BASE_URL: process.env.BIDVIA_BASE_URL,
+    BIDVIA_TENANT_ID: process.env.BIDVIA_TENANT_ID,
+    BIDVIA_SESSION_ID: process.env.BIDVIA_SESSION_ID,
+    BIDVIA_ADMIN_SESSION_ID: process.env.BIDVIA_ADMIN_SESSION_ID,
+  };
+  const originalListAccountAgents = BidviaClient.prototype.listAccountAgents;
+  const originalGetAgentPresence = BidviaClient.prototype.getAgentPresence;
+
+  process.env.BIDVIA_BASE_URL = 'https://api.bidvia.test';
+  process.env.BIDVIA_TENANT_ID = 'tenant-governance';
+  process.env.BIDVIA_SESSION_ID = 'session-governance';
+  process.env.BIDVIA_ADMIN_SESSION_ID = 'admin-session-governance';
+
+  const seenContexts: Array<{
+    helper: string;
+    tenantId?: string;
+    sessionId?: string;
+    adminSessionId?: string;
+    registrationId?: string;
+  }> = [];
+
+  BidviaClient.prototype.listAccountAgents = async function listAccountAgentsStub() {
+    const clientContext = (this as unknown as { options: { context: typeof process.env } }).options.context;
+    seenContexts.push({
+      helper: 'listAccountAgents',
+      tenantId: clientContext.tenantId,
+      sessionId: clientContext.sessionId,
+      adminSessionId: clientContext.adminSessionId,
+    });
+    return {
+      items: [{ registrationId: 'areg-1' }],
+    };
+  };
+
+  BidviaClient.prototype.getAgentPresence = async function getAgentPresenceStub(registrationId: string) {
+    const clientContext = (this as unknown as { options: { context: typeof process.env } }).options.context;
+    seenContexts.push({
+      helper: 'getAgentPresence',
+      tenantId: clientContext.tenantId,
+      sessionId: clientContext.sessionId,
+      adminSessionId: clientContext.adminSessionId,
+      registrationId,
+    });
+    return {
+      registrationId,
+      status: 'online',
+    };
+  };
+
+  runLocalMcpServer(input, output);
+
+  try {
+    input.write(encodeFrame({
+      jsonrpc: '2.0',
+      id: 201,
+      method: 'tools/call',
+      params: {
+        name: 'account-agents-read',
+        arguments: {},
+      },
+    }));
+    const accountAgentsResponse = await readFrame(output) as { result: { content: Array<{ text: string }> } };
+    const accountAgentsPayload = JSON.parse(accountAgentsResponse.result.content[0]!.text);
+    assert.deepEqual(accountAgentsPayload.result, {
+      truthFetchResult: {
+        items: [{ registrationId: 'areg-1' }],
+      },
+    });
+
+    input.write(encodeFrame({
+      jsonrpc: '2.0',
+      id: 202,
+      method: 'tools/call',
+      params: {
+        name: 'agent-presence-read',
+        arguments: {
+          registrationId: 'areg-99',
+        },
+      },
+    }));
+    const presenceResponse = await readFrame(output) as { result: { content: Array<{ text: string }> } };
+    const presencePayload = JSON.parse(presenceResponse.result.content[0]!.text);
+    assert.deepEqual(presencePayload.result, {
+      truthFetchResult: {
+        registrationId: 'areg-99',
+        status: 'online',
+      },
+    });
+
+    assert.deepEqual(seenContexts, [
+      {
+        helper: 'listAccountAgents',
+        tenantId: 'tenant-governance',
+        sessionId: 'session-governance',
+        adminSessionId: 'admin-session-governance',
+      },
+      {
+        helper: 'getAgentPresence',
+        tenantId: 'tenant-governance',
+        sessionId: 'session-governance',
+        adminSessionId: 'admin-session-governance',
+        registrationId: 'areg-99',
+      },
+    ]);
+  } finally {
+    BidviaClient.prototype.listAccountAgents = originalListAccountAgents;
+    BidviaClient.prototype.getAgentPresence = originalGetAgentPresence;
+    input.end();
+    output.end();
+
+    if (originalEnv.BIDVIA_BASE_URL === undefined) {
+      delete process.env.BIDVIA_BASE_URL;
+    } else {
+      process.env.BIDVIA_BASE_URL = originalEnv.BIDVIA_BASE_URL;
+    }
+
+    if (originalEnv.BIDVIA_TENANT_ID === undefined) {
+      delete process.env.BIDVIA_TENANT_ID;
+    } else {
+      process.env.BIDVIA_TENANT_ID = originalEnv.BIDVIA_TENANT_ID;
+    }
+
+    if (originalEnv.BIDVIA_SESSION_ID === undefined) {
+      delete process.env.BIDVIA_SESSION_ID;
+    } else {
+      process.env.BIDVIA_SESSION_ID = originalEnv.BIDVIA_SESSION_ID;
+    }
+
+    if (originalEnv.BIDVIA_ADMIN_SESSION_ID === undefined) {
+      delete process.env.BIDVIA_ADMIN_SESSION_ID;
+    } else {
+      process.env.BIDVIA_ADMIN_SESSION_ID = originalEnv.BIDVIA_ADMIN_SESSION_ID;
+    }
+  }
+});
+
+test('local MCP stdio server default execution client supports business truth-fetch collection reads from tenant env context', async () => {
+  const input = new PassThrough();
+  const output = new PassThrough();
+  const originalEnv = {
+    BIDVIA_BASE_URL: process.env.BIDVIA_BASE_URL,
+    BIDVIA_TENANT_ID: process.env.BIDVIA_TENANT_ID,
+  };
+  const originalListMediaAssets = BidviaClient.prototype.listMediaAssets;
+
+  process.env.BIDVIA_BASE_URL = 'https://api.bidvia.test';
+  process.env.BIDVIA_TENANT_ID = 'tenant-business';
+
+  const seenContexts: Array<{
+    helper: string;
+    tenantId?: string;
+    sessionId?: string;
+    adminSessionId?: string;
+  }> = [];
+
+  BidviaClient.prototype.listMediaAssets = async function listMediaAssetsStub() {
+    const clientContext = (this as unknown as { options: { context: typeof process.env } }).options.context;
+    seenContexts.push({
+      helper: 'listMediaAssets',
+      tenantId: clientContext.tenantId,
+      sessionId: clientContext.sessionId,
+      adminSessionId: clientContext.adminSessionId,
+    });
+    return {
+      items: [{ mediaAssetId: 'media-tenant-1' }],
+    };
+  };
+
+  runLocalMcpServer(input, output);
+
+  try {
+    input.write(encodeFrame({
+      jsonrpc: '2.0',
+      id: 301,
+      method: 'tools/call',
+      params: {
+        name: 'media-assets-read',
+        arguments: {},
+      },
+    }));
+    const mediaAssetsResponse = await readFrame(output) as { result: { content: Array<{ text: string }> } };
+    const mediaAssetsPayload = JSON.parse(mediaAssetsResponse.result.content[0]!.text);
+    assert.deepEqual(mediaAssetsPayload.result, {
+      truthFetchResult: {
+        items: [{ mediaAssetId: 'media-tenant-1' }],
+      },
+    });
+    assert.deepEqual(seenContexts, [
+      {
+        helper: 'listMediaAssets',
+        tenantId: 'tenant-business',
+        sessionId: undefined,
+        adminSessionId: undefined,
+      },
+    ]);
+  } finally {
+    BidviaClient.prototype.listMediaAssets = originalListMediaAssets;
+    input.end();
+    output.end();
+
+    if (originalEnv.BIDVIA_BASE_URL === undefined) {
+      delete process.env.BIDVIA_BASE_URL;
+    } else {
+      process.env.BIDVIA_BASE_URL = originalEnv.BIDVIA_BASE_URL;
+    }
+
+    if (originalEnv.BIDVIA_TENANT_ID === undefined) {
+      delete process.env.BIDVIA_TENANT_ID;
+    } else {
+      process.env.BIDVIA_TENANT_ID = originalEnv.BIDVIA_TENANT_ID;
+    }
+  }
+});
+
+test('local MCP stdio server default execution client supports business truth-fetch detail reads from tenant env context', async () => {
+  const input = new PassThrough();
+  const output = new PassThrough();
+  const originalEnv = {
+    BIDVIA_BASE_URL: process.env.BIDVIA_BASE_URL,
+    BIDVIA_TENANT_ID: process.env.BIDVIA_TENANT_ID,
+  };
+  const originalGetMediaAsset = BidviaClient.prototype.getMediaAsset;
+
+  process.env.BIDVIA_BASE_URL = 'https://api.bidvia.test';
+  process.env.BIDVIA_TENANT_ID = 'tenant-business-detail';
+
+  const seenContexts: Array<{
+    helper: string;
+    tenantId?: string;
+    sessionId?: string;
+    adminSessionId?: string;
+    mediaAssetId?: string;
+  }> = [];
+
+  BidviaClient.prototype.getMediaAsset = async function getMediaAssetStub(mediaAssetId: string) {
+    const clientContext = (this as unknown as { options: { context: typeof process.env } }).options.context;
+    seenContexts.push({
+      helper: 'getMediaAsset',
+      tenantId: clientContext.tenantId,
+      sessionId: clientContext.sessionId,
+      adminSessionId: clientContext.adminSessionId,
+      mediaAssetId,
+    });
+    return {
+      mediaAssetId,
+    };
+  };
+
+  runLocalMcpServer(input, output);
+
+  try {
+    input.write(encodeFrame({
+      jsonrpc: '2.0',
+      id: 401,
+      method: 'tools/call',
+      params: {
+        name: 'media-asset-read',
+        arguments: {
+          mediaAssetId: 'media-detail-1',
+        },
+      },
+    }));
+    const mediaAssetResponse = await readFrame(output) as { result: { content: Array<{ text: string }> } };
+    const mediaAssetPayload = JSON.parse(mediaAssetResponse.result.content[0]!.text);
+    assert.deepEqual(mediaAssetPayload.result, {
+      truthFetchResult: {
+        mediaAssetId: 'media-detail-1',
+      },
+    });
+    assert.deepEqual(seenContexts, [
+      {
+        helper: 'getMediaAsset',
+        tenantId: 'tenant-business-detail',
+        sessionId: undefined,
+        adminSessionId: undefined,
+        mediaAssetId: 'media-detail-1',
+      },
+    ]);
+  } finally {
+    BidviaClient.prototype.getMediaAsset = originalGetMediaAsset;
+    input.end();
+    output.end();
+
+    if (originalEnv.BIDVIA_BASE_URL === undefined) {
+      delete process.env.BIDVIA_BASE_URL;
+    } else {
+      process.env.BIDVIA_BASE_URL = originalEnv.BIDVIA_BASE_URL;
+    }
+
+    if (originalEnv.BIDVIA_TENANT_ID === undefined) {
+      delete process.env.BIDVIA_TENANT_ID;
+    } else {
+      process.env.BIDVIA_TENANT_ID = originalEnv.BIDVIA_TENANT_ID;
+    }
   }
 });

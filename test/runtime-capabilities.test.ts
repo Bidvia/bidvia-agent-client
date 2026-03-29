@@ -31,7 +31,7 @@ test('buildLocalRuntimeCapabilitySnapshot derives a machine-readable local capab
     true,
   );
   assert.equal(snapshot.mcpTools.source, 'local-static');
-  assert.equal(snapshot.mcpTools.items.length, 13);
+  assert.equal(snapshot.mcpTools.items.length, 30);
   assert.equal(snapshot.mcpTools.schemaVersion, '2026-03-27');
   assert.equal(snapshot.mcpTools.version, 'local-runtime-capability-snapshot');
   assert.equal(snapshot.mcpTools.revision, 'repo-mcp-tools');

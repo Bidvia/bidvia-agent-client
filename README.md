@@ -74,7 +74,7 @@ In practice, the SDK currently covers:
 - bounded scenario planning and verification bundle support
 - local capability and server-payload normalization helpers
 
-The truth-fetch expansion in this phase is SDK plus CLI only. It gives you thin read wrappers over approved frozen Core read routes without turning this package into a source of platform truth or widening authority beyond the existing handoff boundary.
+The truth-fetch expansion now ships in three aligned local surfaces. The SDK and CLI remain the source of truth, and the local stdio MCP layer is a thin read-only wrapper over those shipped SDK helpers. The rollout is phased on purpose: governance-first MCP truth-fetch tools ship first, then business-truth collection and detail tools ship second on the same local seam. That MCP layer stays local stdio only and read-only in both phases.
 
 Use an explicit production `baseUrl` when you know the real deployment entrypoint. The canonical production API domains are:
 
@@ -143,6 +143,12 @@ If you want a minimal repo-local truth-fetch example without live credentials, r
 npx tsx examples/truth-fetch.ts
 ```
 
+If you want a minimal repo-local MCP truth-fetch example without live credentials, run:
+
+```bash
+npx tsx examples/mcp-truth-fetch.ts
+```
+
 ## OpenClaw Gateway and local node-host path
 
 This repository already supports a local OpenClaw Gateway and node-host integration path, but the path is intentionally narrow:
@@ -151,7 +157,7 @@ This repository already supports a local OpenClaw Gateway and node-host integrat
 - local stdio MCP server
 - remote HTTPS Bidvia API
 
-The shipped local MCP seam exposes both review-safe tooling and explicit execution tooling, but only through a local stdio server. It does not imply hosted MCP service, hosted Bidvia runtime behavior, or remote registry participation.
+The shipped local MCP seam exposes read-only truth-fetch tools, review-safe tooling, and explicit execution tooling, but only through a local stdio server. The truth-fetch rollout is phased: governance-first MCP reads ship first, business-truth reads ship second, and both stay thin wrappers over the shipped SDK helpers. This does not imply hosted MCP service, hosted Bidvia runtime behavior, remote registry participation, login, OAuth, auth implementation, capability-truth integration, or live negotiation.
 
 Start here if that is your path:
 
@@ -170,6 +176,7 @@ These are implemented in code today and available to users now. They include:
 
 - the typed SDK client and helper builders
 - the typed SDK truth-fetch read wrappers for the approved account, governance, semantic, pricing, and asset groups
+- the local stdio MCP truth-fetch read tools, shipped in two phases: governance-first first, then business-truth collection and detail reads second
 - bounded scenario planning and verification bundle support
 - review-packet preview and export helpers
 - explicit local execution commands with `--dry-run`
@@ -182,6 +189,10 @@ These are implemented in code today and available to users now. They include:
 - OpenClaw Gateway operator documentation for the local path
 - transport/auth-provider hardening for local execution paths
 
+The shipped MCP truth-fetch slice stays narrow: local stdio only, read-only only, and sourced from the SDK helpers already in this repo. It is not a hosted runtime, not a new auth layer, and not a new source of platform truth.
+
+In plain terms, phase order matters here. Governance-first tools ship first for `account-*`, `agent-presence`, and `agent-authority`. Business-truth tools ship second for canonical semantics, pricing, document, media, evidence, and attachment reads. Neither phase widens the MCP layer beyond a local stdio wrapper over already-shipped SDK truth-fetch helpers.
+
 ### 2. Implemented but dependency-gated seams
 
 These seams exist in code, but they remain blocked until Bidvia Core provides frozen truth.
@@ -193,10 +204,9 @@ These seams exist in code, but they remain blocked until Bidvia Core provides fr
 These areas are outside the current shipped boundary:
 
 - hosted MCP and hosted runtime behavior
-- MCP truth-fetch tools and broader MCP truth-fetch integration
-- remote registry behavior
+- remote registry behavior and remote discovery
 - live remote negotiation
-- login or Core-owned auth flows beyond local transport/auth-provider seams
+- login, OAuth, or any auth implementation beyond local transport/auth-provider seams
 - capability truth integration beyond local descriptive surfaces
 - richer governance deep reads beyond the approved truth-fetch groups
 - approval-to-opportunity creation or discovery beyond the explicit current handoff seam

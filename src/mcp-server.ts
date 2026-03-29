@@ -119,6 +119,7 @@ function createDefaultExecutionClient(): BidviaClient {
       principalId: process.env.BIDVIA_PRINCIPAL_ID,
       registrationId: process.env.BIDVIA_REGISTRATION_ID,
       sessionId: process.env.BIDVIA_SESSION_ID,
+      adminSessionId: process.env.BIDVIA_ADMIN_SESSION_ID,
       companyId: process.env.BIDVIA_COMPANY_ID,
     },
   });

@@ -59,7 +59,13 @@ Think about this repo in this order:
 12. export a verification bundle when the run should be reviewable later
 13. use explicit local execution commands when you need the packaged operator path for heartbeat, sync-upload, evidence, or proposal
 
-In this phase, truth-fetch is shipped through the SDK and CLI only. MCP truth-fetch remains deferred, so use the local stdio MCP seam for the already-shipped review-safe and execution surfaces only.
+In this phase, truth-fetch ships through the SDK, CLI, and a bounded local stdio MCP seam. That MCP rollout is phased on purpose: governance-first truth-fetch tools ship first, then business-truth collection and detail tools ship second. In both phases, MCP stays read-only, local stdio only, and a thin wrapper over the shipped SDK helpers.
+
+The honest phase split is:
+
+- governance-first tools ship first for `account-*`, `agent-presence`, and `agent-authority`
+- business-truth tools ship second for canonical semantics, pricing, document, media, evidence, and attachment reads
+- the SDK and CLI stay the source of truth, and MCP only forwards to those already-shipped helpers
 
 Safe operator order for truth-fetch work:
 
@@ -135,10 +141,22 @@ The repo now ships a broad read-only truth-fetch layer across the SDK and CLI fo
 - pricing bases
 - document artifacts, media assets, evidence assets, and attachment bindings
 
+The same approved reads now also have a phased MCP surface on the local stdio seam:
+
+- governance-first tools ship first for `account-*`, `agent-presence`, and `agent-authority`
+- business-truth tools ship second for canonical semantics, pricing, document, media, evidence, and attachment reads
+- the MCP layer stays read-only and forwards to the SDK helpers already shipped in this repo
+
 Runnable repo-local example:
 
 ```bash
 npx tsx examples/truth-fetch.ts
+```
+
+Runnable repo-local MCP example:
+
+```bash
+npx tsx examples/mcp-truth-fetch.ts
 ```
 
 Built CLI examples after `npm run build`:
@@ -150,7 +168,15 @@ node dist/cli.js pricing-bases
 node dist/cli.js media-asset --media-asset-id media-1
 ```
 
-This truth-fetch layer stays read-only. It does not add hosted runtime behavior, live negotiation, capability truth integration, richer governance deep reads, login, or any MCP truth-fetch surface.
+This truth-fetch layer stays read-only. The MCP portion stays local stdio only and does not add hosted runtime behavior, hosted MCP, remote registry or remote discovery, login, OAuth, auth implementation, capability-truth integration, live negotiation, or richer governance deep reads beyond the approved groups.
+
+Keep the deferred boundary explicit when you explain this surface to operators or SDK users:
+
+- hosted runtime and hosted MCP stay deferred
+- remote registry and remote discovery stay deferred
+- login, OAuth, and auth implementation stay deferred
+- capability-truth integration and live negotiation stay deferred
+- richer governance deep reads stay deferred beyond the approved groups above
 
 ## Local runtime-capability snapshot
 
@@ -209,13 +235,13 @@ The repo also ships a static MCP-facing tool catalog in `src/mcp.ts` so callers 
 
 It is intentionally export-only. Use it to inspect repo-local facts such as:
 
-- shipped MCP-facing tool names
+- shipped MCP-facing tool names, including the phased read-only truth-fetch tools
 - tool descriptions
 - input schema references
 - output modes for plan preview, review-packet preview, and review-packet export
 - bounded helper and capability references behind each descriptor
 
-This catalog does not make the repo an MCP server. It does not open a transport, perform protocol negotiation, or discover remote registries. It is a static descriptor/catalog layer for future integration work only.
+This catalog does not make the repo an MCP server on its own. It does not open a hosted transport, perform live negotiation, or discover remote registries. It is a static descriptor/catalog layer for the local stdio server and future bounded integration work only.
 
 ## Local MCP server entrypoint
 
@@ -227,9 +253,9 @@ It is intentionally limited to the local request loop for:
 - `tools/list`
 - `tools/call`
 
-That local server uses the shipped tool catalog from `src/mcp.ts` and dispatches only the current bounded MCP-facing tools. It is useful when you want a repo-local MCP server surface for the already-shipped review-safe plan and packet tools plus the explicit local execution tools.
+That local server uses the shipped tool catalog from `src/mcp.ts` and dispatches only the current bounded MCP-facing tools. It is useful when you want a repo-local MCP server surface for the shipped read-only truth-fetch tools, the already-shipped review-safe plan and packet tools, and the explicit local execution tools.
 
-This server remains deliberately narrow. It does not add hosted runtime behavior, remote registry features, broader protocol/runtime complexity, or any MCP authority beyond the shipped local tool loop.
+This server remains deliberately narrow. It does not add hosted runtime behavior, hosted MCP service, remote registry features, broader protocol/runtime complexity, or any MCP authority beyond the shipped local tool loop.
 
 ## Scenario planning and bounded orchestration preview
 
