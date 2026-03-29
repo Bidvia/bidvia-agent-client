@@ -95,6 +95,7 @@ function createClient() {
       principalId: process.env.BIDVIA_PRINCIPAL_ID,
       registrationId: process.env.BIDVIA_REGISTRATION_ID,
       sessionId: process.env.BIDVIA_SESSION_ID,
+      adminSessionId: process.env.BIDVIA_ADMIN_SESSION_ID,
     },
   });
 }
@@ -122,9 +123,10 @@ type BidviaCliParsedArgs = {
   command: string;
   dryRun: boolean;
   input?: string;
+  flagValues: Partial<Record<BidviaCliSupportedValueFlag, string>>;
   unknownFlags: string[];
   extraPositionals: string[];
-  missingInputValue: boolean;
+  missingValueFlags: BidviaCliSupportedValueFlag[];
 };
 
 type BidviaCliStructuredFailure = {
@@ -136,6 +138,170 @@ type BidviaCliStructuredFailure = {
     details?: string[];
   };
 };
+
+type BidviaCliTruthFetchCommand =
+  | 'account-agents'
+  | 'account-agent'
+  | 'account-agent-bindings'
+  | 'account-records'
+  | 'agent-presence'
+  | 'agent-authority'
+  | 'canonical-semantic-concepts'
+  | 'canonical-semantic-concept'
+  | 'pricing-bases'
+  | 'pricing-basis'
+  | 'document-artifacts'
+  | 'document-artifact'
+  | 'media-assets'
+  | 'media-asset'
+  | 'evidence-assets'
+  | 'evidence-asset'
+  | 'attachment-bindings'
+  | 'attachment-binding';
+
+type BidviaCliTruthFetchCommandDefinition = {
+  run: (client: BidviaClient, parsedArgs: BidviaCliParsedArgs) => Promise<unknown>;
+};
+
+type BidviaCliSupportedValueFlag =
+  | '--input'
+  | '--registration-id'
+  | '--concept-id'
+  | '--pricing-basis-id'
+  | '--document-artifact-id'
+  | '--media-asset-id'
+  | '--evidence-asset-id'
+  | '--attachment-binding-id';
+
+const bidviaCliSupportedValueFlags = new Set<BidviaCliSupportedValueFlag>([
+  '--input',
+  '--registration-id',
+  '--concept-id',
+  '--pricing-basis-id',
+  '--document-artifact-id',
+  '--media-asset-id',
+  '--evidence-asset-id',
+  '--attachment-binding-id',
+]);
+
+const truthFetchVisibilityHelpLines = [
+  '  account-agents',
+  '  account-agent --registration-id ...',
+  '  account-agent-bindings',
+  '  account-records',
+  '  agent-presence --registration-id ...',
+  '  agent-authority --registration-id ...',
+  '  canonical-semantic-concepts',
+  '  canonical-semantic-concept --concept-id ...',
+  '  pricing-bases',
+  '  pricing-basis --pricing-basis-id ...',
+  '  document-artifacts',
+  '  document-artifact --document-artifact-id ...',
+  '  media-assets',
+  '  media-asset --media-asset-id ...',
+  '  evidence-assets',
+  '  evidence-asset --evidence-asset-id ...',
+  '  attachment-bindings',
+  '  attachment-binding --attachment-binding-id ...',
+] as const;
+
+const truthFetchRequiredFlagByCommand = {
+  'account-agent': '--registration-id',
+  'agent-presence': '--registration-id',
+  'agent-authority': '--registration-id',
+  'canonical-semantic-concept': '--concept-id',
+  'pricing-basis': '--pricing-basis-id',
+  'document-artifact': '--document-artifact-id',
+  'media-asset': '--media-asset-id',
+  'evidence-asset': '--evidence-asset-id',
+  'attachment-binding': '--attachment-binding-id',
+} as const satisfies Partial<Record<string, BidviaCliSupportedValueFlag>>;
+
+const truthFetchCollectionCommands = new Set([
+  'account-agents',
+  'account-agent-bindings',
+  'account-records',
+  'canonical-semantic-concepts',
+  'pricing-bases',
+  'document-artifacts',
+  'media-assets',
+  'evidence-assets',
+  'attachment-bindings',
+]);
+
+const truthFetchCommandDefinitions: Record<BidviaCliTruthFetchCommand, BidviaCliTruthFetchCommandDefinition> = {
+  'account-agents': {
+    run: (client) => client.listAccountAgents(),
+  },
+  'account-agent': {
+    run: (client, parsedArgs) => client.getAccountAgent(parsedArgs.flagValues['--registration-id']!),
+  },
+  'account-agent-bindings': {
+    run: (client) => client.listAccountAgentBindings(),
+  },
+  'account-records': {
+    run: (client) => client.listAccountRecords(),
+  },
+  'agent-presence': {
+    run: (client, parsedArgs) => client.getAgentPresence(parsedArgs.flagValues['--registration-id']!),
+  },
+  'agent-authority': {
+    run: (client, parsedArgs) => client.getAgentAuthority(parsedArgs.flagValues['--registration-id']!),
+  },
+  'canonical-semantic-concepts': {
+    run: (client) => client.listCanonicalSemanticConcepts(),
+  },
+  'canonical-semantic-concept': {
+    run: (client, parsedArgs) => client.getCanonicalSemanticConcept(parsedArgs.flagValues['--concept-id']!),
+  },
+  'pricing-bases': {
+    run: (client) => client.listPricingBases(),
+  },
+  'pricing-basis': {
+    run: (client, parsedArgs) => client.getPricingBasis(parsedArgs.flagValues['--pricing-basis-id']!),
+  },
+  'document-artifacts': {
+    run: (client) => client.listDocumentArtifacts(),
+  },
+  'document-artifact': {
+    run: (client, parsedArgs) => client.getDocumentArtifact(parsedArgs.flagValues['--document-artifact-id']!),
+  },
+  'media-assets': {
+    run: (client) => client.listMediaAssets(),
+  },
+  'media-asset': {
+    run: (client, parsedArgs) => client.getMediaAsset(parsedArgs.flagValues['--media-asset-id']!),
+  },
+  'evidence-assets': {
+    run: (client) => client.listEvidenceAssets(),
+  },
+  'evidence-asset': {
+    run: (client, parsedArgs) => client.getEvidenceAsset(parsedArgs.flagValues['--evidence-asset-id']!),
+  },
+  'attachment-bindings': {
+    run: (client) => client.listAttachmentBindings(),
+  },
+  'attachment-binding': {
+    run: (client, parsedArgs) => client.getAttachmentBinding(parsedArgs.flagValues['--attachment-binding-id']!),
+  },
+};
+
+function getSupportedValueFlagsForCommand(command: string): readonly BidviaCliSupportedValueFlag[] {
+  if (command === 'verification-bundle-preview' || command === 'verification-bundle-export') {
+    return ['--input'];
+  }
+
+  const requiredFlag = truthFetchRequiredFlagByCommand[command as keyof typeof truthFetchRequiredFlagByCommand];
+  if (requiredFlag) {
+    return [requiredFlag];
+  }
+
+  if (truthFetchCollectionCommands.has(command)) {
+    return [];
+  }
+
+  return [];
+}
 
 const verificationBundleInputValues = [
   'registration-lifecycle',
@@ -149,9 +315,10 @@ function parseCliArgs(argv: string[]): BidviaCliParsedArgs {
     return {
       command: 'help',
       dryRun: false,
+      flagValues: {},
       unknownFlags: [],
       extraPositionals: [],
-      missingInputValue: false,
+      missingValueFlags: [],
     };
   }
 
@@ -160,18 +327,20 @@ function parseCliArgs(argv: string[]): BidviaCliParsedArgs {
     return {
       command: 'help',
       dryRun: false,
+      flagValues: {},
       unknownFlags: [],
       extraPositionals: [],
-      missingInputValue: false,
+      missingValueFlags: [],
     };
   }
 
   const command = firstToken ?? 'help';
   let dryRun = false;
   let input: string | undefined;
-  let missingInputValue = false;
+  const flagValues: Partial<Record<BidviaCliSupportedValueFlag, string>> = {};
   const unknownFlags: string[] = [];
   const extraPositionals: string[] = [];
+  const missingValueFlags: BidviaCliSupportedValueFlag[] = [];
 
   for (let index = 1; index < argv.length; index += 1) {
     const token = argv[index]!;
@@ -181,14 +350,17 @@ function parseCliArgs(argv: string[]): BidviaCliParsedArgs {
       continue;
     }
 
-    if (token === '--input') {
+    if (bidviaCliSupportedValueFlags.has(token as BidviaCliSupportedValueFlag)) {
       const nextToken = argv[index + 1];
       if (!nextToken || nextToken.startsWith('--')) {
-        missingInputValue = true;
+        missingValueFlags.push(token as BidviaCliSupportedValueFlag);
         continue;
       }
 
-      input = nextToken;
+      flagValues[token as BidviaCliSupportedValueFlag] = nextToken;
+      if (token === '--input') {
+        input = nextToken;
+      }
       index += 1;
       continue;
     }
@@ -209,9 +381,10 @@ function parseCliArgs(argv: string[]): BidviaCliParsedArgs {
     command,
     dryRun,
     input,
+    flagValues,
     unknownFlags,
     extraPositionals,
-    missingInputValue,
+    missingValueFlags,
   };
 }
 
@@ -403,6 +576,9 @@ function printHelp(printLine: (value: string) => void): void {
   printLine('  runtime-capabilities');
   printLine('  launch-topology-smoke');
   printLine('  server-capabilities');
+  for (const line of truthFetchVisibilityHelpLines) {
+    printLine(line);
+  }
   printLine('Execution commands:');
   printLine('  heartbeat [--dry-run]');
   printLine('  sync-upload [--dry-run]');
@@ -441,16 +617,48 @@ export async function runCli(
   } satisfies BidviaCliDependencies;
   const parsedArgs = parseCliArgs(argv);
   const command = parsedArgs.command;
+  const supportedValueFlags = getSupportedValueFlagsForCommand(command);
+  const unsupportedKnownFlags = Object.keys(parsedArgs.flagValues)
+    .filter((flag) => !supportedValueFlags.includes(flag as BidviaCliSupportedValueFlag));
 
-  if (parsedArgs.missingInputValue) {
+  if (parsedArgs.missingValueFlags.length > 0) {
+    const missingFlag = parsedArgs.missingValueFlags[0]!;
+    if (missingFlag === '--input') {
+      return printStructuredFailure(
+        dependencies,
+        buildStructuredFailure(
+          command,
+          'invalid-input',
+          'Missing value for --input. Use one of: registration-lifecycle, registered-agent-operations.',
+          {
+            validInputs: [...verificationBundleInputValues],
+          },
+        ),
+      );
+    }
+
     return printStructuredFailure(
       dependencies,
       buildStructuredFailure(
         command,
         'invalid-input',
-        'Missing value for --input. Use one of: registration-lifecycle, registered-agent-operations.',
+        `Missing value for ${missingFlag} on ${command}.`,
         {
-          validInputs: [...verificationBundleInputValues],
+          details: [missingFlag],
+        },
+      ),
+    );
+  }
+
+  if (unsupportedKnownFlags.length > 0) {
+    return printStructuredFailure(
+      dependencies,
+      buildStructuredFailure(
+        command,
+        'invalid-input',
+        `Unknown option(s): ${unsupportedKnownFlags.join(', ')}. Run --help to review supported commands and flags.`,
+        {
+          details: unsupportedKnownFlags,
         },
       ),
     );
@@ -489,6 +697,21 @@ export async function runCli(
     return 0;
   }
 
+  const requiredTruthFetchFlag = truthFetchRequiredFlagByCommand[command as keyof typeof truthFetchRequiredFlagByCommand];
+  if (requiredTruthFetchFlag && !parsedArgs.flagValues[requiredTruthFetchFlag]) {
+    return printStructuredFailure(
+      dependencies,
+      buildStructuredFailure(
+        command,
+        'invalid-input',
+        `Missing required ${requiredTruthFetchFlag} for ${command}.`,
+        {
+          details: [requiredTruthFetchFlag],
+        },
+      ),
+    );
+  }
+
   if (command === 'environment-mode') {
     dependencies.printJson({
       baseUrl: dependencies.resolveBaseUrl(),
@@ -520,6 +743,14 @@ export async function runCli(
 
   if (command === 'server-capabilities') {
     dependencies.printJson(normalizeServerCapabilityPayload(buildSampleServerCapabilityPayload()));
+    return 0;
+  }
+
+  const truthFetchCommand = truthFetchCommandDefinitions[command as BidviaCliTruthFetchCommand];
+  if (truthFetchCommand) {
+    const client = dependencies.createClient();
+    const result = await truthFetchCommand.run(client, parsedArgs);
+    dependencies.printJson(result);
     return 0;
   }
 

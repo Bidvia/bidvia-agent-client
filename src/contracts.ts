@@ -747,6 +747,77 @@ export interface BidviaAgentAuthorityState {
   grantedBy?: string;
 }
 
+export interface BidviaAgentRegistrationIdentifierInput {
+  agentRegistrationId: string;
+}
+
+export interface BidviaAccountAgentRecord {
+  agentRegistrationId: string;
+  agentId?: string;
+  principalId?: string;
+  tenantId?: string;
+  registrationStatus?: BidviaAgentRegistrationStatus;
+  bindingStatus?: BidviaAgentBindingStatus;
+  participationStatus?: BidviaParticipationStatus;
+  observedAt?: string;
+}
+
+export interface BidviaListAccountAgentsResponse {
+  accountAgents: BidviaAccountAgentRecord[];
+}
+
+export interface BidviaGetAccountAgentResponse {
+  accountAgent: BidviaAccountAgentRecord;
+}
+
+export interface BidviaAccountAgentBindingRecord {
+  agentRegistrationId: string;
+  tenantId: string;
+  principalId?: string;
+  bindingStatus: BidviaAgentBindingStatus;
+  observedAt?: string;
+}
+
+export interface BidviaListAccountAgentBindingsResponse {
+  accountAgentBindings: BidviaAccountAgentBindingRecord[];
+}
+
+export interface BidviaAccountRecord {
+  accountRecordId: string;
+  recordType: string;
+  subjectRef: string;
+  observedAt?: string;
+  summary?: string;
+}
+
+export interface BidviaListAccountRecordsResponse {
+  accountRecords: BidviaAccountRecord[];
+}
+
+export interface BidviaAgentPresenceRecord {
+  agentRegistrationId: string;
+  presenceStatus: BidviaPresenceStatus;
+  readinessStatus?: BidviaReadinessStatus;
+  observedAt: string;
+  rationale?: string;
+}
+
+export interface BidviaGetAgentPresenceResponse {
+  agentPresence: BidviaAgentPresenceRecord;
+}
+
+export interface BidviaAgentAuthorityRecord {
+  agentRegistrationId: string;
+  authorityStatus: BidviaAuthorityStatus;
+  observedAt: string;
+  grantedBy?: string;
+  scopeRefs?: string[];
+}
+
+export interface BidviaGetAgentAuthorityResponse {
+  agentAuthority: BidviaAgentAuthorityRecord;
+}
+
 export const bidviaRuntimeCapabilityKnowledgeSources = [
   'local-static',
   'deferred-server-negotiation',
@@ -955,6 +1026,39 @@ export interface BidviaPricingBasisObject {
   termsSummary?: string;
 }
 
+export interface BidviaCanonicalSemanticConceptIdentifierInput {
+  canonicalSemanticConceptId: string;
+}
+
+export interface BidviaCanonicalSemanticConceptRecord {
+  canonicalSemanticConceptId: string;
+  conceptKey: string;
+  label: string;
+  observedAt?: string;
+  description?: string;
+  status?: string;
+}
+
+export interface BidviaListCanonicalSemanticConceptsResponse {
+  canonicalSemanticConcepts: BidviaCanonicalSemanticConceptRecord[];
+}
+
+export interface BidviaGetCanonicalSemanticConceptResponse {
+  canonicalSemanticConcept: BidviaCanonicalSemanticConceptRecord;
+}
+
+export interface BidviaPricingBasisIdentifierInput {
+  pricingBasisId: string;
+}
+
+export interface BidviaListPricingBasesResponse {
+  pricingBases: BidviaPricingBasisObject[];
+}
+
+export interface BidviaGetPricingBasisResponse {
+  pricingBasis: BidviaPricingBasisObject;
+}
+
 export interface BidviaPricingRuleAtom {
   pricingRuleAtomId: string;
   ruleType: string;
@@ -1033,6 +1137,18 @@ export interface BidviaDocumentArtifact {
   observedAt: string;
 }
 
+export interface BidviaDocumentArtifactIdentifierInput {
+  documentArtifactId: string;
+}
+
+export interface BidviaListDocumentArtifactsResponse {
+  documentArtifacts: BidviaDocumentArtifact[];
+}
+
+export interface BidviaGetDocumentArtifactResponse {
+  documentArtifact: BidviaDocumentArtifact;
+}
+
 export interface BidviaEvidenceAsset {
   evidenceAssetId: string;
   assetKind: string;
@@ -1044,12 +1160,36 @@ export interface BidviaEvidenceAsset {
   lineageRefs: string[];
 }
 
+export interface BidviaEvidenceAssetIdentifierInput {
+  evidenceAssetId: string;
+}
+
+export interface BidviaListEvidenceAssetsResponse {
+  evidenceAssets: BidviaEvidenceAsset[];
+}
+
+export interface BidviaGetEvidenceAssetResponse {
+  evidenceAsset: BidviaEvidenceAsset;
+}
+
 export interface BidviaMediaAsset {
   mediaAssetId: string;
   mediaType: string;
   fileResourceId: string;
   previewRef?: string;
   observedAt: string;
+}
+
+export interface BidviaMediaAssetIdentifierInput {
+  mediaAssetId: string;
+}
+
+export interface BidviaListMediaAssetsResponse {
+  mediaAssets: BidviaMediaAsset[];
+}
+
+export interface BidviaGetMediaAssetResponse {
+  mediaAsset: BidviaMediaAsset;
 }
 
 export interface BidviaAttachmentBinding {
@@ -1062,6 +1202,18 @@ export interface BidviaAttachmentBinding {
   lineageRefs: string[];
   intendedGovernanceEffect?: string;
   observedAt: string;
+}
+
+export interface BidviaAttachmentBindingIdentifierInput {
+  attachmentBindingId: string;
+}
+
+export interface BidviaListAttachmentBindingsResponse {
+  attachmentBindings: BidviaAttachmentBinding[];
+}
+
+export interface BidviaGetAttachmentBindingResponse {
+  attachmentBinding: BidviaAttachmentBinding;
 }
 
 export interface BidviaAssetConsumption {

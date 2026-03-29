@@ -127,3 +127,59 @@ test('normalizeServerCapabilityPayload keeps local and deferred server knowledge
   });
   assert.equal(snapshot.localMcpServer.available, false);
 });
+
+test('normalizeServerCapabilityPayload classifies widened truth-fetch reads from payload data without synthesizing extra support', () => {
+  const snapshot = normalizeServerCapabilityPayload({
+    route_capabilities: [
+      {
+        helper_key: 'listCanonicalSemanticConcepts',
+        route_path_template: '/runtime/canonical-semantic-concepts',
+        http_method: 'GET',
+        access_context_family: 'tenant',
+        required_context: ['tenantId'],
+        scope: 'read',
+        level: 'atomic-route',
+      },
+      {
+        helper_key: 'getAttachmentBinding',
+        route_path_template: '/runtime/attachment-bindings/:attachment_binding_id',
+        http_method: 'GET',
+        access_context_family: 'tenant',
+        required_context: ['tenantId'],
+        scope: 'read',
+        level: 'atomic-route',
+      },
+    ],
+    mcp_tools: [],
+    mcp_server: {
+      available: true,
+      transport: 'stdio',
+      supported_methods: ['initialize', 'tools/list', 'tools/call'],
+    },
+  });
+
+  assert.deepEqual(snapshot.routeCapabilities.items, [
+    {
+      helperKey: 'listCanonicalSemanticConcepts',
+      routePathTemplate: '/runtime/canonical-semantic-concepts',
+      httpMethod: 'GET',
+      accessContextFamily: 'tenant',
+      requiredContext: ['tenantId'],
+      scope: 'read',
+      level: 'atomic-route',
+      localCapabilityTier: 'L0-observe-only',
+      localCapabilityRiskTier: 'observe-only',
+    },
+    {
+      helperKey: 'getAttachmentBinding',
+      routePathTemplate: '/runtime/attachment-bindings/:attachment_binding_id',
+      httpMethod: 'GET',
+      accessContextFamily: 'tenant',
+      requiredContext: ['tenantId'],
+      scope: 'read',
+      level: 'atomic-route',
+      localCapabilityTier: 'L0-observe-only',
+      localCapabilityRiskTier: 'observe-only',
+    },
+  ]);
+});

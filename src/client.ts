@@ -159,6 +159,205 @@ export class BidviaClient {
     });
   }
 
+  async listAccountAgents(requestPolicy?: BidviaClientRequestPolicy) {
+    const context = this.resolveRequestContext(requestPolicy);
+    this.requireTenantId(context);
+    return this.request('/runtime/account/agents', {
+      context,
+      method: 'GET',
+      headers: this.requireSessionHeaders(context),
+      requestPolicy,
+    });
+  }
+
+  async getAccountAgent(agentRegistrationId: string, requestPolicy?: BidviaClientRequestPolicy) {
+    const context = this.resolveRequestContext(requestPolicy);
+    this.requireTenantId(context);
+    return this.request(`/runtime/account/agents/${encodeURIComponent(agentRegistrationId)}`, {
+      context,
+      method: 'GET',
+      headers: this.requireSessionHeaders(context),
+      requestPolicy,
+    });
+  }
+
+  async listAccountAgentBindings(requestPolicy?: BidviaClientRequestPolicy) {
+    const context = this.resolveRequestContext(requestPolicy);
+    this.requireTenantId(context);
+    return this.request('/runtime/account/agent-bindings', {
+      context,
+      method: 'GET',
+      headers: this.requireSessionHeaders(context),
+      requestPolicy,
+    });
+  }
+
+  async listAccountRecords(requestPolicy?: BidviaClientRequestPolicy) {
+    const context = this.resolveRequestContext(requestPolicy);
+    this.requireTenantId(context);
+    return this.request('/runtime/account/records', {
+      context,
+      method: 'GET',
+      headers: this.requireSessionHeaders(context),
+      requestPolicy,
+    });
+  }
+
+  async getAgentPresence(agentRegistrationId: string, requestPolicy?: BidviaClientRequestPolicy) {
+    const context = this.resolveRequestContext(requestPolicy);
+    return this.request(
+      `/runtime/agents/${encodeURIComponent(agentRegistrationId)}/presence?tenant_id=${encodeURIComponent(this.requireTenantId(context))}`,
+      {
+      context,
+      method: 'GET',
+      headers: this.requireAdminSessionHeaders(context),
+      requestPolicy,
+      },
+    );
+  }
+
+  async getAgentAuthority(agentRegistrationId: string, requestPolicy?: BidviaClientRequestPolicy) {
+    const context = this.resolveRequestContext(requestPolicy);
+    return this.request(
+      `/runtime/agents/${encodeURIComponent(agentRegistrationId)}/authority?tenant_id=${encodeURIComponent(this.requireTenantId(context))}`,
+      {
+      context,
+      method: 'GET',
+      headers: this.requireAdminSessionHeaders(context),
+      requestPolicy,
+      },
+    );
+  }
+
+  async listCanonicalSemanticConcepts(requestPolicy?: BidviaClientRequestPolicy) {
+    const context = this.resolveRequestContext(requestPolicy);
+    this.requireTenantId(context);
+    return this.request('/runtime/canonical-semantic-concepts', {
+      context,
+      method: 'GET',
+      requestPolicy,
+    });
+  }
+
+  async getCanonicalSemanticConcept(
+    canonicalSemanticConceptId: string,
+    requestPolicy?: BidviaClientRequestPolicy,
+  ) {
+    const context = this.resolveRequestContext(requestPolicy);
+    this.requireTenantId(context);
+    return this.request(
+      `/runtime/canonical-semantic-concepts/${encodeURIComponent(canonicalSemanticConceptId)}`,
+      {
+        context,
+        method: 'GET',
+        requestPolicy,
+      },
+    );
+  }
+
+  async listPricingBases(requestPolicy?: BidviaClientRequestPolicy) {
+    const context = this.resolveRequestContext(requestPolicy);
+    this.requireTenantId(context);
+    return this.request('/runtime/pricing-bases', {
+      context,
+      method: 'GET',
+      requestPolicy,
+    });
+  }
+
+  async getPricingBasis(pricingBasisId: string, requestPolicy?: BidviaClientRequestPolicy) {
+    const context = this.resolveRequestContext(requestPolicy);
+    this.requireTenantId(context);
+    return this.request(`/runtime/pricing-bases/${encodeURIComponent(pricingBasisId)}`, {
+      context,
+      method: 'GET',
+      requestPolicy,
+    });
+  }
+
+  async listDocumentArtifacts(requestPolicy?: BidviaClientRequestPolicy) {
+    const context = this.resolveRequestContext(requestPolicy);
+    this.requireTenantId(context);
+    return this.request('/runtime/document-artifacts', {
+      context,
+      method: 'GET',
+      requestPolicy,
+    });
+  }
+
+  async getDocumentArtifact(documentArtifactId: string, requestPolicy?: BidviaClientRequestPolicy) {
+    const context = this.resolveRequestContext(requestPolicy);
+    this.requireTenantId(context);
+    return this.request(`/runtime/document-artifacts/${encodeURIComponent(documentArtifactId)}`, {
+      context,
+      method: 'GET',
+      requestPolicy,
+    });
+  }
+
+  async listMediaAssets(requestPolicy?: BidviaClientRequestPolicy) {
+    const context = this.resolveRequestContext(requestPolicy);
+    this.requireTenantId(context);
+    return this.request('/runtime/media-assets', {
+      context,
+      method: 'GET',
+      requestPolicy,
+    });
+  }
+
+  async getMediaAsset(mediaAssetId: string, requestPolicy?: BidviaClientRequestPolicy) {
+    const context = this.resolveRequestContext(requestPolicy);
+    this.requireTenantId(context);
+    return this.request(`/runtime/media-assets/${encodeURIComponent(mediaAssetId)}`, {
+      context,
+      method: 'GET',
+      requestPolicy,
+    });
+  }
+
+  async listEvidenceAssets(requestPolicy?: BidviaClientRequestPolicy) {
+    const context = this.resolveRequestContext(requestPolicy);
+    this.requireTenantId(context);
+    return this.request('/runtime/evidence-assets', {
+      context,
+      method: 'GET',
+      requestPolicy,
+    });
+  }
+
+  async getEvidenceAsset(evidenceAssetId: string, requestPolicy?: BidviaClientRequestPolicy) {
+    const context = this.resolveRequestContext(requestPolicy);
+    this.requireTenantId(context);
+    return this.request(`/runtime/evidence-assets/${encodeURIComponent(evidenceAssetId)}`, {
+      context,
+      method: 'GET',
+      requestPolicy,
+    });
+  }
+
+  async listAttachmentBindings(requestPolicy?: BidviaClientRequestPolicy) {
+    const context = this.resolveRequestContext(requestPolicy);
+    this.requireTenantId(context);
+    return this.request('/runtime/attachment-bindings', {
+      context,
+      method: 'GET',
+      requestPolicy,
+    });
+  }
+
+  async getAttachmentBinding(
+    attachmentBindingId: string,
+    requestPolicy?: BidviaClientRequestPolicy,
+  ) {
+    const context = this.resolveRequestContext(requestPolicy);
+    this.requireTenantId(context);
+    return this.request(`/runtime/attachment-bindings/${encodeURIComponent(attachmentBindingId)}`, {
+      context,
+      method: 'GET',
+      requestPolicy,
+    });
+  }
+
   async submitEvidence(
     input: BidviaEvidenceSubmissionInput,
     requestPolicy?: BidviaClientRequestPolicy,
@@ -465,6 +664,14 @@ export class BidviaClient {
     return `/runtime/agents/${encodeURIComponent(registrationId)}${suffix}?tenant_id=${encodeURIComponent(tenantId)}`;
   }
 
+  private requireTenantId(context: BidviaClientContext) {
+    const tenantId = context.tenantId;
+    if (!tenantId) {
+      throw new Error('tenantId is required for tenant-scoped read routes');
+    }
+    return tenantId;
+  }
+
   private requireRegistrationHeaders(context: BidviaClientContext) {
     const principalId = context.principalId;
     if (!principalId) {
@@ -479,7 +686,7 @@ export class BidviaClient {
   private requireSessionHeaders(context: BidviaClientContext) {
     const sessionId = context.sessionId;
     if (!sessionId) {
-      throw new Error('sessionId is required for claim operations');
+      throw new Error('sessionId is required for session routes');
     }
     return {
       'x-bidvia-session-id': sessionId,

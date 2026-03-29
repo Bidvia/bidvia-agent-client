@@ -49,14 +49,25 @@ Think about this repo in this order:
 2. configure the right context for the environment
 3. use the read-only `environment-mode` command when you need visibility into whether the current base URL resolves to `local`, `sim`, or `production`
 4. use the read-only `runtime-capabilities` command when you need one local JSON view of repo-known runtime-facing facts
-5. choose the right helper family for the current route chain
-6. check the static capability registry when you need machine-readable route or access-context expectations
-7. check the local runtime-capability snapshot when you need one JSON view of repo-known route, MCP, and local server facts
-8. check the local server-capability normalization surface when you need to parse one sample server-derived capability payload into repo shape
-9. check the static MCP-facing tool catalog when you need export-only tool descriptors for shipped bounded slices
-10. build a scenario envelope when the work is a multi-step reviewable flow
-11. export a verification bundle when the run should be reviewable later
-12. use explicit local execution commands when you need the packaged operator path for heartbeat, sync-upload, evidence, or proposal
+5. use the read-only truth-fetch SDK helpers or CLI commands when you need approved frozen Core reads for account, governance, semantic, pricing, or asset facts
+6. choose the right helper family for the current route chain
+7. check the static capability registry when you need machine-readable route or access-context expectations
+8. check the local runtime-capability snapshot when you need one JSON view of repo-known route, MCP, and local server facts
+9. check the local server-capability normalization surface when you need to parse one sample server-derived capability payload into repo shape
+10. check the static MCP-facing tool catalog when you need export-only tool descriptors for shipped bounded slices
+11. build a scenario envelope when the work is a multi-step reviewable flow
+12. export a verification bundle when the run should be reviewable later
+13. use explicit local execution commands when you need the packaged operator path for heartbeat, sync-upload, evidence, or proposal
+
+In this phase, truth-fetch is shipped through the SDK and CLI only. MCP truth-fetch remains deferred, so use the local stdio MCP seam for the already-shipped review-safe and execution surfaces only.
+
+Safe operator order for truth-fetch work:
+
+1. resolve the right `baseUrl` and `tenantId`
+2. start with read-only CLI visibility commands or the matching SDK read helper
+3. use explicit identifier flags for detail reads such as `--registration-id`, `--concept-id`, or `--media-asset-id`
+4. keep execution commands separate from truth-fetch reads
+5. treat returned payloads as frozen-route readbacks, not as new client-owned authority
 
 ## Environment mode visibility
 
@@ -113,6 +124,33 @@ It is intentionally descriptive-only. Use it to inspect repo-local facts such as
 - whether a helper is an atomic route or a bounded scenario helper
 
 This registry does not negotiate with a live runtime, fetch server-provided capabilities, or generate requests from metadata. It is a machine-readable map of the shipped client surface only.
+
+## Truth-fetch reads
+
+The repo now ships a broad read-only truth-fetch layer across the SDK and CLI for approved frozen Core read routes. Today that covers:
+
+- account agents, account agent bindings, and account records
+- agent presence and authority
+- canonical semantic concepts
+- pricing bases
+- document artifacts, media assets, evidence assets, and attachment bindings
+
+Runnable repo-local example:
+
+```bash
+npx tsx examples/truth-fetch.ts
+```
+
+Built CLI examples after `npm run build`:
+
+```bash
+node dist/cli.js account-agents
+node dist/cli.js agent-presence --registration-id areg-1
+node dist/cli.js pricing-bases
+node dist/cli.js media-asset --media-asset-id media-1
+```
+
+This truth-fetch layer stays read-only. It does not add hosted runtime behavior, live negotiation, capability truth integration, richer governance deep reads, login, or any MCP truth-fetch surface.
 
 ## Local runtime-capability snapshot
 

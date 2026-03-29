@@ -82,6 +82,10 @@ test('buildLocalRuntimeCapabilitySnapshot keeps deferred server negotiation expl
   assert.match(snapshot.deferredServerNegotiation.lastUpdatedAt, /^\d{4}-\d{2}-\d{2}T/);
   assert.equal(snapshot.localMcpServer.available, true);
   assert.equal(snapshot.routeCapabilities.items.some((capability) => capability.helperKey === 'postHeartbeat'), true);
+  assert.equal(
+    snapshot.routeCapabilities.items.some((capability) => capability.helperKey === 'listCanonicalSemanticConcepts'),
+    true,
+  );
   assert.deepEqual(
     snapshot.routeCapabilities.items.find((capability) => capability.helperKey === 'postHeartbeat'),
     {
@@ -94,6 +98,20 @@ test('buildLocalRuntimeCapabilitySnapshot keeps deferred server negotiation expl
       level: 'atomic-route',
       localCapabilityTier: 'L2-registration-runtime',
       localCapabilityRiskTier: 'runtime-execution',
+    },
+  );
+  assert.deepEqual(
+    snapshot.routeCapabilities.items.find((capability) => capability.helperKey === 'getAttachmentBinding'),
+    {
+      helperKey: 'getAttachmentBinding',
+      routePathTemplate: '/runtime/attachment-bindings/:attachment_binding_id',
+      httpMethod: 'GET',
+      accessContextFamily: 'tenant',
+      requiredContext: ['tenantId'],
+      scope: 'read',
+      level: 'atomic-route',
+      localCapabilityTier: 'L0-observe-only',
+      localCapabilityRiskTier: 'observe-only',
     },
   );
   assert.deepEqual(
