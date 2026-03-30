@@ -4,6 +4,7 @@ import type {
   BidviaMcpToolCallRequest,
   BidviaMcpToolCallResponse,
   BidviaMcpToolDescriptor,
+  BidviaRouteCapability,
 } from './contracts.js';
 import { getRouteCapability } from './capabilities.js';
 import {
@@ -23,6 +24,26 @@ import type { BidviaIndustryUniverseScenarioPlanInput } from './universe.js';
 
 function cloneMcpToolCatalog(catalog: ReadonlyArray<BidviaMcpToolDescriptor>): BidviaMcpToolDescriptor[] {
   return structuredClone([...catalog]);
+}
+
+type BidviaMcpOperatorToolDiscovery = BidviaMcpToolDescriptor & Pick<
+  BidviaRouteCapability,
+  'routePathTemplate' | 'httpMethod' | 'scope' | 'level'
+>;
+
+export interface BidviaLocalMcpProductizationSnapshot {
+  serverBoundary: {
+    transport: 'stdio';
+    hosted: false;
+    remoteDiscovery: false;
+    sourceOfTruth: 'local-sdk-helpers';
+  };
+  discoverability: {
+    truthFetchReadOnly: true;
+    reviewSafeLocalOnly: true;
+    executionRequiresLocalExecutionClient: true;
+  };
+  tools: BidviaMcpOperatorToolDiscovery[];
 }
 
 function createMcpToolDescriptor(params: {
@@ -305,6 +326,38 @@ export function getMcpToolDescriptor(toolName: string): BidviaMcpToolDescriptor 
 
 export function exportMcpToolCatalog(): BidviaMcpToolDescriptor[] {
   return cloneMcpToolCatalog(bidviaMcpTools);
+}
+
+function buildMcpOperatorToolDiscovery(tool: BidviaMcpToolDescriptor): BidviaMcpOperatorToolDiscovery {
+  const capability = getRouteCapability(tool.helperRef.capabilityKey ?? tool.helperRef.helperKey);
+  if (!capability) {
+    throw new Error(`missing MCP capability metadata for ${tool.toolName}`);
+  }
+
+  return {
+    ...structuredClone(tool),
+    routePathTemplate: capability.routePathTemplate,
+    httpMethod: capability.httpMethod,
+    scope: capability.scope,
+    level: capability.level,
+  };
+}
+
+export function buildLocalMcpProductizationSnapshot(): BidviaLocalMcpProductizationSnapshot {
+  return {
+    serverBoundary: {
+      transport: 'stdio',
+      hosted: false,
+      remoteDiscovery: false,
+      sourceOfTruth: 'local-sdk-helpers',
+    },
+    discoverability: {
+      truthFetchReadOnly: true,
+      reviewSafeLocalOnly: true,
+      executionRequiresLocalExecutionClient: true,
+    },
+    tools: bidviaMcpTools.map((tool) => buildMcpOperatorToolDiscovery(tool)),
+  };
 }
 
 type BidviaMcpDispatchResult = {

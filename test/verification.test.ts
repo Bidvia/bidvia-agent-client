@@ -88,7 +88,11 @@ test('review packet contracts represent reviewer-ready summary and bounded statu
       {
         sectionKey: 'routes',
         title: 'Route coverage',
-        entries: ['completed:createListing', 'pending-review:activateListing', 'pending-review:generateMatchCandidates'],
+        entries: [
+          'completed:1/3:createListing:requires=tenantId|principalId|companyId',
+          'pending-review:2/3:activateListing:requires=tenantId|principalId|companyId',
+          'pending-review:3/3:generateMatchCandidates:requires=tenantId|principalId|companyId',
+        ],
       },
       {
         sectionKey: 'verification',
@@ -98,6 +102,8 @@ test('review packet contracts represent reviewer-ready summary and bounded statu
           'review-packet-status:partial',
           'completed-routes:1/3',
           'pending-routes:2',
+          'next-pending-route:activateListing',
+          'route-coverage-note:completed-prefix-only',
           'server-truth-claimed:false',
           'adjudication-outcome-included:false',
         ],
@@ -105,7 +111,7 @@ test('review packet contracts represent reviewer-ready summary and bounded statu
       {
         sectionKey: 'records',
         title: 'Recorded ids',
-        entries: ['listings:listing-1'],
+        entries: ['record-group:listings:count=1', 'listings:listing-1'],
       },
     ],
   };
@@ -552,7 +558,11 @@ test('buildReviewPacket derives reviewer-ready sections and complete status from
     {
       sectionKey: 'routes',
       title: 'Route coverage',
-      entries: ['completed:createListing', 'completed:activateListing', 'completed:generateMatchCandidates'],
+      entries: [
+        'completed:1/3:createListing:requires=tenantId|principalId|companyId',
+        'completed:2/3:activateListing:requires=tenantId|principalId|companyId',
+        'completed:3/3:generateMatchCandidates:requires=tenantId|principalId|companyId',
+      ],
     },
     {
       sectionKey: 'verification',
@@ -562,6 +572,8 @@ test('buildReviewPacket derives reviewer-ready sections and complete status from
         'review-packet-status:complete',
         'completed-routes:3/3',
         'pending-routes:0',
+        'next-pending-route:none',
+        'route-coverage-note:completed-prefix-only',
         'server-truth-claimed:false',
         'adjudication-outcome-included:false',
       ],
@@ -569,7 +581,12 @@ test('buildReviewPacket derives reviewer-ready sections and complete status from
     {
       sectionKey: 'records',
       title: 'Recorded ids',
-      entries: ['listings:listing-1', 'matches:match-1'],
+      entries: [
+        'record-group:listings:count=1',
+        'listings:listing-1',
+        'record-group:matches:count=1',
+        'matches:match-1',
+      ],
     },
   ]);
 });
@@ -638,6 +655,83 @@ test('buildReviewPacket derives partial and pending-review only from completed r
   assert.deepEqual(partialPacket.details.verification.pendingRouteKeys, [
     'activateListing',
     'generateMatchCandidates',
+  ]);
+});
+
+test('buildReviewPacket exposes richer route-chain and record-group readback from existing bounded facts only', () => {
+  const plan = buildIndustryUniverseScenarioPlan({
+    scenarioId: 'scenario-industry-universe-1',
+    scenarioLabel: 'industry-universe-soda-ash-light',
+    sourceRefs: ['source://market/soda-ash-light'],
+    evidenceRefs: ['evidence://supply/soda-ash-light'],
+    traceIds: ['trace-1'],
+    workflowIds: ['wf-1'],
+    createListing: {
+      listingId: 'listing-1',
+      listingType: 'supply',
+      category: 'basic inorganic industrial chemical',
+      sku: 'sodium-carbonate-soda-ash-light',
+      quantityValue: '15',
+      quantityUnit: 'tons',
+      regionSummary: 'China -> Vietnam',
+      verificationStatus: 'verified',
+      freshnessTs: '2026-03-25T20:20:00Z',
+      traceId: 'trace-1',
+      idempotencyKey: 'listing-1',
+      now: '2026-03-25T20:20:00Z',
+    },
+    activateListing: {
+      now: '2026-03-25T20:21:00Z',
+    },
+    generateMatchCandidates: {
+      upstreamDecision: 'READY_FOR_ROUTING',
+      requiredEvidenceLevel: 1,
+      detectedEvidenceLevel: 1,
+      workflowRunId: 'wf-1',
+      triggerEventId: 'evt-1',
+      topN: 10,
+      now: '2026-03-25T20:22:00Z',
+    },
+  });
+
+  const packet = buildReviewPacket({
+    scenario: plan.envelope,
+    bundle: buildScenarioVerificationBundle({
+      scenario: plan.envelope,
+      verificationMode: 'review-safe',
+      completedRouteChain: [plan.envelope.expectedRouteChain[0]!],
+      recordIds: {
+        listings: ['listing-1'],
+        matches: ['match-1', 'match-2'],
+      },
+    }),
+  });
+
+  const routesSection = packet.sections.find((section) => section.sectionKey === 'routes');
+  const verificationSection = packet.sections.find((section) => section.sectionKey === 'verification');
+  const recordsSection = packet.sections.find((section) => section.sectionKey === 'records');
+
+  assert.deepEqual(routesSection?.entries, [
+    'completed:1/3:createListing:requires=tenantId|principalId|companyId',
+    'pending-review:2/3:activateListing:requires=tenantId|principalId|companyId',
+    'pending-review:3/3:generateMatchCandidates:requires=tenantId|principalId|companyId',
+  ]);
+  assert.deepEqual(verificationSection?.entries, [
+    'verification-mode:review-safe',
+    'review-packet-status:partial',
+    'completed-routes:1/3',
+    'pending-routes:2',
+    'next-pending-route:activateListing',
+    'route-coverage-note:completed-prefix-only',
+    'server-truth-claimed:false',
+    'adjudication-outcome-included:false',
+  ]);
+  assert.deepEqual(recordsSection?.entries, [
+    'record-group:listings:count=1',
+    'listings:listing-1',
+    'record-group:matches:count=2',
+    'matches:match-1',
+    'matches:match-2',
   ]);
 });
 

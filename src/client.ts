@@ -229,6 +229,97 @@ export class BidviaClient {
     );
   }
 
+  async getAgentReadiness(agentRegistrationId: string, requestPolicy?: BidviaClientRequestPolicy) {
+    const context = this.resolveRequestContext(requestPolicy);
+    return this.request(
+      `/runtime/agents/${encodeURIComponent(agentRegistrationId)}/readiness?tenant_id=${encodeURIComponent(this.requireTenantId(context))}`,
+      {
+        context,
+        method: 'GET',
+        headers: this.requireAdminSessionHeaders(context),
+        requestPolicy,
+      },
+    );
+  }
+
+  async getAgentSummary(agentRegistrationId: string, requestPolicy?: BidviaClientRequestPolicy) {
+    const context = this.resolveRequestContext(requestPolicy);
+    return this.request(
+      `/runtime/agents/${encodeURIComponent(agentRegistrationId)}/summary?tenant_id=${encodeURIComponent(this.requireTenantId(context))}`,
+      {
+        context,
+        method: 'GET',
+        headers: this.requireAdminSessionHeaders(context),
+        requestPolicy,
+      },
+    );
+  }
+
+  async getAgentAuthorityProfile(
+    agentRegistrationId: string,
+    requestPolicy?: BidviaClientRequestPolicy,
+  ) {
+    const context = this.resolveRequestContext(requestPolicy);
+    return this.request(
+      `/runtime/agents/${encodeURIComponent(agentRegistrationId)}/authority-profile?tenant_id=${encodeURIComponent(this.requireTenantId(context))}`,
+      {
+        context,
+        method: 'GET',
+        headers: this.requireAdminSessionHeaders(context),
+        requestPolicy,
+      },
+    );
+  }
+
+  async getAgentAuthorityLadder(
+    agentRegistrationId: string,
+    requestPolicy?: BidviaClientRequestPolicy,
+  ) {
+    const context = this.resolveRequestContext(requestPolicy);
+    return this.request(
+      `/runtime/agents/${encodeURIComponent(agentRegistrationId)}/authority-ladder?tenant_id=${encodeURIComponent(this.requireTenantId(context))}`,
+      {
+        context,
+        method: 'GET',
+        headers: this.requireAdminSessionHeaders(context),
+        requestPolicy,
+      },
+    );
+  }
+
+  async listAgentCapabilityProfiles(
+    agentRegistrationId: string,
+    requestPolicy?: BidviaClientRequestPolicy,
+  ) {
+    const context = this.resolveRequestContext(requestPolicy);
+    return this.request(
+      `/runtime/agents/${encodeURIComponent(agentRegistrationId)}/capability-profiles?tenant_id=${encodeURIComponent(this.requireTenantId(context))}`,
+      {
+        context,
+        method: 'GET',
+        headers: this.requireAdminSessionHeaders(context),
+        requestPolicy,
+      },
+    );
+  }
+
+  async getAgentCapabilityProfile(
+    agentRegistrationId: string,
+    capabilityProfileId: string,
+    requestPolicy?: BidviaClientRequestPolicy,
+  ) {
+    const context = this.resolveRequestContext(requestPolicy);
+    return this.request(
+      `/runtime/agents/${encodeURIComponent(agentRegistrationId)}/capability-profiles/${encodeURIComponent(capabilityProfileId)}?tenant_id=${encodeURIComponent(this.requireTenantId(context))}`,
+      {
+        context,
+        method: 'GET',
+        headers: this.requireAdminSessionHeaders(context),
+        requestPolicy,
+      },
+    );
+  }
+
   async listCanonicalSemanticConcepts(requestPolicy?: BidviaClientRequestPolicy) {
     const context = this.resolveRequestContext(requestPolicy);
     this.requireTenantId(context);
@@ -255,6 +346,110 @@ export class BidviaClient {
     );
   }
 
+  async listCanonicalSemanticLabels(requestPolicy?: BidviaClientRequestPolicy) {
+    const context = this.resolveRequestContext(requestPolicy);
+    this.requireTenantId(context);
+    return this.request('/runtime/canonical-semantic-labels', {
+      context,
+      method: 'GET',
+      requestPolicy,
+    });
+  }
+
+  async getCanonicalSemanticLabel(
+    canonicalSemanticLabelId: string,
+    requestPolicy?: BidviaClientRequestPolicy,
+  ) {
+    const context = this.resolveRequestContext(requestPolicy);
+    this.requireTenantId(context);
+    return this.request(
+      `/runtime/canonical-semantic-labels/${encodeURIComponent(canonicalSemanticLabelId)}`,
+      {
+        context,
+        method: 'GET',
+        requestPolicy,
+      },
+    );
+  }
+
+  async listCanonicalSemanticMappings(requestPolicy?: BidviaClientRequestPolicy) {
+    const context = this.resolveRequestContext(requestPolicy);
+    this.requireTenantId(context);
+    return this.request('/runtime/canonical-semantic-mappings', {
+      context,
+      method: 'GET',
+      requestPolicy,
+    });
+  }
+
+  async getCanonicalSemanticMapping(
+    canonicalSemanticMappingId: string,
+    requestPolicy?: BidviaClientRequestPolicy,
+  ) {
+    const context = this.resolveRequestContext(requestPolicy);
+    this.requireTenantId(context);
+    return this.request(
+      `/runtime/canonical-semantic-mappings/${encodeURIComponent(canonicalSemanticMappingId)}`,
+      {
+        context,
+        method: 'GET',
+        requestPolicy,
+      },
+    );
+  }
+
+  async listCanonicalSemanticTaxonomyEntries(requestPolicy?: BidviaClientRequestPolicy) {
+    const context = this.resolveRequestContext(requestPolicy);
+    this.requireTenantId(context);
+    return this.request('/runtime/canonical-semantic-taxonomy-entries', {
+      context,
+      method: 'GET',
+      requestPolicy,
+    });
+  }
+
+  async getCanonicalSemanticTaxonomyEntry(
+    canonicalSemanticTaxonomyEntryId: string,
+    requestPolicy?: BidviaClientRequestPolicy,
+  ) {
+    const context = this.resolveRequestContext(requestPolicy);
+    this.requireTenantId(context);
+    return this.request(
+      `/runtime/canonical-semantic-taxonomy-entries/${encodeURIComponent(canonicalSemanticTaxonomyEntryId)}`,
+      {
+        context,
+        method: 'GET',
+        requestPolicy,
+      },
+    );
+  }
+
+  async listCanonicalSemanticLineageLinks(requestPolicy?: BidviaClientRequestPolicy) {
+    const context = this.resolveRequestContext(requestPolicy);
+    this.requireTenantId(context);
+    return this.request('/runtime/canonical-semantic-lineage-links', {
+      context,
+      method: 'GET',
+      requestPolicy,
+    });
+  }
+
+  async getCanonicalSemanticLineageLink(
+    canonicalSemanticLineageLinkId: string,
+    requestPolicy?: BidviaClientRequestPolicy,
+  ) {
+    const context = this.resolveRequestContext(requestPolicy);
+    this.requireTenantId(context);
+    return this.request(
+      `/runtime/canonical-semantic-lineage-links/${encodeURIComponent(canonicalSemanticLineageLinkId)}`,
+      {
+        context,
+        method: 'GET',
+        requestPolicy,
+      },
+    );
+  }
+
   async listPricingBases(requestPolicy?: BidviaClientRequestPolicy) {
     const context = this.resolveRequestContext(requestPolicy);
     this.requireTenantId(context);
@@ -269,6 +464,124 @@ export class BidviaClient {
     const context = this.resolveRequestContext(requestPolicy);
     this.requireTenantId(context);
     return this.request(`/runtime/pricing-bases/${encodeURIComponent(pricingBasisId)}`, {
+      context,
+      method: 'GET',
+      requestPolicy,
+    });
+  }
+
+  async listPricingRuleAtoms(requestPolicy?: BidviaClientRequestPolicy) {
+    const context = this.resolveRequestContext(requestPolicy);
+    this.requireTenantId(context);
+    return this.request('/runtime/pricing-rule-atoms', {
+      context,
+      method: 'GET',
+      requestPolicy,
+    });
+  }
+
+  async getPricingRuleAtom(pricingRuleAtomId: string, requestPolicy?: BidviaClientRequestPolicy) {
+    const context = this.resolveRequestContext(requestPolicy);
+    this.requireTenantId(context);
+    return this.request(`/runtime/pricing-rule-atoms/${encodeURIComponent(pricingRuleAtomId)}`, {
+      context,
+      method: 'GET',
+      requestPolicy,
+    });
+  }
+
+  async listPricingQuotationMethodModules(requestPolicy?: BidviaClientRequestPolicy) {
+    const context = this.resolveRequestContext(requestPolicy);
+    this.requireTenantId(context);
+    return this.request('/runtime/pricing-quotation-method-modules', {
+      context,
+      method: 'GET',
+      requestPolicy,
+    });
+  }
+
+  async getPricingQuotationMethodModule(
+    pricingQuotationMethodModuleId: string,
+    requestPolicy?: BidviaClientRequestPolicy,
+  ) {
+    const context = this.resolveRequestContext(requestPolicy);
+    this.requireTenantId(context);
+    return this.request(
+      `/runtime/pricing-quotation-method-modules/${encodeURIComponent(pricingQuotationMethodModuleId)}`,
+      {
+        context,
+        method: 'GET',
+        requestPolicy,
+      },
+    );
+  }
+
+  async listPricingQuoteTemplates(requestPolicy?: BidviaClientRequestPolicy) {
+    const context = this.resolveRequestContext(requestPolicy);
+    this.requireTenantId(context);
+    return this.request('/runtime/pricing-quote-templates', {
+      context,
+      method: 'GET',
+      requestPolicy,
+    });
+  }
+
+  async getPricingQuoteTemplate(
+    pricingQuoteTemplateId: string,
+    requestPolicy?: BidviaClientRequestPolicy,
+  ) {
+    const context = this.resolveRequestContext(requestPolicy);
+    this.requireTenantId(context);
+    return this.request(
+      `/runtime/pricing-quote-templates/${encodeURIComponent(pricingQuoteTemplateId)}`,
+      {
+        context,
+        method: 'GET',
+        requestPolicy,
+      },
+    );
+  }
+
+  async listPricingQuotations(requestPolicy?: BidviaClientRequestPolicy) {
+    const context = this.resolveRequestContext(requestPolicy);
+    this.requireTenantId(context);
+    return this.request('/runtime/pricing-quotations', {
+      context,
+      method: 'GET',
+      requestPolicy,
+    });
+  }
+
+  async getPricingQuotation(
+    pricingQuotationId: string,
+    requestPolicy?: BidviaClientRequestPolicy,
+  ) {
+    const context = this.resolveRequestContext(requestPolicy);
+    this.requireTenantId(context);
+    return this.request(`/runtime/pricing-quotations/${encodeURIComponent(pricingQuotationId)}`, {
+      context,
+      method: 'GET',
+      requestPolicy,
+    });
+  }
+
+  async listPricingExplanations(requestPolicy?: BidviaClientRequestPolicy) {
+    const context = this.resolveRequestContext(requestPolicy);
+    this.requireTenantId(context);
+    return this.request('/runtime/pricing-explanations', {
+      context,
+      method: 'GET',
+      requestPolicy,
+    });
+  }
+
+  async getPricingExplanation(
+    pricingExplanationId: string,
+    requestPolicy?: BidviaClientRequestPolicy,
+  ) {
+    const context = this.resolveRequestContext(requestPolicy);
+    this.requireTenantId(context);
+    return this.request(`/runtime/pricing-explanations/${encodeURIComponent(pricingExplanationId)}`, {
       context,
       method: 'GET',
       requestPolicy,
@@ -352,6 +665,39 @@ export class BidviaClient {
     const context = this.resolveRequestContext(requestPolicy);
     this.requireTenantId(context);
     return this.request(`/runtime/attachment-bindings/${encodeURIComponent(attachmentBindingId)}`, {
+      context,
+      method: 'GET',
+      requestPolicy,
+    });
+  }
+
+  async listFileResources(requestPolicy?: BidviaClientRequestPolicy) {
+    const context = this.resolveRequestContext(requestPolicy);
+    this.requireTenantId(context);
+    return this.request('/runtime/file-resources', {
+      context,
+      method: 'GET',
+      requestPolicy,
+    });
+  }
+
+  async getFileResource(fileResourceId: string, requestPolicy?: BidviaClientRequestPolicy) {
+    const context = this.resolveRequestContext(requestPolicy);
+    this.requireTenantId(context);
+    return this.request(`/runtime/file-resources/${encodeURIComponent(fileResourceId)}`, {
+      context,
+      method: 'GET',
+      requestPolicy,
+    });
+  }
+
+  async listTargetAttachmentBindings(
+    targetRef: string,
+    requestPolicy?: BidviaClientRequestPolicy,
+  ) {
+    const context = this.resolveRequestContext(requestPolicy);
+    this.requireTenantId(context);
+    return this.request(`/runtime/targets/${encodeURIComponent(targetRef)}/attachment-bindings`, {
       context,
       method: 'GET',
       requestPolicy,

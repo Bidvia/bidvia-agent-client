@@ -20,6 +20,10 @@ import { buildSyncUploadInput } from './sync.js';
 import { buildEvidenceSubmissionInput } from './evidence.js';
 import { buildProposalSubmissionInput } from './proposals.js';
 import {
+  bidviaNextStageReadRouteDiscoveryGroups,
+  bidviaRouteCapabilities,
+} from './capabilities.js';
+import {
   connectionApprovalScenarioAdapter,
   industryUniverseScenarioAdapter,
   opportunityPackageHandoffAdapter,
@@ -27,6 +31,7 @@ import {
   type BidviaExecutionAdapter,
   type BidviaRegisteredAgentExecutionCommand,
 } from './adapters.js';
+import { buildLocalMcpProductizationSnapshot } from './mcp.js';
 import { buildCommercialActionScenarioPlan } from './commercial-action.js';
 import { buildMultiBusinessChainCoordinatorPlan } from './coordinator.js';
 import { normalizeServerCapabilityPayload } from './server-capabilities.js';
@@ -146,10 +151,34 @@ type BidviaCliTruthFetchCommand =
   | 'account-records'
   | 'agent-presence'
   | 'agent-authority'
+  | 'agent-readiness'
+  | 'agent-summary'
+  | 'agent-authority-profile'
+  | 'agent-authority-ladder'
+  | 'agent-capability-profiles'
+  | 'agent-capability-profile'
   | 'canonical-semantic-concepts'
   | 'canonical-semantic-concept'
+  | 'canonical-semantic-labels'
+  | 'canonical-semantic-label'
+  | 'canonical-semantic-mappings'
+  | 'canonical-semantic-mapping'
+  | 'canonical-semantic-taxonomy-entries'
+  | 'canonical-semantic-taxonomy-entry'
+  | 'canonical-semantic-lineage-links'
+  | 'canonical-semantic-lineage-link'
   | 'pricing-bases'
   | 'pricing-basis'
+  | 'pricing-rule-atoms'
+  | 'pricing-rule-atom'
+  | 'pricing-quotation-method-modules'
+  | 'pricing-quotation-method-module'
+  | 'pricing-quote-templates'
+  | 'pricing-quote-template'
+  | 'pricing-quotations'
+  | 'pricing-quotation'
+  | 'pricing-explanations'
+  | 'pricing-explanation'
   | 'document-artifacts'
   | 'document-artifact'
   | 'media-assets'
@@ -157,7 +186,10 @@ type BidviaCliTruthFetchCommand =
   | 'evidence-assets'
   | 'evidence-asset'
   | 'attachment-bindings'
-  | 'attachment-binding';
+  | 'attachment-binding'
+  | 'file-resources'
+  | 'file-resource'
+  | 'target-attachment-bindings';
 
 type BidviaCliTruthFetchCommandDefinition = {
   run: (client: BidviaClient, parsedArgs: BidviaCliParsedArgs) => Promise<unknown>;
@@ -166,22 +198,46 @@ type BidviaCliTruthFetchCommandDefinition = {
 type BidviaCliSupportedValueFlag =
   | '--input'
   | '--registration-id'
+  | '--capability-profile-id'
   | '--concept-id'
+  | '--label-id'
+  | '--mapping-id'
+  | '--taxonomy-entry-id'
+  | '--lineage-link-id'
   | '--pricing-basis-id'
+  | '--pricing-rule-atom-id'
+  | '--pricing-quotation-method-module-id'
+  | '--pricing-quote-template-id'
+  | '--pricing-quotation-id'
+  | '--pricing-explanation-id'
   | '--document-artifact-id'
   | '--media-asset-id'
   | '--evidence-asset-id'
-  | '--attachment-binding-id';
+  | '--attachment-binding-id'
+  | '--file-resource-id'
+  | '--target-ref';
 
 const bidviaCliSupportedValueFlags = new Set<BidviaCliSupportedValueFlag>([
   '--input',
   '--registration-id',
+  '--capability-profile-id',
   '--concept-id',
+  '--label-id',
+  '--mapping-id',
+  '--taxonomy-entry-id',
+  '--lineage-link-id',
   '--pricing-basis-id',
+  '--pricing-rule-atom-id',
+  '--pricing-quotation-method-module-id',
+  '--pricing-quote-template-id',
+  '--pricing-quotation-id',
+  '--pricing-explanation-id',
   '--document-artifact-id',
   '--media-asset-id',
   '--evidence-asset-id',
   '--attachment-binding-id',
+  '--file-resource-id',
+  '--target-ref',
 ]);
 
 const truthFetchVisibilityHelpLines = [
@@ -191,10 +247,34 @@ const truthFetchVisibilityHelpLines = [
   '  account-records',
   '  agent-presence --registration-id ...',
   '  agent-authority --registration-id ...',
+  '  agent-readiness --registration-id ...',
+  '  agent-summary --registration-id ...',
+  '  agent-authority-profile --registration-id ...',
+  '  agent-authority-ladder --registration-id ...',
+  '  agent-capability-profiles --registration-id ...',
+  '  agent-capability-profile --registration-id ... --capability-profile-id ...',
   '  canonical-semantic-concepts',
   '  canonical-semantic-concept --concept-id ...',
+  '  canonical-semantic-labels',
+  '  canonical-semantic-label --label-id ...',
+  '  canonical-semantic-mappings',
+  '  canonical-semantic-mapping --mapping-id ...',
+  '  canonical-semantic-taxonomy-entries',
+  '  canonical-semantic-taxonomy-entry --taxonomy-entry-id ...',
+  '  canonical-semantic-lineage-links',
+  '  canonical-semantic-lineage-link --lineage-link-id ...',
   '  pricing-bases',
   '  pricing-basis --pricing-basis-id ...',
+  '  pricing-rule-atoms',
+  '  pricing-rule-atom --pricing-rule-atom-id ...',
+  '  pricing-quotation-method-modules',
+  '  pricing-quotation-method-module --pricing-quotation-method-module-id ...',
+  '  pricing-quote-templates',
+  '  pricing-quote-template --pricing-quote-template-id ...',
+  '  pricing-quotations',
+  '  pricing-quotation --pricing-quotation-id ...',
+  '  pricing-explanations',
+  '  pricing-explanation --pricing-explanation-id ...',
   '  document-artifacts',
   '  document-artifact --document-artifact-id ...',
   '  media-assets',
@@ -203,30 +283,60 @@ const truthFetchVisibilityHelpLines = [
   '  evidence-asset --evidence-asset-id ...',
   '  attachment-bindings',
   '  attachment-binding --attachment-binding-id ...',
+  '  file-resources',
+  '  file-resource --file-resource-id ...',
+  '  target-attachment-bindings --target-ref ...',
 ] as const;
 
-const truthFetchRequiredFlagByCommand = {
-  'account-agent': '--registration-id',
-  'agent-presence': '--registration-id',
-  'agent-authority': '--registration-id',
-  'canonical-semantic-concept': '--concept-id',
-  'pricing-basis': '--pricing-basis-id',
-  'document-artifact': '--document-artifact-id',
-  'media-asset': '--media-asset-id',
-  'evidence-asset': '--evidence-asset-id',
-  'attachment-binding': '--attachment-binding-id',
-} as const satisfies Partial<Record<string, BidviaCliSupportedValueFlag>>;
+const truthFetchRequiredFlagsByCommand = {
+  'account-agent': ['--registration-id'],
+  'agent-presence': ['--registration-id'],
+  'agent-authority': ['--registration-id'],
+  'agent-readiness': ['--registration-id'],
+  'agent-summary': ['--registration-id'],
+  'agent-authority-profile': ['--registration-id'],
+  'agent-authority-ladder': ['--registration-id'],
+  'agent-capability-profiles': ['--registration-id'],
+  'agent-capability-profile': ['--registration-id', '--capability-profile-id'],
+  'canonical-semantic-concept': ['--concept-id'],
+  'canonical-semantic-label': ['--label-id'],
+  'canonical-semantic-mapping': ['--mapping-id'],
+  'canonical-semantic-taxonomy-entry': ['--taxonomy-entry-id'],
+  'canonical-semantic-lineage-link': ['--lineage-link-id'],
+  'pricing-basis': ['--pricing-basis-id'],
+  'pricing-rule-atom': ['--pricing-rule-atom-id'],
+  'pricing-quotation-method-module': ['--pricing-quotation-method-module-id'],
+  'pricing-quote-template': ['--pricing-quote-template-id'],
+  'pricing-quotation': ['--pricing-quotation-id'],
+  'pricing-explanation': ['--pricing-explanation-id'],
+  'document-artifact': ['--document-artifact-id'],
+  'media-asset': ['--media-asset-id'],
+  'evidence-asset': ['--evidence-asset-id'],
+  'attachment-binding': ['--attachment-binding-id'],
+  'file-resource': ['--file-resource-id'],
+  'target-attachment-bindings': ['--target-ref'],
+} as const satisfies Partial<Record<string, readonly BidviaCliSupportedValueFlag[]>>;
 
 const truthFetchCollectionCommands = new Set([
   'account-agents',
   'account-agent-bindings',
   'account-records',
   'canonical-semantic-concepts',
+  'canonical-semantic-labels',
+  'canonical-semantic-mappings',
+  'canonical-semantic-taxonomy-entries',
+  'canonical-semantic-lineage-links',
   'pricing-bases',
+  'pricing-rule-atoms',
+  'pricing-quotation-method-modules',
+  'pricing-quote-templates',
+  'pricing-quotations',
+  'pricing-explanations',
   'document-artifacts',
   'media-assets',
   'evidence-assets',
   'attachment-bindings',
+  'file-resources',
 ]);
 
 const truthFetchCommandDefinitions: Record<BidviaCliTruthFetchCommand, BidviaCliTruthFetchCommandDefinition> = {
@@ -248,17 +358,104 @@ const truthFetchCommandDefinitions: Record<BidviaCliTruthFetchCommand, BidviaCli
   'agent-authority': {
     run: (client, parsedArgs) => client.getAgentAuthority(parsedArgs.flagValues['--registration-id']!),
   },
+  'agent-readiness': {
+    run: (client, parsedArgs) => client.getAgentReadiness(parsedArgs.flagValues['--registration-id']!),
+  },
+  'agent-summary': {
+    run: (client, parsedArgs) => client.getAgentSummary(parsedArgs.flagValues['--registration-id']!),
+  },
+  'agent-authority-profile': {
+    run: (client, parsedArgs) => client.getAgentAuthorityProfile(parsedArgs.flagValues['--registration-id']!),
+  },
+  'agent-authority-ladder': {
+    run: (client, parsedArgs) => client.getAgentAuthorityLadder(parsedArgs.flagValues['--registration-id']!),
+  },
+  'agent-capability-profiles': {
+    run: (client, parsedArgs) => client.listAgentCapabilityProfiles(parsedArgs.flagValues['--registration-id']!),
+  },
+  'agent-capability-profile': {
+    run: (client, parsedArgs) => client.getAgentCapabilityProfile(
+      parsedArgs.flagValues['--registration-id']!,
+      parsedArgs.flagValues['--capability-profile-id']!,
+    ),
+  },
   'canonical-semantic-concepts': {
     run: (client) => client.listCanonicalSemanticConcepts(),
   },
   'canonical-semantic-concept': {
     run: (client, parsedArgs) => client.getCanonicalSemanticConcept(parsedArgs.flagValues['--concept-id']!),
   },
+  'canonical-semantic-labels': {
+    run: (client) => client.listCanonicalSemanticLabels(),
+  },
+  'canonical-semantic-label': {
+    run: (client, parsedArgs) => client.getCanonicalSemanticLabel(parsedArgs.flagValues['--label-id']!),
+  },
+  'canonical-semantic-mappings': {
+    run: (client) => client.listCanonicalSemanticMappings(),
+  },
+  'canonical-semantic-mapping': {
+    run: (client, parsedArgs) => client.getCanonicalSemanticMapping(parsedArgs.flagValues['--mapping-id']!),
+  },
+  'canonical-semantic-taxonomy-entries': {
+    run: (client) => client.listCanonicalSemanticTaxonomyEntries(),
+  },
+  'canonical-semantic-taxonomy-entry': {
+    run: (client, parsedArgs) => client.getCanonicalSemanticTaxonomyEntry(
+      parsedArgs.flagValues['--taxonomy-entry-id']!,
+    ),
+  },
+  'canonical-semantic-lineage-links': {
+    run: (client) => client.listCanonicalSemanticLineageLinks(),
+  },
+  'canonical-semantic-lineage-link': {
+    run: (client, parsedArgs) => client.getCanonicalSemanticLineageLink(
+      parsedArgs.flagValues['--lineage-link-id']!,
+    ),
+  },
   'pricing-bases': {
     run: (client) => client.listPricingBases(),
   },
   'pricing-basis': {
     run: (client, parsedArgs) => client.getPricingBasis(parsedArgs.flagValues['--pricing-basis-id']!),
+  },
+  'pricing-rule-atoms': {
+    run: (client) => client.listPricingRuleAtoms(),
+  },
+  'pricing-rule-atom': {
+    run: (client, parsedArgs) => client.getPricingRuleAtom(parsedArgs.flagValues['--pricing-rule-atom-id']!),
+  },
+  'pricing-quotation-method-modules': {
+    run: (client) => client.listPricingQuotationMethodModules(),
+  },
+  'pricing-quotation-method-module': {
+    run: (client, parsedArgs) => client.getPricingQuotationMethodModule(
+      parsedArgs.flagValues['--pricing-quotation-method-module-id']!,
+    ),
+  },
+  'pricing-quote-templates': {
+    run: (client) => client.listPricingQuoteTemplates(),
+  },
+  'pricing-quote-template': {
+    run: (client, parsedArgs) => client.getPricingQuoteTemplate(
+      parsedArgs.flagValues['--pricing-quote-template-id']!,
+    ),
+  },
+  'pricing-quotations': {
+    run: (client) => client.listPricingQuotations(),
+  },
+  'pricing-quotation': {
+    run: (client, parsedArgs) => client.getPricingQuotation(
+      parsedArgs.flagValues['--pricing-quotation-id']!,
+    ),
+  },
+  'pricing-explanations': {
+    run: (client) => client.listPricingExplanations(),
+  },
+  'pricing-explanation': {
+    run: (client, parsedArgs) => client.getPricingExplanation(
+      parsedArgs.flagValues['--pricing-explanation-id']!,
+    ),
   },
   'document-artifacts': {
     run: (client) => client.listDocumentArtifacts(),
@@ -284,6 +481,15 @@ const truthFetchCommandDefinitions: Record<BidviaCliTruthFetchCommand, BidviaCli
   'attachment-binding': {
     run: (client, parsedArgs) => client.getAttachmentBinding(parsedArgs.flagValues['--attachment-binding-id']!),
   },
+  'file-resources': {
+    run: (client) => client.listFileResources(),
+  },
+  'file-resource': {
+    run: (client, parsedArgs) => client.getFileResource(parsedArgs.flagValues['--file-resource-id']!),
+  },
+  'target-attachment-bindings': {
+    run: (client, parsedArgs) => client.listTargetAttachmentBindings(parsedArgs.flagValues['--target-ref']!),
+  },
 };
 
 function getSupportedValueFlagsForCommand(command: string): readonly BidviaCliSupportedValueFlag[] {
@@ -291,9 +497,9 @@ function getSupportedValueFlagsForCommand(command: string): readonly BidviaCliSu
     return ['--input'];
   }
 
-  const requiredFlag = truthFetchRequiredFlagByCommand[command as keyof typeof truthFetchRequiredFlagByCommand];
-  if (requiredFlag) {
-    return [requiredFlag];
+  const requiredFlags = truthFetchRequiredFlagsByCommand[command as keyof typeof truthFetchRequiredFlagsByCommand];
+  if (requiredFlags) {
+    return requiredFlags;
   }
 
   if (truthFetchCollectionCommands.has(command)) {
@@ -576,6 +782,7 @@ function printHelp(printLine: (value: string) => void): void {
   printLine('  runtime-capabilities');
   printLine('  launch-topology-smoke');
   printLine('  server-capabilities');
+  printLine('  operator-discovery');
   for (const line of truthFetchVisibilityHelpLines) {
     printLine(line);
   }
@@ -601,6 +808,25 @@ function printHelp(printLine: (value: string) => void): void {
   printLine('  commercial-action-verification-wave-preview');
   printLine('  verification-bundle-preview [--input registration-lifecycle|registered-agent-operations]');
   printLine('  verification-bundle-export [--input registration-lifecycle|registered-agent-operations]');
+}
+
+function buildOperatorDiscoverySnapshot() {
+  return {
+    command: 'operator-discovery',
+    scope: 'local-only',
+    cli: {
+      routeCapabilities: structuredClone(bidviaRouteCapabilities),
+      nextStageReadRouteDiscoveryGroups: bidviaNextStageReadRouteDiscoveryGroups.map((group) => ({
+        groupKey: group.groupKey,
+        label: group.label,
+        discoveryStatus: group.discoveryStatus,
+        discoveryOnly: group.discoveryOnly,
+        serverTruthClaimed: group.serverTruthClaimed,
+        memberCount: group.members.length,
+      })),
+    },
+    mcp: buildLocalMcpProductizationSnapshot(),
+  };
 }
 
 export async function runCli(
@@ -697,19 +923,25 @@ export async function runCli(
     return 0;
   }
 
-  const requiredTruthFetchFlag = truthFetchRequiredFlagByCommand[command as keyof typeof truthFetchRequiredFlagByCommand];
-  if (requiredTruthFetchFlag && !parsedArgs.flagValues[requiredTruthFetchFlag]) {
-    return printStructuredFailure(
-      dependencies,
-      buildStructuredFailure(
-        command,
-        'invalid-input',
-        `Missing required ${requiredTruthFetchFlag} for ${command}.`,
-        {
-          details: [requiredTruthFetchFlag],
-        },
-      ),
-    );
+  const requiredTruthFetchFlags = truthFetchRequiredFlagsByCommand[
+    command as keyof typeof truthFetchRequiredFlagsByCommand
+  ];
+  if (requiredTruthFetchFlags) {
+    for (const requiredTruthFetchFlag of requiredTruthFetchFlags) {
+      if (!parsedArgs.flagValues[requiredTruthFetchFlag]) {
+        return printStructuredFailure(
+          dependencies,
+          buildStructuredFailure(
+            command,
+            'invalid-input',
+            `Missing required ${requiredTruthFetchFlag} for ${command}.`,
+            {
+              details: [requiredTruthFetchFlag],
+            },
+          ),
+        );
+      }
+    }
   }
 
   if (command === 'environment-mode') {
@@ -743,6 +975,11 @@ export async function runCli(
 
   if (command === 'server-capabilities') {
     dependencies.printJson(normalizeServerCapabilityPayload(buildSampleServerCapabilityPayload()));
+    return 0;
+  }
+
+  if (command === 'operator-discovery') {
+    dependencies.printJson(buildOperatorDiscoverySnapshot());
     return 0;
   }
 

@@ -3,7 +3,7 @@ import { fileURLToPath } from 'node:url';
 
 import { BidviaClient } from './client.js';
 import { resolveBidviaBaseUrlFromEnv } from './config.js';
-import { bidviaMcpTools, dispatchMcpToolCall } from './mcp.js';
+import { buildLocalMcpProductizationSnapshot, dispatchMcpToolCall } from './mcp.js';
 
 interface JsonRpcRequest {
   jsonrpc: '2.0';
@@ -62,16 +62,24 @@ function buildInitializeResponse(id: string | number | null): JsonRpcSuccessResp
 }
 
 function buildToolsListResponse(id: string | number | null): JsonRpcSuccessResponse {
+  const productizationSnapshot = buildLocalMcpProductizationSnapshot();
+
   return {
     jsonrpc: '2.0',
     id,
     result: {
-      tools: bidviaMcpTools.map((tool) => ({
+      serverBoundary: productizationSnapshot.serverBoundary,
+      discoverability: productizationSnapshot.discoverability,
+      tools: productizationSnapshot.tools.map((tool) => ({
         name: tool.toolName,
         description: tool.description,
         inputSchema: tool.inputSchemaRef,
         outputMode: tool.outputMode,
         helperRef: tool.helperRef,
+        routePathTemplate: tool.routePathTemplate,
+        httpMethod: tool.httpMethod,
+        scope: tool.scope,
+        level: tool.level,
         localCapabilityTier: tool.localCapabilityTier,
         localCapabilityRiskTier: tool.localCapabilityRiskTier,
         accessContextFamily: tool.accessContextFamily,

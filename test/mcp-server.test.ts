@@ -155,9 +155,24 @@ test('local MCP stdio server exposes bounded tool metadata and handles review-sa
     }));
     const listResponse = await readFrame(output) as {
       result: {
+        serverBoundary: {
+          transport: string;
+          hosted: boolean;
+          remoteDiscovery: boolean;
+          sourceOfTruth: string;
+        };
+        discoverability: {
+          truthFetchReadOnly: boolean;
+          reviewSafeLocalOnly: boolean;
+          executionRequiresLocalExecutionClient: boolean;
+        };
         tools: Array<{
           name: string;
           outputMode: string;
+          routePathTemplate: string;
+          httpMethod: string;
+          scope: string;
+          level: string;
           localCapabilityTier: string;
           localCapabilityRiskTier: string;
           accessContextFamily: string;
@@ -165,6 +180,17 @@ test('local MCP stdio server exposes bounded tool metadata and handles review-sa
         }>;
       };
     };
+    assert.deepEqual(listResponse.result.serverBoundary, {
+      transport: 'stdio',
+      hosted: false,
+      remoteDiscovery: false,
+      sourceOfTruth: 'local-sdk-helpers',
+    });
+    assert.deepEqual(listResponse.result.discoverability, {
+      truthFetchReadOnly: true,
+      reviewSafeLocalOnly: true,
+      executionRequiresLocalExecutionClient: true,
+    });
     assert.deepEqual(listResponse.result.tools.map((tool) => tool.name), [
       'industry-universe-plan-preview',
       'industry-universe-review-packet-preview',
@@ -210,6 +236,10 @@ test('local MCP stdio server exposes bounded tool metadata and handles review-sa
           helperKey: 'heartbeat-execution',
           capabilityKey: 'postHeartbeat',
         },
+        routePathTemplate: '/runtime/agents/:registrationId/heartbeat',
+        httpMethod: 'POST',
+        scope: 'write',
+        level: 'atomic-route',
         localCapabilityTier: 'L2-registration-runtime',
         localCapabilityRiskTier: 'runtime-execution',
         accessContextFamily: 'registration',

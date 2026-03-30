@@ -24,16 +24,41 @@ test('runCli prints grouped help output for visibility, execution, review-safe, 
     '  runtime-capabilities',
     '  launch-topology-smoke',
     '  server-capabilities',
+    '  operator-discovery',
     '  account-agents',
     '  account-agent --registration-id ...',
     '  account-agent-bindings',
     '  account-records',
     '  agent-presence --registration-id ...',
     '  agent-authority --registration-id ...',
+    '  agent-readiness --registration-id ...',
+    '  agent-summary --registration-id ...',
+    '  agent-authority-profile --registration-id ...',
+    '  agent-authority-ladder --registration-id ...',
+    '  agent-capability-profiles --registration-id ...',
+    '  agent-capability-profile --registration-id ... --capability-profile-id ...',
     '  canonical-semantic-concepts',
     '  canonical-semantic-concept --concept-id ...',
+    '  canonical-semantic-labels',
+    '  canonical-semantic-label --label-id ...',
+    '  canonical-semantic-mappings',
+    '  canonical-semantic-mapping --mapping-id ...',
+    '  canonical-semantic-taxonomy-entries',
+    '  canonical-semantic-taxonomy-entry --taxonomy-entry-id ...',
+    '  canonical-semantic-lineage-links',
+    '  canonical-semantic-lineage-link --lineage-link-id ...',
     '  pricing-bases',
     '  pricing-basis --pricing-basis-id ...',
+    '  pricing-rule-atoms',
+    '  pricing-rule-atom --pricing-rule-atom-id ...',
+    '  pricing-quotation-method-modules',
+    '  pricing-quotation-method-module --pricing-quotation-method-module-id ...',
+    '  pricing-quote-templates',
+    '  pricing-quote-template --pricing-quote-template-id ...',
+    '  pricing-quotations',
+    '  pricing-quotation --pricing-quotation-id ...',
+    '  pricing-explanations',
+    '  pricing-explanation --pricing-explanation-id ...',
     '  document-artifacts',
     '  document-artifact --document-artifact-id ...',
     '  media-assets',
@@ -42,6 +67,9 @@ test('runCli prints grouped help output for visibility, execution, review-safe, 
     '  evidence-asset --evidence-asset-id ...',
     '  attachment-bindings',
     '  attachment-binding --attachment-binding-id ...',
+    '  file-resources',
+    '  file-resource --file-resource-id ...',
+    '  target-attachment-bindings --target-ref ...',
     'Execution commands:',
     '  heartbeat [--dry-run]',
     '  sync-upload [--dry-run]',
@@ -65,6 +93,113 @@ test('runCli prints grouped help output for visibility, execution, review-safe, 
     '  verification-bundle-preview [--input registration-lifecycle|registered-agent-operations]',
     '  verification-bundle-export [--input registration-lifecycle|registered-agent-operations]',
   ]);
+});
+
+test('runCli prints operator discovery snapshots for CLI route metadata and local MCP packaging', async () => {
+  const printed: unknown[] = [];
+
+  const exitCode = await runCli(['operator-discovery'], {
+    printJson: (value) => {
+      printed.push(value);
+    },
+    printLine: () => {
+      throw new Error('operator-discovery should not print help lines');
+    },
+  });
+
+  assert.equal(exitCode, 0);
+  assert.equal(printed.length, 1);
+  const snapshot = printed[0] as {
+    command: string;
+    scope: string;
+    cli: {
+      routeCapabilities: Array<{ helperKey: string; routePathTemplate: string; accessContextFamily: string }>;
+      nextStageReadRouteDiscoveryGroups: Array<{ groupKey: string; discoveryStatus: string; memberCount: number }>;
+    };
+    mcp: {
+      serverBoundary: { transport: string; hosted: boolean; remoteDiscovery: boolean; sourceOfTruth: string };
+      discoverability: {
+        truthFetchReadOnly: boolean;
+        reviewSafeLocalOnly: boolean;
+        executionRequiresLocalExecutionClient: boolean;
+      };
+      tools: Array<{ toolName: string; routePathTemplate: string; httpMethod: string; scope: string }>;
+    };
+  };
+  assert.equal(snapshot.command, 'operator-discovery');
+  assert.equal(snapshot.scope, 'local-only');
+  assert.deepEqual(snapshot.cli.routeCapabilities.find((entry) => entry.helperKey === 'listAccountAgents'), {
+    helperKey: 'listAccountAgents',
+    routePathTemplate: '/runtime/account/agents',
+    httpMethod: 'GET',
+    accessContextFamily: 'session',
+    requiredContext: ['tenantId', 'sessionId'],
+    scope: 'read',
+    level: 'atomic-route',
+    localCapabilityTier: 'L0-observe-only',
+    localCapabilityRiskTier: 'observe-only',
+  });
+  assert.deepEqual(snapshot.cli.routeCapabilities.find((entry) => entry.helperKey === 'getAgentReadiness'), {
+    helperKey: 'getAgentReadiness',
+    routePathTemplate: '/runtime/agents/:agent_registration_id/readiness',
+    httpMethod: 'GET',
+    accessContextFamily: 'admin-session',
+    requiredContext: ['tenantId', 'adminSessionId'],
+    scope: 'read',
+    level: 'atomic-route',
+    localCapabilityTier: 'L0-observe-only',
+    localCapabilityRiskTier: 'observe-only',
+  });
+  assert.deepEqual(snapshot.cli.routeCapabilities.find((entry) => entry.helperKey === 'listCanonicalSemanticLabels'), {
+    helperKey: 'listCanonicalSemanticLabels',
+    routePathTemplate: '/runtime/canonical-semantic-labels',
+    httpMethod: 'GET',
+    accessContextFamily: 'tenant',
+    requiredContext: ['tenantId'],
+    scope: 'read',
+    level: 'atomic-route',
+    localCapabilityTier: 'L0-observe-only',
+    localCapabilityRiskTier: 'observe-only',
+  });
+  assert.deepEqual(snapshot.cli.nextStageReadRouteDiscoveryGroups.find((entry) => entry.groupKey === 'governance-deep-reads'), {
+    groupKey: 'governance-deep-reads',
+    label: 'Richer governance deep reads',
+    discoveryStatus: 'metadata-only',
+    discoveryOnly: true,
+    serverTruthClaimed: false,
+    memberCount: 0,
+  });
+  assert.deepEqual(snapshot.mcp.serverBoundary, {
+    transport: 'stdio',
+    hosted: false,
+    remoteDiscovery: false,
+    sourceOfTruth: 'local-sdk-helpers',
+  });
+  assert.deepEqual(snapshot.mcp.discoverability, {
+    truthFetchReadOnly: true,
+    reviewSafeLocalOnly: true,
+    executionRequiresLocalExecutionClient: true,
+  });
+  assert.deepEqual(snapshot.mcp.tools.find((tool) => tool.toolName === 'account-agents-read'), {
+    toolName: 'account-agents-read',
+    description: 'Reads the current governed account agent records through the shipped SDK helper.',
+    inputSchemaRef: {
+      schemaKey: 'BidviaTruthFetchEmptyInput',
+    },
+    outputMode: 'truth-fetch-result',
+    helperRef: {
+      helperKey: 'listAccountAgents',
+      capabilityKey: 'listAccountAgents',
+    },
+    routePathTemplate: '/runtime/account/agents',
+    httpMethod: 'GET',
+    scope: 'read',
+    level: 'atomic-route',
+    accessContextFamily: 'session',
+    requiredContext: ['tenantId', 'sessionId'],
+    localCapabilityTier: 'L0-observe-only',
+    localCapabilityRiskTier: 'observe-only',
+  });
 });
 
 test('runCli dry-runs execution commands with structured output instead of invoking the client', async () => {

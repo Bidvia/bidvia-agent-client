@@ -2,12 +2,15 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import type {
+  BidviaNextStageReadRouteDiscoveryGroup,
   BidviaRouteCapability,
   BidviaRouteCapabilityLevel,
 } from '../src/contracts.ts';
 import {
   bidviaLocalCapabilityRiskTiers,
   bidviaLocalCapabilityTiers,
+  bidviaNextStageReadRouteDiscoveryGroupKeys,
+  bidviaNextStageReadRouteDiscoveryStatuses,
   bidviaRouteCapabilityAccessContextFamilies,
   bidviaRouteCapabilityHttpMethods,
   bidviaRouteCapabilityLevels,
@@ -15,7 +18,9 @@ import {
 } from '../src/contracts.ts';
 import {
   bidviaRouteCapabilities,
+  bidviaNextStageReadRouteDiscoveryGroups,
   getRouteCapability,
+  getNextStageReadRouteDiscoveryGroup,
 } from '../src/capabilities.ts';
 
 test('capability contract exposes bounded descriptive metadata labels', () => {
@@ -411,4 +416,131 @@ test('capability registry exposes approved truth-fetch helpers as local read-onl
     expectedTruthFetchCapabilities.map((capability) => getRouteCapability(capability.helperKey)),
     expectedTruthFetchCapabilities,
   );
+});
+
+test('capability registry exposes shipped widened T2 and T3 truth-fetch helpers as real route capabilities', () => {
+  const shippedExpandedHelperKeys = [
+    'getAgentReadiness',
+    'getAgentSummary',
+    'getAgentAuthorityProfile',
+    'getAgentAuthorityLadder',
+    'listAgentCapabilityProfiles',
+    'getAgentCapabilityProfile',
+    'listCanonicalSemanticLabels',
+    'getCanonicalSemanticLabel',
+    'listCanonicalSemanticMappings',
+    'getCanonicalSemanticMapping',
+    'listCanonicalSemanticTaxonomyEntries',
+    'getCanonicalSemanticTaxonomyEntry',
+    'listCanonicalSemanticLineageLinks',
+    'getCanonicalSemanticLineageLink',
+    'listPricingRuleAtoms',
+    'getPricingRuleAtom',
+    'listPricingQuotationMethodModules',
+    'getPricingQuotationMethodModule',
+    'listPricingQuoteTemplates',
+    'getPricingQuoteTemplate',
+    'listPricingQuotations',
+    'getPricingQuotation',
+    'listPricingExplanations',
+    'getPricingExplanation',
+    'listFileResources',
+    'getFileResource',
+    'listTargetAttachmentBindings',
+  ] as const;
+
+  assert.equal(
+    shippedExpandedHelperKeys.every((helperKey) => getRouteCapability(helperKey) !== undefined),
+    true,
+  );
+});
+
+test('next-stage discovery groups no longer relabel shipped widened helpers as metadata-only futures', () => {
+  const shippedExpandedHelperKeys = new Set([
+    'getAgentReadiness',
+    'getAgentSummary',
+    'getAgentAuthorityProfile',
+    'getAgentAuthorityLadder',
+    'listAgentCapabilityProfiles',
+    'getAgentCapabilityProfile',
+    'listCanonicalSemanticLabels',
+    'getCanonicalSemanticLabel',
+    'listCanonicalSemanticMappings',
+    'getCanonicalSemanticMapping',
+    'listCanonicalSemanticTaxonomyEntries',
+    'getCanonicalSemanticTaxonomyEntry',
+    'listCanonicalSemanticLineageLinks',
+    'getCanonicalSemanticLineageLink',
+    'listPricingRuleAtoms',
+    'getPricingRuleAtom',
+    'listPricingQuotationMethodModules',
+    'getPricingQuotationMethodModule',
+    'listPricingQuoteTemplates',
+    'getPricingQuoteTemplate',
+    'listPricingQuotations',
+    'getPricingQuotation',
+    'listPricingExplanations',
+    'getPricingExplanation',
+    'listFileResources',
+    'getFileResource',
+    'listTargetAttachmentBindings',
+  ]);
+
+  assert.equal(
+    bidviaNextStageReadRouteDiscoveryGroups.flatMap((group) => group.members)
+      .some((member) => shippedExpandedHelperKeys.has(member.helperKey)),
+    false,
+  );
+});
+
+test('next-stage discovery contracts expose metadata-only route status labels for future read foundations', () => {
+  assert.deepEqual(bidviaNextStageReadRouteDiscoveryStatuses, ['metadata-only']);
+  assert.deepEqual(bidviaNextStageReadRouteDiscoveryGroupKeys, [
+    'governance-deep-reads',
+    'semantic-truth-fetch-expansion',
+    'pricing-truth-fetch-expansion',
+    'asset-truth-fetch-expansion',
+  ]);
+});
+
+test('next-stage governance discovery group describes richer admin-session deep reads without claiming server truth', () => {
+  const expectedGroup: BidviaNextStageReadRouteDiscoveryGroup = {
+    groupKey: 'governance-deep-reads',
+    label: 'Richer governance deep reads',
+    description:
+      'Metadata-only bucket reserved for future governance deep-read additions beyond the helpers already shipped in routeCapabilities.',
+    discoveryStatus: 'metadata-only',
+    discoveryOnly: true,
+    serverTruthClaimed: false,
+    members: [],
+  };
+
+  assert.deepEqual(getNextStageReadRouteDiscoveryGroup('governance-deep-reads'), expectedGroup);
+});
+
+test('next-stage truth-fetch discovery groups describe semantic pricing and asset expansion candidates', () => {
+  assert.deepEqual(
+    bidviaNextStageReadRouteDiscoveryGroups.map((group) => group.groupKey),
+    [
+      'governance-deep-reads',
+      'semantic-truth-fetch-expansion',
+      'pricing-truth-fetch-expansion',
+      'asset-truth-fetch-expansion',
+    ],
+  );
+
+  assert.deepEqual(getNextStageReadRouteDiscoveryGroup('semantic-truth-fetch-expansion'), {
+    groupKey: 'semantic-truth-fetch-expansion',
+    label: 'Broader semantic truth-fetch families',
+    description:
+      'Metadata-only bucket reserved for future semantic truth-fetch additions beyond the helpers already shipped in routeCapabilities.',
+    discoveryStatus: 'metadata-only',
+    discoveryOnly: true,
+    serverTruthClaimed: false,
+    members: [],
+  });
+
+  assert.deepEqual(getNextStageReadRouteDiscoveryGroup('pricing-truth-fetch-expansion')?.members, []);
+
+  assert.deepEqual(getNextStageReadRouteDiscoveryGroup('asset-truth-fetch-expansion')?.members, []);
 });

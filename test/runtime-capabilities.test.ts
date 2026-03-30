@@ -134,3 +134,64 @@ test('buildLocalRuntimeCapabilitySnapshot keeps deferred server negotiation expl
     },
   );
 });
+
+test('buildLocalRuntimeCapabilitySnapshot includes shipped widened read helpers in local route capability discovery', () => {
+  const snapshot = buildLocalRuntimeCapabilitySnapshot();
+
+  assert.deepEqual(
+    snapshot.routeCapabilities.items.find((capability) => capability.helperKey === 'getAgentReadiness'),
+    {
+      helperKey: 'getAgentReadiness',
+      routePathTemplate: '/runtime/agents/:agent_registration_id/readiness',
+      httpMethod: 'GET',
+      accessContextFamily: 'admin-session',
+      requiredContext: ['tenantId', 'adminSessionId'],
+      scope: 'read',
+      level: 'atomic-route',
+      localCapabilityTier: 'L0-observe-only',
+      localCapabilityRiskTier: 'observe-only',
+    },
+  );
+  assert.deepEqual(
+    snapshot.routeCapabilities.items.find((capability) => capability.helperKey === 'listCanonicalSemanticLabels'),
+    {
+      helperKey: 'listCanonicalSemanticLabels',
+      routePathTemplate: '/runtime/canonical-semantic-labels',
+      httpMethod: 'GET',
+      accessContextFamily: 'tenant',
+      requiredContext: ['tenantId'],
+      scope: 'read',
+      level: 'atomic-route',
+      localCapabilityTier: 'L0-observe-only',
+      localCapabilityRiskTier: 'observe-only',
+    },
+  );
+  assert.deepEqual(
+    snapshot.routeCapabilities.items.find((capability) => capability.helperKey === 'getPricingExplanation'),
+    {
+      helperKey: 'getPricingExplanation',
+      routePathTemplate: '/runtime/pricing-explanations/:pricing_explanation_id',
+      httpMethod: 'GET',
+      accessContextFamily: 'tenant',
+      requiredContext: ['tenantId'],
+      scope: 'read',
+      level: 'atomic-route',
+      localCapabilityTier: 'L0-observe-only',
+      localCapabilityRiskTier: 'observe-only',
+    },
+  );
+  assert.deepEqual(
+    snapshot.routeCapabilities.items.find((capability) => capability.helperKey === 'listTargetAttachmentBindings'),
+    {
+      helperKey: 'listTargetAttachmentBindings',
+      routePathTemplate: '/runtime/targets/:target_ref/attachment-bindings',
+      httpMethod: 'GET',
+      accessContextFamily: 'tenant',
+      requiredContext: ['tenantId'],
+      scope: 'read',
+      level: 'atomic-route',
+      localCapabilityTier: 'L0-observe-only',
+      localCapabilityRiskTier: 'observe-only',
+    },
+  );
+});

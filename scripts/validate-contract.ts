@@ -681,7 +681,7 @@ async function main() {
       sectionKey: 'routes',
       title: 'Route coverage',
       entries: industryUniversePlan.envelope.expectedRouteChain.map(
-        (routeStep) => `completed:${routeStep.routeKey}`,
+        (routeStep, index) => `completed:${index + 1}/${industryUniversePlan.envelope.expectedRouteChain.length}:${routeStep.routeKey}:requires=${routeStep.requiredContext.join('|')}`,
       ),
     },
     {
@@ -692,6 +692,8 @@ async function main() {
         'review-packet-status:complete',
         `completed-routes:${industryUniverseBundle.completedRouteChain.length}/${industryUniversePlan.envelope.expectedRouteChain.length}`,
         'pending-routes:0',
+        'next-pending-route:none',
+        'route-coverage-note:completed-prefix-only',
         'server-truth-claimed:false',
         'adjudication-outcome-included:false',
       ],
@@ -699,7 +701,12 @@ async function main() {
     {
       sectionKey: 'records',
       title: 'Recorded ids',
-      entries: ['listings:listing-validate-1', 'matches:match-validate-1'],
+      entries: [
+        'record-group:listings:count=1',
+        'listings:listing-validate-1',
+        'record-group:matches:count=1',
+        'matches:match-validate-1',
+      ],
     },
   ]);
   assert.notEqual(exportedReviewPacket, reviewPacket);

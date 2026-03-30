@@ -95,6 +95,13 @@ runLocalMcpServer(input, output, {
         ],
       };
     },
+    async getAgentAuthority() {
+      return {
+        agentRegistrationId: 'areg-example-1',
+        authorityState: 'active',
+        authorityScope: ['review', 'escalate'],
+      };
+    },
     async listPricingBases() {
       return {
         items: [
@@ -134,7 +141,12 @@ try {
   }));
   const toolsListResponse = await readFrame(output) as {
     result: {
-      tools: Array<{ name: string }>;
+      tools: Array<{
+        name: string;
+        outputMode: string;
+        routePathTemplate: string;
+        accessContextFamily: string;
+      }>;
     };
   };
 
@@ -143,7 +155,14 @@ try {
       content: Array<{ text: string }>;
     };
   };
-  const businessReadResponse = await callTool(input, output, 4, 'pricing-bases-read', {}) as {
+  const governanceDetailResponse = await callTool(input, output, 4, 'agent-authority-read', {
+    registrationId: 'areg-example-1',
+  }) as {
+    result: {
+      content: Array<{ text: string }>;
+    };
+  };
+  const businessReadResponse = await callTool(input, output, 5, 'pricing-bases-read', {}) as {
     result: {
       content: Array<{ text: string }>;
     };
@@ -152,17 +171,28 @@ try {
   console.log(JSON.stringify({
     initialize: initializeResponse.result,
     truthFetchToolsShown: toolsListResponse.result.tools
-      .map((tool) => tool.name)
-      .filter((name) => name === 'account-agents-read' || name === 'pricing-bases-read'),
+      .filter((tool) => (
+        tool.name === 'account-agents-read'
+        || tool.name === 'agent-authority-read'
+        || tool.name === 'pricing-bases-read'
+      ))
+      .map((tool) => ({
+        name: tool.name,
+        outputMode: tool.outputMode,
+        routePathTemplate: tool.routePathTemplate,
+        accessContextFamily: tool.accessContextFamily,
+      })),
     phaseOrder: [
-      'governance-first tools ship first',
-      'business-truth tools ship second',
+      'SDK and CLI cover the wider shipped read surface',
+      'MCP stays a thin local wrapper over the approved read-only subset',
     ],
     governanceFirstRead: JSON.parse(governanceReadResponse.result.content[0]!.text),
+    governanceDetailRead: JSON.parse(governanceDetailResponse.result.content[0]!.text),
     businessTruthRead: JSON.parse(businessReadResponse.result.content[0]!.text),
     notes: [
       'This example stays repo-local and uses injected read-only dependencies.',
       'The MCP server here is local stdio only and wraps shipped SDK truth-fetch helpers.',
+      'tools/list exposes discovery metadata so operators can inspect route and access-context expectations locally.',
       'No live credentials, hosted MCP service, login, or remote discovery are required by default.',
     ],
   }, null, 2));

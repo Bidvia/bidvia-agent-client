@@ -177,13 +177,14 @@ function buildRoutesSection(
   completedRouteChain: BidviaScenarioRouteStep[],
 ): BidviaReviewPacketSection {
   const completedRouteKeys = new Set(completedRouteChain.map((routeStep) => routeStep.routeKey));
+  const totalRouteCount = expectedRouteChain.length;
 
   return {
     sectionKey: 'routes',
     title: 'Route coverage',
-    entries: expectedRouteChain.map((routeStep) => {
+    entries: expectedRouteChain.map((routeStep, index) => {
       const status = completedRouteKeys.has(routeStep.routeKey) ? 'completed' : 'pending-review';
-      return `${status}:${routeStep.routeKey}`;
+      return `${status}:${index + 1}/${totalRouteCount}:${routeStep.routeKey}:requires=${routeStep.requiredContext.join('|')}`;
     }),
   };
 }
@@ -194,6 +195,7 @@ function buildVerificationSection(params: {
   expectedRouteCount: number;
   completedRouteCount: number;
   pendingRouteCount: number;
+  nextPendingRouteKey?: string;
 }): BidviaReviewPacketSection {
   return {
     sectionKey: 'verification',
@@ -203,6 +205,8 @@ function buildVerificationSection(params: {
       `review-packet-status:${params.status}`,
       `completed-routes:${params.completedRouteCount}/${params.expectedRouteCount}`,
       `pending-routes:${params.pendingRouteCount}`,
+      `next-pending-route:${params.nextPendingRouteKey ?? 'none'}`,
+      'route-coverage-note:completed-prefix-only',
       'server-truth-claimed:false',
       'adjudication-outcome-included:false',
     ],
@@ -228,7 +232,14 @@ function buildRecordsSection(recordIds: BidviaVerificationBundleRecordIds): Bidv
     title: 'Recorded ids',
     entries: recordGroupKeys.flatMap((recordGroupKey) => {
       const ids = recordIds[recordGroupKey] ?? [];
-      return ids.map((id) => `${recordGroupKey}:${id}`);
+      if (ids.length === 0) {
+        return [];
+      }
+
+      return [
+        `record-group:${recordGroupKey}:count=${ids.length}`,
+        ...ids.map((id) => `${recordGroupKey}:${id}`),
+      ];
     }),
   };
 }
@@ -426,6 +437,9 @@ export function buildReviewPacket(input: BuildReviewPacketInput): BidviaReviewPa
         expectedRouteCount,
         completedRouteCount,
         pendingRouteCount,
+        nextPendingRouteKey: input.bundle.completedRouteChain.length < input.scenario.expectedRouteChain.length
+          ? input.scenario.expectedRouteChain[input.bundle.completedRouteChain.length]?.routeKey
+          : undefined,
       }),
       buildRecordsSection(input.bundle.recordIds),
     ],

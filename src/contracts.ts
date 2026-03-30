@@ -363,6 +363,39 @@ export interface BidviaRouteCapability {
   scenarioRouteSteps?: BidviaScenarioRouteStep[];
 }
 
+export const bidviaNextStageReadRouteDiscoveryStatuses = ['metadata-only'] as const;
+
+export type BidviaNextStageReadRouteDiscoveryStatus =
+  (typeof bidviaNextStageReadRouteDiscoveryStatuses)[number];
+
+export const bidviaNextStageReadRouteDiscoveryGroupKeys = [
+  'governance-deep-reads',
+  'semantic-truth-fetch-expansion',
+  'pricing-truth-fetch-expansion',
+  'asset-truth-fetch-expansion',
+] as const;
+
+export type BidviaNextStageReadRouteDiscoveryGroupKey =
+  (typeof bidviaNextStageReadRouteDiscoveryGroupKeys)[number];
+
+export interface BidviaNextStageReadRouteDiscoveryMember extends BidviaRouteCapability {
+  scope: 'read';
+  level: 'atomic-route';
+  discoveryStatus: BidviaNextStageReadRouteDiscoveryStatus;
+  discoveryOnly: true;
+  serverTruthClaimed: false;
+}
+
+export interface BidviaNextStageReadRouteDiscoveryGroup {
+  groupKey: BidviaNextStageReadRouteDiscoveryGroupKey;
+  label: string;
+  description: string;
+  discoveryStatus: BidviaNextStageReadRouteDiscoveryStatus;
+  discoveryOnly: true;
+  serverTruthClaimed: false;
+  members: BidviaNextStageReadRouteDiscoveryMember[];
+}
+
 export interface BidviaScenarioEnvelopeRecordIds {
   registrations?: string[];
   proposals?: string[];

@@ -49,7 +49,7 @@ Think about this repo in this order:
 2. configure the right context for the environment
 3. use the read-only `environment-mode` command when you need visibility into whether the current base URL resolves to `local`, `sim`, or `production`
 4. use the read-only `runtime-capabilities` command when you need one local JSON view of repo-known runtime-facing facts
-5. use the read-only truth-fetch SDK helpers or CLI commands when you need approved frozen Core reads for account, governance, semantic, pricing, or asset facts
+5. use the read-only truth-fetch SDK helpers or CLI commands when you need approved frozen Core reads for account, richer governance deep-read, semantic, pricing, or asset facts
 6. choose the right helper family for the current route chain
 7. check the static capability registry when you need machine-readable route or access-context expectations
 8. check the local runtime-capability snapshot when you need one JSON view of repo-known route, MCP, and local server facts
@@ -59,12 +59,13 @@ Think about this repo in this order:
 12. export a verification bundle when the run should be reviewable later
 13. use explicit local execution commands when you need the packaged operator path for heartbeat, sync-upload, evidence, or proposal
 
-In this phase, truth-fetch ships through the SDK, CLI, and a bounded local stdio MCP seam. That MCP rollout is phased on purpose: governance-first truth-fetch tools ship first, then business-truth collection and detail tools ship second. In both phases, MCP stays read-only, local stdio only, and a thin wrapper over the shipped SDK helpers.
+In this phase, truth-fetch ships through the SDK and CLI as the full widened client-owned read surface, with a bounded local stdio MCP seam exposing the currently approved read-only subset. That MCP rollout is phased on purpose: governance-first truth-fetch tools ship first, then business-truth collection and detail tools ship second. In both phases, MCP stays read-only, local stdio only, and a thin wrapper over the shipped SDK helpers.
 
 The honest phase split is:
 
-- governance-first tools ship first for `account-*`, `agent-presence`, and `agent-authority`
-- business-truth tools ship second for canonical semantics, pricing, document, media, evidence, and attachment reads
+- the SDK and CLI expose the widened governance deep-read family and the broader business truth-fetch families listed below
+- the MCP seam keeps the currently approved governance-first tools for `account-*`, `agent-presence`, and `agent-authority`
+- the MCP seam also exposes the shipped business-truth collection and detail tools for canonical semantics, pricing, document, media, evidence, and attachment reads
 - the SDK and CLI stay the source of truth, and MCP only forwards to those already-shipped helpers
 
 Safe operator order for truth-fetch work:
@@ -136,15 +137,16 @@ This registry does not negotiate with a live runtime, fetch server-provided capa
 The repo now ships a broad read-only truth-fetch layer across the SDK and CLI for approved frozen Core read routes. Today that covers:
 
 - account agents, account agent bindings, and account records
-- agent presence and authority
-- canonical semantic concepts
-- pricing bases
-- document artifacts, media assets, evidence assets, and attachment bindings
+- richer governance deep reads for agent presence, authority, readiness, summaries, authority profiles, authority ladders, and capability profiles
+- broader canonical semantic reads for concepts, labels, mappings, taxonomy entries, and lineage links
+- broader pricing reads for bases, rule atoms, quotation method modules, quote templates, quotations, and explanations
+- broader document, media, evidence, attachment, and file-resource reads
 
 The same approved reads now also have a phased MCP surface on the local stdio seam:
 
-- governance-first tools ship first for `account-*`, `agent-presence`, and `agent-authority`
-- business-truth tools ship second for canonical semantics, pricing, document, media, evidence, and attachment reads
+- the SDK and CLI expose the widened governance deep-read family plus the broader business truth-fetch families listed above
+- the MCP seam keeps the currently approved governance-first tools for `account-*`, `agent-presence`, and `agent-authority`
+- the MCP seam also exposes the shipped business-truth collection and detail tools for canonical semantics, pricing, document, media, evidence, and attachment reads
 - the MCP layer stays read-only and forwards to the SDK helpers already shipped in this repo
 
 Runnable repo-local example:
@@ -168,7 +170,7 @@ node dist/cli.js pricing-bases
 node dist/cli.js media-asset --media-asset-id media-1
 ```
 
-This truth-fetch layer stays read-only. The MCP portion stays local stdio only and does not add hosted runtime behavior, hosted MCP, remote registry or remote discovery, login, OAuth, auth implementation, capability-truth integration, live negotiation, or richer governance deep reads beyond the approved groups.
+This truth-fetch layer stays read-only. The MCP portion stays local stdio only and does not add hosted runtime behavior, hosted MCP, remote registry or remote discovery, login, OAuth, auth implementation, capability-truth integration, notification or task truth, multi-agent coordination truth, or live negotiation.
 
 Keep the deferred boundary explicit when you explain this surface to operators or SDK users:
 
@@ -176,7 +178,8 @@ Keep the deferred boundary explicit when you explain this surface to operators o
 - remote registry and remote discovery stay deferred
 - login, OAuth, and auth implementation stay deferred
 - capability-truth integration and live negotiation stay deferred
-- richer governance deep reads stay deferred beyond the approved groups above
+- notification truth, task dispatch truth, and multi-agent coordination truth stay deferred
+- approval -> opportunity closure stays deferred beyond the explicit current handoff seam
 
 ## Local runtime-capability snapshot
 
@@ -335,7 +338,7 @@ The verification-wave preview commands are intentionally bounded and operator-fa
 
 The verification-bundle preview and export commands are also review-safe only. They package the already-built scenario envelope into a local preview or exported bundle for review, not remote verification authority or hosted workflow behavior.
 
-The review-packet commands are intentionally bounded. They only preview or export JSON derived from existing scenario plans and verification bundles. The richer packet structure now includes reviewer-facing route coverage and recorded-id detail, but it still does not execute runtime work, create new platform authority, or widen the current local adapter seam.
+The review-packet commands are intentionally bounded. They only preview or export JSON derived from existing scenario plans and verification bundles. The richer packet structure now includes reviewer-facing route coverage, next-step readback, and recorded-id detail, but it still does not execute runtime work, create new platform authority, or widen the current local adapter seam.
 
 The current review-packet preview and export surfaces stay review-oriented only. They expose richer detail for humans and downstream tooling, not signing, policy authority, or server-truth semantics.
 
