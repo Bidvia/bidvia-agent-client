@@ -242,6 +242,23 @@ test('runCli dry-runs execution commands with structured output instead of invok
     command: 'heartbeat',
     mode: 'dry-run',
     scope: 'local-only',
+    preflight: {
+      target: 'heartbeat',
+      surface: 'cli',
+      scope: 'local-only',
+      routePathTemplate: '/runtime/agents/:registrationId/heartbeat',
+      httpMethod: 'POST',
+      accessContextFamily: 'registration',
+      localCapabilityTier: 'L2-registration-runtime',
+      localCapabilityRiskTier: 'runtime-execution',
+      requiredContext: ['tenantId', 'registrationId', 'principalId'],
+      missingContext: ['registrationId', 'principalId'],
+      hints: [
+        'Dry-run stays local and does not execute the remote registration-bound route.',
+        'Set BIDVIA_REGISTRATION_ID and BIDVIA_PRINCIPAL_ID before running the real execution command.',
+        'Risk tier runtime-execution means the non-dry-run command writes to the remote runtime route.',
+      ],
+    },
     input: {
       now: '2026-03-29T10:00:00Z',
       expiresAt: '2026-03-29T10:05:00.000Z',

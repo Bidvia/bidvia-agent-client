@@ -848,6 +848,10 @@ export function getRouteCapability(helperKey: string): BidviaRouteCapability | u
   return bidviaRouteCapabilities.find((capability) => capability.helperKey === helperKey);
 }
 
+export function exportRouteCapabilityCatalog(): BidviaRouteCapability[] {
+  return structuredClone([...bidviaRouteCapabilities]);
+}
+
 export function getNextStageReadRouteDiscoveryGroup(
   groupKey: BidviaNextStageReadRouteDiscoveryGroup['groupKey'],
 ): BidviaNextStageReadRouteDiscoveryGroup | undefined {

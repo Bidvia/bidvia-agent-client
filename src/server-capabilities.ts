@@ -6,8 +6,10 @@ import type {
   BidviaRouteCapability,
   BidviaServerCapabilityPayload,
 } from './contracts.js';
-import { getRouteCapability } from './capabilities.js';
-import { getMcpToolDescriptor } from './mcp.js';
+import {
+  getLocalMcpToolDescriptor,
+  getRouteCapabilityFromLocalCatalog,
+} from './discovery-catalog.js';
 
 const runtimeCapabilitySnapshotSchemaVersion = '2026-03-27';
 const serverCapabilityPayloadVersion = 'server-capability-payload';
@@ -35,7 +37,7 @@ function deriveLocalRouteClassification(routeCapability: {
   localCapabilityTier: BidviaLocalCapabilityTier;
   localCapabilityRiskTier: BidviaLocalCapabilityRiskTier;
 } {
-  const localCapability = getRouteCapability(routeCapability.helper_key);
+  const localCapability = getRouteCapabilityFromLocalCatalog(routeCapability.helper_key);
   if (localCapability) {
     return {
       localCapabilityTier: localCapability.localCapabilityTier,
@@ -80,7 +82,7 @@ function deriveLocalMcpClassification(toolName: string): {
   accessContextFamily: BidviaMcpToolDescriptor['accessContextFamily'];
   requiredContext: BidviaMcpToolDescriptor['requiredContext'];
 } {
-  const localDescriptor = getMcpToolDescriptor(toolName);
+  const localDescriptor = getLocalMcpToolDescriptor(toolName);
   if (localDescriptor) {
     return {
       localCapabilityTier: localDescriptor.localCapabilityTier,

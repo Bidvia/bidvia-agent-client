@@ -68,6 +68,9 @@ function freezeReviewPacketVerificationDetail(
   Object.freeze(detail.expectedRouteKeys);
   Object.freeze(detail.completedRouteKeys);
   Object.freeze(detail.pendingRouteKeys);
+  Object.freeze(detail.localDerivedExplanation);
+  Object.freeze(detail.serverOwnedFacts);
+  Object.freeze(detail.dependencyGatedSeams);
   return Object.freeze(detail);
 }
 
@@ -195,6 +198,10 @@ function buildVerificationSection(params: {
   expectedRouteCount: number;
   completedRouteCount: number;
   pendingRouteCount: number;
+  sourceRefCount: number;
+  evidenceRefCount: number;
+  traceabilityRefCount: number;
+  totalRecordCount: number;
   nextPendingRouteKey?: string;
 }): BidviaReviewPacketSection {
   return {
@@ -207,8 +214,16 @@ function buildVerificationSection(params: {
       `pending-routes:${params.pendingRouteCount}`,
       `next-pending-route:${params.nextPendingRouteKey ?? 'none'}`,
       'route-coverage-note:completed-prefix-only',
+      `local-derived-explanation:review-packet-status:${params.status}`,
+      `local-derived-explanation:next-pending-route:${params.nextPendingRouteKey ?? 'none'}`,
+      'local-derived-explanation:route-coverage-note:completed-prefix-only',
+      `server-owned-facts:scenario-source-refs:${params.sourceRefCount}`,
+      `server-owned-facts:scenario-evidence-refs:${params.evidenceRefCount}`,
+      `server-owned-facts:traceability-refs:${params.traceabilityRefCount}`,
+      `server-owned-facts:recorded-ids:${params.totalRecordCount}`,
       'server-truth-claimed:false',
       'adjudication-outcome-included:false',
+      'dependency-gated-seams:core-truth-closure:deferred',
     ],
   };
 }
@@ -296,6 +311,9 @@ function buildReviewPacketBoundaryDetail(): BidviaReviewPacketBoundaryDetail {
   return {
     derivedFromScenarioFacts: true,
     derivedFromVerificationFacts: true,
+    localDerivedExplanationIncluded: true,
+    serverOwnedFactsIncluded: true,
+    dependencyGatedSeamsIncluded: true,
     serverTruthClaimed: false,
     adjudicationOutcomeIncluded: false,
   };
@@ -314,6 +332,22 @@ function buildReviewPacketVerificationDetail(
     completedRouteKeys,
     pendingRouteKeys: expectedRouteKeys.slice(completedRouteKeys.length),
     totalRecordCount,
+    localDerivedExplanation: [
+      'review-packet-status',
+      'next-pending-route',
+      'route-coverage-note',
+    ],
+    serverOwnedFacts: [
+      'scenario-source-refs',
+      'scenario-evidence-refs',
+      'traceability-refs',
+      'recorded-ids',
+    ],
+    dependencyGatedSeams: [
+      'server-truth-claimed:false',
+      'adjudication-outcome-included:false',
+      'core-truth-closure:deferred',
+    ],
   };
 }
 
@@ -437,6 +471,10 @@ export function buildReviewPacket(input: BuildReviewPacketInput): BidviaReviewPa
         expectedRouteCount,
         completedRouteCount,
         pendingRouteCount,
+        sourceRefCount: input.scenario.sourceRefs.length,
+        evidenceRefCount: input.scenario.evidenceRefs.length,
+        traceabilityRefCount: input.scenario.traceIds.length + input.scenario.workflowIds.length,
+        totalRecordCount,
         nextPendingRouteKey: input.bundle.completedRouteChain.length < input.scenario.expectedRouteChain.length
           ? input.scenario.expectedRouteChain[input.bundle.completedRouteChain.length]?.routeKey
           : undefined,

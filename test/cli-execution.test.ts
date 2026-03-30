@@ -16,6 +16,11 @@ test('runCli routes heartbeat through the explicit execution adapter and creates
       clientCreateCount += 1;
       return client as never;
     },
+    resolveExecutionContext: () => ({
+      tenantId: 'tenant-a',
+      registrationId: 'areg-1',
+      principalId: 'agent-1',
+    }),
     now: () => '2026-03-29T10:00:00Z',
     printJson: (value) => {
       printed.push(value);
@@ -25,6 +30,10 @@ test('runCli routes heartbeat through the explicit execution adapter and creates
     },
     executionCommands: {
       heartbeat: {
+        buildInput: () => ({
+          now: '2026-03-29T10:00:00Z',
+          expiresAt: '2026-03-29T10:05:00.000Z',
+        }),
         run: async (receivedClient, now) => {
           const input: BidviaHeartbeatInput = {
             now,

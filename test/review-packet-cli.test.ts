@@ -28,12 +28,34 @@ test('industry-universe-review-packet-preview prints review packet json', () => 
   assert.equal(output.status, 'pending-review');
   assert.equal(output.details.boundary.serverTruthClaimed, false);
   assert.equal(output.details.boundary.adjudicationOutcomeIncluded, false);
+  assert.equal(output.details.boundary.localDerivedExplanationIncluded, true);
+  assert.equal(output.details.boundary.serverOwnedFactsIncluded, true);
+  assert.equal(output.details.boundary.dependencyGatedSeamsIncluded, true);
+  assert.deepEqual(output.details.verification.localDerivedExplanation, [
+    'review-packet-status',
+    'next-pending-route',
+    'route-coverage-note',
+  ]);
+  assert.deepEqual(output.details.verification.serverOwnedFacts, [
+    'scenario-source-refs',
+    'scenario-evidence-refs',
+    'traceability-refs',
+    'recorded-ids',
+  ]);
+  assert.deepEqual(output.details.verification.dependencyGatedSeams, [
+    'server-truth-claimed:false',
+    'adjudication-outcome-included:false',
+    'core-truth-closure:deferred',
+  ]);
   assert.equal(output.summary.pendingRouteCount, 3);
   assert.equal(
     output.sections[3]?.entries[0],
     'pending-review:1/3:createListing:requires=tenantId|principalId|companyId',
   );
   assert.equal(output.sections[4]?.entries.includes('next-pending-route:createListing'), true);
+  assert.equal(output.sections[4]?.entries.includes('local-derived-explanation:review-packet-status:pending-review'), true);
+  assert.equal(output.sections[4]?.entries.includes('server-owned-facts:scenario-source-refs:1'), true);
+  assert.equal(output.sections[4]?.entries.includes('dependency-gated-seams:core-truth-closure:deferred'), true);
   assert.deepEqual(
     output.sections.map((section: { sectionKey: string }) => section.sectionKey),
     ['scenario', 'evidence', 'traceability', 'routes', 'verification', 'records'],
@@ -69,12 +91,34 @@ test('industry-universe-review-packet-export prints exported review packet json'
   assert.equal(output.status, 'pending-review');
   assert.equal(output.details.boundary.serverTruthClaimed, false);
   assert.equal(output.details.boundary.adjudicationOutcomeIncluded, false);
+  assert.equal(output.details.boundary.localDerivedExplanationIncluded, true);
+  assert.equal(output.details.boundary.serverOwnedFactsIncluded, true);
+  assert.equal(output.details.boundary.dependencyGatedSeamsIncluded, true);
+  assert.deepEqual(output.details.verification.localDerivedExplanation, [
+    'review-packet-status',
+    'next-pending-route',
+    'route-coverage-note',
+  ]);
+  assert.deepEqual(output.details.verification.serverOwnedFacts, [
+    'scenario-source-refs',
+    'scenario-evidence-refs',
+    'traceability-refs',
+    'recorded-ids',
+  ]);
+  assert.deepEqual(output.details.verification.dependencyGatedSeams, [
+    'server-truth-claimed:false',
+    'adjudication-outcome-included:false',
+    'core-truth-closure:deferred',
+  ]);
   assert.equal(output.summary.pendingRouteCount, 3);
   assert.equal(
     output.sections[3]?.entries[0],
     'pending-review:1/3:createListing:requires=tenantId|principalId|companyId',
   );
   assert.equal(output.sections[4]?.entries.includes('next-pending-route:createListing'), true);
+  assert.equal(output.sections[4]?.entries.includes('local-derived-explanation:review-packet-status:pending-review'), true);
+  assert.equal(output.sections[4]?.entries.includes('server-owned-facts:scenario-source-refs:1'), true);
+  assert.equal(output.sections[4]?.entries.includes('dependency-gated-seams:core-truth-closure:deferred'), true);
   assert.deepEqual(
     output.sections.map((section: { sectionKey: string }) => section.sectionKey),
     ['scenario', 'evidence', 'traceability', 'routes', 'verification', 'records'],

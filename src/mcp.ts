@@ -4,9 +4,7 @@ import type {
   BidviaMcpToolCallRequest,
   BidviaMcpToolCallResponse,
   BidviaMcpToolDescriptor,
-  BidviaRouteCapability,
 } from './contracts.js';
-import { getRouteCapability } from './capabilities.js';
 import {
   connectionApprovalScenarioAdapter,
   industryUniverseScenarioAdapter,
@@ -19,6 +17,16 @@ import type {
   BidviaIndustryUniverseAdapterResult,
   BidviaOpportunityPackageHandoffAdapterResult,
 } from './adapters.js';
+import {
+  buildLocalMcpProductizationSnapshot as buildSharedLocalMcpProductizationSnapshot,
+  buildLocalMcpToolCatalog,
+  getLocalMcpToolDescriptor,
+} from './discovery-catalog.js';
+import {
+  buildMcpExecutionPreflight,
+  buildMcpMissingContextMessage,
+} from './operator-ergonomics.js';
+import type { BidviaLocalMcpProductizationSnapshot } from './discovery-catalog.js';
 import type { BidviaOpportunityPackageHandoffPlanInput } from './handoffs.js';
 import type { BidviaIndustryUniverseScenarioPlanInput } from './universe.js';
 
@@ -26,338 +34,18 @@ function cloneMcpToolCatalog(catalog: ReadonlyArray<BidviaMcpToolDescriptor>): B
   return structuredClone([...catalog]);
 }
 
-type BidviaMcpOperatorToolDiscovery = BidviaMcpToolDescriptor & Pick<
-  BidviaRouteCapability,
-  'routePathTemplate' | 'httpMethod' | 'scope' | 'level'
->;
-
-export interface BidviaLocalMcpProductizationSnapshot {
-  serverBoundary: {
-    transport: 'stdio';
-    hosted: false;
-    remoteDiscovery: false;
-    sourceOfTruth: 'local-sdk-helpers';
-  };
-  discoverability: {
-    truthFetchReadOnly: true;
-    reviewSafeLocalOnly: true;
-    executionRequiresLocalExecutionClient: true;
-  };
-  tools: BidviaMcpOperatorToolDiscovery[];
-}
-
-function createMcpToolDescriptor(params: {
-  toolName: string;
-  description: string;
-  inputSchemaKey: string;
-  outputMode: BidviaMcpToolDescriptor['outputMode'];
-  helperKey: string;
-  capabilityKey?: string;
-}): BidviaMcpToolDescriptor {
-  const capability = getRouteCapability(params.capabilityKey ?? params.helperKey);
-  if (!capability) {
-    throw new Error(`missing MCP capability metadata for ${params.toolName}`);
-  }
-
-  return {
-    toolName: params.toolName,
-    description: params.description,
-    inputSchemaRef: {
-      schemaKey: params.inputSchemaKey,
-    },
-    outputMode: params.outputMode,
-    helperRef: {
-      helperKey: params.helperKey,
-      capabilityKey: params.capabilityKey,
-    },
-    localCapabilityTier: capability.localCapabilityTier,
-    localCapabilityRiskTier: capability.localCapabilityRiskTier,
-    accessContextFamily: capability.accessContextFamily,
-    requiredContext: [...capability.requiredContext],
-  };
-}
-
-export const bidviaMcpTools: ReadonlyArray<BidviaMcpToolDescriptor> = [
-  createMcpToolDescriptor({
-    toolName: 'industry-universe-plan-preview',
-    description: 'Previews the bounded industry universe scenario plan payload.',
-    inputSchemaKey: 'BidviaIndustryUniverseScenarioPlanInput',
-    outputMode: 'plan-preview',
-    helperKey: 'buildIndustryUniverseScenarioPlan',
-    capabilityKey: 'buildIndustryUniverseScenarioPlan',
-  }),
-  createMcpToolDescriptor({
-    toolName: 'industry-universe-review-packet-preview',
-    description: 'Previews the bounded industry universe review packet payload.',
-    inputSchemaKey: 'BidviaIndustryUniverseScenarioPlanInput',
-    outputMode: 'review-packet-preview',
-    helperKey: 'buildIndustryUniverseScenarioPlan',
-    capabilityKey: 'buildIndustryUniverseScenarioPlan',
-  }),
-  createMcpToolDescriptor({
-    toolName: 'industry-universe-review-packet-export',
-    description: 'Exports the bounded industry universe review packet payload.',
-    inputSchemaKey: 'BidviaIndustryUniverseScenarioPlanInput',
-    outputMode: 'review-packet-export',
-    helperKey: 'buildIndustryUniverseScenarioPlan',
-    capabilityKey: 'buildIndustryUniverseScenarioPlan',
-  }),
-  createMcpToolDescriptor({
-    toolName: 'connection-approval-plan-preview',
-    description: 'Previews the bounded connection approval scenario plan payload.',
-    inputSchemaKey: 'BidviaConnectionApprovalScenarioPlanInput',
-    outputMode: 'plan-preview',
-    helperKey: 'buildConnectionApprovalScenarioPlan',
-    capabilityKey: 'buildConnectionApprovalScenarioPlan',
-  }),
-  createMcpToolDescriptor({
-    toolName: 'connection-approval-review-packet-preview',
-    description: 'Previews the bounded connection approval review packet payload.',
-    inputSchemaKey: 'BidviaConnectionApprovalScenarioPlanInput',
-    outputMode: 'review-packet-preview',
-    helperKey: 'buildConnectionApprovalScenarioPlan',
-    capabilityKey: 'buildConnectionApprovalScenarioPlan',
-  }),
-  createMcpToolDescriptor({
-    toolName: 'connection-approval-review-packet-export',
-    description: 'Exports the bounded connection approval review packet payload.',
-    inputSchemaKey: 'BidviaConnectionApprovalScenarioPlanInput',
-    outputMode: 'review-packet-export',
-    helperKey: 'buildConnectionApprovalScenarioPlan',
-    capabilityKey: 'buildConnectionApprovalScenarioPlan',
-  }),
-  createMcpToolDescriptor({
-    toolName: 'opportunity-package-handoff-plan-preview',
-    description: 'Previews the bounded opportunity package handoff scenario plan payload.',
-    inputSchemaKey: 'BidviaOpportunityPackageHandoffPlanInput',
-    outputMode: 'plan-preview',
-    helperKey: 'buildOpportunityPackageHandoffPlan',
-    capabilityKey: 'buildOpportunityPackageHandoffPlan',
-  }),
-  createMcpToolDescriptor({
-    toolName: 'opportunity-package-handoff-review-packet-preview',
-    description: 'Previews the bounded opportunity package handoff review packet payload.',
-    inputSchemaKey: 'BidviaOpportunityPackageHandoffPlanInput',
-    outputMode: 'review-packet-preview',
-    helperKey: 'buildOpportunityPackageHandoffPlan',
-    capabilityKey: 'buildOpportunityPackageHandoffPlan',
-  }),
-  createMcpToolDescriptor({
-    toolName: 'opportunity-package-handoff-review-packet-export',
-    description: 'Exports the bounded opportunity package handoff review packet payload.',
-    inputSchemaKey: 'BidviaOpportunityPackageHandoffPlanInput',
-    outputMode: 'review-packet-export',
-    helperKey: 'buildOpportunityPackageHandoffPlan',
-    capabilityKey: 'buildOpportunityPackageHandoffPlan',
-  }),
-  createMcpToolDescriptor({
-    toolName: 'account-agents-read',
-    description: 'Reads the current governed account agent records through the shipped SDK helper.',
-    inputSchemaKey: 'BidviaTruthFetchEmptyInput',
-    outputMode: 'truth-fetch-result',
-    helperKey: 'listAccountAgents',
-    capabilityKey: 'listAccountAgents',
-  }),
-  createMcpToolDescriptor({
-    toolName: 'account-agent-bindings-read',
-    description: 'Reads the current governed account agent bindings through the shipped SDK helper.',
-    inputSchemaKey: 'BidviaTruthFetchEmptyInput',
-    outputMode: 'truth-fetch-result',
-    helperKey: 'listAccountAgentBindings',
-    capabilityKey: 'listAccountAgentBindings',
-  }),
-  createMcpToolDescriptor({
-    toolName: 'account-records-read',
-    description: 'Reads the current governed account records through the shipped SDK helper.',
-    inputSchemaKey: 'BidviaTruthFetchEmptyInput',
-    outputMode: 'truth-fetch-result',
-    helperKey: 'listAccountRecords',
-    capabilityKey: 'listAccountRecords',
-  }),
-  createMcpToolDescriptor({
-    toolName: 'agent-presence-read',
-    description: 'Reads the current governed agent presence through the shipped SDK helper.',
-    inputSchemaKey: 'BidviaAgentRegistrationIdentifierInput',
-    outputMode: 'truth-fetch-result',
-    helperKey: 'getAgentPresence',
-    capabilityKey: 'getAgentPresence',
-  }),
-  createMcpToolDescriptor({
-    toolName: 'agent-authority-read',
-    description: 'Reads the current governed agent authority through the shipped SDK helper.',
-    inputSchemaKey: 'BidviaAgentRegistrationIdentifierInput',
-    outputMode: 'truth-fetch-result',
-    helperKey: 'getAgentAuthority',
-    capabilityKey: 'getAgentAuthority',
-  }),
-  createMcpToolDescriptor({
-    toolName: 'canonical-semantic-concepts-read',
-    description: 'Reads the current business canonical semantic concepts through the shipped SDK helper.',
-    inputSchemaKey: 'BidviaTruthFetchEmptyInput',
-    outputMode: 'truth-fetch-result',
-    helperKey: 'listCanonicalSemanticConcepts',
-    capabilityKey: 'listCanonicalSemanticConcepts',
-  }),
-  createMcpToolDescriptor({
-    toolName: 'canonical-semantic-concept-read',
-    description: 'Reads the current business canonical semantic concept through the shipped SDK helper.',
-    inputSchemaKey: 'BidviaCanonicalSemanticConceptIdentifierInput',
-    outputMode: 'truth-fetch-result',
-    helperKey: 'getCanonicalSemanticConcept',
-    capabilityKey: 'getCanonicalSemanticConcept',
-  }),
-  createMcpToolDescriptor({
-    toolName: 'pricing-bases-read',
-    description: 'Reads the current business pricing bases through the shipped SDK helper.',
-    inputSchemaKey: 'BidviaTruthFetchEmptyInput',
-    outputMode: 'truth-fetch-result',
-    helperKey: 'listPricingBases',
-    capabilityKey: 'listPricingBases',
-  }),
-  createMcpToolDescriptor({
-    toolName: 'pricing-basis-read',
-    description: 'Reads the current business pricing basis through the shipped SDK helper.',
-    inputSchemaKey: 'BidviaPricingBasisIdentifierInput',
-    outputMode: 'truth-fetch-result',
-    helperKey: 'getPricingBasis',
-    capabilityKey: 'getPricingBasis',
-  }),
-  createMcpToolDescriptor({
-    toolName: 'document-artifacts-read',
-    description: 'Reads the current business document artifacts through the shipped SDK helper.',
-    inputSchemaKey: 'BidviaTruthFetchEmptyInput',
-    outputMode: 'truth-fetch-result',
-    helperKey: 'listDocumentArtifacts',
-    capabilityKey: 'listDocumentArtifacts',
-  }),
-  createMcpToolDescriptor({
-    toolName: 'document-artifact-read',
-    description: 'Reads the current business document artifact through the shipped SDK helper.',
-    inputSchemaKey: 'BidviaDocumentArtifactIdentifierInput',
-    outputMode: 'truth-fetch-result',
-    helperKey: 'getDocumentArtifact',
-    capabilityKey: 'getDocumentArtifact',
-  }),
-  createMcpToolDescriptor({
-    toolName: 'media-assets-read',
-    description: 'Reads the current business media assets through the shipped SDK helper.',
-    inputSchemaKey: 'BidviaTruthFetchEmptyInput',
-    outputMode: 'truth-fetch-result',
-    helperKey: 'listMediaAssets',
-    capabilityKey: 'listMediaAssets',
-  }),
-  createMcpToolDescriptor({
-    toolName: 'media-asset-read',
-    description: 'Reads the current business media asset through the shipped SDK helper.',
-    inputSchemaKey: 'BidviaMediaAssetIdentifierInput',
-    outputMode: 'truth-fetch-result',
-    helperKey: 'getMediaAsset',
-    capabilityKey: 'getMediaAsset',
-  }),
-  createMcpToolDescriptor({
-    toolName: 'evidence-assets-read',
-    description: 'Reads the current business evidence assets through the shipped SDK helper.',
-    inputSchemaKey: 'BidviaTruthFetchEmptyInput',
-    outputMode: 'truth-fetch-result',
-    helperKey: 'listEvidenceAssets',
-    capabilityKey: 'listEvidenceAssets',
-  }),
-  createMcpToolDescriptor({
-    toolName: 'evidence-asset-read',
-    description: 'Reads the current business evidence asset through the shipped SDK helper.',
-    inputSchemaKey: 'BidviaEvidenceAssetIdentifierInput',
-    outputMode: 'truth-fetch-result',
-    helperKey: 'getEvidenceAsset',
-    capabilityKey: 'getEvidenceAsset',
-  }),
-  createMcpToolDescriptor({
-    toolName: 'attachment-bindings-read',
-    description: 'Reads the current business attachment bindings through the shipped SDK helper.',
-    inputSchemaKey: 'BidviaTruthFetchEmptyInput',
-    outputMode: 'truth-fetch-result',
-    helperKey: 'listAttachmentBindings',
-    capabilityKey: 'listAttachmentBindings',
-  }),
-  createMcpToolDescriptor({
-    toolName: 'attachment-binding-read',
-    description: 'Reads the current business attachment binding through the shipped SDK helper.',
-    inputSchemaKey: 'BidviaAttachmentBindingIdentifierInput',
-    outputMode: 'truth-fetch-result',
-    helperKey: 'getAttachmentBinding',
-    capabilityKey: 'getAttachmentBinding',
-  }),
-  createMcpToolDescriptor({
-    toolName: registeredAgentExecutionAdapters.heartbeat.name,
-    description: 'Executes the real remote heartbeat over the local registration-bound client seam.',
-    inputSchemaKey: 'BidviaHeartbeatInput',
-    outputMode: 'execution-result',
-    helperKey: registeredAgentExecutionAdapters.heartbeat.name,
-    capabilityKey: registeredAgentExecutionAdapters.heartbeat.capabilityKey,
-  }),
-  createMcpToolDescriptor({
-    toolName: registeredAgentExecutionAdapters['sync-upload'].name,
-    description: 'Executes the real remote sync upload over the local registration-bound client seam.',
-    inputSchemaKey: 'BidviaSyncUploadInput',
-    outputMode: 'execution-result',
-    helperKey: registeredAgentExecutionAdapters['sync-upload'].name,
-    capabilityKey: registeredAgentExecutionAdapters['sync-upload'].capabilityKey,
-  }),
-  createMcpToolDescriptor({
-    toolName: registeredAgentExecutionAdapters.evidence.name,
-    description: 'Executes the real remote evidence submission over the local registration-bound client seam.',
-    inputSchemaKey: 'BidviaEvidenceSubmissionInput',
-    outputMode: 'execution-result',
-    helperKey: registeredAgentExecutionAdapters.evidence.name,
-    capabilityKey: registeredAgentExecutionAdapters.evidence.capabilityKey,
-  }),
-  createMcpToolDescriptor({
-    toolName: registeredAgentExecutionAdapters.proposal.name,
-    description: 'Executes the real remote proposal submission over the local registration-bound client seam.',
-    inputSchemaKey: 'BidviaProposalSubmissionInput',
-    outputMode: 'execution-result',
-    helperKey: registeredAgentExecutionAdapters.proposal.name,
-    capabilityKey: registeredAgentExecutionAdapters.proposal.capabilityKey,
-  }),
-];
+export const bidviaMcpTools: ReadonlyArray<BidviaMcpToolDescriptor> = buildLocalMcpToolCatalog();
 
 export function getMcpToolDescriptor(toolName: string): BidviaMcpToolDescriptor | undefined {
-  return bidviaMcpTools.find((tool) => tool.toolName === toolName);
+  return getLocalMcpToolDescriptor(toolName);
 }
 
 export function exportMcpToolCatalog(): BidviaMcpToolDescriptor[] {
   return cloneMcpToolCatalog(bidviaMcpTools);
 }
 
-function buildMcpOperatorToolDiscovery(tool: BidviaMcpToolDescriptor): BidviaMcpOperatorToolDiscovery {
-  const capability = getRouteCapability(tool.helperRef.capabilityKey ?? tool.helperRef.helperKey);
-  if (!capability) {
-    throw new Error(`missing MCP capability metadata for ${tool.toolName}`);
-  }
-
-  return {
-    ...structuredClone(tool),
-    routePathTemplate: capability.routePathTemplate,
-    httpMethod: capability.httpMethod,
-    scope: capability.scope,
-    level: capability.level,
-  };
-}
-
 export function buildLocalMcpProductizationSnapshot(): BidviaLocalMcpProductizationSnapshot {
-  return {
-    serverBoundary: {
-      transport: 'stdio',
-      hosted: false,
-      remoteDiscovery: false,
-      sourceOfTruth: 'local-sdk-helpers',
-    },
-    discoverability: {
-      truthFetchReadOnly: true,
-      reviewSafeLocalOnly: true,
-      executionRequiresLocalExecutionClient: true,
-    },
-    tools: bidviaMcpTools.map((tool) => buildMcpOperatorToolDiscovery(tool)),
-  };
+  return buildSharedLocalMcpProductizationSnapshot();
 }
 
 type BidviaMcpDispatchResult = {
@@ -520,11 +208,18 @@ async function dispatchRegisteredAgentExecutionTool(
     throw new Error(`MCP tool ${descriptor.toolName} requires a local execution client factory`);
   }
 
-  const executionResult = await adapter.run(dependencies.createExecutionClient(), input);
+  const client = dependencies.createExecutionClient();
+  const preflight = buildMcpExecutionPreflight(descriptor, client);
+  if (preflight && preflight.missingContext.length > 0) {
+    throw new Error(buildMcpMissingContextMessage(descriptor.toolName, preflight.missingContext));
+  }
+
+  const executionResult = await adapter.run(client, input);
 
   return {
     toolName: descriptor.toolName,
     outputMode: descriptor.outputMode,
+    preflight,
     result: {
       executionResult,
     },

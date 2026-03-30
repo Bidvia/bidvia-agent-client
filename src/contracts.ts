@@ -473,6 +473,9 @@ export interface BidviaReviewPacketSummary {
 export interface BidviaReviewPacketBoundaryDetail {
   derivedFromScenarioFacts: true;
   derivedFromVerificationFacts: true;
+  localDerivedExplanationIncluded: true;
+  serverOwnedFactsIncluded: true;
+  dependencyGatedSeamsIncluded: true;
   serverTruthClaimed: false;
   adjudicationOutcomeIncluded: false;
 }
@@ -482,6 +485,9 @@ export interface BidviaReviewPacketVerificationDetail {
   completedRouteKeys: string[];
   pendingRouteKeys: string[];
   totalRecordCount: number;
+  localDerivedExplanation: string[];
+  serverOwnedFacts: string[];
+  dependencyGatedSeams: string[];
 }
 
 export type BidviaReviewPacketRecordGroupKey = keyof BidviaScenarioEnvelopeRecordIds;
@@ -570,6 +576,7 @@ export interface BidviaMcpToolCallRequest {
 export interface BidviaMcpToolCallResponse<Result = unknown> {
   toolName: string;
   outputMode: BidviaMcpToolOutputMode;
+  preflight?: unknown;
   result: Result;
 }
 

@@ -21,8 +21,12 @@ import { buildEvidenceSubmissionInput } from './evidence.js';
 import { buildProposalSubmissionInput } from './proposals.js';
 import {
   bidviaNextStageReadRouteDiscoveryGroups,
-  bidviaRouteCapabilities,
 } from './capabilities.js';
+import {
+  buildLocalDiscoveryCatalog,
+  buildLocalRouteCapabilityCatalog,
+  buildLocalMcpProductizationSnapshot,
+} from './discovery-catalog.js';
 import {
   connectionApprovalScenarioAdapter,
   industryUniverseScenarioAdapter,
@@ -31,21 +35,30 @@ import {
   type BidviaExecutionAdapter,
   type BidviaRegisteredAgentExecutionCommand,
 } from './adapters.js';
-import { buildLocalMcpProductizationSnapshot } from './mcp.js';
 import { buildCommercialActionScenarioPlan } from './commercial-action.js';
 import { buildMultiBusinessChainCoordinatorPlan } from './coordinator.js';
 import { normalizeServerCapabilityPayload } from './server-capabilities.js';
 import { buildLocalRuntimeCapabilitySnapshot } from './runtime-capabilities.js';
 import {
   buildReviewPacket,
+  exportReviewPacket,
   buildScenarioVerificationBundle,
   exportScenarioVerificationBundle,
 } from './verification.js';
 import { buildRegistrationLifecycleScenarioPlan } from './registration-lifecycle.js';
 import { buildRegisteredAgentOperationsScenarioPlan } from './registered-agent-operations.js';
+import {
+  buildCliExecutionPreflight,
+  buildCliMissingContextMessage,
+  type BidviaExecutionOperatorPreflight,
+} from './operator-ergonomics.js';
 
 function printJson(value: unknown): void {
   console.log(JSON.stringify(value, null, 2));
+}
+
+function printReviewPacketJson(value: unknown): void {
+  printJson(exportReviewPacket(value as Parameters<typeof exportReviewPacket>[0]));
 }
 
 export function shouldRunCliMain(argvEntry: string | undefined, moduleUrl: string): boolean {
@@ -141,6 +154,7 @@ type BidviaCliStructuredFailure = {
     message: string;
     validInputs?: string[];
     details?: string[];
+    preflight?: BidviaExecutionOperatorPreflight;
   };
 };
 
@@ -717,6 +731,14 @@ function buildVerificationBundlePreview(input: BidviaVerificationBundleInput, no
 
 export interface BidviaCliDependencies {
   createClient: () => BidviaClient;
+  resolveExecutionContext: () => {
+    tenantId: string;
+    principalId?: string;
+    registrationId?: string;
+    sessionId?: string;
+    adminSessionId?: string;
+    companyId?: string;
+  };
   resolveBaseUrl: () => string;
   resolveEnvironmentMode: () => ReturnType<typeof resolveBidviaEnvironmentModeFromEnv>;
   now: () => string;
@@ -761,6 +783,14 @@ const defaultExecutionCommands: Record<BidviaRegisteredAgentExecutionCommand, Bi
 function createDefaultCliDependencies(): BidviaCliDependencies {
   return {
     createClient,
+    resolveExecutionContext: () => ({
+      tenantId: process.env.BIDVIA_TENANT_ID ?? 'tenant-a',
+      principalId: process.env.BIDVIA_PRINCIPAL_ID,
+      registrationId: process.env.BIDVIA_REGISTRATION_ID,
+      sessionId: process.env.BIDVIA_SESSION_ID,
+      adminSessionId: process.env.BIDVIA_ADMIN_SESSION_ID,
+      companyId: process.env.BIDVIA_COMPANY_ID,
+    }),
     resolveBaseUrl: resolveBidviaBaseUrlFromEnv,
     resolveEnvironmentMode: resolveBidviaEnvironmentModeFromEnv,
     now: () => new Date().toISOString(),
@@ -815,7 +845,7 @@ function buildOperatorDiscoverySnapshot() {
     command: 'operator-discovery',
     scope: 'local-only',
     cli: {
-      routeCapabilities: structuredClone(bidviaRouteCapabilities),
+      routeCapabilities: buildLocalRouteCapabilityCatalog(),
       nextStageReadRouteDiscoveryGroups: bidviaNextStageReadRouteDiscoveryGroups.map((group) => ({
         groupKey: group.groupKey,
         label: group.label,
@@ -824,6 +854,7 @@ function buildOperatorDiscoverySnapshot() {
         serverTruthClaimed: group.serverTruthClaimed,
         memberCount: group.members.length,
       })),
+      discoveryCatalog: buildLocalDiscoveryCatalog(),
     },
     mcp: buildLocalMcpProductizationSnapshot(),
   };
@@ -993,6 +1024,12 @@ export async function runCli(
 
   const executionCommand = dependencies.executionCommands[command as BidviaRegisteredAgentExecutionCommand];
   if (executionCommand) {
+    const preflight = buildCliExecutionPreflight(
+      command,
+      dependencies.resolveExecutionContext(),
+      parsedArgs.dryRun,
+    );
+
     if (parsedArgs.input) {
       return printStructuredFailure(
         dependencies,
@@ -1010,9 +1047,25 @@ export async function runCli(
         command,
         mode: 'dry-run',
         scope: 'local-only',
+        preflight,
         input: executionCommand.buildInput(now),
       });
       return 0;
+    }
+
+    if (preflight && preflight.missingContext.length > 0) {
+      return printStructuredFailure(
+        dependencies,
+        buildStructuredFailure(
+          command,
+          'missing-context',
+          buildCliMissingContextMessage(command, preflight.missingContext),
+          {
+            details: [...preflight.missingContext],
+            preflight,
+          },
+        ),
+      );
     }
 
     const client = dependencies.createClient();
@@ -1147,7 +1200,7 @@ export async function runCli(
         now,
       },
     });
-    dependencies.printJson(result.reviewPacket);
+    printReviewPacketJson(result.reviewPacket);
     return 0;
   }
 
@@ -1186,7 +1239,7 @@ export async function runCli(
         now,
       },
     });
-    dependencies.printJson(result.exportedReviewPacket);
+    printReviewPacketJson(result.exportedReviewPacket);
     return 0;
   }
 
@@ -1244,7 +1297,7 @@ export async function runCli(
         now,
       },
     });
-    dependencies.printJson(result.reviewPacket);
+    printReviewPacketJson(result.reviewPacket);
     return 0;
   }
 
@@ -1273,7 +1326,7 @@ export async function runCli(
         now,
       },
     });
-    dependencies.printJson(result.exportedReviewPacket);
+    printReviewPacketJson(result.exportedReviewPacket);
     return 0;
   }
 
@@ -1325,7 +1378,7 @@ export async function runCli(
         now,
       },
     });
-    dependencies.printJson(result.reviewPacket);
+    printReviewPacketJson(result.reviewPacket);
     return 0;
   }
 
@@ -1351,7 +1404,7 @@ export async function runCli(
         now,
       },
     });
-    dependencies.printJson(result.exportedReviewPacket);
+    printReviewPacketJson(result.exportedReviewPacket);
     return 0;
   }
 

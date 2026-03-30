@@ -119,3 +119,25 @@ test('refreshRemoteCapabilityTruth fails closed with explicit dependency-gated s
   assert.equal(refreshed.localMcpServer.localSnapshot.available, true);
   assert.equal(refreshed.localMcpServer.coreSnapshot, null);
 });
+
+test('refreshRemoteCapabilityTruth returns an isolated blocked truth snapshot for each dependency-gated refresh', () => {
+  const localSnapshot = buildLocalRuntimeCapabilitySnapshot({
+    explicitBaseUrl: 'https://staging.bidvia.internal',
+  });
+
+  const firstRefresh = refreshRemoteCapabilityTruth({
+    localSnapshot,
+  });
+  const secondRefresh = refreshRemoteCapabilityTruth({
+    localSnapshot,
+  });
+
+  assert.notEqual(firstRefresh.coreTruthRefresh, secondRefresh.coreTruthRefresh);
+  assert.deepEqual(secondRefresh.coreTruthRefresh, {
+    source: 'dependency-gated',
+    status: 'blocked',
+    blockedBy: 'bidvia-core-capability-truth',
+    reason: 'Frozen core capability truth is unavailable.',
+    serverProvidedCapabilitiesKnown: false,
+  });
+});

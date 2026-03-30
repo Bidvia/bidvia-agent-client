@@ -44,6 +44,9 @@ test('review packet contracts represent reviewer-ready summary and bounded statu
       boundary: {
         derivedFromScenarioFacts: true,
         derivedFromVerificationFacts: true,
+        localDerivedExplanationIncluded: true,
+        serverOwnedFactsIncluded: true,
+        dependencyGatedSeamsIncluded: true,
         serverTruthClaimed: false,
         adjudicationOutcomeIncluded: false,
       },
@@ -52,6 +55,22 @@ test('review packet contracts represent reviewer-ready summary and bounded statu
         completedRouteKeys: ['createListing'],
         pendingRouteKeys: ['activateListing', 'generateMatchCandidates'],
         totalRecordCount: 1,
+        localDerivedExplanation: [
+          'review-packet-status',
+          'next-pending-route',
+          'route-coverage-note',
+        ],
+        serverOwnedFacts: [
+          'scenario-source-refs',
+          'scenario-evidence-refs',
+          'traceability-refs',
+          'recorded-ids',
+        ],
+        dependencyGatedSeams: [
+          'server-truth-claimed:false',
+          'adjudication-outcome-included:false',
+          'core-truth-closure:deferred',
+        ],
       },
       routeDetails: [
         {
@@ -104,8 +123,16 @@ test('review packet contracts represent reviewer-ready summary and bounded statu
           'pending-routes:2',
           'next-pending-route:activateListing',
           'route-coverage-note:completed-prefix-only',
+          'local-derived-explanation:review-packet-status:partial',
+          'local-derived-explanation:next-pending-route:activateListing',
+          'local-derived-explanation:route-coverage-note:completed-prefix-only',
+          'server-owned-facts:scenario-source-refs:1',
+          'server-owned-facts:scenario-evidence-refs:1',
+          'server-owned-facts:traceability-refs:2',
+          'server-owned-facts:recorded-ids:1',
           'server-truth-claimed:false',
           'adjudication-outcome-included:false',
+          'dependency-gated-seams:core-truth-closure:deferred',
         ],
       },
       {
@@ -126,6 +153,23 @@ test('review packet contracts represent reviewer-ready summary and bounded statu
     ['scenario', 'evidence', 'traceability', 'routes', 'verification', 'records'],
   );
   assert.equal(packet.details.boundary.serverTruthClaimed, false);
+  assert.equal(packet.details.boundary.localDerivedExplanationIncluded, true);
+  assert.deepEqual(packet.details.verification.localDerivedExplanation, [
+    'review-packet-status',
+    'next-pending-route',
+    'route-coverage-note',
+  ]);
+  assert.deepEqual(packet.details.verification.serverOwnedFacts, [
+    'scenario-source-refs',
+    'scenario-evidence-refs',
+    'traceability-refs',
+    'recorded-ids',
+  ]);
+  assert.deepEqual(packet.details.verification.dependencyGatedSeams, [
+    'server-truth-claimed:false',
+    'adjudication-outcome-included:false',
+    'core-truth-closure:deferred',
+  ]);
   assert.deepEqual(packet.details.verification.pendingRouteKeys, ['activateListing', 'generateMatchCandidates']);
 });
 
@@ -497,6 +541,9 @@ test('buildReviewPacket derives reviewer-ready sections and complete status from
     boundary: {
       derivedFromScenarioFacts: true,
       derivedFromVerificationFacts: true,
+      localDerivedExplanationIncluded: true,
+      serverOwnedFactsIncluded: true,
+      dependencyGatedSeamsIncluded: true,
       serverTruthClaimed: false,
       adjudicationOutcomeIncluded: false,
     },
@@ -505,6 +552,22 @@ test('buildReviewPacket derives reviewer-ready sections and complete status from
       completedRouteKeys: ['createListing', 'activateListing', 'generateMatchCandidates'],
       pendingRouteKeys: [],
       totalRecordCount: 2,
+      localDerivedExplanation: [
+        'review-packet-status',
+        'next-pending-route',
+        'route-coverage-note',
+      ],
+      serverOwnedFacts: [
+        'scenario-source-refs',
+        'scenario-evidence-refs',
+        'traceability-refs',
+        'recorded-ids',
+      ],
+      dependencyGatedSeams: [
+        'server-truth-claimed:false',
+        'adjudication-outcome-included:false',
+        'core-truth-closure:deferred',
+      ],
     },
     routeDetails: [
       {
@@ -574,8 +637,16 @@ test('buildReviewPacket derives reviewer-ready sections and complete status from
         'pending-routes:0',
         'next-pending-route:none',
         'route-coverage-note:completed-prefix-only',
+        'local-derived-explanation:review-packet-status:complete',
+        'local-derived-explanation:next-pending-route:none',
+        'local-derived-explanation:route-coverage-note:completed-prefix-only',
+        'server-owned-facts:scenario-source-refs:1',
+        'server-owned-facts:scenario-evidence-refs:1',
+        'server-owned-facts:traceability-refs:2',
+        'server-owned-facts:recorded-ids:2',
         'server-truth-claimed:false',
         'adjudication-outcome-included:false',
+        'dependency-gated-seams:core-truth-closure:deferred',
       ],
     },
     {
@@ -723,8 +794,16 @@ test('buildReviewPacket exposes richer route-chain and record-group readback fro
     'pending-routes:2',
     'next-pending-route:activateListing',
     'route-coverage-note:completed-prefix-only',
+    'local-derived-explanation:review-packet-status:partial',
+    'local-derived-explanation:next-pending-route:activateListing',
+    'local-derived-explanation:route-coverage-note:completed-prefix-only',
+    'server-owned-facts:scenario-source-refs:1',
+    'server-owned-facts:scenario-evidence-refs:1',
+    'server-owned-facts:traceability-refs:2',
+    'server-owned-facts:recorded-ids:3',
     'server-truth-claimed:false',
     'adjudication-outcome-included:false',
+    'dependency-gated-seams:core-truth-closure:deferred',
   ]);
   assert.deepEqual(recordsSection?.entries, [
     'record-group:listings:count=1',
@@ -785,8 +864,12 @@ test('buildReviewPacket stays explicitly local and derived without server-owned 
 
   assert.equal(packet.details.boundary.serverTruthClaimed, false);
   assert.equal(packet.details.boundary.adjudicationOutcomeIncluded, false);
+  assert.equal(packet.details.boundary.serverOwnedFactsIncluded, true);
+  assert.equal(packet.details.boundary.dependencyGatedSeamsIncluded, true);
   assert.equal(packet.sections[4]?.entries.includes('server-truth-claimed:false'), true);
   assert.equal(packet.sections[4]?.entries.includes('adjudication-outcome-included:false'), true);
+  assert.equal(packet.sections[4]?.entries.includes('local-derived-explanation:route-coverage-note:completed-prefix-only'), true);
+  assert.equal(packet.sections[4]?.entries.includes('dependency-gated-seams:core-truth-closure:deferred'), true);
 });
 
 test('exportReviewPacket returns a stable cloned packet export', () => {

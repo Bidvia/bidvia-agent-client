@@ -8,13 +8,19 @@ import type {
 } from './contracts.js';
 import { normalizeServerCapabilityPayload } from './server-capabilities.js';
 
-const blockedCoreTruthRefresh: BidviaBlockedCoreCapabilityTruthRefresh = {
+const blockedCoreTruthRefreshTemplate: BidviaBlockedCoreCapabilityTruthRefresh = {
   source: 'dependency-gated',
   status: 'blocked',
   blockedBy: 'bidvia-core-capability-truth',
   reason: 'Frozen core capability truth is unavailable.',
   serverProvidedCapabilitiesKnown: false,
 };
+
+function buildBlockedCoreTruthRefresh(): BidviaBlockedCoreCapabilityTruthRefresh {
+  return {
+    ...blockedCoreTruthRefreshTemplate,
+  };
+}
 
 export function refreshRemoteCapabilityTruth(
   input: BidviaRemoteCapabilityRefreshInput,
@@ -47,7 +53,7 @@ export function refreshRemoteCapabilityTruth(
           supportedMethods: [...bidviaMcpServerSupportedMethods],
         },
       },
-      coreTruthRefresh: blockedCoreTruthRefresh,
+      coreTruthRefresh: buildBlockedCoreTruthRefresh(),
     };
   }
 

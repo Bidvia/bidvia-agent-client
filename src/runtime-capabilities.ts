@@ -2,13 +2,15 @@ import {
   bidviaMcpServerSupportedMethods,
 } from './contracts.js';
 import type { BidviaLocalRuntimeCapabilitySnapshot } from './contracts.js';
-import { bidviaRouteCapabilities } from './capabilities.js';
 import {
   resolveBidviaBaseUrl,
   resolveBidviaEnvironmentMode,
 } from './config.js';
 import type { ResolveBidviaBaseUrlOptions } from './config.js';
-import { bidviaMcpTools } from './mcp.js';
+import {
+  buildLocalMcpToolCatalog,
+  buildLocalRouteCapabilityCatalog,
+} from './discovery-catalog.js';
 
 const runtimeCapabilitySnapshotSchemaVersion = '2026-03-27';
 const localRuntimeCapabilitySnapshotVersion = 'local-runtime-capability-snapshot';
@@ -16,11 +18,11 @@ const localStaticFallbackPolicy = 'prefer-local-static-until-server-negotiation'
 const deferredNegotiationFallbackPolicy = 'await-explicit-server-negotiation';
 
 function cloneLocalRouteCapabilities(): BidviaLocalRuntimeCapabilitySnapshot['routeCapabilities']['items'] {
-  return structuredClone([...bidviaRouteCapabilities]);
+  return buildLocalRouteCapabilityCatalog();
 }
 
 function cloneLocalMcpTools(): BidviaLocalRuntimeCapabilitySnapshot['mcpTools']['items'] {
-  return structuredClone([...bidviaMcpTools]);
+  return buildLocalMcpToolCatalog();
 }
 
 function buildLocalStaticMetadata(revision: string, lastUpdatedAt: string) {

@@ -3,7 +3,8 @@ import { fileURLToPath } from 'node:url';
 
 import { BidviaClient } from './client.js';
 import { resolveBidviaBaseUrlFromEnv } from './config.js';
-import { buildLocalMcpProductizationSnapshot, dispatchMcpToolCall } from './mcp.js';
+import { buildLocalMcpProductizationSnapshot } from './discovery-catalog.js';
+import { dispatchMcpToolCall } from './mcp.js';
 
 interface JsonRpcRequest {
   jsonrpc: '2.0';
