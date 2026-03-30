@@ -1,5 +1,7 @@
 # Contract Boundary
 
+This boundary reference supports the active execution plan at `.sisyphus/plans/agent-client-next-version-productization.md`. Read it as release-boundary guidance for the current shipped local-first surface, not as a competing roadmap.
+
 ## Rule
 
 `Bidvia-agent-client` consumes agent-access truth from Bidvia core. It does not define that truth.
@@ -31,7 +33,7 @@
 - client convenience must not bypass platform truth
 - proposals and evidence remain explicit platform operations
 
-## Current V11 focus
+## Current frozen focus
 
 - onboarding / claim
 - heartbeat

@@ -2,6 +2,8 @@
 
 `bidvia-agent-client` is the open-source SDK and CLI for connecting governed agents to the Bidvia platform.
 
+The active execution plan for the current documentation and productization wave is `.sisyphus/plans/agent-client-next-version-productization.md`. This README stays focused on the shipped local-first package surface and should be read alongside that plan, not as a competing roadmap.
+
 Today, this package ships a usable current mainline client surface for the frozen Bidvia Commercial Universe V1 / Core V12 handoff boundary. It includes typed SDK helpers, a widened read-only truth-fetch layer, stronger local operator discovery surfaces, richer review-safe readback, bounded scenario and verification helpers, local CLI commands, and a local stdio MCP seam. Recent transport and auth-provider hardening support that local-only foundation, but they do not mean login is shipped. It does not claim hosted runtime behavior, remote registry behavior, integrated Core truth beyond frozen inputs, or client-owned authority.
 
 ## What ships today
@@ -196,9 +198,9 @@ In plain terms, phase order matters here. The widened governance deep-read famil
 
 ### 2. Implemented but dependency-gated seams
 
-These seams exist in code, but they remain blocked until Bidvia Core provides frozen truth.
+These seams exist in code as readiness-only consumption points, but they remain blocked until Bidvia Core provides frozen truth.
 
-`refreshRemoteCapabilityTruth(...)` belongs here. The seam is implemented, but integrated Core truth is not. Until frozen Core-owned capability truth exists, it stays blocked and fail-closed.
+`refreshRemoteCapabilityTruth(...)` belongs here. The seam is ready to consume a future frozen Core capability-truth payload, but this repo does not have that truth today. Until frozen Core-owned capability truth exists, every blocked refresh stays fail-closed and must not be read as truth closure.
 
 ### 3. Deferred areas
 

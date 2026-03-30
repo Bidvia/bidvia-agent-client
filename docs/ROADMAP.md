@@ -1,5 +1,10 @@
 # Roadmap
 
+> Status: reference-only support material
+>
+> The active execution plan for the current wave is `.sisyphus/plans/agent-client-next-version-productization.md`.
+> Read this file as long-horizon sequencing support only. Current execution stays grounded in Track 1 client-owned productization, while Core truth closure remains deferred to later work.
+
 ## Product direction
 
 `Bidvia-agent-client` is on a long path toward a governed operating kit for agents connecting to the Bidvia platform.
@@ -39,8 +44,8 @@ These are implemented and should be described as local repo-owned surfaces:
 
 These are implemented seams that must stay fail-closed until Bidvia Core provides frozen truth:
 
-- `refreshRemoteCapabilityTruth(...)` is implemented, but it is blocked until frozen Core capability truth and freshness semantics exist
-- the seam can merge local snapshot knowledge with a server-derived capability payload shape, but it must not be described as integrated Core truth, live negotiation, remote discovery, hosted MCP/runtime behavior, or remote registry behavior
+- `refreshRemoteCapabilityTruth(...)` is implemented as a readiness-only consumption seam, but it is blocked until frozen Core capability truth and freshness semantics exist
+- the seam can accept a future server-derived capability payload shape without rewriting the client boundary, but it must not be described as integrated Core truth, truth closure, live negotiation, remote discovery, hosted MCP/runtime behavior, or remote registry behavior
 
 ### Deferred Core, runtime, and control-plane areas
 
@@ -50,6 +55,8 @@ These remain outside the shipped mainline boundary:
 - hosted MCP/runtime expansion, remote registry behavior, and broader runtime negotiation loops
 - approval-to-opportunity creation or discovery behavior after the current coordinator handoff boundary
 - broader control-plane ownership, client-owned authority, or any claim that bounded orchestration is a general workflow engine
+
+The current wave also keeps six speculative mechanisms explicitly deferred: transport profiles, workspace grants, confirmation gates, durable session stores, context compression, and memory blocks. Treat them as out of scope for current-wave implementation until a future plan provides separate evidence for promotion. See `.sisyphus/internal/AGENT_CLIENT_DEFERRED_MECHANISMS_EVIDENCE.md`.
 
 ## Long-horizon blueprint
 
@@ -61,7 +68,7 @@ L1 completes Track 1. The goal is for this repo to become the most reliable Bidv
 
 #### Track 1. Integration productization for external users, operators, and OpenClaw Gateway paths
 
-Track 1 focuses on turning the current partial slice into a clear, dependable integration product without changing the repo into OpenClaw core, a hosted control plane, or a client-owned authority layer.
+Track 1 focuses on turning the current shipped slice into a clear, dependable integration product without changing the repo into OpenClaw core, a hosted control plane, or a client-owned authority layer.
 
 Primary outcomes:
 

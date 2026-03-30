@@ -1,5 +1,7 @@
 # Onboarding Guide
 
+This guide supports the current local-first package surface. For current execution sequencing and scope, use `.sisyphus/plans/agent-client-next-version-productization.md` as the active plan. That current wave stays inside grounded Track 1 client-owned productization and does not reopen Core truth closure.
+
 ## Goal
 
 This guide shows the minimum operating path for two current mainline audiences:
