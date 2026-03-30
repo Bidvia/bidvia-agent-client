@@ -10,8 +10,8 @@ This smoke guide is intentionally bounded to the shipped local operator path:
 
 - local package build and validation
 - local CLI read-only checks
-- local stdio MCP server entry readiness
-- remote HTTPS API domain configuration visibility only
+- local stdio MCP server entry availability
+- remote HTTPS API domain visibility only
 
 It does **not** assume any hosted Bidvia runtime, hosted MCP service, or remote registry behavior.
 
@@ -40,7 +40,7 @@ Run the smoke checks in this order:
 5. environment mode smoke
 6. runtime-capability snapshot smoke
 7. server-capability normalization smoke
-8. optional local MCP server entry readiness check
+8. optional local MCP server entry check
 
 Do not skip directly to MCP wiring before the earlier checks are clean.
 
@@ -123,6 +123,7 @@ node dist/cli.js launch-topology-smoke
 
 - the resolved `baseUrl` is what the current environment actually produces
 - the resolved `environmentMode` is visible locally
+- the default public path resolves to `https://api.bidvia.ai` when no override is set
 - the canonical production API domains are visible as:
   - `https://api.bidvia.ai`
   - `https://api.bidvia.cn`
@@ -137,6 +138,7 @@ Treat it as an environment/topology configuration problem.
 High-level meaning:
 
 - the operator may be pointing at the wrong domain
+- the package default may have been overridden unexpectedly
 - the canonical `api.*` guidance may not be reflected in the local environment
 - profile compatibility assumptions may not match the current shell/env state
 
@@ -151,7 +153,7 @@ node dist/cli.js environment-mode
 ### What this proves
 
 - the current base URL resolves to `local`, `sim`, or `production`
-- the local environment classifier is behaving consistently with the configured `BIDVIA_BASE_URL`
+- the local environment classifier is behaving consistently with the current default or explicit override
 
 ### If this fails
 
@@ -210,7 +212,7 @@ High-level meaning:
 - server-derived payload handling cannot currently be inspected or demonstrated locally
 - do not mistake this for a remote negotiation failure, because the command is sample/local only
 
-## 8. Optional local MCP server entry readiness check
+## 8. Optional local MCP server entry check
 
 ### Entrypoint
 
@@ -226,7 +228,7 @@ node dist/src/mcp-server.js
 
 ### Operational note
 
-This is an entry readiness check, not a hosted-service proof.
+This is an entry check, not a hosted-service proof.
 
 It should be treated as:
 
@@ -250,7 +252,7 @@ High-level meaning:
 - `npm run build` passes
 - `npm test` passes
 - `npm run validate` passes
-- `launch-topology-smoke` returns the expected canonical `api.*` and compatibility mapping information
+- `launch-topology-smoke` returns the expected default public resolution or the intended explicit override, plus the canonical `api.*` and compatibility mapping information
 - `environment-mode` reflects the intended environment
 - `runtime-capabilities` returns local-static and deferred surfaces as expected
 - `server-capabilities` returns normalized `server-derived` sample output as expected
@@ -258,7 +260,7 @@ High-level meaning:
 ### Stop and fix locally when:
 
 - build/test/validate fails
-- canonical domain resolution looks wrong
+- default public resolution or explicit override resolution looks wrong
 - runtime capability visibility is missing
 - server capability normalization output is missing or malformed
 
@@ -276,6 +278,10 @@ node dist/cli.js server-capabilities
 
 If that bundle is clean, then move on to the fuller test/validate path and the local stdio MCP entry wiring.
 
+For the default public path, run that bundle without setting `BIDVIA_BASE_URL` first.
+
+If the deployment needs local, sim, china, or other operator-managed routing instead, set `BIDVIA_BASE_URL` before the smoke run and treat that as an explicit advanced override, not the baseline public path.
+
 If you want the grouped local-only command surface before or after the smoke run, use:
 
 ```bash
@@ -289,7 +295,7 @@ That help output is the quickest way to confirm the current packaged CLI still i
 Use `docs/OPENCLAW_GATEWAY_ONBOARDING.md` for:
 
 - install/configure order
-- canonical domain guidance
+- default public path first, with explicit override guidance second
 - compatibility-window explanation
 - CLI-first vs MCP-first entry choice
 

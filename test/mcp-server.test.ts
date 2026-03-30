@@ -363,6 +363,70 @@ test('local MCP stdio server parses byte-accurate UTF-8 frames when requests arr
   }
 });
 
+test('local MCP stdio server uses an explicit execution client dependency ahead of env-backed defaults', async () => {
+  const input = new PassThrough();
+  const output = new PassThrough();
+  const originalEnv = {
+    BIDVIA_BASE_URL: process.env.BIDVIA_BASE_URL,
+    BIDVIA_TENANT_ID: process.env.BIDVIA_TENANT_ID,
+  };
+
+  process.env.BIDVIA_BASE_URL = 'https://bidvia.ai';
+  process.env.BIDVIA_TENANT_ID = 'tenant-from-env';
+
+  let createExecutionClientCalls = 0;
+
+  runLocalMcpServerWithDependencies(input, output, {
+    createExecutionClient: () => {
+      createExecutionClientCalls += 1;
+
+      return {
+        async listMediaAssets() {
+          return {
+            items: [{ mediaAssetId: 'media-from-override' }],
+          };
+        },
+      };
+    },
+  });
+
+  try {
+    input.write(encodeFrame({
+      jsonrpc: '2.0',
+      id: 150,
+      method: 'tools/call',
+      params: {
+        name: 'media-assets-read',
+        arguments: {},
+      },
+    }));
+    const response = await readFrame(output) as { result: { content: Array<{ text: string }> } };
+    const payload = JSON.parse(response.result.content[0]!.text);
+
+    assert.equal(createExecutionClientCalls, 1);
+    assert.deepEqual(payload.result, {
+      truthFetchResult: {
+        items: [{ mediaAssetId: 'media-from-override' }],
+      },
+    });
+  } finally {
+    input.end();
+    output.end();
+
+    if (originalEnv.BIDVIA_BASE_URL === undefined) {
+      delete process.env.BIDVIA_BASE_URL;
+    } else {
+      process.env.BIDVIA_BASE_URL = originalEnv.BIDVIA_BASE_URL;
+    }
+
+    if (originalEnv.BIDVIA_TENANT_ID === undefined) {
+      delete process.env.BIDVIA_TENANT_ID;
+    } else {
+      process.env.BIDVIA_TENANT_ID = originalEnv.BIDVIA_TENANT_ID;
+    }
+  }
+});
+
 test('local MCP stdio server default execution client supports governance truth-fetch session and admin-session reads from env context', async () => {
   const input = new PassThrough();
   const output = new PassThrough();

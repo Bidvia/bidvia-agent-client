@@ -3,6 +3,8 @@ export type BidviaBaseUrlProfile = 'global' | 'china';
 export type BidviaEnvironmentMode = 'local' | 'sim' | 'production';
 
 const LOCAL_DEVELOPMENT_FALLBACK_BASE_URL = 'http://127.0.0.1:8787';
+const PUBLIC_GLOBAL_BASE_URL = 'https://api.bidvia.ai';
+const PUBLIC_CHINA_BASE_URL = 'https://api.bidvia.cn';
 const LOCAL_BASE_URLS = new Set([
   LOCAL_DEVELOPMENT_FALLBACK_BASE_URL,
   'http://localhost:8787',
@@ -26,11 +28,11 @@ export function resolveBidviaBaseUrl(options: ResolveBidviaBaseUrlOptions = {}):
 
   switch (options.profile) {
     case 'global':
-      return 'https://bidvia.ai';
+      return PUBLIC_GLOBAL_BASE_URL;
     case 'china':
-      return 'https://bidvia.cn';
+      return PUBLIC_CHINA_BASE_URL;
     default:
-      return LOCAL_DEVELOPMENT_FALLBACK_BASE_URL;
+      return PUBLIC_GLOBAL_BASE_URL;
   }
 }
 
@@ -47,11 +49,7 @@ export function resolveBidviaEnvironmentMode(options: ResolveBidviaBaseUrlOption
     return 'sim';
   }
 
-  if (options.profile === 'global' || options.profile === 'china') {
-    return 'production';
-  }
-
-  return 'local';
+  return 'production';
 }
 
 export function resolveBidviaBaseUrlFromEnv(env: NodeJS.ProcessEnv = process.env): string {

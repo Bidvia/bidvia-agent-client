@@ -202,6 +202,103 @@ test('runCli prints operator discovery snapshots for CLI route metadata and loca
   });
 });
 
+test('runCli prints the public-default environment visibility output instead of silently falling back to local', async () => {
+  const printed: unknown[] = [];
+
+  const exitCode = await runCli(['environment-mode'], {
+    printJson: (value) => {
+      printed.push(value);
+    },
+    printLine: () => {
+      throw new Error('environment-mode should not print help lines');
+    },
+  });
+
+  assert.equal(exitCode, 0);
+  assert.deepEqual(printed, [{
+    baseUrl: 'https://api.bidvia.ai',
+    environmentMode: 'production',
+  }]);
+});
+
+test('runCli prints launch topology smoke output with canonical api domains and compatibility-only root mappings', async () => {
+  const printed: unknown[] = [];
+
+  const exitCode = await runCli(['launch-topology-smoke'], {
+    printJson: (value) => {
+      printed.push(value);
+    },
+    printLine: () => {
+      throw new Error('launch-topology-smoke should not print help lines');
+    },
+  });
+
+  assert.equal(exitCode, 0);
+  assert.deepEqual(printed, [{
+    baseUrl: 'https://api.bidvia.ai',
+    environmentMode: 'production',
+    canonicalGlobalApiDomain: 'https://api.bidvia.ai',
+    canonicalChinaApiDomain: 'https://api.bidvia.cn',
+    compatibilityProfileMappings: {
+      global: 'https://bidvia.ai',
+      china: 'https://bidvia.cn',
+    },
+  }]);
+});
+
+test('runCli prints runtime capability snapshots for the public default and preserves explicit local and sim classification', async () => {
+  const defaultPrinted: unknown[] = [];
+  const localPrinted: unknown[] = [];
+  const simPrinted: unknown[] = [];
+
+  const defaultExitCode = await runCli(['runtime-capabilities'], {
+    printJson: (value) => {
+      defaultPrinted.push(value);
+    },
+    printLine: () => {
+      throw new Error('runtime-capabilities should not print help lines');
+    },
+  });
+  const localExitCode = await runCli(['runtime-capabilities'], {
+    resolveBaseUrl: () => 'http://127.0.0.1:8787',
+    printJson: (value) => {
+      localPrinted.push(value);
+    },
+    printLine: () => {
+      throw new Error('runtime-capabilities should not print help lines for explicit local override');
+    },
+  });
+  const simExitCode = await runCli(['runtime-capabilities'], {
+    resolveBaseUrl: () => 'https://staging.bidvia.internal',
+    printJson: (value) => {
+      simPrinted.push(value);
+    },
+    printLine: () => {
+      throw new Error('runtime-capabilities should not print help lines for explicit sim override');
+    },
+  });
+
+  assert.equal(defaultExitCode, 0);
+  assert.equal(localExitCode, 0);
+  assert.equal(simExitCode, 0);
+  assert.equal(defaultPrinted.length, 1);
+  assert.equal(localPrinted.length, 1);
+  assert.equal(simPrinted.length, 1);
+
+  const defaultSnapshot = defaultPrinted[0] as { baseUrl: string; environmentMode: string };
+  const localSnapshot = localPrinted[0] as { baseUrl: string; environmentMode: string };
+  const simSnapshot = simPrinted[0] as { baseUrl: string; environmentMode: string };
+
+  assert.equal(defaultSnapshot.baseUrl, 'https://api.bidvia.ai');
+  assert.equal(defaultSnapshot.environmentMode, 'production');
+  assert.equal(localSnapshot.baseUrl, 'http://127.0.0.1:8787');
+  assert.equal(localSnapshot.environmentMode, 'local');
+  assert.notEqual(localSnapshot.environmentMode, 'sim');
+  assert.equal(simSnapshot.baseUrl, 'https://staging.bidvia.internal');
+  assert.equal(simSnapshot.environmentMode, 'sim');
+  assert.notEqual(simSnapshot.environmentMode, 'local');
+});
+
 test('runCli dry-runs execution commands with structured output instead of invoking the client', async () => {
   const printed: unknown[] = [];
   let clientCreateCount = 0;

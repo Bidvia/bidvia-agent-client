@@ -17,11 +17,12 @@ It does **not** assume any hosted Bidvia runtime, hosted MCP service, or remote 
 Use this guide when you want to:
 
 1. install `bidvia-agent-client` in an environment managed by OpenClaw Gateway or a node-host
-2. configure the correct Bidvia API base URL and context variables
-3. verify the local launch topology and capability surfaces with read-only commands
+2. configure the minimum Bidvia context variables for the default public path
+3. verify the default public endpoint resolution and local capability surfaces with read-only commands
 4. choose whether the next integration step is:
    - direct CLI/operator usage, or
    - local stdio MCP server wiring into OpenClaw
+5. optionally pin an explicit Bidvia API base URL when the operator needs local, sim, regional, or other managed endpoint control
 
 This guide is **not** the full smoke catalogue. Keep expanded smoke procedures in `docs/OPENCLAW_GATEWAY_SMOKE.md`.
 
@@ -30,12 +31,12 @@ This guide is **not** the full smoke catalogue. Keep expanded smoke procedures i
 Follow this order:
 
 1. install dependencies and build the package
-2. set the Bidvia API base URL explicitly
-3. set the minimum Bidvia context environment variables
-4. run the read-only topology and capability smoke commands
-5. decide whether the OpenClaw integration entry should be:
+2. set the minimum Bidvia context environment variables
+3. run the read-only topology and capability smoke commands
+4. decide whether the OpenClaw integration entry should be:
    - local CLI/operator checks first, or
    - local stdio MCP server consumption
+5. only if needed, add an explicit `BIDVIA_BASE_URL` override for local, sim, regional, or operator-managed environments
 
 Do **not** start by assuming hosted runtime or remote negotiation exists.
 
@@ -50,27 +51,13 @@ npm run build
 
 This gives you the built CLI at `dist/cli.js` and the built local MCP server entrypoint at `dist/src/mcp-server.js`.
 
-## Step 2 — configure the canonical Bidvia API domain
+## Step 2 — use the default public endpoint first
 
-For production launch, the canonical API domains are:
+For the normal public operator path, `bidvia-agent-client` now defaults to the canonical public API at `https://api.bidvia.ai`.
 
-- global canonical API -> `https://api.bidvia.ai`
-- china canonical API -> `https://api.bidvia.cn`
+That means the simplest public onboarding flow does not need an initial `BIDVIA_BASE_URL` export. Build the package first, set the minimum context, then use the read-only CLI commands to confirm what the package resolves locally.
 
-In production, prefer an explicit `BIDVIA_BASE_URL` with one of those canonical `api.*` domains.
-
-Example:
-
-```bash
-export BIDVIA_BASE_URL="https://api.bidvia.ai"
-```
-
-During the compatibility window, the profile mappings remain supported:
-
-- `global` profile compatibility mapping -> `https://bidvia.ai`
-- `china` profile compatibility mapping -> `https://bidvia.cn`
-
-That compatibility behavior is still valid for now, but it is not the canonical production recommendation.
+This simplified default does not remove operator control. Explicit endpoint selection still remains available when you need local, sim, regional, or other operator-managed routing.
 
 ## Step 3 — configure the minimum Bidvia context
 
@@ -109,6 +96,7 @@ Use this to confirm:
 
 - resolved `baseUrl`
 - resolved `environmentMode`
+- default public resolution to `https://api.bidvia.ai` when no override is set
 - canonical `api.*` domains
 - compatibility profile mappings
 
@@ -119,6 +107,8 @@ node dist/cli.js environment-mode
 ```
 
 Use this to confirm the current base URL resolves to `local`, `sim`, or `production` as expected.
+
+For the default public path, this should resolve as production without requiring an explicit endpoint export.
 
 ### 4.3 Local runtime-capability snapshot
 
@@ -151,6 +141,37 @@ The current shipped local-only CLI surface includes:
 - review-safe scenario plan and review-packet preview/export commands
 - verification-bundle preview/export commands
 - bounded verification-wave preview commands
+
+## Advanced operator note — explicit endpoint override
+
+Use an explicit `BIDVIA_BASE_URL` only when you need to override the simplified public default.
+
+Common operator-managed cases include:
+
+- local control
+- sim control
+- china production routing
+- another regional or managed deployment entrypoint
+
+Examples:
+
+```bash
+export BIDVIA_BASE_URL="http://127.0.0.1:8787"
+export BIDVIA_BASE_URL="https://sim.bidvia.ai"
+export BIDVIA_BASE_URL="https://api.bidvia.cn"
+```
+
+The active public resolution behavior remains:
+
+- default or `global` profile -> `https://api.bidvia.ai`
+- `china` profile -> `https://api.bidvia.cn`
+
+During the compatibility window, the older root-domain mappings may still appear in topology smoke output as informational context:
+
+- `global` compatibility mapping -> `https://bidvia.ai`
+- `china` compatibility mapping -> `https://bidvia.cn`
+
+Those root-domain mappings are compatibility metadata, not the active profile resolution targets. The normal public onboarding path should still start with the package default instead of an explicit export.
 
 ## Step 5 — choose the integration entry mode
 
@@ -196,10 +217,11 @@ That local execution surface is still not login. Transport/auth-provider hardeni
 At the end of onboarding, the operator should have these facts written down explicitly:
 
 1. which canonical Bidvia API domain is being used
-2. whether the deployment is currently relying on compatibility-window profile mapping
-3. which environment variables are globally set for the Gateway context
-4. which variables are injected per agent / per route family
-5. whether the first integration step is CLI-first or stdio MCP-first
+2. whether the deployment is using the default public API or an explicit operator override
+3. whether the deployment is currently relying on compatibility-window profile mapping
+4. which environment variables are globally set for the Gateway context
+5. which variables are injected per agent / per route family
+6. whether the first integration step is CLI-first or stdio MCP-first
 
 Do not leave these as tribal knowledge.
 
@@ -208,7 +230,7 @@ Do not leave these as tribal knowledge.
 For most OpenClaw Gateway installations, the safest baseline is:
 
 1. install and build locally
-2. set explicit `BIDVIA_BASE_URL` to canonical `api.*`
+2. rely on the default public API unless operator control requires an override
 3. set the minimal shared Bidvia tenant/principal values
 4. run the four read-only smoke commands
 5. only then wire `node dist/src/mcp-server.js` into OpenClaw if the Gateway side is ready

@@ -42,11 +42,12 @@ npm run validate
 
 ## Quick SDK use
 
+For the normal public package path, the SDK defaults to the canonical public API at `https://api.bidvia.ai`.
+
 ```ts
 import { BidviaClient, buildHeartbeatInput } from 'bidvia-agent-client';
 
 const client = new BidviaClient({
-  baseUrl: 'https://api.bidvia.ai',
   context: {
     tenantId: 'tenant-a',
     principalId: 'agent-1',
@@ -79,14 +80,29 @@ In practice, the SDK currently covers:
 
 The truth-fetch expansion now ships across the SDK and CLI, with the local stdio MCP layer exposing the currently approved read-only subset as a thin wrapper over shipped SDK helpers. The rollout is phased on purpose: the SDK and CLI now cover the widened client-owned read surface, while MCP keeps its narrower governance-first and business-truth read slices on the same local seam. That MCP layer stays local stdio only and read-only in every phase.
 
-Use an explicit production `baseUrl` when you know the real deployment entrypoint. The canonical production API domains are:
+### Advanced endpoint override
+
+Use an explicit production `baseUrl` only when you know you need a non-default deployment entrypoint. The canonical production API domains are:
 
 - `https://api.bidvia.ai`
 - `https://api.bidvia.cn`
 
+```ts
+const client = new BidviaClient({
+  baseUrl: 'https://api.bidvia.cn',
+  context: {
+    tenantId: 'tenant-a',
+    principalId: 'agent-1',
+    registrationId: 'registration-1',
+  },
+});
+```
+
 ## CLI quick start
 
 After a local build, the package exposes the CLI at `dist/cli.js`, and published installs expose the `bidvia-agent-client` binary.
+
+For the normal public package path, CLI commands resolve against `https://api.bidvia.ai` unless an operator overrides the endpoint.
 
 Start with grouped help when you want the current local-only command surface:
 
@@ -140,6 +156,15 @@ node dist/cli.js proposal --dry-run
 
 The CLI is intentionally local and operator-facing. It helps you inspect environment resolution, local capability views, dry-run payloads, and bounded reviewable flows. It does not turn this package into a hosted runtime, and it does not mean user login is already part of the executable package surface.
 
+### Advanced CLI endpoint override
+
+When you need an explicit operator-selected endpoint, set `BIDVIA_BASE_URL` before running commands. The public defaults stay package-first, but explicit override remains available for operator-managed environments.
+
+```bash
+export BIDVIA_BASE_URL="https://api.bidvia.cn"
+node dist/cli.js environment-mode
+```
+
 If you want a minimal repo-local truth-fetch example without live credentials, run:
 
 ```bash
@@ -154,7 +179,7 @@ npx tsx examples/mcp-truth-fetch.ts
 
 ## OpenClaw Gateway and local node-host path
 
-This repository already supports a local OpenClaw Gateway and node-host integration path, but the path is intentionally narrow:
+This repository already supports a local OpenClaw Gateway and node-host integration path. The default public path still stays intentionally narrow:
 
 - local operator workflow
 - local stdio MCP server
@@ -167,7 +192,9 @@ Start here if that is your path:
 - `docs/OPENCLAW_GATEWAY_ONBOARDING.md` for install and configuration order
 - `docs/OPENCLAW_GATEWAY_SMOKE.md` for the detailed smoke sequence
 
-For Gateway users, the safest order is still: install locally, set the canonical Bidvia API base URL explicitly, run the read-only smoke commands, then wire the local stdio MCP server only if the Gateway side is ready.
+For Gateway users on the public path, the safest order is still: install locally, run the read-only smoke commands against the default public API, then wire the local stdio MCP server only if the Gateway side is ready.
+
+If your Gateway deployment needs an operator-selected endpoint instead, set `BIDVIA_BASE_URL` explicitly before the smoke flow. Keep the boundary the same: local stdio MCP on your side, remote HTTPS Bidvia API on the other side.
 
 ## Release boundary, kept honest
 

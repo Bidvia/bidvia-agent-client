@@ -96,12 +96,14 @@ node dist/cli.js environment-mode
 
 This layer does not change request payloads, enforce execution policy, or add environment-specific runtime controls. It only surfaces classification from the current base URL/profile inputs.
 
-For global launch production guidance, prefer explicit canonical API domains:
+For the normal public package path, start with the package defaults. The SDK and CLI resolve against the canonical public API at `https://api.bidvia.ai`, so public onboarding should not begin with a manual `BIDVIA_BASE_URL` export.
+
+When you need an explicit operator-selected endpoint instead, use the canonical API domains below:
 
 - global canonical API -> `https://api.bidvia.ai`
 - china canonical API -> `https://api.bidvia.cn`
 
-Set `BIDVIA_BASE_URL` explicitly to one of those canonical `api.*` domains in production when you know the real deployment entrypoint.
+Use an explicit `BIDVIA_BASE_URL` override only when you know you need a different deployment entrypoint, such as a local, sim, regional, or operator-managed environment. In production, prefer one of those canonical `api.*` domains when you know the real deployment entrypoint.
 
 If you want a read-only local check of the finalized launch topology guidance, use:
 
@@ -109,14 +111,19 @@ If you want a read-only local check of the finalized launch topology guidance, u
 node dist/cli.js launch-topology-smoke
 ```
 
-That command prints local JSON only: resolved `baseUrl`, resolved `environmentMode`, canonical global/china API domains, and the current compatibility profile mappings.
+That command prints local JSON only: resolved `baseUrl`, resolved `environmentMode`, canonical global/china API domains, and compatibility mapping context.
 
-During the compatibility window, the `global` and `china` profiles still keep the root-domain compatibility mapping:
+The active profile/default resolution behavior is now:
 
-- `global` profile compatibility mapping -> `https://bidvia.ai`
-- `china` profile compatibility mapping -> `https://bidvia.cn`
+- default or `global` profile -> `https://api.bidvia.ai`
+- `china` profile -> `https://api.bidvia.cn`
 
-That compatibility behavior remains supported for now, but the canonical production recommendation is the explicit `api.*` base URL. The shipped runtime model also stays the same: local stdio MCP server plus remote HTTPS API.
+During the compatibility window, `launch-topology-smoke` may still show the older root domains as informational compatibility mappings:
+
+- `global` compatibility mapping -> `https://bidvia.ai`
+- `china` compatibility mapping -> `https://bidvia.cn`
+
+Those root domains are compatibility metadata, not the active `BIDVIA_BASE_URL_PROFILE` resolution targets. The default public path stays package-first and the canonical explicit production recommendation is still the `api.*` base URL. The shipped runtime model also stays the same: local stdio MCP server plus remote HTTPS API.
 
 For the dedicated local/Gateway operator path, keep using the separate OpenClaw Gateway package docs above. They stay bounded to local stdio MCP plus remote HTTPS API and do not imply any hosted runtime behavior.
 
@@ -427,15 +434,20 @@ Additional context now supported for production-proven routes:
 - `adminSessionId` for admin-session detail routes
 - `companyId` for operator-context write routes
 
-Recommended domain profile defaults for future rollout preparation:
+Recommended domain profile defaults for current rollout:
 
 - global canonical API -> `https://api.bidvia.ai`
 - china canonical API -> `https://api.bidvia.cn`
 
-Compatibility mapping still retained during launch window:
+Active profile resolution:
 
-- global profile -> `https://bidvia.ai`
-- china profile -> `https://bidvia.cn`
+- default or `global` profile -> `https://api.bidvia.ai`
+- `china` profile -> `https://api.bidvia.cn`
+
+Compatibility mapping still shown as informational launch-window context:
+
+- global compatibility mapping -> `https://bidvia.ai`
+- china compatibility mapping -> `https://bidvia.cn`
 
 ## Hard stop rules
 

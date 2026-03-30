@@ -8,12 +8,10 @@ import type {
   BidviaLocalRuntimeCapabilitySnapshot,
 } from '../src/contracts.ts';
 
-test('buildLocalRuntimeCapabilitySnapshot derives a machine-readable local capability view from shipped facts only', () => {
-  const snapshot = buildLocalRuntimeCapabilitySnapshot({
-    profile: 'global',
-  });
+test('buildLocalRuntimeCapabilitySnapshot defaults to the public global API while keeping its capability view derived from shipped facts only', () => {
+  const snapshot = buildLocalRuntimeCapabilitySnapshot();
 
-  assert.equal(snapshot.baseUrl, 'https://bidvia.ai');
+  assert.equal(snapshot.baseUrl, 'https://api.bidvia.ai');
   assert.equal(snapshot.environmentMode, 'production');
   assert.equal(snapshot.routeCapabilities.source, 'local-static');
   assert.equal(snapshot.routeCapabilities.items.length > 0, true);
@@ -58,6 +56,22 @@ test('buildLocalRuntimeCapabilitySnapshot derives a machine-readable local capab
     supportedMethods: ['initialize', 'tools/list', 'tools/call'],
   });
   assert.match(snapshot.localMcpServer.lastUpdatedAt, /^\d{4}-\d{2}-\d{2}T/);
+});
+
+test('buildLocalRuntimeCapabilitySnapshot keeps explicit local and sim base URLs classified without falling back to the public default', () => {
+  const localSnapshot = buildLocalRuntimeCapabilitySnapshot({
+    explicitBaseUrl: 'http://127.0.0.1:8787',
+  });
+  const simSnapshot = buildLocalRuntimeCapabilitySnapshot({
+    explicitBaseUrl: 'https://staging.bidvia.internal',
+  });
+
+  assert.equal(localSnapshot.baseUrl, 'http://127.0.0.1:8787');
+  assert.equal(localSnapshot.environmentMode, 'local');
+  assert.notEqual(localSnapshot.environmentMode, 'sim');
+  assert.equal(simSnapshot.baseUrl, 'https://staging.bidvia.internal');
+  assert.equal(simSnapshot.environmentMode, 'sim');
+  assert.notEqual(simSnapshot.environmentMode, 'local');
 });
 
 test('buildLocalRuntimeCapabilitySnapshot keeps deferred server negotiation explicit and separate from local facts', () => {

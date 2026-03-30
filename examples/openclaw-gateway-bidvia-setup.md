@@ -5,7 +5,7 @@ This example shows one concrete local operator path for preparing `bidvia-agent-
 It is intentionally bounded to the currently shipped local/Gateway model:
 
 - local install
-- explicit remote HTTPS Bidvia API base URL
+- default public remote HTTPS Bidvia API
 - local read-only smoke checks
 - optional local stdio MCP wiring
 
@@ -34,28 +34,13 @@ This gives you:
 - `dist/cli.js`
 - `dist/src/mcp-server.js`
 
-## 3. Set the canonical Bidvia API domain
+## 3. Use the default public endpoint first
 
-For production launch guidance, prefer explicit canonical `api.*` domains.
+For the normal public operator path, `bidvia-agent-client` already defaults to `https://api.bidvia.ai`.
 
-Global example:
+Start with that package default. You do not need to export `BIDVIA_BASE_URL` for the baseline public smoke flow.
 
-```bash
-export BIDVIA_BASE_URL="https://api.bidvia.ai"
-```
-
-China example:
-
-```bash
-export BIDVIA_BASE_URL="https://api.bidvia.cn"
-```
-
-Compatibility-window note:
-
-- `global` profile compatibility mapping still resolves to `https://bidvia.ai`
-- `china` profile compatibility mapping still resolves to `https://bidvia.cn`
-
-That compatibility behavior remains supported for now, but the canonical production recommendation is the explicit `api.*` base URL.
+If this deployment needs local, sim, china, or another operator-managed endpoint instead, use the advanced override section below.
 
 ## 4. Set the minimum Bidvia context
 
@@ -85,6 +70,7 @@ Use this to confirm:
 
 - resolved `baseUrl`
 - resolved `environmentMode`
+- default public resolution to `https://api.bidvia.ai` when no override is set
 - canonical `api.*` domains
 - compatibility profile mappings
 
@@ -94,7 +80,7 @@ Use this to confirm:
 node dist/cli.js environment-mode
 ```
 
-Use this to confirm the configured base URL resolves to the expected environment classification.
+Use this to confirm the current default or explicit override resolves to the expected environment classification.
 
 ### 5.3 Runtime capabilities
 
@@ -120,7 +106,29 @@ node dist/cli.js --help
 
 Use this to confirm the current packaged command surface before deciding whether the next operator step is dry-run execution, review-safe export, or local MCP wiring.
 
-## 6. Optional local integrity checks
+## 6. Advanced operator override, optional local integrity checks
+
+If this deployment needs explicit endpoint control, set `BIDVIA_BASE_URL` before running the smoke flow.
+
+Examples:
+
+```bash
+export BIDVIA_BASE_URL="http://127.0.0.1:8787"
+export BIDVIA_BASE_URL="https://sim.bidvia.ai"
+export BIDVIA_BASE_URL="https://api.bidvia.cn"
+```
+
+Active profile/default resolution note:
+
+- default or `global` profile -> `https://api.bidvia.ai`
+- `china` profile -> `https://api.bidvia.cn`
+
+Compatibility-window note:
+
+- `global` compatibility mapping may still appear as `https://bidvia.ai` in `launch-topology-smoke`
+- `china` compatibility mapping may still appear as `https://bidvia.cn` in `launch-topology-smoke`
+
+Those root domains are compatibility metadata in smoke output, not the active profile resolution targets. The default public setup path should stay package-first.
 
 If you want a stronger local verification pass before Gateway wiring:
 
@@ -182,7 +190,6 @@ Transport/auth-provider hardening supports this local path, but it still does no
 cd /Users/liujiao/develop/Bidvia-agent-client
 npm install
 npm run build
-export BIDVIA_BASE_URL="https://api.bidvia.ai"
 export BIDVIA_TENANT_ID="tenant-a"
 export BIDVIA_PRINCIPAL_ID="actor-gateway-1"
 node dist/cli.js launch-topology-smoke
@@ -198,6 +205,8 @@ If that baseline is clean, then the operator can move on to:
 - or `node dist/src/mcp-server.js`
 
 depending on whether the next step is stronger local verification or local stdio MCP wiring.
+
+If the operator needs explicit endpoint control instead of the default public path, add `export BIDVIA_BASE_URL="..."` before the smoke commands and re-run the same bounded flow.
 
 ## 10. What this setup example does not prove
 
