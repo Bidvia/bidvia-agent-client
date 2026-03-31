@@ -3,20 +3,52 @@
   "version": "0.1.0",
   "private": false,
   "description": "Open-source-ready Bidvia agent access client toolkit scaffold.",
+  "license": "MIT",
   "type": "module",
+  "keywords": [
+    "bidvia",
+    "agent",
+    "sdk",
+    "cli",
+    "mcp"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
   "bin": {
     "bidvia-agent-client": "./dist/cli.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/src/index.d.ts",
+      "import": "./dist/src/index.js"
+    },
+    "./cli": "./dist/cli.js",
+    "./mcp-server": "./dist/src/mcp-server.js",
+    "./package.json": "./package.json"
   },
   "files": [
     "dist",
     "README.md",
-    "LICENSE"
+    "LICENSE",
+    "CONTRIBUTING.md",
+    "CODE_OF_CONDUCT.md"
   ],
+  "releaseGate": {
+    "npmPublished": false,
+    "pendingPublicMetadata": [
+      "repository",
+      "homepage",
+      "bugs"
+    ]
+  },
   "scripts": {
     "test": "tsx --test test/**/*.test.ts",
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "validate": "tsx scripts/validate-contract.ts",
+    "validate:release-readiness": "tsx scripts/validate-release-readiness.ts",
+    "validate:release-gate": "tsx scripts/validate-release-gate.ts",
     "example": "tsx examples/basic-agent.ts",
     "example:internal": "tsx examples/internal-team-agent.ts",
     "example:seed": "tsx examples/seed-user-agent.ts"

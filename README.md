@@ -19,18 +19,32 @@ The current mainline remains explicitly bounded to the frozen Bidvia Commercial 
 
 ## Installation
 
-### Use a published package release
+The package now has a stable install/config model, but the final public publish gate is still closed.
 
-```bash
-npm install bidvia-agent-client
-```
-
-### Work from this repository locally
+### Repo-local development/build path
 
 ```bash
 npm install
 npm run build
 ```
+
+This gives you:
+
+- the local CLI at `node dist/cli.js`
+- the local MCP fallback at `node dist/mcp-server.js`
+
+### Published-install path, once the final release gate is open
+
+```bash
+npm install bidvia-agent-client
+```
+
+Once publication is actually live, the stable installed surfaces become:
+
+- `bidvia-agent-client` for CLI commands
+- `bidvia-agent-client mcp-server` for the local stdio MCP server
+
+Until that gate is open, do not assume the package is already available on npm.
 
 Useful local verification commands:
 
@@ -47,12 +61,20 @@ npm run validate
 
 For the normal public package path, start with the package defaults. The CLI resolves against `https://api.bidvia.ai`, so the baseline public journey does not start with `BIDVIA_BASE_URL`.
 
-After a local build, walk the guided path in this order:
+For repo-local development, walk the guided path in this order:
 
 ```bash
 node dist/cli.js onboarding-readiness
 node dist/cli.js route-context-matrix
 node dist/cli.js registration-lifecycle-plan
+```
+
+After the final publish gate opens, the same path becomes:
+
+```bash
+bidvia-agent-client onboarding-readiness
+bidvia-agent-client route-context-matrix
+bidvia-agent-client registration-lifecycle-plan
 ```
 
 Use those commands for three different questions:
@@ -73,12 +95,21 @@ node dist/cli.js registered-agent-operations-plan
 
 If your path is a local OpenClaw Gateway or node-host install, start from the shipped operator handoff instead of reconstructing the MCP config by hand:
 
+Repo-local development/build path:
+
 ```bash
 node dist/cli.js openclaw-mcp-config
 node dist/cli.js route-context-matrix
 ```
 
-Use `openclaw-mcp-config` to export the local stdio MCP command, default public endpoint, and required environment placeholders. Then use `route-context-matrix` to confirm which context family the guided operator route needs before enabling execution.
+Published-install path, once the final release gate is open:
+
+```bash
+bidvia-agent-client openclaw-mcp-config
+bidvia-agent-client route-context-matrix
+```
+
+Use `openclaw-mcp-config` to export the OpenClaw-compatible `command` / `args` / `env` fragment first. The installed execution story is `bidvia-agent-client mcp-server`; the repo-local development fallback remains `node dist/mcp-server.js`. Then use `route-context-matrix` to confirm which context family the guided operator route needs before enabling execution.
 
 Continue with:
 
@@ -146,11 +177,21 @@ const client = new BidviaClient({
 
 ## CLI quick start
 
-After a local build, the package exposes the CLI at `dist/cli.js`, and published installs expose the `bidvia-agent-client` binary.
+Repo-local development/build path:
+
+```bash
+node dist/cli.js --help
+```
+
+Published-install path, once the final release gate is open:
+
+```bash
+bidvia-agent-client --help
+```
 
 For the normal public package path, CLI commands resolve against `https://api.bidvia.ai`. Start with the public CLI-first journey before you reach for explicit overrides.
 
-Guided public journey:
+Guided public journey, repo-local development/build path:
 
 ```bash
 node dist/cli.js onboarding-readiness
@@ -159,12 +200,16 @@ node dist/cli.js registration-lifecycle-plan
 node dist/cli.js registered-agent-operations-plan
 ```
 
-Guided OpenClaw/operator handoff:
+The future installed form uses the same commands through `bidvia-agent-client ...` once publication is actually live.
+
+Guided OpenClaw/operator handoff, repo-local development/build path:
 
 ```bash
 node dist/cli.js openclaw-mcp-config
 node dist/cli.js route-context-matrix
 ```
+
+That export now describes the stable installed MCP surface directly: `bidvia-agent-client mcp-server` is the intended installed command, while `node dist/mcp-server.js` remains the repo-local fallback.
 
 Start with grouped help when you want the current local-only command surface:
 
@@ -254,6 +299,13 @@ Start here if that is your path:
 ```bash
 node dist/cli.js openclaw-mcp-config
 node dist/cli.js route-context-matrix
+```
+
+After the final publish gate opens, the same operator flow should move to:
+
+```bash
+bidvia-agent-client openclaw-mcp-config
+bidvia-agent-client route-context-matrix
 ```
 
 Then continue with:

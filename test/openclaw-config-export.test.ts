@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 
 import * as publicSurface from '../src/index.ts';
 
-test('buildOpenClawConfig and exportOpenClawConfig define the local stdio MCP operator contract without hosted behavior', () => {
+test('buildOpenClawConfig and exportOpenClawConfig produce an OpenClaw-consumption fragment for the local stdio MCP server without assuming a live package release', () => {
   const exports = publicSurface as Record<string, unknown>;
 
   assert.equal(typeof exports.buildOpenClawConfig, 'function');
@@ -13,22 +13,28 @@ test('buildOpenClawConfig and exportOpenClawConfig define the local stdio MCP op
   const exported = (exports.exportOpenClawConfig as (value: unknown) => unknown)(config);
 
   assert.deepEqual(exported, {
-    serverName: 'bidvia-agent-client',
-    transport: 'stdio',
-    command: 'node',
-    args: ['dist/mcp-server.js'],
-    env: {
-      BIDVIA_BASE_URL: 'https://api.bidvia.ai',
-      BIDVIA_TENANT_ID: '<required>',
-      BIDVIA_SESSION_ID: '<optional>',
-      BIDVIA_ADMIN_SESSION_ID: '<optional>',
-      BIDVIA_REGISTRATION_ID: '<optional>',
-      BIDVIA_PRINCIPAL_ID: '<optional>',
+    mcpServers: {
+      'bidvia-agent-client': {
+        command: 'bidvia-agent-client',
+        args: ['mcp-server'],
+        env: {
+          BIDVIA_BASE_URL: 'https://api.bidvia.ai',
+          BIDVIA_TENANT_ID: '<required>',
+          BIDVIA_SESSION_ID: '<optional>',
+          BIDVIA_ADMIN_SESSION_ID: '<optional>',
+          BIDVIA_REGISTRATION_ID: '<optional>',
+          BIDVIA_PRINCIPAL_ID: '<optional>',
+        },
+      },
     },
-    boundary: {
+    localExecutionExpectations: {
+      transport: 'stdio',
       localOnly: true,
       hosted: false,
       remoteDiscovery: false,
+      publishedPackageRequired: true,
+      endpointOverride: 'advanced-operator-only',
+      developmentFallback: 'node dist/mcp-server.js',
     },
     firstSuccessNextStep: {
       command: 'route-context-matrix',

@@ -10,7 +10,7 @@ This smoke guide is intentionally bounded to the shipped local operator path:
 
 - local package build and validation
 - local CLI read-only checks
-- local stdio MCP server entry availability
+- stable local stdio MCP execution surface availability
 - remote HTTPS API domain visibility only
 
 It does **not** assume any hosted Bidvia runtime, hosted MCP service, or remote registry behavior.
@@ -125,7 +125,8 @@ node dist/cli.js openclaw-mcp-config
 
 - the shipped local stdio MCP handoff can be exported without repo archaeology
 - the default public `BIDVIA_BASE_URL` is visible in the operator config
-- the local MCP command is handed off as `node dist/mcp-server.js`
+- the installed MCP command is handed off as `bidvia-agent-client mcp-server`
+- the repo-local MCP fallback remains visible as `node dist/mcp-server.js`
 - the boundary stays local-only, non-hosted, and non-discovery
 - the visible next success step remains `route-context-matrix`
 
@@ -265,7 +266,13 @@ High-level meaning:
 
 ## 10. Optional local MCP server entry check
 
-### Entrypoint
+### Installed entrypoint
+
+```bash
+bidvia-agent-client mcp-server
+```
+
+### Repo-local fallback
 
 ```bash
 node dist/mcp-server.js
@@ -273,8 +280,8 @@ node dist/mcp-server.js
 
 ### What this proves
 
-- the built local stdio MCP server entrypoint exists
-- the Gateway-side next step can use the shipped local stdio path if desired
+- the stable installed local stdio MCP server entrypoint is the intended operator-facing path once publication is live
+- the repo-local fallback still exists for development/build workflows
 - the local MCP surface remains bounded to shipped review-safe and explicit execution tools only
 
 ### Operational note

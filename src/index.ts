@@ -14,6 +14,7 @@ export * from './contracts.js';
 export * from './heartbeat.js';
 export * from './handoffs.js';
 export * from './mcp.js';
+export * from './mcp-server.js';
 export * from './normalization.js';
 export * from './scenarios.js';
 export * from './sync.js';

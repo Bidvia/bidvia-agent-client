@@ -226,6 +226,10 @@ export function runLocalMcpServer(
   });
 }
 
-if (shouldRunLocalMcpServerMain(process.argv[1], import.meta.url)) {
+export function runLocalMcpServerMain(): void {
   runLocalMcpServer();
+}
+
+if (shouldRunLocalMcpServerMain(process.argv[1], import.meta.url)) {
+  runLocalMcpServerMain();
 }

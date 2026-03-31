@@ -74,6 +74,7 @@ test('runCli prints grouped help output for visibility, execution, review-safe, 
     '  file-resource --file-resource-id ...',
     '  target-attachment-bindings --target-ref ...',
     'Execution commands:',
+    '  mcp-server',
     '  heartbeat [--dry-run]',
     '  sync-upload [--dry-run]',
     '  evidence [--dry-run]',
@@ -294,22 +295,28 @@ test('runCli prints an OpenClaw MCP config export that stays local stdio first a
     command: 'openclaw-mcp-config',
     scope: 'local-only',
     config: {
-      serverName: 'bidvia-agent-client',
-      transport: 'stdio',
-      command: 'node',
-      args: ['dist/mcp-server.js'],
-      env: {
-        BIDVIA_BASE_URL: 'https://api.bidvia.ai',
-        BIDVIA_TENANT_ID: '<required>',
-        BIDVIA_SESSION_ID: '<optional>',
-        BIDVIA_ADMIN_SESSION_ID: '<optional>',
-        BIDVIA_REGISTRATION_ID: '<optional>',
-        BIDVIA_PRINCIPAL_ID: '<optional>',
+      mcpServers: {
+        'bidvia-agent-client': {
+          command: 'bidvia-agent-client',
+          args: ['mcp-server'],
+          env: {
+            BIDVIA_BASE_URL: 'https://api.bidvia.ai',
+            BIDVIA_TENANT_ID: '<required>',
+            BIDVIA_SESSION_ID: '<optional>',
+            BIDVIA_ADMIN_SESSION_ID: '<optional>',
+            BIDVIA_REGISTRATION_ID: '<optional>',
+            BIDVIA_PRINCIPAL_ID: '<optional>',
+          },
+        },
       },
-      boundary: {
+      localExecutionExpectations: {
+        transport: 'stdio',
         localOnly: true,
         hosted: false,
         remoteDiscovery: false,
+        publishedPackageRequired: true,
+        endpointOverride: 'advanced-operator-only',
+        developmentFallback: 'node dist/mcp-server.js',
       },
       firstSuccessNextStep: {
         command: 'route-context-matrix',
@@ -321,6 +328,25 @@ test('runCli prints an OpenClaw MCP config export that stays local stdio first a
       endpointOverride: 'Advanced/operator-only: set BIDVIA_BASE_URL only when you need a non-default deployment endpoint.',
     },
   }]);
+});
+
+test('runCli dispatches the stable installed MCP server subcommand while leaving repo-local fallback to the direct file entrypoint', async () => {
+  let runLocalMcpServerCalls = 0;
+
+  const exitCode = await runCli(['mcp-server'], {
+    runLocalMcpServer: () => {
+      runLocalMcpServerCalls += 1;
+    },
+    printJson: () => {
+      throw new Error('mcp-server should not print json');
+    },
+    printLine: () => {
+      throw new Error('mcp-server should not print help lines');
+    },
+  });
+
+  assert.equal(exitCode, 0);
+  assert.equal(runLocalMcpServerCalls, 1);
 });
 
 test('runCli prints a route-context matrix that keeps public-first rows ahead of operator-secondary rows', async () => {

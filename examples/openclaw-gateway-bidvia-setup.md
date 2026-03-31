@@ -16,6 +16,19 @@ It does **not** assume:
 - remote registry discovery
 - live remote capability negotiation
 
+## Install model, kept honest
+
+Today, use the repo-local development/build path:
+
+```bash
+npm install
+npm run build
+```
+
+That path gives you `node dist/cli.js` for the CLI and `node dist/mcp-server.js` as the local MCP fallback.
+
+The stable installed execution model is already defined for the final publish gate: once publication is actually live, use `bidvia-agent-client` for CLI commands and `bidvia-agent-client mcp-server` for the local stdio MCP server. Until then, do not treat `npm install bidvia-agent-client` as current external-user guidance.
+
 ## 1. Install and build
 
 ```bash
@@ -23,7 +36,7 @@ npm install
 npm run build
 ```
 
-This gives you the CLI at `dist/cli.js` and the local stdio MCP entrypoint at `dist/mcp-server.js`.
+This gives you the CLI at `dist/cli.js` and the local stdio MCP fallback entrypoint at `dist/mcp-server.js`.
 
 ## 2. Start from the shipped OpenClaw handoff
 
@@ -35,10 +48,12 @@ node dist/cli.js openclaw-mcp-config
 
 Use that output as the source of truth for:
 
-- the local stdio MCP command
+- the OpenClaw-compatible `command` / `args` / `env` fragment
 - the default public `BIDVIA_BASE_URL`
 - the required and optional environment placeholders
 - the local-only boundary flags
+
+The primary installed MCP execution story in that export is now `bidvia-agent-client mcp-server`. Keep `node dist/mcp-server.js` only as the repo-local development/build fallback.
 
 ## 3. Confirm the guided route context
 
@@ -192,7 +207,13 @@ These stay local and do not add hosted or remote behavior.
 
 ## 9. Optional local stdio MCP wiring
 
-If the OpenClaw side is ready to consume a local stdio MCP server, use the shipped entrypoint:
+If the OpenClaw side is ready to consume a local stdio MCP server, the stable installed entrypoint is:
+
+```bash
+bidvia-agent-client mcp-server
+```
+
+For repo-local development/build use, the direct fallback remains:
 
 ```bash
 node dist/mcp-server.js
@@ -229,7 +250,7 @@ If that baseline is clean, then the operator can move on to:
 
 - `npm test`
 - `npm run validate`
-- or `node dist/mcp-server.js`
+- or the exported `bidvia-agent-client mcp-server` fragment, with `node dist/mcp-server.js` kept as the repo-local fallback
 
 depending on whether the next step is stronger local verification or local stdio MCP wiring.
 

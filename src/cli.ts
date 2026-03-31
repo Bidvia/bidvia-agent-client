@@ -63,6 +63,7 @@ import {
   buildRouteContextMatrix,
   buildRouteContextMatrixNextStepHints,
 } from './route-context-matrix.js';
+import { runLocalMcpServerMain } from './mcp-server.js';
 
 function printJson(value: unknown): void {
   console.log(JSON.stringify(value, null, 2));
@@ -756,6 +757,7 @@ export interface BidviaCliDependencies {
   printJson: (value: unknown) => void;
   printLine: (value: string) => void;
   printError: (value: string) => void;
+  runLocalMcpServer: () => void;
   executionCommands: Partial<Record<BidviaRegisteredAgentExecutionCommand, BidviaCliExecutionCommandDefinition>>;
 }
 
@@ -812,6 +814,7 @@ function createDefaultCliDependencies(): BidviaCliDependencies {
     printError: (value) => {
       console.error(value);
     },
+    runLocalMcpServer: runLocalMcpServerMain,
     executionCommands: defaultExecutionCommands,
   };
 }
@@ -831,6 +834,7 @@ function printHelp(printLine: (value: string) => void): void {
     printLine(line);
   }
   printLine('Execution commands:');
+  printLine('  mcp-server');
   printLine('  heartbeat [--dry-run]');
   printLine('  sync-upload [--dry-run]');
   printLine('  evidence [--dry-run]');
@@ -1047,6 +1051,11 @@ export async function runCli(
         endpointOverride: 'Advanced/operator-only: set BIDVIA_BASE_URL only when you need a non-default deployment endpoint.',
       },
     });
+    return 0;
+  }
+
+  if (command === 'mcp-server') {
+    dependencies.runLocalMcpServer();
     return 0;
   }
 
