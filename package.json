@@ -5,6 +5,14 @@
   "description": "Open-source-ready Bidvia agent access client toolkit scaffold.",
   "license": "MIT",
   "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Bidvia/bidvia-agent-client.git"
+  },
+  "homepage": "https://github.com/Bidvia/bidvia-agent-client",
+  "bugs": {
+    "url": "https://github.com/Bidvia/bidvia-agent-client/issues"
+  },
   "keywords": [
     "bidvia",
     "agent",
@@ -35,12 +43,7 @@
     "CODE_OF_CONDUCT.md"
   ],
   "releaseGate": {
-    "npmPublished": false,
-    "pendingPublicMetadata": [
-      "repository",
-      "homepage",
-      "bugs"
-    ]
+    "npmPublished": false
   },
   "scripts": {
     "test": "tsx --test test/**/*.test.ts",

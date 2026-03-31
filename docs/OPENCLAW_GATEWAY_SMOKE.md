@@ -118,7 +118,7 @@ High-level meaning:
 ### Command
 
 ```bash
-node dist/cli.js openclaw-mcp-config
+bidvia-agent-client openclaw-mcp-config
 ```
 
 ### What this proves
@@ -144,7 +144,7 @@ High-level meaning:
 ### Command
 
 ```bash
-node dist/cli.js route-context-matrix
+bidvia-agent-client route-context-matrix
 ```
 
 ### What this proves
@@ -168,7 +168,7 @@ High-level meaning:
 ### Command
 
 ```bash
-node dist/cli.js launch-topology-smoke
+bidvia-agent-client launch-topology-smoke
 ```
 
 ### What this proves
@@ -199,7 +199,7 @@ High-level meaning:
 ### Command
 
 ```bash
-node dist/cli.js environment-mode
+bidvia-agent-client environment-mode
 ```
 
 ### What this proves
@@ -221,7 +221,7 @@ High-level meaning:
 ### Command
 
 ```bash
-node dist/cli.js runtime-capabilities
+bidvia-agent-client runtime-capabilities
 ```
 
 ### What this proves
@@ -246,7 +246,7 @@ High-level meaning:
 ### Command
 
 ```bash
-node dist/cli.js server-capabilities
+bidvia-agent-client server-capabilities
 ```
 
 ### What this proves
@@ -280,7 +280,7 @@ node dist/mcp-server.js
 
 ### What this proves
 
-- the stable installed local stdio MCP server entrypoint is the intended operator-facing path once publication is live
+- the stable installed local stdio MCP server entrypoint is the intended operator-facing path
 - the repo-local fallback still exists for development/build workflows
 - the local MCP surface remains bounded to shipped review-safe and explicit execution tools only
 

@@ -41,7 +41,6 @@ test('package distribution metadata exposes stable installed SDK, CLI, and local
   });
   assert.deepEqual(packageJson.releaseGate, {
     npmPublished: false,
-    pendingPublicMetadata: ['repository', 'homepage', 'bugs'],
   });
   assert.equal(packageJson.license, 'MIT');
   assert.deepEqual(packageJson.engines, {
@@ -54,9 +53,14 @@ test('package distribution metadata exposes stable installed SDK, CLI, and local
     'cli',
     'mcp',
   ]);
-  assert.equal(packageJson.repository, undefined);
-  assert.equal(packageJson.homepage, undefined);
-  assert.equal(packageJson.bugs, undefined);
+  assert.deepEqual(packageJson.repository, {
+    type: 'git',
+    url: 'https://github.com/Bidvia/bidvia-agent-client.git',
+  });
+  assert.equal(packageJson.homepage, 'https://github.com/Bidvia/bidvia-agent-client');
+  assert.deepEqual(packageJson.bugs, {
+    url: 'https://github.com/Bidvia/bidvia-agent-client/issues',
+  });
   assert.equal((packageJson.scripts as Record<string, unknown>)['validate:release-readiness'], 'tsx scripts/validate-release-readiness.ts');
   assert.equal((packageJson.scripts as Record<string, unknown>)['validate:release-gate'], 'tsx scripts/validate-release-gate.ts');
 });

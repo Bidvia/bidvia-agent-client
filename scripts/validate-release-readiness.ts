@@ -44,11 +44,15 @@ function main(): void {
   });
   assert.deepEqual(packageJson.releaseGate, {
     npmPublished: false,
-    pendingPublicMetadata: ['repository', 'homepage', 'bugs'],
   });
-  assert.equal(packageJson.repository, undefined);
-  assert.equal(packageJson.homepage, undefined);
-  assert.equal(packageJson.bugs, undefined);
+  assert.deepEqual(packageJson.repository, {
+    type: 'git',
+    url: 'https://github.com/Bidvia/bidvia-agent-client.git',
+  });
+  assert.equal(packageJson.homepage, 'https://github.com/Bidvia/bidvia-agent-client');
+  assert.deepEqual(packageJson.bugs, {
+    url: 'https://github.com/Bidvia/bidvia-agent-client/issues',
+  });
   assert.equal(packageJson.scripts?.['validate:release-readiness'], 'tsx scripts/validate-release-readiness.ts');
 
   for (const relativePath of ['README.md', 'LICENSE', 'CONTRIBUTING.md', 'CODE_OF_CONDUCT.md']) {

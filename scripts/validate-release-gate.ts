@@ -16,7 +16,12 @@ function run(command: string, args: string[], cwd: string): string {
   return execFileSync(command, args, {
     cwd,
     encoding: 'utf8',
+    timeout: 5000,
   });
+}
+
+function buildJsonRpcFrame(body: string): string {
+  return `Content-Length: ${Buffer.byteLength(body, 'utf8')}\r\n\r\n${body}`;
 }
 
 function main(): void {
@@ -27,6 +32,22 @@ function main(): void {
   assert.match(checklist, /manual publish gate/i);
   assert.match(checklist, /npm publish/);
   assert.match(checklist, /validate:release-gate/);
+
+  const readme = readFileSync(path.join(workspaceRoot, 'README.md'), 'utf8');
+  const onboardingDoc = readFileSync(path.join(workspaceRoot, 'docs', 'OPENCLAW_GATEWAY_ONBOARDING.md'), 'utf8');
+  const smokeDoc = readFileSync(path.join(workspaceRoot, 'docs', 'OPENCLAW_GATEWAY_SMOKE.md'), 'utf8');
+  const openClawExample = readFileSync(path.join(workspaceRoot, 'examples', 'openclaw-gateway-bidvia-setup.md'), 'utf8');
+
+  for (const document of [readme, onboardingDoc, openClawExample]) {
+    assert.match(document, /npm install bidvia-agent-client/);
+    assert.match(document, /bidvia-agent-client mcp-server/);
+  }
+
+  assert.match(readme, /bidvia-agent-client openclaw-mcp-config/);
+  assert.match(readme, /bidvia-agent-client onboarding-readiness/);
+  assert.match(onboardingDoc, /bidvia-agent-client openclaw-mcp-config/);
+  assert.match(smokeDoc, /bidvia-agent-client openclaw-mcp-config/);
+  assert.match(smokeDoc, /bidvia-agent-client mcp-server/);
 
   run('npm', ['run', 'validate:release-readiness'], workspaceRoot);
 
@@ -55,12 +76,32 @@ function main(): void {
     const helpOutput = run('node_modules/.bin/bidvia-agent-client', ['--help'], tempRoot);
     assert.match(helpOutput, /bidvia-agent-client/);
     assert.match(helpOutput, /mcp-server/);
+    assert.match(helpOutput, /openclaw-mcp-config/);
 
     const openClawConfigOutput = run('node_modules/.bin/bidvia-agent-client', ['openclaw-mcp-config'], tempRoot);
     assert.match(openClawConfigOutput, /"openclaw-mcp-config"/);
     assert.match(openClawConfigOutput, /"mcpServers"/);
     assert.match(openClawConfigOutput, /"command": "bidvia-agent-client"/);
     assert.match(openClawConfigOutput, /"mcp-server"/);
+
+    const initializeOutput = execFileSync(
+      'node_modules/.bin/bidvia-agent-client',
+      ['mcp-server'],
+      {
+        cwd: tempRoot,
+        encoding: 'utf8',
+        timeout: 5000,
+        input: buildJsonRpcFrame(JSON.stringify({
+          jsonrpc: '2.0',
+          id: 1,
+          method: 'initialize',
+          params: {},
+        })),
+      },
+    );
+    assert.match(initializeOutput, /Content-Length:/);
+    assert.match(initializeOutput, /"protocolVersion":"2024-11-05"/);
+    assert.match(initializeOutput, /"name":"bidvia-agent-client"/);
   } finally {
     rmSync(tempRoot, { recursive: true, force: true });
     unlinkSync(tarballPath);

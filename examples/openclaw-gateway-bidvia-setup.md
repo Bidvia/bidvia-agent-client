@@ -18,7 +18,15 @@ It does **not** assume:
 
 ## Install model, kept honest
 
-Today, use the repo-local development/build path:
+Current public install path:
+
+```bash
+npm install bidvia-agent-client
+```
+
+That path gives you `bidvia-agent-client` for the CLI and `bidvia-agent-client mcp-server` for the local stdio MCP server.
+
+Developer fallback path:
 
 ```bash
 npm install
@@ -26,8 +34,6 @@ npm run build
 ```
 
 That path gives you `node dist/cli.js` for the CLI and `node dist/mcp-server.js` as the local MCP fallback.
-
-The stable installed execution model is already defined for the final publish gate: once publication is actually live, use `bidvia-agent-client` for CLI commands and `bidvia-agent-client mcp-server` for the local stdio MCP server. Until then, do not treat `npm install bidvia-agent-client` as current external-user guidance.
 
 ## 1. Install and build
 
@@ -43,7 +49,7 @@ This gives you the CLI at `dist/cli.js` and the local stdio MCP fallback entrypo
 Do not reconstruct the MCP command and environment block by hand. Export the shipped operator config first:
 
 ```bash
-node dist/cli.js openclaw-mcp-config
+bidvia-agent-client openclaw-mcp-config
 ```
 
 Use that output as the source of truth for:
@@ -58,7 +64,7 @@ The primary installed MCP execution story in that export is now `bidvia-agent-cl
 ## 3. Confirm the guided route context
 
 ```bash
-node dist/cli.js route-context-matrix
+bidvia-agent-client route-context-matrix
 ```
 
 Use this to confirm that the public-first onboarding rows stay primary and the OpenClaw/operator row stays secondary before you enable execution.
@@ -92,19 +98,19 @@ Do not assume every agent or every route family shares one execution context.
 ### 6.1 OpenClaw config export
 
 ```bash
-node dist/cli.js openclaw-mcp-config
+bidvia-agent-client openclaw-mcp-config
 ```
 
 ### 6.2 Route-context matrix
 
 ```bash
-node dist/cli.js route-context-matrix
+bidvia-agent-client route-context-matrix
 ```
 
 ### 6.3 Launch topology smoke
 
 ```bash
-node dist/cli.js launch-topology-smoke
+bidvia-agent-client launch-topology-smoke
 ```
 
 Use this to confirm:
@@ -118,7 +124,7 @@ Use this to confirm:
 ### 6.4 Environment mode
 
 ```bash
-node dist/cli.js environment-mode
+bidvia-agent-client environment-mode
 ```
 
 Use this to confirm the current default or explicit override resolves to the expected environment classification.
@@ -126,7 +132,7 @@ Use this to confirm the current default or explicit override resolves to the exp
 ### 6.5 Runtime capabilities
 
 ```bash
-node dist/cli.js runtime-capabilities
+bidvia-agent-client runtime-capabilities
 ```
 
 Use this to inspect repo-local runtime-facing knowledge only.
@@ -134,7 +140,7 @@ Use this to inspect repo-local runtime-facing knowledge only.
 ### 6.6 Server capability normalization sample
 
 ```bash
-node dist/cli.js server-capabilities
+bidvia-agent-client server-capabilities
 ```
 
 Use this to inspect the locally normalized server-derived sample shape only. It does not contact a server.
@@ -142,7 +148,7 @@ Use this to inspect the locally normalized server-derived sample shape only. It 
 ### 6.7 Grouped CLI help
 
 ```bash
-node dist/cli.js --help
+bidvia-agent-client --help
 ```
 
 Use this to confirm the current packaged command surface before deciding whether the next operator step is dry-run execution, review-safe export, or local MCP wiring.
@@ -181,17 +187,17 @@ npm run validate
 If you want explicit local execution payload previews without sending a request yet:
 
 ```bash
-node dist/cli.js heartbeat --dry-run
-node dist/cli.js sync-upload --dry-run
-node dist/cli.js evidence --dry-run
-node dist/cli.js proposal --dry-run
+bidvia-agent-client heartbeat --dry-run
+bidvia-agent-client sync-upload --dry-run
+bidvia-agent-client evidence --dry-run
+bidvia-agent-client proposal --dry-run
 ```
 
 If you want review-safe verification-bundle previews or exports:
 
 ```bash
-node dist/cli.js verification-bundle-preview --input registration-lifecycle
-node dist/cli.js verification-bundle-export --input registered-agent-operations
+bidvia-agent-client verification-bundle-preview --input registration-lifecycle
+bidvia-agent-client verification-bundle-export --input registered-agent-operations
 ```
 
 ## 8. Optional runnable local examples
@@ -234,16 +240,15 @@ Transport/auth-provider hardening supports this local path, but it still does no
 ## 10. Minimal copy-paste baseline
 
 ```bash
-npm install
-npm run build
-node dist/cli.js openclaw-mcp-config
-node dist/cli.js route-context-matrix
+npm install bidvia-agent-client
+bidvia-agent-client openclaw-mcp-config
+bidvia-agent-client route-context-matrix
 export BIDVIA_TENANT_ID="tenant-a"
 export BIDVIA_PRINCIPAL_ID="actor-gateway-1"
-node dist/cli.js launch-topology-smoke
-node dist/cli.js environment-mode
-node dist/cli.js runtime-capabilities
-node dist/cli.js server-capabilities
+bidvia-agent-client launch-topology-smoke
+bidvia-agent-client environment-mode
+bidvia-agent-client runtime-capabilities
+bidvia-agent-client server-capabilities
 ```
 
 If that baseline is clean, then the operator can move on to:
