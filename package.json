@@ -1,5 +1,5 @@
 {
-  "name": "bidvia-agent-client",
+  "name": "@bidvia/client",
   "version": "0.1.0",
   "private": false,
   "description": "Open-source-ready Bidvia agent access client toolkit scaffold.",
@@ -24,7 +24,7 @@
     "node": ">=20"
   },
   "bin": {
-    "bidvia-agent-client": "./dist/cli.js"
+    "bidvia": "./dist/cli.js"
   },
   "exports": {
     ".": {

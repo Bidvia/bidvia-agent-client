@@ -14,8 +14,8 @@ test('buildOpenClawConfig and exportOpenClawConfig produce an OpenClaw-consumpti
 
   assert.deepEqual(exported, {
     mcpServers: {
-      'bidvia-agent-client': {
-        command: 'bidvia-agent-client',
+      'bidvia': {
+        command: 'bidvia',
         args: ['mcp-server'],
         env: {
           BIDVIA_BASE_URL: 'https://api.bidvia.ai',

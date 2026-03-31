@@ -20,8 +20,9 @@ function fileExists(relativePath: string) {
 test('package distribution metadata exposes stable installed SDK, CLI, and local MCP entrypoints from dist artifacts', () => {
   const packageJson = readPackageJson();
 
+  assert.equal(packageJson.name, '@bidvia/client');
   assert.deepEqual(packageJson.bin, {
-    'bidvia-agent-client': './dist/cli.js',
+    bidvia: './dist/cli.js',
   });
   assert.deepEqual(packageJson.files, [
     'dist',
@@ -68,10 +69,12 @@ test('package distribution metadata exposes stable installed SDK, CLI, and local
 test('package metadata declares the installed MCP execution surface without losing the repo-local fallback', () => {
   const packageJson = readPackageJson();
 
+  assert.equal(packageJson.name, '@bidvia/client');
   assert.deepEqual(packageJson.bin, {
-    'bidvia-agent-client': './dist/cli.js',
+    bidvia: './dist/cli.js',
   });
   assert.equal((packageJson.exports as Record<string, unknown>)['./mcp-server'], './dist/src/mcp-server.js');
+  assert.equal(fileExists('mcp-server.ts'), true);
 });
 
 test('public package support files and release-readiness validation entrypoints are present when publication metadata is gated', () => {

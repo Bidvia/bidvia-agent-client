@@ -35,7 +35,7 @@ test('runCli help lists truth-fetch read-only commands under the visibility grou
 
   assert.equal(exitCode, 0);
   const expectedVisibilityLines = [
-    'bidvia-agent-client',
+    'bidvia',
     'Visibility commands:',
     '  environment-mode',
     '  runtime-capabilities',

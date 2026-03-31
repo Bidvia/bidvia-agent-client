@@ -18,7 +18,7 @@ test('runCli prints grouped help output for visibility, execution, review-safe, 
 
   assert.equal(exitCode, 0);
   assert.deepEqual(lines, [
-    'bidvia-agent-client',
+    'bidvia',
     'Visibility commands:',
     '  environment-mode',
     '  runtime-capabilities',
@@ -296,8 +296,8 @@ test('runCli prints an OpenClaw MCP config export that stays local stdio first a
     scope: 'local-only',
     config: {
       mcpServers: {
-        'bidvia-agent-client': {
-          command: 'bidvia-agent-client',
+        bidvia: {
+          command: 'bidvia',
           args: ['mcp-server'],
           env: {
             BIDVIA_BASE_URL: 'https://api.bidvia.ai',

@@ -2,7 +2,7 @@
 
 ## Goal
 
-This guide is the main operator entrypoint for installing and configuring `bidvia-agent-client` under an OpenClaw Gateway / node-host context.
+This guide is the main operator entrypoint for installing and configuring `@bidvia/client` under an OpenClaw Gateway / node-host context.
 
 It is intentionally bounded to the current shipped model:
 
@@ -16,7 +16,7 @@ It does **not** assume any hosted Bidvia runtime, hosted MCP service, or remote 
 
 Use this guide when you want to:
 
-1. install `bidvia-agent-client` in an environment managed by OpenClaw Gateway or a node-host
+1. install `@bidvia/client` in an environment managed by OpenClaw Gateway or a node-host
 2. export the shipped OpenClaw/operator config instead of reconstructing it by hand
 3. configure the minimum Bidvia context variables for the default public path
 4. verify the default public endpoint resolution and local capability surfaces with read-only commands
@@ -30,10 +30,10 @@ This guide is **not** the full smoke catalogue. Keep expanded smoke procedures i
 Current public install path:
 
 ```bash
-npm install bidvia-agent-client
+npm install @bidvia/client
 ```
 
-That path gives you `bidvia-agent-client` for CLI commands and `bidvia-agent-client mcp-server` for the stable local stdio MCP server.
+That path gives you `bidvia` for CLI commands and `bidvia mcp-server` for the stable local stdio MCP server.
 
 Developer fallback path:
 
@@ -49,8 +49,8 @@ That path gives you `node dist/cli.js` for the CLI and `node dist/mcp-server.js`
 Follow this order:
 
 1. install the package
-2. run `bidvia-agent-client openclaw-mcp-config`
-3. run `bidvia-agent-client route-context-matrix`
+2. run `bidvia openclaw-mcp-config`
+3. run `bidvia route-context-matrix`
 4. set the minimum Bidvia context environment variables
 5. run the read-only topology and capability smoke commands
 6. decide whether the OpenClaw integration entry should be local CLI/operator checks first or local stdio MCP server consumption
@@ -69,14 +69,14 @@ npm run build
 
 This gives you the built CLI at `dist/cli.js` and the built local MCP fallback entrypoint at `dist/mcp-server.js`.
 
-For the current installed public path, the equivalent surfaces are `bidvia-agent-client` and `bidvia-agent-client mcp-server`.
+For the current installed public path, the equivalent surfaces are `bidvia` and `bidvia mcp-server`.
 
 ## Step 2 — export the shipped OpenClaw handoff first
 
 Start from the convenience export instead of reconstructing the MCP command and environment block from repo files:
 
 ```bash
-bidvia-agent-client openclaw-mcp-config
+bidvia openclaw-mcp-config
 ```
 
 Use that output as the handoff source for:
@@ -89,14 +89,14 @@ Use that output as the handoff source for:
 
 The shipped config export is now intentionally split into two layers:
 
-- primary installed execution surface: `bidvia-agent-client mcp-server`
+- primary installed execution surface: `bidvia mcp-server`
 - repo-local development/build fallback: `node dist/mcp-server.js`
 
 Use the exported fragment as the primary handoff. Keep the direct `dist/` entrypoint only as the development/build fallback.
 
 ## Step 3 — use the default public endpoint first
 
-For the normal public operator path, `bidvia-agent-client` now defaults to the canonical public API at `https://api.bidvia.ai`.
+For the normal public operator path, `bidvia` now defaults to the canonical public API at `https://api.bidvia.ai`.
 
 That means the simplest public onboarding flow does not need an initial `BIDVIA_BASE_URL` export. Build the package first, set the minimum context, then use the read-only CLI commands to confirm what the package resolves locally.
 
@@ -130,7 +130,7 @@ For OpenClaw Gateway operators, the safe default is:
 Before wiring OpenClaw tools, confirm the guided route context:
 
 ```bash
-bidvia-agent-client route-context-matrix
+bidvia route-context-matrix
 ```
 
 Use this to confirm:
@@ -145,7 +145,7 @@ Then run the read-only smoke commands in this order:
 ### 5.1 Launch topology smoke
 
 ```bash
-bidvia-agent-client launch-topology-smoke
+bidvia launch-topology-smoke
 ```
 
 Use this to confirm:
@@ -159,7 +159,7 @@ Use this to confirm:
 ### 5.2 Environment mode visibility
 
 ```bash
-bidvia-agent-client environment-mode
+bidvia environment-mode
 ```
 
 Use this to confirm the current base URL resolves to `local`, `sim`, or `production` as expected.
@@ -169,7 +169,7 @@ For the default public path, this should resolve as production without requiring
 ### 5.3 Local runtime-capability snapshot
 
 ```bash
-bidvia-agent-client runtime-capabilities
+bidvia runtime-capabilities
 ```
 
 Use this to inspect repo-local runtime-facing knowledge only.
@@ -177,7 +177,7 @@ Use this to inspect repo-local runtime-facing knowledge only.
 ### 5.4 Server-capability normalization sample
 
 ```bash
-bidvia-agent-client server-capabilities
+bidvia server-capabilities
 ```
 
 Use this to confirm the local parser/normalizer for server-derived payload shape. This is sample/local normalization only, not live negotiation.
@@ -187,7 +187,7 @@ If any of the matrix or smoke checks look wrong, stop here and fix the local ins
 If you want the full grouped command surface before you choose the next step, run:
 
 ```bash
-bidvia-agent-client --help
+bidvia --help
 ```
 
 The current shipped local-only CLI surface includes:
@@ -254,7 +254,7 @@ Use this when the OpenClaw side is ready to consume a local stdio MCP server.
 The stable installed MCP server command is:
 
 ```bash
-bidvia-agent-client mcp-server
+bidvia mcp-server
 ```
 
 For repo-local development/build use, the direct fallback remains:
@@ -299,7 +299,7 @@ For most OpenClaw Gateway installations, the safest baseline is:
 4. rely on the default public API unless operator control requires an override
 5. set the minimal shared Bidvia tenant/principal values
 6. run the four read-only smoke commands
-7. only then wire the exported `bidvia-agent-client mcp-server` fragment into OpenClaw if the Gateway side is ready, using `node dist/mcp-server.js` only as the repo-local fallback
+7. only then wire the exported `bidvia mcp-server` fragment into OpenClaw if the Gateway side is ready, using `node dist/mcp-server.js` only as the repo-local fallback
 
 This order reduces ambiguity and keeps the integration bounded to shipped local surfaces.
 

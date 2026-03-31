@@ -19,7 +19,7 @@ It does **not** assume any hosted Bidvia runtime, hosted MCP service, or remote 
 
 This guide answers one question only:
 
-> “Is this local / Gateway-side `bidvia-agent-client` install configured and visible enough to proceed?”
+> “Is this local / Gateway-side `@bidvia/client` install configured and visible enough to proceed?”
 
 It does **not** prove:
 
@@ -118,14 +118,14 @@ High-level meaning:
 ### Command
 
 ```bash
-bidvia-agent-client openclaw-mcp-config
+bidvia openclaw-mcp-config
 ```
 
 ### What this proves
 
 - the shipped local stdio MCP handoff can be exported without repo archaeology
 - the default public `BIDVIA_BASE_URL` is visible in the operator config
-- the installed MCP command is handed off as `bidvia-agent-client mcp-server`
+- the installed MCP command is handed off as `bidvia mcp-server`
 - the repo-local MCP fallback remains visible as `node dist/mcp-server.js`
 - the boundary stays local-only, non-hosted, and non-discovery
 - the visible next success step remains `route-context-matrix`
@@ -144,7 +144,7 @@ High-level meaning:
 ### Command
 
 ```bash
-bidvia-agent-client route-context-matrix
+bidvia route-context-matrix
 ```
 
 ### What this proves
@@ -168,7 +168,7 @@ High-level meaning:
 ### Command
 
 ```bash
-bidvia-agent-client launch-topology-smoke
+bidvia launch-topology-smoke
 ```
 
 ### What this proves
@@ -199,7 +199,7 @@ High-level meaning:
 ### Command
 
 ```bash
-bidvia-agent-client environment-mode
+bidvia environment-mode
 ```
 
 ### What this proves
@@ -221,7 +221,7 @@ High-level meaning:
 ### Command
 
 ```bash
-bidvia-agent-client runtime-capabilities
+bidvia runtime-capabilities
 ```
 
 ### What this proves
@@ -246,7 +246,7 @@ High-level meaning:
 ### Command
 
 ```bash
-bidvia-agent-client server-capabilities
+bidvia server-capabilities
 ```
 
 ### What this proves
@@ -269,7 +269,7 @@ High-level meaning:
 ### Installed entrypoint
 
 ```bash
-bidvia-agent-client mcp-server
+bidvia mcp-server
 ```
 
 ### Repo-local fallback

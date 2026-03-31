@@ -1,6 +1,6 @@
 # OpenClaw Gateway Bidvia Setup Example
 
-This example shows one concrete local operator path for preparing `bidvia-agent-client` under an OpenClaw Gateway / node-host style deployment.
+This example shows one concrete local operator path for preparing `@bidvia/client` under an OpenClaw Gateway / node-host style deployment.
 
 It is intentionally bounded to the currently shipped local/Gateway model:
 
@@ -21,10 +21,10 @@ It does **not** assume:
 Current public install path:
 
 ```bash
-npm install bidvia-agent-client
+npm install @bidvia/client
 ```
 
-That path gives you `bidvia-agent-client` for the CLI and `bidvia-agent-client mcp-server` for the local stdio MCP server.
+That path gives you `bidvia` for the CLI and `bidvia mcp-server` for the local stdio MCP server.
 
 Developer fallback path:
 
@@ -49,7 +49,7 @@ This gives you the CLI at `dist/cli.js` and the local stdio MCP fallback entrypo
 Do not reconstruct the MCP command and environment block by hand. Export the shipped operator config first:
 
 ```bash
-bidvia-agent-client openclaw-mcp-config
+bidvia openclaw-mcp-config
 ```
 
 Use that output as the source of truth for:
@@ -59,19 +59,19 @@ Use that output as the source of truth for:
 - the required and optional environment placeholders
 - the local-only boundary flags
 
-The primary installed MCP execution story in that export is now `bidvia-agent-client mcp-server`. Keep `node dist/mcp-server.js` only as the repo-local development/build fallback.
+The primary installed MCP execution story in that export is now `bidvia mcp-server`. Keep `node dist/mcp-server.js` only as the repo-local development/build fallback.
 
 ## 3. Confirm the guided route context
 
 ```bash
-bidvia-agent-client route-context-matrix
+bidvia route-context-matrix
 ```
 
 Use this to confirm that the public-first onboarding rows stay primary and the OpenClaw/operator row stays secondary before you enable execution.
 
 ## 4. Use the default public endpoint first
 
-For the normal public operator path, `bidvia-agent-client` already defaults to `https://api.bidvia.ai`.
+For the normal public operator path, `bidvia` already defaults to `https://api.bidvia.ai`.
 
 Start with that package default. You do not need to export `BIDVIA_BASE_URL` for the baseline public smoke flow.
 
@@ -98,19 +98,19 @@ Do not assume every agent or every route family shares one execution context.
 ### 6.1 OpenClaw config export
 
 ```bash
-bidvia-agent-client openclaw-mcp-config
+bidvia openclaw-mcp-config
 ```
 
 ### 6.2 Route-context matrix
 
 ```bash
-bidvia-agent-client route-context-matrix
+bidvia route-context-matrix
 ```
 
 ### 6.3 Launch topology smoke
 
 ```bash
-bidvia-agent-client launch-topology-smoke
+bidvia launch-topology-smoke
 ```
 
 Use this to confirm:
@@ -124,7 +124,7 @@ Use this to confirm:
 ### 6.4 Environment mode
 
 ```bash
-bidvia-agent-client environment-mode
+bidvia environment-mode
 ```
 
 Use this to confirm the current default or explicit override resolves to the expected environment classification.
@@ -132,7 +132,7 @@ Use this to confirm the current default or explicit override resolves to the exp
 ### 6.5 Runtime capabilities
 
 ```bash
-bidvia-agent-client runtime-capabilities
+bidvia runtime-capabilities
 ```
 
 Use this to inspect repo-local runtime-facing knowledge only.
@@ -140,7 +140,7 @@ Use this to inspect repo-local runtime-facing knowledge only.
 ### 6.6 Server capability normalization sample
 
 ```bash
-bidvia-agent-client server-capabilities
+bidvia server-capabilities
 ```
 
 Use this to inspect the locally normalized server-derived sample shape only. It does not contact a server.
@@ -148,7 +148,7 @@ Use this to inspect the locally normalized server-derived sample shape only. It 
 ### 6.7 Grouped CLI help
 
 ```bash
-bidvia-agent-client --help
+bidvia --help
 ```
 
 Use this to confirm the current packaged command surface before deciding whether the next operator step is dry-run execution, review-safe export, or local MCP wiring.
@@ -187,17 +187,17 @@ npm run validate
 If you want explicit local execution payload previews without sending a request yet:
 
 ```bash
-bidvia-agent-client heartbeat --dry-run
-bidvia-agent-client sync-upload --dry-run
-bidvia-agent-client evidence --dry-run
-bidvia-agent-client proposal --dry-run
+bidvia heartbeat --dry-run
+bidvia sync-upload --dry-run
+bidvia evidence --dry-run
+bidvia proposal --dry-run
 ```
 
 If you want review-safe verification-bundle previews or exports:
 
 ```bash
-bidvia-agent-client verification-bundle-preview --input registration-lifecycle
-bidvia-agent-client verification-bundle-export --input registered-agent-operations
+bidvia verification-bundle-preview --input registration-lifecycle
+bidvia verification-bundle-export --input registered-agent-operations
 ```
 
 ## 8. Optional runnable local examples
@@ -216,7 +216,7 @@ These stay local and do not add hosted or remote behavior.
 If the OpenClaw side is ready to consume a local stdio MCP server, the stable installed entrypoint is:
 
 ```bash
-bidvia-agent-client mcp-server
+bidvia mcp-server
 ```
 
 For repo-local development/build use, the direct fallback remains:
@@ -240,22 +240,22 @@ Transport/auth-provider hardening supports this local path, but it still does no
 ## 10. Minimal copy-paste baseline
 
 ```bash
-npm install bidvia-agent-client
-bidvia-agent-client openclaw-mcp-config
-bidvia-agent-client route-context-matrix
+npm install @bidvia/client
+bidvia openclaw-mcp-config
+bidvia route-context-matrix
 export BIDVIA_TENANT_ID="tenant-a"
 export BIDVIA_PRINCIPAL_ID="actor-gateway-1"
-bidvia-agent-client launch-topology-smoke
-bidvia-agent-client environment-mode
-bidvia-agent-client runtime-capabilities
-bidvia-agent-client server-capabilities
+bidvia launch-topology-smoke
+bidvia environment-mode
+bidvia runtime-capabilities
+bidvia server-capabilities
 ```
 
 If that baseline is clean, then the operator can move on to:
 
 - `npm test`
 - `npm run validate`
-- or the exported `bidvia-agent-client mcp-server` fragment, with `node dist/mcp-server.js` kept as the repo-local fallback
+- or the exported `bidvia mcp-server` fragment, with `node dist/mcp-server.js` kept as the repo-local fallback
 
 depending on whether the next step is stronger local verification or local stdio MCP wiring.
 

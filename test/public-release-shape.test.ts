@@ -15,6 +15,7 @@ test('public release docs no longer depend on transitional publication wording i
   const readme = readText('README.md');
   const onboardingDoc = readText('docs/OPENCLAW_GATEWAY_ONBOARDING.md');
   const smokeDoc = readText('docs/OPENCLAW_GATEWAY_SMOKE.md');
+  const openClawExample = readText('examples/openclaw-gateway-bidvia-setup.md');
 
   for (const document of [readme, onboardingDoc, smokeDoc]) {
     assert.doesNotMatch(document, /once the final (public )?publish gate is open/i);
@@ -23,9 +24,18 @@ test('public release docs no longer depend on transitional publication wording i
     assert.doesNotMatch(document, /do not assume the package is already available on npm/i);
   }
 
-  assert.match(readme, /npm install bidvia-agent-client/);
-  assert.match(readme, /bidvia-agent-client openclaw-mcp-config/);
-  assert.match(readme, /bidvia-agent-client mcp-server/);
-  assert.match(onboardingDoc, /bidvia-agent-client mcp-server/);
-  assert.match(smokeDoc, /bidvia-agent-client mcp-server/);
+  for (const document of [readme, onboardingDoc, openClawExample]) {
+    assert.match(document, /npm install @bidvia\/client/);
+    assert.match(document, /bidvia mcp-server/);
+    assert.doesNotMatch(document, /npm install bidvia-agent-client/);
+    assert.doesNotMatch(document, /bidvia-agent-client mcp-server/);
+  }
+
+  assert.match(readme, /bidvia openclaw-mcp-config/);
+  assert.match(readme, /bidvia onboarding-readiness/);
+  assert.match(onboardingDoc, /bidvia openclaw-mcp-config/);
+  assert.match(smokeDoc, /bidvia openclaw-mcp-config/);
+  assert.match(smokeDoc, /bidvia mcp-server/);
+  assert.doesNotMatch(readme, /bidvia-agent-client openclaw-mcp-config/);
+  assert.doesNotMatch(smokeDoc, /bidvia-agent-client openclaw-mcp-config/);
 });

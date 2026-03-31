@@ -820,7 +820,7 @@ function createDefaultCliDependencies(): BidviaCliDependencies {
 }
 
 function printHelp(printLine: (value: string) => void): void {
-  printLine('bidvia-agent-client');
+  printLine('bidvia');
   printLine('Visibility commands:');
   printLine('  environment-mode');
   printLine('  runtime-capabilities');

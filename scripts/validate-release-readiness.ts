@@ -13,6 +13,9 @@ type ReleaseGate = {
 };
 
 type PackageJson = {
+  name?: string;
+  bin?: Record<string, string>;
+  exports?: Record<string, unknown>;
   license?: string;
   keywords?: string[];
   engines?: Record<string, string>;
@@ -37,6 +40,19 @@ function assertFileExists(relativePath: string): void {
 function main(): void {
   const packageJson = readPackageJson();
 
+  assert.equal(packageJson.name, '@bidvia/client');
+  assert.deepEqual(packageJson.bin, {
+    bidvia: './dist/cli.js',
+  });
+  assert.deepEqual(packageJson.exports, {
+    '.': {
+      types: './dist/src/index.d.ts',
+      import: './dist/src/index.js',
+    },
+    './cli': './dist/cli.js',
+    './mcp-server': './dist/src/mcp-server.js',
+    './package.json': './package.json',
+  });
   assert.equal(packageJson.license, 'MIT');
   assert.deepEqual(packageJson.keywords, ['bidvia', 'agent', 'sdk', 'cli', 'mcp']);
   assert.deepEqual(packageJson.engines, {

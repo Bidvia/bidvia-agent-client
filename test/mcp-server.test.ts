@@ -138,7 +138,7 @@ test('local MCP stdio server exposes bounded tool metadata and handles review-sa
       result: {
         protocolVersion: '2024-11-05',
         serverInfo: {
-          name: 'bidvia-agent-client',
+          name: '@bidvia/client',
           version: '0.1.0',
         },
         capabilities: {

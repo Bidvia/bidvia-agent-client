@@ -2,8 +2,8 @@ import { buildLocalRuntimeCapabilitySnapshot } from './runtime-capabilities.js';
 
 export interface BidviaOpenClawConfig {
   mcpServers: {
-    'bidvia-agent-client': {
-      command: 'bidvia-agent-client';
+    bidvia: {
+      command: 'bidvia';
       args: ['mcp-server'];
       env: {
         BIDVIA_BASE_URL: string;
@@ -43,8 +43,8 @@ export function buildOpenClawConfig(): BidviaOpenClawConfig {
 
   return {
     mcpServers: {
-      'bidvia-agent-client': {
-        command: 'bidvia-agent-client',
+      bidvia: {
+        command: 'bidvia',
         args: ['mcp-server'],
         env: {
           BIDVIA_BASE_URL: defaults.baseUrl,

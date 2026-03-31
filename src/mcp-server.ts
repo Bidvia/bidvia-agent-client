@@ -52,7 +52,7 @@ function buildInitializeResponse(id: string | number | null): JsonRpcSuccessResp
     result: {
       protocolVersion: '2024-11-05',
       serverInfo: {
-        name: 'bidvia-agent-client',
+        name: '@bidvia/client',
         version: '0.1.0',
       },
       capabilities: {

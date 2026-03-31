@@ -18,7 +18,7 @@ This checklist is for the final human-triggered release gate only. It prepares t
 
 Confirm `package.json` still matches the intended public release shape:
 
-- `name: bidvia-agent-client`
+- `name: @bidvia/client`
 - `version` matches the intended release tag/version
 - `repository.url: https://github.com/Bidvia/bidvia-agent-client.git`
 - `homepage: https://github.com/Bidvia/bidvia-agent-client`
@@ -33,7 +33,7 @@ Do **not** continue if any metadata value has drifted or become contradictory.
 2. Confirm the current release entry accurately reflects the shipped surface:
    - typed SDK helpers for onboarding and registration-bound operations
    - CLI readiness, route-context, visibility, and bounded review/verification flows
-   - the stable installed MCP surface `bidvia-agent-client mcp-server`
+   - the stable installed MCP surface `bidvia mcp-server`
    - OpenClaw-compatible config export through `openclaw-mcp-config`
 3. Confirm the changelog does **not** overclaim hosted runtime, hosted MCP, remote registry/discovery, login, or Core truth closure.
 
@@ -42,9 +42,9 @@ Do **not** continue if any metadata value has drifted or become contradictory.
 1. Confirm `npm pack --dry-run` succeeds.
 2. Confirm `npm run validate:release-gate` succeeds.
 3. Confirm the tarball-install smoke in `validate:release-gate` covers the current public install story:
-   - `bidvia-agent-client --help`
-   - `bidvia-agent-client openclaw-mcp-config`
-   - `bidvia-agent-client mcp-server`
+   - `bidvia --help`
+   - `bidvia openclaw-mcp-config`
+   - `bidvia mcp-server`
 4. Confirm the release gate still treats repo-local `node dist/mcp-server.js` only as the developer fallback, not the primary public install story.
 
 ## 5. Final manual publish gate

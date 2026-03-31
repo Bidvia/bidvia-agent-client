@@ -2,7 +2,7 @@
 
 ## Version position
 
-This release captures the completed next local-only version of `bidvia-agent-client`.
+This release captures the completed next local-only version of `@bidvia/client`, with the installed CLI surface exposed as `bidvia`.
 
 It strengthens the package as a client-owned SDK, CLI, and local stdio MCP surface for the frozen Bidvia Commercial Universe V1 / Core V12 handoff boundary. It does not turn the package into a hosted runtime, a hosted MCP service, a remote registry participant, or a source of Core-owned truth.
 
@@ -42,7 +42,7 @@ The local stdio MCP seam now exposes a broader, better-aligned bounded tool surf
 
 ### Docs and examples alignment
 
-Package docs and examples now line up more closely with the shipped local path. That includes clearer operator guidance for local verification, dry-run execution, bounded review exports, and the correct built Gateway MCP entrypoint at `dist/src/mcp-server.js`.
+Package docs and examples now line up more closely with the shipped local path. That includes clearer operator guidance for local verification, dry-run execution, bounded review exports, the installed MCP entrypoint `bidvia mcp-server`, and the repo-local fallback `node dist/mcp-server.js`.
 
 ### UTF-8 MCP framing fix and validate-script alignment
 
