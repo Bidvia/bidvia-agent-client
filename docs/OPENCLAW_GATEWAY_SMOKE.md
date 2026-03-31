@@ -36,11 +36,13 @@ Run the smoke checks in this order:
 1. build check
 2. test check
 3. contract validation check
-4. launch topology smoke
-5. environment mode smoke
-6. runtime-capability snapshot smoke
-7. server-capability normalization smoke
-8. optional local MCP server entry check
+4. OpenClaw config export smoke
+5. route-context matrix smoke
+6. launch topology smoke
+7. environment mode smoke
+8. runtime-capability snapshot smoke
+9. server-capability normalization smoke
+10. optional local MCP server entry check
 
 Do not skip directly to MCP wiring before the earlier checks are clean.
 
@@ -56,7 +58,7 @@ npm run build
 
 - the package compiles
 - `dist/cli.js` exists in a current build
-- `dist/src/mcp-server.js` exists in a current build
+- `dist/mcp-server.js` exists in a current build
 
 ### If this fails
 
@@ -111,7 +113,56 @@ High-level meaning:
 - the local install may no longer reflect the expected frozen client contract
 - do not continue to operator rollout until resolved
 
-## 4. Launch topology smoke
+## 4. OpenClaw config export smoke
+
+### Command
+
+```bash
+node dist/cli.js openclaw-mcp-config
+```
+
+### What this proves
+
+- the shipped local stdio MCP handoff can be exported without repo archaeology
+- the default public `BIDVIA_BASE_URL` is visible in the operator config
+- the local MCP command is handed off as `node dist/mcp-server.js`
+- the boundary stays local-only, non-hosted, and non-discovery
+- the visible next success step remains `route-context-matrix`
+
+### If this fails
+
+Treat it as a local operator handoff problem first.
+
+High-level meaning:
+
+- the Gateway-side setup is missing the convenience export that should anchor the rest of the smoke flow
+- do not replace it with handwritten MCP config until the packaged export is understood
+
+## 5. Route-context matrix smoke
+
+### Command
+
+```bash
+node dist/cli.js route-context-matrix
+```
+
+### What this proves
+
+- the public-first onboarding rows stay primary
+- the local OpenClaw/operator row stays secondary
+- the required context family is visible before local operator execution is enabled
+- the visible operator next success step remains `registered-agent-operations-plan`
+
+### If this fails
+
+Treat it as a guided-journey context problem.
+
+High-level meaning:
+
+- the operator cannot safely tell which context family is required for the shipped route path
+- do not move on to MCP wiring until the matrix output is back
+
+## 6. Launch topology smoke
 
 ### Command
 
@@ -142,7 +193,7 @@ High-level meaning:
 - the canonical `api.*` guidance may not be reflected in the local environment
 - profile compatibility assumptions may not match the current shell/env state
 
-## 5. Environment mode smoke
+## 7. Environment mode smoke
 
 ### Command
 
@@ -164,7 +215,7 @@ High-level meaning:
 - the current base URL may be malformed or unexpected
 - the operator should not assume later capability output is being interpreted in the intended environment mode
 
-## 6. Runtime-capability snapshot smoke
+## 8. Runtime-capability snapshot smoke
 
 ### Command
 
@@ -189,7 +240,7 @@ High-level meaning:
 - the operator has lost one of the main read-only diagnostics surfaces
 - do not proceed to Gateway integration without restoring that visibility
 
-## 7. Server-capability normalization smoke
+## 9. Server-capability normalization smoke
 
 ### Command
 
@@ -212,12 +263,12 @@ High-level meaning:
 - server-derived payload handling cannot currently be inspected or demonstrated locally
 - do not mistake this for a remote negotiation failure, because the command is sample/local only
 
-## 8. Optional local MCP server entry check
+## 10. Optional local MCP server entry check
 
 ### Entrypoint
 
 ```bash
-node dist/src/mcp-server.js
+node dist/mcp-server.js
 ```
 
 ### What this proves
@@ -252,6 +303,8 @@ High-level meaning:
 - `npm run build` passes
 - `npm test` passes
 - `npm run validate` passes
+- `openclaw-mcp-config` returns the shipped local stdio handoff with the expected default public base URL and boundary flags
+- `route-context-matrix` keeps the public-first rows primary and the operator row secondary
 - `launch-topology-smoke` returns the expected default public resolution or the intended explicit override, plus the canonical `api.*` and compatibility mapping information
 - `environment-mode` reflects the intended environment
 - `runtime-capabilities` returns local-static and deferred surfaces as expected
@@ -270,6 +323,8 @@ If an operator only has time for the shortest meaningful check, use this exact o
 
 ```bash
 npm run build
+node dist/cli.js openclaw-mcp-config
+node dist/cli.js route-context-matrix
 node dist/cli.js launch-topology-smoke
 node dist/cli.js environment-mode
 node dist/cli.js runtime-capabilities
@@ -295,6 +350,8 @@ That help output is the quickest way to confirm the current packaged CLI still i
 Use `docs/OPENCLAW_GATEWAY_ONBOARDING.md` for:
 
 - install/configure order
+- `openclaw-mcp-config` as the operator handoff source
+- `route-context-matrix` before execution enablement
 - default public path first, with explicit override guidance second
 - compatibility-window explanation
 - CLI-first vs MCP-first entry choice

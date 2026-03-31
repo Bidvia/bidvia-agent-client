@@ -192,6 +192,7 @@ try {
     notes: [
       'This example stays repo-local and uses injected read-only dependencies.',
       'The MCP server here is local stdio only and wraps shipped SDK truth-fetch helpers.',
+      'For the operator handoff, start with openclaw-mcp-config and then confirm route-context-matrix.',
       'tools/list exposes discovery metadata so operators can inspect route and access-context expectations locally.',
       'No live credentials, hosted MCP service, login, or remote discovery are required by default.',
     ],

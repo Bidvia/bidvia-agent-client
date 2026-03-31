@@ -20,7 +20,7 @@ function createExampleFetch(): typeof fetch {
 
 async function main() {
   const client = new BidviaClient({
-    baseUrl: 'http://127.0.0.1:8787',
+    baseUrl: 'https://api.bidvia.ai',
     context: {
       tenantId: 'tenant-a',
       principalId: 'actor-1',
@@ -39,7 +39,18 @@ async function main() {
   const evidence = await client.submitEvidence(buildEvidenceSubmissionInput('evidence://example/1', 'provider_receipt', 'example proof payload', '2026-03-25T18:03:00Z'));
   const proposal = await client.submitProposal(buildProposalSubmissionInput('template_change', 'proposal://example/1', 'example proposal payload', '2026-03-25T18:04:00Z'));
 
-  console.log({ onboarding, heartbeat, sync, evidence, proposal });
+  console.log({
+    guidedJourney: 'public-cli-first-followed-by-sdk-example',
+    notes: [
+      'This example relies on the package default public base URL.',
+      'For the guided public path, start with onboarding-readiness and route-context-matrix before running SDK flows.',
+    ],
+    onboarding,
+    heartbeat,
+    sync,
+    evidence,
+    proposal,
+  });
 }
 
 void main();

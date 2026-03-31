@@ -25,6 +25,9 @@ test('runCli prints grouped help output for visibility, execution, review-safe, 
     '  launch-topology-smoke',
     '  server-capabilities',
     '  operator-discovery',
+    '  onboarding-readiness',
+    '  openclaw-mcp-config',
+    '  route-context-matrix',
     '  account-agents',
     '  account-agent --registration-id ...',
     '  account-agent-bindings',
@@ -112,10 +115,11 @@ test('runCli prints operator discovery snapshots for CLI route metadata and loca
   const snapshot = printed[0] as {
     command: string;
     scope: string;
-    cli: {
-      routeCapabilities: Array<{ helperKey: string; routePathTemplate: string; accessContextFamily: string }>;
-      nextStageReadRouteDiscoveryGroups: Array<{ groupKey: string; discoveryStatus: string; memberCount: number }>;
-    };
+      cli: {
+        routeCapabilities: Array<{ helperKey: string; routePathTemplate: string; accessContextFamily: string }>;
+        nextStageReadRouteDiscoveryGroups: Array<{ groupKey: string; discoveryStatus: string; memberCount: number }>;
+        nextStepHints: Array<{ journeyKey: string; relevance: string; command: string; rationale: string }>;
+      };
     mcp: {
       serverBoundary: { transport: string; hosted: boolean; remoteDiscovery: boolean; sourceOfTruth: string };
       discoverability: {
@@ -169,6 +173,20 @@ test('runCli prints operator discovery snapshots for CLI route metadata and loca
     serverTruthClaimed: false,
     memberCount: 0,
   });
+  assert.deepEqual(snapshot.cli.nextStepHints, [
+    {
+      journeyKey: 'public-first-onboarding',
+      relevance: 'public-first-common',
+      command: 'registration-lifecycle-plan',
+      rationale: 'Stay on the shipped onboarding chain before switching into post-registration runtime execution.',
+    },
+    {
+      journeyKey: 'local-openclaw-operator',
+      relevance: 'operator-secondary',
+      command: 'registered-agent-operations-plan',
+      rationale: 'Use the post-onboarding operations plan after the local MCP operator path has the required registration context.',
+    },
+  ]);
   assert.deepEqual(snapshot.mcp.serverBoundary, {
     transport: 'stdio',
     hosted: false,
@@ -200,6 +218,196 @@ test('runCli prints operator discovery snapshots for CLI route metadata and loca
     localCapabilityTier: 'L0-observe-only',
     localCapabilityRiskTier: 'observe-only',
   });
+});
+
+test('runCli prints public-first onboarding readiness without requiring environment switching', async () => {
+  const printed: unknown[] = [];
+
+  const exitCode = await runCli(['onboarding-readiness'], {
+    printJson: (value) => {
+      printed.push(value);
+    },
+    printLine: () => {
+      throw new Error('onboarding-readiness should not print help lines');
+    },
+  });
+
+  assert.equal(exitCode, 0);
+  assert.deepEqual(printed, [{
+    command: 'onboarding-readiness',
+    defaults: {
+      baseUrl: 'https://api.bidvia.ai',
+      environmentMode: 'production',
+      environmentSelectionRequired: false,
+    },
+    journey: {
+      journeyKey: 'public-first-onboarding',
+      label: 'Public-first onboarding readiness',
+      steps: [
+        {
+          helperKey: 'createProvisionalAgent',
+          routePathTemplate: '/runtime/agents/provisional',
+          accessContextFamily: 'tenant',
+          requiredContext: ['tenantId'],
+        },
+        {
+          helperKey: 'queryProvisionalAgent',
+          routePathTemplate: '/runtime/agents/provisional',
+          accessContextFamily: 'tenant',
+          requiredContext: ['tenantId'],
+        },
+        {
+          helperKey: 'claimProvisionalAgent',
+          routePathTemplate: '/runtime/agents/provisional/claim',
+          accessContextFamily: 'session',
+          requiredContext: ['tenantId', 'sessionId'],
+        },
+        {
+          helperKey: 'getAgentReadiness',
+          routePathTemplate: '/runtime/agents/:agent_registration_id/readiness',
+          accessContextFamily: 'admin-session',
+          requiredContext: ['tenantId', 'adminSessionId'],
+        },
+      ],
+      firstSuccessNextStep: {
+        command: 'registration-lifecycle-plan',
+        rationale: 'Use the lifecycle plan next so the first successful onboarding path stays aligned with the shipped provisional-to-registration chain.',
+      },
+    },
+  }]);
+});
+
+test('runCli prints an OpenClaw MCP config export that stays local stdio first and treats endpoint override as advanced', async () => {
+  const printed: unknown[] = [];
+
+  const exitCode = await runCli(['openclaw-mcp-config'], {
+    printJson: (value) => {
+      printed.push(value);
+    },
+    printLine: () => {
+      throw new Error('openclaw-mcp-config should not print help lines');
+    },
+  });
+
+  assert.equal(exitCode, 0);
+  assert.deepEqual(printed, [{
+    command: 'openclaw-mcp-config',
+    scope: 'local-only',
+    config: {
+      serverName: 'bidvia-agent-client',
+      transport: 'stdio',
+      command: 'node',
+      args: ['dist/mcp-server.js'],
+      env: {
+        BIDVIA_BASE_URL: 'https://api.bidvia.ai',
+        BIDVIA_TENANT_ID: '<required>',
+        BIDVIA_SESSION_ID: '<optional>',
+        BIDVIA_ADMIN_SESSION_ID: '<optional>',
+        BIDVIA_REGISTRATION_ID: '<optional>',
+        BIDVIA_PRINCIPAL_ID: '<optional>',
+      },
+      boundary: {
+        localOnly: true,
+        hosted: false,
+        remoteDiscovery: false,
+      },
+      firstSuccessNextStep: {
+        command: 'route-context-matrix',
+        rationale: 'Confirm the required context family for each guided route before enabling local OpenClaw operator execution.',
+      },
+    },
+    operatorNotes: {
+      transportBoundary: 'Local stdio MCP on your side, remote HTTPS Bidvia API on the other side.',
+      endpointOverride: 'Advanced/operator-only: set BIDVIA_BASE_URL only when you need a non-default deployment endpoint.',
+    },
+  }]);
+});
+
+test('runCli prints a route-context matrix that keeps public-first rows ahead of operator-secondary rows', async () => {
+  const printed: unknown[] = [];
+
+  const exitCode = await runCli(['route-context-matrix'], {
+    printJson: (value) => {
+      printed.push(value);
+    },
+    printLine: () => {
+      throw new Error('route-context-matrix should not print help lines');
+    },
+  });
+
+  assert.equal(exitCode, 0);
+  assert.deepEqual(printed, [{
+    command: 'route-context-matrix',
+    defaults: {
+      baseUrl: 'https://api.bidvia.ai',
+      environmentMode: 'production',
+      environmentSelectionRequired: false,
+    },
+    rows: [
+      {
+        journeyKey: 'public-first-onboarding',
+        helperKey: 'createProvisionalAgent',
+        routePathTemplate: '/runtime/agents/provisional',
+        routeFamily: 'agent-onboarding',
+        accessContextFamily: 'tenant',
+        requiredContext: ['tenantId'],
+        operationKind: 'execute',
+        localCapabilityRiskTier: 'runtime-execution',
+        relevance: 'public-first-common',
+        presentationTier: 'primary',
+        recommendedOutputMode: 'execution-result',
+      },
+      {
+        journeyKey: 'public-first-onboarding',
+        helperKey: 'claimProvisionalAgent',
+        routePathTemplate: '/runtime/agents/provisional/claim',
+        routeFamily: 'agent-onboarding',
+        accessContextFamily: 'session',
+        requiredContext: ['tenantId', 'sessionId'],
+        operationKind: 'execute',
+        localCapabilityRiskTier: 'runtime-execution',
+        relevance: 'public-first-common',
+        presentationTier: 'primary',
+        recommendedOutputMode: 'execution-result',
+      },
+      {
+        journeyKey: 'public-first-onboarding',
+        helperKey: 'getAgentReadiness',
+        routePathTemplate: '/runtime/agents/:agent_registration_id/readiness',
+        routeFamily: 'agent-runtime',
+        accessContextFamily: 'admin-session',
+        requiredContext: ['tenantId', 'adminSessionId'],
+        operationKind: 'read-only',
+        localCapabilityRiskTier: 'observe-only',
+        relevance: 'public-first-common',
+        presentationTier: 'primary',
+        recommendedOutputMode: 'truth-fetch-result',
+      },
+      {
+        journeyKey: 'local-openclaw-operator',
+        helperKey: 'postHeartbeat',
+        routePathTemplate: '/runtime/agents/:registrationId/heartbeat',
+        routeFamily: 'agent-runtime',
+        accessContextFamily: 'registration',
+        requiredContext: ['tenantId', 'registrationId', 'principalId'],
+        operationKind: 'execute',
+        localCapabilityRiskTier: 'runtime-execution',
+        relevance: 'operator-secondary',
+        presentationTier: 'secondary',
+        recommendedOutputMode: 'execution-result',
+      },
+    ],
+    firstSuccessNextSteps: {
+      'public-first-onboarding': {
+        command: 'registration-lifecycle-plan',
+        rationale: 'Stay on the shipped onboarding chain before switching into post-registration runtime execution.',
+      },
+      'local-openclaw-operator': {
+        command: 'registered-agent-operations-plan',
+        rationale: 'Use the post-onboarding operations plan after the local MCP operator path has the required registration context.',
+      },
+    },
+  }]);
 });
 
 test('runCli prints the public-default environment visibility output instead of silently falling back to local', async () => {

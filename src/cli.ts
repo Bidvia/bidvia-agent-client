@@ -52,6 +52,17 @@ import {
   buildCliMissingContextMessage,
   type BidviaExecutionOperatorPreflight,
 } from './operator-ergonomics.js';
+import {
+  buildOnboardingReadiness,
+} from './onboarding-readiness.js';
+import {
+  buildOpenClawConfig,
+  exportOpenClawConfig,
+} from './openclaw-config-export.js';
+import {
+  buildRouteContextMatrix,
+  buildRouteContextMatrixNextStepHints,
+} from './route-context-matrix.js';
 
 function printJson(value: unknown): void {
   console.log(JSON.stringify(value, null, 2));
@@ -813,6 +824,9 @@ function printHelp(printLine: (value: string) => void): void {
   printLine('  launch-topology-smoke');
   printLine('  server-capabilities');
   printLine('  operator-discovery');
+  printLine('  onboarding-readiness');
+  printLine('  openclaw-mcp-config');
+  printLine('  route-context-matrix');
   for (const line of truthFetchVisibilityHelpLines) {
     printLine(line);
   }
@@ -854,6 +868,7 @@ function buildOperatorDiscoverySnapshot() {
         serverTruthClaimed: group.serverTruthClaimed,
         memberCount: group.members.length,
       })),
+      nextStepHints: buildRouteContextMatrixNextStepHints(),
       discoveryCatalog: buildLocalDiscoveryCatalog(),
     },
     mcp: buildLocalMcpProductizationSnapshot(),
@@ -1011,6 +1026,35 @@ export async function runCli(
 
   if (command === 'operator-discovery') {
     dependencies.printJson(buildOperatorDiscoverySnapshot());
+    return 0;
+  }
+
+  if (command === 'onboarding-readiness') {
+    dependencies.printJson({
+      command,
+      ...buildOnboardingReadiness(),
+    });
+    return 0;
+  }
+
+  if (command === 'openclaw-mcp-config') {
+    dependencies.printJson({
+      command,
+      scope: 'local-only',
+      config: exportOpenClawConfig(buildOpenClawConfig()),
+      operatorNotes: {
+        transportBoundary: 'Local stdio MCP on your side, remote HTTPS Bidvia API on the other side.',
+        endpointOverride: 'Advanced/operator-only: set BIDVIA_BASE_URL only when you need a non-default deployment endpoint.',
+      },
+    });
+    return 0;
+  }
+
+  if (command === 'route-context-matrix') {
+    dependencies.printJson({
+      command,
+      ...buildRouteContextMatrix(),
+    });
     return 0;
   }
 

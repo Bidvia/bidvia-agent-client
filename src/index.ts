@@ -30,3 +30,6 @@ export * from './registered-agent-operations.js';
 export * from './runtime-capabilities.js';
 export * from './server-capabilities.js';
 export * from './task-participation.js';
+export * from './onboarding-readiness.js';
+export * from './openclaw-config-export.js';
+export * from './route-context-matrix.js';

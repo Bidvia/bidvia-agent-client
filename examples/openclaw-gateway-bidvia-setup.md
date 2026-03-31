@@ -16,25 +16,39 @@ It does **not** assume:
 - remote registry discovery
 - live remote capability negotiation
 
-## 1. Change into the repo
-
-```bash
-cd /Users/liujiao/develop/Bidvia-agent-client
-```
-
-## 2. Install and build
+## 1. Install and build
 
 ```bash
 npm install
 npm run build
 ```
 
-This gives you:
+This gives you the CLI at `dist/cli.js` and the local stdio MCP entrypoint at `dist/mcp-server.js`.
 
-- `dist/cli.js`
-- `dist/src/mcp-server.js`
+## 2. Start from the shipped OpenClaw handoff
 
-## 3. Use the default public endpoint first
+Do not reconstruct the MCP command and environment block by hand. Export the shipped operator config first:
+
+```bash
+node dist/cli.js openclaw-mcp-config
+```
+
+Use that output as the source of truth for:
+
+- the local stdio MCP command
+- the default public `BIDVIA_BASE_URL`
+- the required and optional environment placeholders
+- the local-only boundary flags
+
+## 3. Confirm the guided route context
+
+```bash
+node dist/cli.js route-context-matrix
+```
+
+Use this to confirm that the public-first onboarding rows stay primary and the OpenClaw/operator row stays secondary before you enable execution.
+
+## 4. Use the default public endpoint first
 
 For the normal public operator path, `bidvia-agent-client` already defaults to `https://api.bidvia.ai`.
 
@@ -42,7 +56,7 @@ Start with that package default. You do not need to export `BIDVIA_BASE_URL` for
 
 If this deployment needs local, sim, china, or another operator-managed endpoint instead, use the advanced override section below.
 
-## 4. Set the minimum Bidvia context
+## 5. Set the minimum Bidvia context
 
 Start with the minimum shared Gateway-side values:
 
@@ -58,9 +72,21 @@ Add route-specific variables only when needed later:
 
 Do not assume every agent or every route family shares one execution context.
 
-## 5. Run the read-only smoke commands
+## 6. Run the read-only smoke commands
 
-### 5.1 Launch topology smoke
+### 6.1 OpenClaw config export
+
+```bash
+node dist/cli.js openclaw-mcp-config
+```
+
+### 6.2 Route-context matrix
+
+```bash
+node dist/cli.js route-context-matrix
+```
+
+### 6.3 Launch topology smoke
 
 ```bash
 node dist/cli.js launch-topology-smoke
@@ -74,7 +100,7 @@ Use this to confirm:
 - canonical `api.*` domains
 - compatibility profile mappings
 
-### 5.2 Environment mode
+### 6.4 Environment mode
 
 ```bash
 node dist/cli.js environment-mode
@@ -82,7 +108,7 @@ node dist/cli.js environment-mode
 
 Use this to confirm the current default or explicit override resolves to the expected environment classification.
 
-### 5.3 Runtime capabilities
+### 6.5 Runtime capabilities
 
 ```bash
 node dist/cli.js runtime-capabilities
@@ -90,7 +116,7 @@ node dist/cli.js runtime-capabilities
 
 Use this to inspect repo-local runtime-facing knowledge only.
 
-### 5.4 Server capability normalization sample
+### 6.6 Server capability normalization sample
 
 ```bash
 node dist/cli.js server-capabilities
@@ -98,7 +124,7 @@ node dist/cli.js server-capabilities
 
 Use this to inspect the locally normalized server-derived sample shape only. It does not contact a server.
 
-### 5.5 Grouped CLI help
+### 6.7 Grouped CLI help
 
 ```bash
 node dist/cli.js --help
@@ -106,7 +132,7 @@ node dist/cli.js --help
 
 Use this to confirm the current packaged command surface before deciding whether the next operator step is dry-run execution, review-safe export, or local MCP wiring.
 
-## 6. Advanced operator override, optional local integrity checks
+## 7. Advanced operator override, optional local integrity checks
 
 If this deployment needs explicit endpoint control, set `BIDVIA_BASE_URL` before running the smoke flow.
 
@@ -153,7 +179,7 @@ node dist/cli.js verification-bundle-preview --input registration-lifecycle
 node dist/cli.js verification-bundle-export --input registered-agent-operations
 ```
 
-## 7. Optional runnable local examples
+## 8. Optional runnable local examples
 
 If you want the standalone local examples for the same visibility surfaces:
 
@@ -164,12 +190,12 @@ npx tsx examples/server-capabilities.ts
 
 These stay local and do not add hosted or remote behavior.
 
-## 8. Optional local stdio MCP wiring
+## 9. Optional local stdio MCP wiring
 
 If the OpenClaw side is ready to consume a local stdio MCP server, use the shipped entrypoint:
 
 ```bash
-node dist/src/mcp-server.js
+node dist/mcp-server.js
 ```
 
 Treat it as:
@@ -184,12 +210,13 @@ Do **not** treat it as a hosted MCP service or remote registry participant.
 
 Transport/auth-provider hardening supports this local path, but it still does not mean login ships in the package today.
 
-## 9. Minimal copy-paste baseline
+## 10. Minimal copy-paste baseline
 
 ```bash
-cd /Users/liujiao/develop/Bidvia-agent-client
 npm install
 npm run build
+node dist/cli.js openclaw-mcp-config
+node dist/cli.js route-context-matrix
 export BIDVIA_TENANT_ID="tenant-a"
 export BIDVIA_PRINCIPAL_ID="actor-gateway-1"
 node dist/cli.js launch-topology-smoke
@@ -202,13 +229,13 @@ If that baseline is clean, then the operator can move on to:
 
 - `npm test`
 - `npm run validate`
-- or `node dist/src/mcp-server.js`
+- or `node dist/mcp-server.js`
 
 depending on whether the next step is stronger local verification or local stdio MCP wiring.
 
 If the operator needs explicit endpoint control instead of the default public path, add `export BIDVIA_BASE_URL="..."` before the smoke commands and re-run the same bounded flow.
 
-## 10. What this setup example does not prove
+## 11. What this setup example does not prove
 
 This example proves only a local / Gateway-side setup path.
 

@@ -61,7 +61,9 @@ const client = {
 const scenarioResult = await runRegisteredAgentOperationsScenario(client, scenarioPlan);
 
 console.log(JSON.stringify({
+  guidedJourney: 'post-registration-first-success',
   scenarioPlan,
+  nextSuggestedCliCommand: 'node dist/cli.js registered-agent-operations-plan',
   verificationBundle: scenarioResult.verificationBundle,
   reviewPacket: scenarioResult.reviewPacket,
 }, null, 2));

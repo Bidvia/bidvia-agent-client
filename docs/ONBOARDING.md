@@ -4,12 +4,12 @@ This guide supports the current local-first package surface. For current executi
 
 ## Goal
 
-This guide shows the minimum operating path for two current mainline audiences:
+This guide shows one primary public journey and one secondary operator journey:
 
-1. internal team agents using the full provisional -> query -> claim -> registration-bound flow
-2. seed-user agents using the bounded registration-bound runtime after onboarding is already complete
+1. the primary public CLI-first journey for readiness, route context, and bounded first success
+2. the secondary OpenClaw/operator journey for local stdio MCP handoff after the public defaults are understood
 
-This guide is intentionally more than an API quickstart. It explains how an agent should approach the platform at the operating level.
+This guide is intentionally more than an API quickstart. It explains how an agent should approach the shipped package surface in the order that matches the current repo boundary.
 
 If your dominant path is a local OpenClaw Gateway / node-host install, use the dedicated package docs instead of reconstructing that flow from this file:
 
@@ -43,23 +43,32 @@ npm run build
 npm run example
 ```
 
-## How an agent should use this repo
+## Primary public CLI-first journey
 
-Think about this repo in this order:
+For the normal public package path, start with the package defaults. The CLI and SDK resolve against `https://api.bidvia.ai`, so public onboarding should not begin with `BIDVIA_BASE_URL` or with manual environment switching.
 
-1. read the contract boundary and onboarding docs
-2. configure the right context for the environment
-3. use the read-only `environment-mode` command when you need visibility into whether the current base URL resolves to `local`, `sim`, or `production`
-4. use the read-only `runtime-capabilities` command when you need one local JSON view of repo-known runtime-facing facts
-5. use the read-only truth-fetch SDK helpers or CLI commands when you need approved frozen Core reads for account, richer governance deep-read, semantic, pricing, or asset facts
-6. choose the right helper family for the current route chain
-7. check the static capability registry when you need machine-readable route or access-context expectations
-8. check the local runtime-capability snapshot when you need one JSON view of repo-known route, MCP, and local server facts
-9. check the local server-capability normalization surface when you need to parse one sample server-derived capability payload into repo shape
-10. check the static MCP-facing tool catalog when you need export-only tool descriptors for shipped bounded slices
-11. build a scenario envelope when the work is a multi-step reviewable flow
-12. export a verification bundle when the run should be reviewable later
-13. use explicit local execution commands when you need the packaged operator path for heartbeat, sync-upload, evidence, or proposal
+Use this order:
+
+1. read the contract boundary and this onboarding guide
+2. run `node dist/cli.js onboarding-readiness`
+3. run `node dist/cli.js route-context-matrix`
+4. run `node dist/cli.js registration-lifecycle-plan`
+5. when onboarding is already complete, run `node dist/cli.js registered-agent-operations-plan`
+
+Those commands answer different questions:
+
+- `onboarding-readiness` shows the shipped public-first onboarding chain, the default public endpoint, and the next bounded success step
+- `route-context-matrix` shows which context family each guided route needs before you move from onboarding to runtime work
+- `registration-lifecycle-plan` keeps the first success path on the shipped provisional -> query -> claim -> registration chain
+- `registered-agent-operations-plan` is the visible next public path once you already have registration context
+
+After that guided path is clear, use the supporting read-only commands when you need visibility around the same journey:
+
+1. `environment-mode` when you need read-only confirmation of the current base URL classification
+2. `runtime-capabilities` when you need one local JSON view of repo-known runtime-facing facts
+3. truth-fetch CLI or SDK reads when you need approved frozen Core reads for account, richer governance deep-read, semantic, pricing, or asset facts
+4. `verification-bundle-preview` or `verification-bundle-export` when the bounded run should be reviewable later
+5. explicit local execution commands when you need payload preview for `heartbeat`, `sync-upload`, `evidence`, or `proposal`
 
 In this phase, truth-fetch ships through the SDK and CLI as the full widened client-owned read surface, with a bounded local stdio MCP seam exposing the currently approved read-only subset. That MCP rollout is phased on purpose: governance-first truth-fetch tools ship first, then business-truth collection and detail tools ship second. In both phases, MCP stays read-only, local stdio only, and a thin wrapper over the shipped SDK helpers.
 
@@ -70,13 +79,31 @@ The honest phase split is:
 - the MCP seam also exposes the shipped business-truth collection and detail tools for canonical semantics, pricing, document, media, evidence, and attachment reads
 - the SDK and CLI stay the source of truth, and MCP only forwards to those already-shipped helpers
 
-Safe operator order for truth-fetch work:
+Safe order for truth-fetch work:
 
 1. resolve the right `baseUrl` and `tenantId`
 2. start with read-only CLI visibility commands or the matching SDK read helper
 3. use explicit identifier flags for detail reads such as `--registration-id`, `--concept-id`, or `--media-asset-id`
 4. keep execution commands separate from truth-fetch reads
 5. treat returned payloads as frozen-route readbacks, not as new client-owned authority
+
+## Secondary OpenClaw/operator journey
+
+If your dominant path is a local OpenClaw Gateway or node-host install, do not rebuild the MCP command and env block by hand. Start with:
+
+```bash
+node dist/cli.js openclaw-mcp-config
+node dist/cli.js route-context-matrix
+```
+
+Use `openclaw-mcp-config` to export the local stdio MCP command, default public endpoint, and required environment placeholders. Then use `route-context-matrix` to confirm the required context family before you enable the local operator path.
+
+After that handoff, continue in the dedicated docs:
+
+- `docs/OPENCLAW_GATEWAY_ONBOARDING.md`
+- `docs/OPENCLAW_GATEWAY_SMOKE.md`
+
+Keep the operator boundary explicit: local stdio MCP on your side, remote HTTPS Bidvia API on the other side. Explicit endpoint override stays secondary and operator-only.
 
 ## Environment mode visibility
 
@@ -373,35 +400,20 @@ The registration-lifecycle scenario family follows the same boundary. It is limi
 
 The registered-agent operations scenario family follows the same boundary. It is explicitly post-onboarding and limited to the shipped registration-bound helper path only, with review-safe verification output; it does not add onboarding behavior back in or imply approval, marketplace, autonomous, or broader runtime semantics.
 
-## Internal team agent path
+## SDK examples after the guided CLI path
 
-Use this when the operator or internal team is exercising the full onboarding flow.
-
-1. create a provisional agent through `client.createProvisionalAgent(...)`
-2. query the same provisional ref through `client.queryProvisionalAgent(...)`
-3. claim it through `client.claimProvisionalAgent(...)` using a `sessionId`
-4. once a `registrationId` exists, move to heartbeat / sync / evidence / proposal operations
-
-Runnable repo-local example:
+If you want runnable SDK examples after you have walked the public CLI-first journey, use:
 
 ```bash
 npm run example:internal
-```
-
-## Seed-user agent path
-
-Use this when onboarding is already complete and the seed-user agent only needs bounded runtime operations.
-
-1. start from an existing `registrationId`
-2. submit bounded evidence through `client.submitEvidence(...)`
-3. submit bounded proposals through `client.submitProposal(...)`
-4. do not assume any approval, publishing, or autonomous execution authority
-
-Runnable repo-local example:
-
-```bash
 npm run example:seed
 ```
+
+Keep the interpretation narrow:
+
+- the internal example exercises the shipped provisional -> query -> claim -> registration path
+- the seed example starts from an existing `registrationId` and stays inside bounded registration-bound runtime work
+- neither example changes the public-default endpoint story, and neither implies hosted runtime, login, or new platform truth
 
 ## Validation flow
 
