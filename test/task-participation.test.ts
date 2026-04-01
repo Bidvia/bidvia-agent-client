@@ -1,9 +1,15 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-test('task-participation helpers export local shell builders for offer, claim, ack, lease, timeout, and retry awareness', async () => {
+test('task-participation helpers export local observation builders for offer, claim, ack, lease, timeout, and retry awareness', async () => {
   const taskParticipationModule = await import('../src/index.ts');
 
+  assert.equal(typeof taskParticipationModule.buildLocalTaskOfferObservation, 'function');
+  assert.equal(typeof taskParticipationModule.buildLocalTaskClaimIntent, 'function');
+  assert.equal(typeof taskParticipationModule.buildLocalTaskAckObservation, 'function');
+  assert.equal(typeof taskParticipationModule.buildLocalTaskLeaseObservation, 'function');
+  assert.equal(typeof taskParticipationModule.buildLocalTaskTimeoutObservation, 'function');
+  assert.equal(typeof taskParticipationModule.buildLocalTaskRetryAwareness, 'function');
   assert.equal(typeof taskParticipationModule.buildTaskOfferShell, 'function');
   assert.equal(typeof taskParticipationModule.buildTaskClaimShell, 'function');
   assert.equal(typeof taskParticipationModule.buildTaskAckShell, 'function');
@@ -15,47 +21,51 @@ test('task-participation helpers export local shell builders for offer, claim, a
 test('task-participation helpers keep task offers and retry awareness local and descriptive', async () => {
   const taskParticipationModule = await import('../src/index.ts');
 
-  const offer = taskParticipationModule.buildTaskOfferShell({
-    taskId: 'task-1',
+  const offer = taskParticipationModule.buildLocalTaskOfferObservation({
+    localTaskRef: 'task-1',
     offerId: 'offer-1',
     observedAt: '2026-03-27T00:00:00.000Z',
-    offerSummary: 'local shell observed an offered task without claiming scheduler authority',
+    summary: 'local shell observed an offered task without claiming runtime dispatch authority',
     leaseExpiresAt: '2026-03-27T00:05:00.000Z',
     timeoutAt: '2026-03-27T00:06:00.000Z',
-    schedulerDecisionRef: 'scheduler://offers/offer-1',
+    localCoordinationRef: 'local://task-observations/offer-1',
   });
 
-  const retryAwareness = taskParticipationModule.buildTaskRetryAwarenessShell({
-    taskId: 'task-1',
+  const retryAwareness = taskParticipationModule.buildLocalTaskRetryAwareness({
+    localTaskRef: 'task-1',
     observedAt: '2026-03-27T00:01:00.000Z',
     attempt: 2,
     maxAttempts: 5,
     retryable: true,
     nextRetryAt: '2026-03-27T00:02:00.000Z',
-    rationale: 'local shell tracks retry context without deciding whether the scheduler will re-offer the task',
+    rationale: 'local shell tracks retry context without deciding whether runtime will redispatch the task',
   });
 
   assert.deepEqual(offer, {
-    kind: 'task-offer',
-    scope: 'local-participation-shell',
+    kind: 'local-task-offer-observation',
+    scope: 'local-task-participation',
+    localTaskRef: 'task-1',
+    localCoordinationRef: 'local://task-observations/offer-1',
     taskId: 'task-1',
+    schedulerDecisionRef: 'local://task-observations/offer-1',
     offerId: 'offer-1',
     observedAt: '2026-03-27T00:00:00.000Z',
-    offerSummary: 'local shell observed an offered task without claiming scheduler authority',
+    summary: 'local shell observed an offered task without claiming runtime dispatch authority',
+    offerSummary: 'local shell observed an offered task without claiming runtime dispatch authority',
     leaseExpiresAt: '2026-03-27T00:05:00.000Z',
     timeoutAt: '2026-03-27T00:06:00.000Z',
-    schedulerDecisionRef: 'scheduler://offers/offer-1',
   });
   assert.deepEqual(retryAwareness, {
-    kind: 'task-retry-awareness',
-    scope: 'local-participation-shell',
+    kind: 'local-task-retry-awareness',
+    scope: 'local-task-participation',
+    localTaskRef: 'task-1',
     taskId: 'task-1',
     observedAt: '2026-03-27T00:01:00.000Z',
     attempt: 2,
     maxAttempts: 5,
     retryable: true,
     nextRetryAt: '2026-03-27T00:02:00.000Z',
-    rationale: 'local shell tracks retry context without deciding whether the scheduler will re-offer the task',
+    rationale: 'local shell tracks retry context without deciding whether runtime will redispatch the task',
   });
   assert.equal('authority' in offer, false);
   assert.equal('schedulerStatus' in offer, false);
@@ -66,78 +76,94 @@ test('task-participation helpers keep task offers and retry awareness local and 
 test('task-participation helpers keep claim, ack, lease, and timeout shells descriptive instead of acting like a scheduler', async () => {
   const taskParticipationModule = await import('../src/index.ts');
 
-  const claim = taskParticipationModule.buildTaskClaimShell({
-    taskId: 'task-1',
+  const claim = taskParticipationModule.buildLocalTaskClaimIntent({
+    localTaskRef: 'task-1',
     offerId: 'offer-1',
     claimId: 'claim-1',
-    claimedAt: '2026-03-27T00:00:30.000Z',
-    claimSummary: 'local agent intends to participate in the offered task',
-    schedulerDecisionRef: 'scheduler://claims/claim-1',
+    observedAt: '2026-03-27T00:00:30.000Z',
+    summary: 'local agent intends to participate in the observed task',
+    localCoordinationRef: 'local://task-observations/claim-1',
   });
-  const ack = taskParticipationModule.buildTaskAckShell({
-    taskId: 'task-1',
+  const ack = taskParticipationModule.buildLocalTaskAckObservation({
+    localTaskRef: 'task-1',
     claimId: 'claim-1',
     ackId: 'ack-1',
-    acknowledgedAt: '2026-03-27T00:00:45.000Z',
-    ackSummary: 'local shell recorded that a claim acknowledgement was observed',
-    schedulerDecisionRef: 'scheduler://acks/ack-1',
+    observedAt: '2026-03-27T00:00:45.000Z',
+    summary: 'local shell recorded that a coordination acknowledgement was observed',
+    localCoordinationRef: 'local://task-observations/ack-1',
   });
-  const lease = taskParticipationModule.buildTaskLeaseShell({
-    taskId: 'task-1',
+  const lease = taskParticipationModule.buildLocalTaskLeaseObservation({
+    localTaskRef: 'task-1',
     leaseId: 'lease-1',
-    leasedAt: '2026-03-27T00:01:00.000Z',
+    observedAt: '2026-03-27T00:01:00.000Z',
     leaseExpiresAt: '2026-03-27T00:05:00.000Z',
-    leaseSummary: 'local shell recorded a temporary lease window for work already offered elsewhere',
-    schedulerDecisionRef: 'scheduler://leases/lease-1',
+    summary: 'local shell recorded a temporary work window already decided elsewhere',
+    localCoordinationRef: 'local://task-observations/lease-1',
   });
-  const timeout = taskParticipationModule.buildTaskTimeoutShell({
-    taskId: 'task-1',
+  const timeout = taskParticipationModule.buildLocalTaskTimeoutObservation({
+    localTaskRef: 'task-1',
     timeoutId: 'timeout-1',
-    timedOutAt: '2026-03-27T00:05:30.000Z',
-    timeoutSummary: 'local shell observed that the lease window timed out',
+    observedAt: '2026-03-27T00:05:30.000Z',
+    summary: 'local shell observed that the temporary work window timed out',
     priorLeaseId: 'lease-1',
-    schedulerDecisionRef: 'scheduler://timeouts/timeout-1',
+    localCoordinationRef: 'local://task-observations/timeout-1',
   });
 
   assert.deepEqual(claim, {
-    kind: 'task-claim',
-    scope: 'local-participation-shell',
+    kind: 'local-task-claim-intent',
+    scope: 'local-task-participation',
+    localTaskRef: 'task-1',
+    localCoordinationRef: 'local://task-observations/claim-1',
     taskId: 'task-1',
+    schedulerDecisionRef: 'local://task-observations/claim-1',
     offerId: 'offer-1',
     claimId: 'claim-1',
+    observedAt: '2026-03-27T00:00:30.000Z',
     claimedAt: '2026-03-27T00:00:30.000Z',
-    claimSummary: 'local agent intends to participate in the offered task',
-    schedulerDecisionRef: 'scheduler://claims/claim-1',
+    summary: 'local agent intends to participate in the observed task',
+    claimSummary: 'local agent intends to participate in the observed task',
   });
   assert.deepEqual(ack, {
-    kind: 'task-ack',
-    scope: 'local-participation-shell',
+    kind: 'local-task-ack-observation',
+    scope: 'local-task-participation',
+    localTaskRef: 'task-1',
+    localCoordinationRef: 'local://task-observations/ack-1',
     taskId: 'task-1',
+    schedulerDecisionRef: 'local://task-observations/ack-1',
     claimId: 'claim-1',
     ackId: 'ack-1',
+    observedAt: '2026-03-27T00:00:45.000Z',
     acknowledgedAt: '2026-03-27T00:00:45.000Z',
-    ackSummary: 'local shell recorded that a claim acknowledgement was observed',
-    schedulerDecisionRef: 'scheduler://acks/ack-1',
+    summary: 'local shell recorded that a coordination acknowledgement was observed',
+    ackSummary: 'local shell recorded that a coordination acknowledgement was observed',
   });
   assert.deepEqual(lease, {
-    kind: 'task-lease',
-    scope: 'local-participation-shell',
+    kind: 'local-task-lease-observation',
+    scope: 'local-task-participation',
+    localTaskRef: 'task-1',
+    localCoordinationRef: 'local://task-observations/lease-1',
     taskId: 'task-1',
+    schedulerDecisionRef: 'local://task-observations/lease-1',
     leaseId: 'lease-1',
+    observedAt: '2026-03-27T00:01:00.000Z',
     leasedAt: '2026-03-27T00:01:00.000Z',
     leaseExpiresAt: '2026-03-27T00:05:00.000Z',
-    leaseSummary: 'local shell recorded a temporary lease window for work already offered elsewhere',
-    schedulerDecisionRef: 'scheduler://leases/lease-1',
+    summary: 'local shell recorded a temporary work window already decided elsewhere',
+    leaseSummary: 'local shell recorded a temporary work window already decided elsewhere',
   });
   assert.deepEqual(timeout, {
-    kind: 'task-timeout',
-    scope: 'local-participation-shell',
+    kind: 'local-task-timeout-observation',
+    scope: 'local-task-participation',
+    localTaskRef: 'task-1',
+    localCoordinationRef: 'local://task-observations/timeout-1',
     taskId: 'task-1',
+    schedulerDecisionRef: 'local://task-observations/timeout-1',
     timeoutId: 'timeout-1',
+    observedAt: '2026-03-27T00:05:30.000Z',
     timedOutAt: '2026-03-27T00:05:30.000Z',
-    timeoutSummary: 'local shell observed that the lease window timed out',
+    summary: 'local shell observed that the temporary work window timed out',
+    timeoutSummary: 'local shell observed that the temporary work window timed out',
     priorLeaseId: 'lease-1',
-    schedulerDecisionRef: 'scheduler://timeouts/timeout-1',
   });
   assert.equal('assignedAgentId' in claim, false);
   assert.equal('dispatchDecision' in ack, false);

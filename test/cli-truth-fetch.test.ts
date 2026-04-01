@@ -51,24 +51,27 @@ test('runCli help lists truth-fetch read-only commands under the visibility grou
     '  account-records',
     '  agent-presence --registration-id ...',
     '  agent-authority --registration-id ...',
-    '  agent-readiness --registration-id ...',
-    '  agent-summary --registration-id ...',
-    '  agent-authority-profile --registration-id ...',
-    '  agent-authority-ladder --registration-id ...',
-    '  agent-capability-profiles --registration-id ...',
-    '  agent-capability-profile --registration-id ... --capability-profile-id ...',
-    '  canonical-semantic-concepts',
-    '  canonical-semantic-concept --concept-id ...',
-    '  canonical-semantic-labels',
-    '  canonical-semantic-label --label-id ...',
-    '  canonical-semantic-mappings',
-    '  canonical-semantic-mapping --mapping-id ...',
-    '  canonical-semantic-taxonomy-entries',
-    '  canonical-semantic-taxonomy-entry --taxonomy-entry-id ...',
-    '  canonical-semantic-lineage-links',
-    '  canonical-semantic-lineage-link --lineage-link-id ...',
-    '  pricing-bases',
-    '  pricing-basis --pricing-basis-id ...',
+      '  agent-readiness --registration-id ...',
+      '  agent-summary --registration-id ...',
+      '  agent-registrations',
+      '  agent-registration --registration-id ...',
+      '  authority-profiles',
+      '  agent-authority-profile --registration-id ...',
+      '  agent-authority-ladder --registration-id ...',
+      '  capability-profiles',
+      '  agent-capability-profile --registration-id ...',
+      '  participation-states --registration-id ...',
+      '  participation-state --registration-id ... --participation-state-id ...',
+      '  task-dispatches --registration-id ...',
+      '  task-dispatch --registration-id ... --task-dispatch-id ...',
+      '  canonical-semantic-concepts',
+      '  canonical-semantic-concept --concept-id ...',
+      '  canonical-semantic-labels',
+      '  canonical-semantic-label --label-id ...',
+      '  canonical-semantic-mappings',
+      '  canonical-semantic-mapping --mapping-id ...',
+      '  pricing-bases',
+      '  pricing-basis --pricing-basis-id ...',
     '  pricing-rule-atoms',
     '  pricing-rule-atom --pricing-rule-atom-id ...',
     '  pricing-quotation-method-modules',
@@ -93,6 +96,9 @@ test('runCli help lists truth-fetch read-only commands under the visibility grou
   ];
   assert.deepEqual(lines.slice(0, expectedVisibilityLines.length), expectedVisibilityLines);
   assert.equal(lines[expectedVisibilityLines.length], 'Execution commands:');
+  assert(!lines.includes('  agent-capability-profiles --registration-id ...'));
+  assert(!lines.includes('  canonical-semantic-taxonomy-entries'));
+  assert(!lines.includes('  canonical-semantic-lineage-links'));
 });
 
 test('runCli returns structured missing required-id failures for truth-fetch detail commands', async () => {
@@ -335,13 +341,16 @@ test('runCli routes truth-fetch commands through the matching SDK method and pri
   assert.equal(clientCreateCalls.length, cases.length);
 });
 
-test('runCli default client uses session and admin-session env context for corrected truth-fetch reads', async () => {
+test('runCli default client uses session and principal-governed env context for corrected truth-fetch reads', async () => {
   const printed: unknown[] = [];
   const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
   const restoreEnv = [
     setEnvVar('BIDVIA_BASE_URL', 'http://127.0.0.1:8787'),
     setEnvVar('BIDVIA_TENANT_ID', 'tenant-a'),
     setEnvVar('BIDVIA_SESSION_ID', 'sess-1'),
+    setEnvVar('BIDVIA_PRINCIPAL_ID', 'principal-1'),
+    setEnvVar('BIDVIA_PRINCIPAL_TYPE', 'operator'),
+    setEnvVar('BIDVIA_AUTHORIZED_ROLE', 'admin'),
     setEnvVar('BIDVIA_ADMIN_SESSION_ID', 'admin-sess-1'),
   ];
   const previousFetch = globalThis.fetch;
@@ -387,9 +396,67 @@ test('runCli default client uses session and admin-session env context for corre
   assert.equal(String(calls[0]?.input), 'http://127.0.0.1:8787/runtime/account/agents');
   assert.equal(String(calls[1]?.input), 'http://127.0.0.1:8787/runtime/agents/areg-1/presence?tenant_id=tenant-a');
   assert.equal((calls[0]?.init?.headers as Record<string, string>)['x-bidvia-session-id'], 'sess-1');
+  assert.equal((calls[1]?.init?.headers as Record<string, string>)['x-authorized-tenant-id'], 'tenant-a');
+  assert.equal((calls[1]?.init?.headers as Record<string, string>)['x-bidvia-principal-id'], 'principal-1');
   assert.equal((calls[1]?.init?.headers as Record<string, string>)['x-bidvia-admin-session-id'], 'admin-sess-1');
+  assert.equal((calls[1]?.init?.headers as Record<string, string>)['x-bidvia-principal-type'], 'operator');
+  assert.equal((calls[1]?.init?.headers as Record<string, string>)['x-authorized-role'], 'admin');
   assert.deepEqual(printed, [
     { ok: true, path: 'http://127.0.0.1:8787/runtime/account/agents' },
     { ok: true, path: 'http://127.0.0.1:8787/runtime/agents/areg-1/presence?tenant_id=tenant-a' },
   ]);
+});
+
+test('runCli execution commands pass company, principal-type, and authorized-role env values into BidviaClient', async () => {
+  const printed: unknown[] = [];
+  const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
+  const restoreEnv = [
+    setEnvVar('BIDVIA_BASE_URL', 'http://127.0.0.1:8787'),
+    setEnvVar('BIDVIA_TENANT_ID', 'tenant-a'),
+    setEnvVar('BIDVIA_PRINCIPAL_ID', 'principal-1'),
+    setEnvVar('BIDVIA_PRINCIPAL_TYPE', 'operator'),
+    setEnvVar('BIDVIA_AUTHORIZED_ROLE', 'admin'),
+    setEnvVar('BIDVIA_COMPANY_ID', 'company-a'),
+    setEnvVar('BIDVIA_REGISTRATION_ID', 'areg-1'),
+  ];
+  const previousFetch = globalThis.fetch;
+
+  globalThis.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
+    calls.push({ input, init });
+
+    return new Response(JSON.stringify({ ok: true, path: String(input) }), {
+      status: 200,
+      headers: { 'content-type': 'application/json' },
+    });
+  };
+
+  try {
+    const exitCode = await runCli(['heartbeat'], {
+      printJson: (value) => {
+        printed.push(value);
+      },
+      printLine: () => {
+        throw new Error('execution should print json only');
+      },
+      now: () => '2026-04-01T12:00:00.000Z',
+    });
+
+    assert.equal(exitCode, 0);
+  } finally {
+    globalThis.fetch = previousFetch;
+    for (const restore of restoreEnv.reverse()) {
+      restore();
+    }
+  }
+
+  assert.equal(calls.length, 1);
+  assert.equal(String(calls[0]?.input), 'http://127.0.0.1:8787/runtime/agents/areg-1/heartbeat?tenant_id=tenant-a');
+  assert.equal((calls[0]?.init?.headers as Record<string, string>)['x-authorized-tenant-id'], 'tenant-a');
+  assert.equal((calls[0]?.init?.headers as Record<string, string>)['x-bidvia-principal-id'], 'principal-1');
+  assert.equal((calls[0]?.init?.headers as Record<string, string>)['x-bidvia-principal-type'], 'operator');
+  assert.equal((calls[0]?.init?.headers as Record<string, string>)['x-authorized-role'], 'admin');
+  assert.deepEqual(printed, [{
+    ok: true,
+    path: 'http://127.0.0.1:8787/runtime/agents/areg-1/heartbeat?tenant_id=tenant-a',
+  }]);
 });

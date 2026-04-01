@@ -8,14 +8,16 @@ import type {
   BidviaIndustryUniverseScenarioPlanInput,
 } from './universe.js';
 import type {
-  BidviaTaskAckShell,
-  BidviaTaskLeaseShell,
-  BidviaTaskOfferShell,
+  BidviaLocalTaskAckObservation,
+  BidviaLocalTaskLeaseObservation,
+  BidviaLocalTaskOfferObservation,
 } from './task-participation.js';
 
 export interface BidviaClientContext {
   tenantId: string;
   principalId?: string;
+  principalType?: string;
+  authorizedRole?: string;
   registrationId?: string;
   sessionId?: string;
   adminSessionId?: string;
@@ -200,6 +202,106 @@ export interface BidviaCommercialActionExecuteInput {
   now: string;
 }
 
+export interface BidviaAgentAuthorityProfileWriteInput {
+  principalRef: string;
+  tenantScope: string;
+  companyScope: string;
+  authorizedActionScopes: string[];
+  commercialAuthorityLevel: string;
+  status: string;
+}
+
+export interface BidviaAgentAuthorityLadderWriteInput {
+  authorityRung: string;
+  grantedActionScopes: string[];
+  downgradedFromRung?: string;
+  grantedAt: string;
+  rationale: string;
+}
+
+export interface BidviaAgentCapabilityProfileWriteInput {
+  domainStrengths: string[];
+  templateDomains: string[];
+  workflowRoles: string[];
+  allowedRuntimeScopes: string[];
+  qualitySignals: string[];
+  adoptionRate: number;
+  evidenceScore: number;
+  riskReliabilityBand: string;
+  routingPriority: number;
+}
+
+export interface BidviaParticipationStateWriteInput {
+  state: string;
+  reason: string;
+  now: string;
+  participationRole?: string;
+  visibility?: string;
+  contextHandoffState?: string;
+  contextHandoffRef?: string;
+  coordinationOwnerKind?: string;
+  coordinationOwnerRef?: string;
+}
+
+export interface BidviaLeaseWriteInput {
+  leaseScope: string;
+  now: string;
+  expiresAt: string;
+}
+
+export interface BidviaTaskDispatchWriteInput {
+  taskKind: string;
+  taskRef: string;
+  now: string;
+  reason: string;
+}
+
+export interface BidviaTaskDispatchAssignInput {
+  assignedToRegistrationId: string;
+  now: string;
+  reason: string;
+}
+
+export interface BidviaTaskDispatchSuspendInput {
+  now: string;
+  reason: string;
+}
+
+export interface BidviaTaskDispatchResumeInput {
+  now: string;
+  reason: string;
+}
+
+export interface BidviaTaskDispatchCompleteInput {
+  now: string;
+  reason: string;
+  outcomeRef: string;
+}
+
+export interface BidviaTaskDispatchFailInput {
+  now: string;
+  reason: string;
+  outcomeRef: string;
+}
+
+export interface BidviaClaimWriteInput {
+  claimKind: string;
+  claimRef: string;
+  now: string;
+  taskDispatchId?: string;
+}
+
+export interface BidviaClaimAcceptInput {
+  now: string;
+  taskDispatchId?: string;
+}
+
+export interface BidviaClaimRejectInput {
+  reason: string;
+  now: string;
+  taskDispatchId?: string;
+}
+
 export interface BidviaCommercialActionScenarioPlanInput {
   scenarioId: string;
   scenarioLabel: string;
@@ -312,6 +414,7 @@ export const bidviaRouteCapabilityAccessContextFamilies = [
   'registration',
   'session',
   'admin-session',
+  'principal-governed-read',
   'operator-company',
   'scenario',
 ] as const;
@@ -678,7 +781,7 @@ export const bidviaGovernedAgentStateKinds = [
   'registration',
   'identity',
   'binding',
-  'participation-state',
+  'local-participation-state',
   'presence',
   'readiness',
   'authority',
@@ -704,7 +807,7 @@ export const bidviaAgentBindingStatuses = [
 
 export type BidviaAgentBindingStatus = (typeof bidviaAgentBindingStatuses)[number];
 
-export const bidviaParticipationStatuses = [
+export const bidviaLocalParticipationStatuses = [
   'not-participating',
   'eligible',
   'invited',
@@ -714,7 +817,8 @@ export const bidviaParticipationStatuses = [
   'completed',
 ] as const;
 
-export type BidviaParticipationStatus = (typeof bidviaParticipationStatuses)[number];
+export type BidviaLocalParticipationStatus =
+  (typeof bidviaLocalParticipationStatuses)[number];
 
 export const bidviaPresenceStatuses = ['unknown', 'online', 'offline'] as const;
 
@@ -762,11 +866,15 @@ export interface BidviaAgentBindingState {
   registrationId?: string;
 }
 
-export interface BidviaAgentParticipationState {
-  kind: 'participation-state';
-  status: BidviaParticipationStatus;
+export interface BidviaLocalParticipationState {
+  kind: 'local-participation-state';
+  localStatus: BidviaLocalParticipationStatus;
+  localTaskRef?: string;
+  status: BidviaLocalParticipationStatus;
   taskId?: string;
 }
+
+export type BidviaAgentParticipationState = BidviaLocalParticipationState;
 
 export interface BidviaAgentPresenceState {
   kind: 'presence';
@@ -801,7 +909,7 @@ export interface BidviaAccountAgentRecord {
   tenantId?: string;
   registrationStatus?: BidviaAgentRegistrationStatus;
   bindingStatus?: BidviaAgentBindingStatus;
-  participationStatus?: BidviaParticipationStatus;
+  participationStatus?: BidviaLocalParticipationStatus;
   observedAt?: string;
 }
 
@@ -1311,7 +1419,7 @@ export interface BidviaProposalRecommendationInput {
   recommendationRef: string;
   summary: string;
   now: string;
-  taskOffer: BidviaTaskOfferShell;
+  taskOffer: BidviaLocalTaskOfferObservation;
 }
 
 export interface BidviaProposalReviewAssessmentInput {
@@ -1321,7 +1429,7 @@ export interface BidviaProposalReviewAssessmentInput {
   assessment: string;
   summary: string;
   now: string;
-  taskAck: BidviaTaskAckShell;
+  taskAck: BidviaLocalTaskAckObservation;
 }
 
 export interface BidviaAuthorizedUseInput {
@@ -1331,7 +1439,7 @@ export interface BidviaAuthorizedUseInput {
   receiptId: string;
   usageSummary: string;
   now: string;
-  taskLease: BidviaTaskLeaseShell;
+  taskLease: BidviaLocalTaskLeaseObservation;
 }
 
 export interface BidviaGovernedProposalRecommendation {
@@ -1342,7 +1450,7 @@ export interface BidviaGovernedProposalRecommendation {
   recommendationRef: string;
   summary: string;
   now: string;
-  taskOffer: BidviaTaskOfferShell;
+  taskOffer: BidviaLocalTaskOfferObservation;
 }
 
 export interface BidviaGovernedProposalReviewAssessment {
@@ -1353,7 +1461,7 @@ export interface BidviaGovernedProposalReviewAssessment {
   assessment: string;
   summary: string;
   now: string;
-  taskAck: BidviaTaskAckShell;
+  taskAck: BidviaLocalTaskAckObservation;
 }
 
 export interface BidviaGovernedAuthorizedUseReceipt {
@@ -1364,7 +1472,7 @@ export interface BidviaGovernedAuthorizedUseReceipt {
   receiptId: string;
   usageSummary: string;
   now: string;
-  taskLease: BidviaTaskLeaseShell;
+  taskLease: BidviaLocalTaskLeaseObservation;
 }
 
 export interface BidviaGovernedProposalReviewUsePlanInput {

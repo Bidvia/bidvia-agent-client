@@ -28,6 +28,7 @@ It does **not** prove:
 - hosted MCP readiness
 - approval-to-opportunity seam crossing
 - broader orchestration behavior beyond the currently shipped bounded slices
+- full governed semantics for principal-governed reads without real operator credentials and context
 
 ## Recommended smoke order
 
@@ -183,6 +184,8 @@ bidvia launch-topology-smoke
   - `global -> https://bidvia.ai`
   - `china -> https://bidvia.cn`
 
+Without real governed credentials, this is still a wiring and auth-posture check. It does not prove principal-governed business semantics.
+
 ### If this fails
 
 Treat it as an environment/topology configuration problem.
@@ -206,6 +209,8 @@ bidvia environment-mode
 
 - the current base URL resolves to `local`, `sim`, or `production`
 - the local environment classifier is behaving consistently with the current default or explicit override
+
+This still does not prove the widened governed read surface end to end. It only proves local classification behavior.
 
 ### If this fails
 
@@ -231,6 +236,8 @@ bidvia runtime-capabilities
 - static MCP tool metadata is visible
 - local MCP server availability is visible
 - deferred server-provided negotiation is still represented as deferred, not invented as available truth
+
+The snapshot can describe the frozen registration/profile and participation/task families now shipped in SDK/CLI, but it remains a local descriptive view, not proof of remote governed truth.
 
 ### If this fails
 
@@ -316,6 +323,8 @@ High-level meaning:
 - `environment-mode` reflects the intended environment
 - `runtime-capabilities` returns local-static and deferred surfaces as expected
 - `server-capabilities` returns normalized `server-derived` sample output as expected
+
+Passing this smoke sequence means the local package is wired and visible enough to continue. It does not mean credential-less local or sim probes have established full governed semantics.
 
 ### Stop and fix locally when:
 

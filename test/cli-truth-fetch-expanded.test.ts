@@ -34,14 +34,24 @@ test('runCli help lists the expanded truth-fetch family commands under the visib
   });
 
   assert.equal(exitCode, 0);
+  assert(lines.includes('  agent-registrations'));
+  assert(lines.includes('  agent-registration --registration-id ...'));
+  assert(lines.includes('  authority-profiles'));
+  assert(lines.includes('  capability-profiles'));
+  assert(lines.includes('  agent-capability-profile --registration-id ...'));
+  assert(lines.includes('  participation-states --registration-id ...'));
+  assert(lines.includes('  participation-state --registration-id ... --participation-state-id ...'));
+  assert(lines.includes('  task-dispatches --registration-id ...'));
+  assert(lines.includes('  task-dispatch --registration-id ... --task-dispatch-id ...'));
   assert(lines.includes('  canonical-semantic-labels'));
   assert(lines.includes('  canonical-semantic-label --label-id ...'));
   assert(lines.includes('  canonical-semantic-mappings'));
   assert(lines.includes('  canonical-semantic-mapping --mapping-id ...'));
-  assert(lines.includes('  canonical-semantic-taxonomy-entries'));
-  assert(lines.includes('  canonical-semantic-taxonomy-entry --taxonomy-entry-id ...'));
-  assert(lines.includes('  canonical-semantic-lineage-links'));
-  assert(lines.includes('  canonical-semantic-lineage-link --lineage-link-id ...'));
+  assert(!lines.includes('  agent-capability-profiles --registration-id ...'));
+  assert(!lines.includes('  canonical-semantic-taxonomy-entries'));
+  assert(!lines.includes('  canonical-semantic-taxonomy-entry --taxonomy-entry-id ...'));
+  assert(!lines.includes('  canonical-semantic-lineage-links'));
+  assert(!lines.includes('  canonical-semantic-lineage-link --lineage-link-id ...'));
   assert(lines.includes('  pricing-rule-atoms'));
   assert(lines.includes('  pricing-rule-atom --pricing-rule-atom-id ...'));
   assert(lines.includes('  pricing-quotation-method-modules'));

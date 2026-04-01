@@ -427,12 +427,13 @@ test('local MCP stdio server uses an explicit execution client dependency ahead 
   }
 });
 
-test('local MCP stdio server default execution client supports governance truth-fetch session and admin-session reads from env context', async () => {
+test('local MCP stdio server default execution client supports governance truth-fetch session and principal-governed reads from env context', async () => {
   const input = new PassThrough();
   const output = new PassThrough();
   const originalEnv = {
     BIDVIA_BASE_URL: process.env.BIDVIA_BASE_URL,
     BIDVIA_TENANT_ID: process.env.BIDVIA_TENANT_ID,
+    BIDVIA_PRINCIPAL_ID: process.env.BIDVIA_PRINCIPAL_ID,
     BIDVIA_SESSION_ID: process.env.BIDVIA_SESSION_ID,
     BIDVIA_ADMIN_SESSION_ID: process.env.BIDVIA_ADMIN_SESSION_ID,
   };
@@ -441,25 +442,28 @@ test('local MCP stdio server default execution client supports governance truth-
 
   process.env.BIDVIA_BASE_URL = 'https://api.bidvia.test';
   process.env.BIDVIA_TENANT_ID = 'tenant-governance';
+  process.env.BIDVIA_PRINCIPAL_ID = 'principal-governance';
   process.env.BIDVIA_SESSION_ID = 'session-governance';
   process.env.BIDVIA_ADMIN_SESSION_ID = 'admin-session-governance';
 
   const seenContexts: Array<{
-    helper: string;
-    tenantId?: string;
-    sessionId?: string;
-    adminSessionId?: string;
-    registrationId?: string;
+      helper: string;
+      tenantId?: string;
+      principalId?: string;
+      sessionId?: string;
+      adminSessionId?: string;
+      registrationId?: string;
   }> = [];
 
   BidviaClient.prototype.listAccountAgents = async function listAccountAgentsStub() {
     const clientContext = (this as unknown as { options: { context: typeof process.env } }).options.context;
-    seenContexts.push({
-      helper: 'listAccountAgents',
-      tenantId: clientContext.tenantId,
-      sessionId: clientContext.sessionId,
-      adminSessionId: clientContext.adminSessionId,
-    });
+      seenContexts.push({
+        helper: 'listAccountAgents',
+        tenantId: clientContext.tenantId,
+        principalId: clientContext.principalId,
+        sessionId: clientContext.sessionId,
+        adminSessionId: clientContext.adminSessionId,
+      });
     return {
       items: [{ registrationId: 'areg-1' }],
     };
@@ -467,12 +471,13 @@ test('local MCP stdio server default execution client supports governance truth-
 
   BidviaClient.prototype.getAgentPresence = async function getAgentPresenceStub(registrationId: string) {
     const clientContext = (this as unknown as { options: { context: typeof process.env } }).options.context;
-    seenContexts.push({
-      helper: 'getAgentPresence',
-      tenantId: clientContext.tenantId,
-      sessionId: clientContext.sessionId,
-      adminSessionId: clientContext.adminSessionId,
-      registrationId,
+      seenContexts.push({
+        helper: 'getAgentPresence',
+        tenantId: clientContext.tenantId,
+        principalId: clientContext.principalId,
+        sessionId: clientContext.sessionId,
+        adminSessionId: clientContext.adminSessionId,
+        registrationId,
     });
     return {
       registrationId,
@@ -524,12 +529,14 @@ test('local MCP stdio server default execution client supports governance truth-
       {
         helper: 'listAccountAgents',
         tenantId: 'tenant-governance',
+        principalId: 'principal-governance',
         sessionId: 'session-governance',
         adminSessionId: 'admin-session-governance',
       },
       {
         helper: 'getAgentPresence',
         tenantId: 'tenant-governance',
+        principalId: 'principal-governance',
         sessionId: 'session-governance',
         adminSessionId: 'admin-session-governance',
         registrationId: 'areg-99',
@@ -551,6 +558,12 @@ test('local MCP stdio server default execution client supports governance truth-
       delete process.env.BIDVIA_TENANT_ID;
     } else {
       process.env.BIDVIA_TENANT_ID = originalEnv.BIDVIA_TENANT_ID;
+    }
+
+    if (originalEnv.BIDVIA_PRINCIPAL_ID === undefined) {
+      delete process.env.BIDVIA_PRINCIPAL_ID;
+    } else {
+      process.env.BIDVIA_PRINCIPAL_ID = originalEnv.BIDVIA_PRINCIPAL_ID;
     }
 
     if (originalEnv.BIDVIA_SESSION_ID === undefined) {

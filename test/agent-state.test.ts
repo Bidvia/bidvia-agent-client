@@ -5,7 +5,7 @@ import {
   bidviaGovernedAgentStateKinds,
   bidviaAgentRegistrationStatuses,
   bidviaAgentBindingStatuses,
-  bidviaParticipationStatuses,
+  bidviaLocalParticipationStatuses,
   bidviaPresenceStatuses,
   bidviaReadinessStatuses,
   bidviaAuthorityStatuses,
@@ -17,7 +17,7 @@ import type {
   BidviaAgentRegistrationState,
   BidviaAgentIdentityState,
   BidviaAgentBindingState,
-  BidviaAgentParticipationState,
+  BidviaLocalParticipationState,
   BidviaAgentPresenceState,
   BidviaAgentReadinessState,
   BidviaAgentAuthorityState,
@@ -40,7 +40,7 @@ test('agent-state contracts declare governed state dimensions as separate concep
     'registration',
     'identity',
     'binding',
-    'participation-state',
+    'local-participation-state',
     'presence',
     'readiness',
     'authority',
@@ -57,7 +57,7 @@ test('agent-state contracts declare governed state dimensions as separate concep
     'tenant-bound',
     'registration-bound',
   ]);
-  assert.deepEqual(bidviaParticipationStatuses, [
+  assert.deepEqual(bidviaLocalParticipationStatuses, [
     'not-participating',
     'eligible',
     'invited',
@@ -147,8 +147,10 @@ test('agent-state contracts keep registration, identity, binding, participation,
     registrationId: 'areg-1',
   };
 
-  const participation: BidviaAgentParticipationState = {
-    kind: 'participation-state',
+  const participation: BidviaLocalParticipationState = {
+    kind: 'local-participation-state',
+    localStatus: 'accepted',
+    localTaskRef: 'task-1',
     status: 'accepted',
     taskId: 'task-1',
   };
@@ -176,7 +178,7 @@ test('agent-state contracts keep registration, identity, binding, participation,
   assert.equal(expectRegistrationState(registration).status, 'registered');
   assert.equal(identity.identity.normalized.value.agentId, 'agent-1');
   assert.equal(binding.registrationId, 'areg-1');
-  assert.equal(participation.taskId, 'task-1');
+  assert.equal(participation.localTaskRef, 'task-1');
   assert.equal(expectPresenceState(presence).status, 'online');
   assert.equal(readiness.rationale, 'local preflight checks passed');
   assert.equal(expectAuthorityState(authority).grantedBy, 'policy://tenant-1/registration/areg-1');
@@ -316,6 +318,7 @@ test('agent-state helpers build each local governed state without collapsing the
 
   assert.equal(typeof agentStateModule.buildAgentRegistrationState, 'function');
   assert.equal(typeof agentStateModule.buildAgentBindingState, 'function');
+  assert.equal(typeof agentStateModule.buildLocalParticipationState, 'function');
   assert.equal(typeof agentStateModule.buildAgentParticipationState, 'function');
 
   const registration = agentStateModule.buildAgentRegistrationState({
@@ -327,7 +330,11 @@ test('agent-state helpers build each local governed state without collapsing the
     tenantId: 'tenant-1',
     registrationId: 'areg-1',
   });
-  const participation = agentStateModule.buildAgentParticipationState({
+  const participation = agentStateModule.buildLocalParticipationState({
+    localStatus: 'accepted',
+    localTaskRef: 'task-1',
+  });
+  const legacyParticipation = agentStateModule.buildAgentParticipationState({
     status: 'accepted',
     taskId: 'task-1',
   });
@@ -344,10 +351,13 @@ test('agent-state helpers build each local governed state without collapsing the
     registrationId: 'areg-1',
   });
   assert.deepEqual(participation, {
-    kind: 'participation-state',
+    kind: 'local-participation-state',
+    localStatus: 'accepted',
+    localTaskRef: 'task-1',
     status: 'accepted',
     taskId: 'task-1',
   });
+  assert.deepEqual(legacyParticipation, participation);
   assert.equal('taskId' in registration, false);
   assert.equal('tenantId' in participation, false);
 });

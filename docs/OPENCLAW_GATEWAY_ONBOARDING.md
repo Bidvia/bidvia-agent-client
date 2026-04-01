@@ -12,6 +12,8 @@ It is intentionally bounded to the current shipped model:
 
 It does **not** assume any hosted Bidvia runtime, hosted MCP service, or remote registry behavior.
 
+The current SDK and CLI already expose the widened frozen downstream read surface for agent registrations, authority profiles, capability profiles, the singular per-registration capability profile, and the shipped participation-state/task-dispatch family. The OpenClaw path remains narrower: MCP is still a local stdio seam, mostly read-only, and intentionally smaller than the full SDK/CLI surface.
+
 ## Scope boundary
 
 Use this guide when you want to:
@@ -117,7 +119,7 @@ Add these only when the route family needs them:
 
 - `BIDVIA_REGISTRATION_ID` for registration-bound runtime helpers
 - `BIDVIA_SESSION_ID` for claim/onboarding surfaces
-- `adminSessionId`-style behavior is route-specific and should stay bounded to the routes that need it
+- principal-governed reads require `BIDVIA_TENANT_ID` plus `BIDVIA_PRINCIPAL_ID`, with `adminSessionId`-style behavior only as an optional companion on some routes
 - `companyId`-style operator write scope is also route-specific and should not be assumed globally
 
 For OpenClaw Gateway operators, the safe default is:
@@ -155,6 +157,8 @@ Use this to confirm:
 - default public resolution to `https://api.bidvia.ai` when no override is set
 - canonical `api.*` domains
 - compatibility profile mappings
+
+Without real governed credentials, this still proves local routing, transport, reachability, and auth-posture only. It does not prove full governed semantics.
 
 ### 5.2 Environment mode visibility
 

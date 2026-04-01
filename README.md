@@ -2,7 +2,7 @@
 
 `@bidvia/client` is the open-source SDK and CLI for connecting governed agents to the Bidvia platform.
 
-The active execution plan for the current documentation and productization wave is `.sisyphus/plans/agent-client-next-version-productization.md`. This README stays focused on the shipped local-first package surface and should be read alongside that plan, not as a competing roadmap.
+The active execution plan for the current documentation and productization wave is `.sisyphus/plans/agent-client-core-vnext-alignment-and-joint-debug.md`. This README stays focused on the shipped local-first package surface and should be read alongside that plan, not as a competing roadmap.
 
 Today, this package ships a usable current mainline client surface for the frozen Bidvia Commercial Universe V1 / Core V12 handoff boundary. It includes typed SDK helpers, a widened read-only truth-fetch layer, stronger local operator discovery surfaces, richer review-safe readback, bounded scenario and verification helpers, local CLI commands, and a local stdio MCP seam. Recent transport and auth-provider hardening support that local-only foundation, but they do not mean login is shipped. It does not claim hosted runtime behavior, remote registry behavior, integrated Core truth beyond frozen inputs, or client-owned authority.
 
@@ -13,7 +13,9 @@ This package currently gives external users two guided journeys:
 - one primary public CLI-first journey for readiness, route context, bounded first success, and local operator visibility
 - one secondary OpenClaw/operator journey for local stdio MCP wiring against the same remote HTTPS Bidvia API
 
-The same package also ships an SDK for Bidvia agent access routes, onboarding flows, registration-bound operations, richer governance and business truth-fetch reads, bounded scenario planning, and verification-safe exports.
+The same package also ships an SDK for Bidvia agent access routes, onboarding flows, registration-bound operations, the frozen downstream truth-fetch reads now adopted in the client surface, bounded scenario planning, and verification-safe exports.
+
+The widened frozen read surface now visible in the SDK and CLI includes the canonical families behind `GET /runtime/agents/registrations`, `GET /runtime/agents/:registrationId`, `GET /runtime/authority-profiles`, `GET /runtime/capability-profiles`, `GET /runtime/agents/:registrationId/capability-profile`, plus the shipped participation-state and task-dispatch read/write wrappers where the client already exposes them. MCP stays intentionally narrower, mostly read-only, and limited to the approved local stdio subset.
 
 The current mainline remains explicitly bounded to the frozen Bidvia Commercial Universe V1 / Core V12 framing. This repo can improve client ergonomics, but it must not invent platform truth or widen governance authority on its own.
 
@@ -145,13 +147,15 @@ In practice, the SDK currently covers:
 - official onboarding and claim flows
 - registration-bound heartbeat, sync, evidence, and proposal operations
 - agent-state and task-participation helpers
-- truth-fetch reads for account agents, account agent bindings, and account records; richer governance deep reads for agent presence, authority, readiness, summaries, authority profiles, authority ladders, and capability profiles; broader business truth-fetch families for canonical semantics, pricing, and document, media, evidence, attachment, and file-resource assets
+- truth-fetch reads for account agents, account agent bindings, and account records; richer governance deep reads for agent registrations, per-registration detail, agent presence, authority, readiness, summaries, authority profiles, capability profiles, and the singular per-registration capability profile; shipped participation-state and task-dispatch visibility plus task action wrappers; broader business truth-fetch families for canonical semantics, pricing, and document, media, evidence, attachment, and file-resource assets
 - pricing, assets, connection, commercial-action, and related route helpers already present in code
 - bounded scenario planning and verification bundle support
 - richer review-safe readback for already-shipped bounded orchestration slices
 - local capability and server-payload normalization helpers
 
-The truth-fetch expansion now ships across the SDK and CLI, with the local stdio MCP layer exposing the currently approved read-only subset as a thin wrapper over shipped SDK helpers. The rollout is phased on purpose: the SDK and CLI now cover the widened client-owned read surface, while MCP keeps its narrower governance-first and business-truth read slices on the same local seam. That MCP layer stays local stdio only and read-only in every phase.
+The truth-fetch expansion now ships across the SDK and CLI, with the local stdio MCP layer exposing the currently approved read-only subset as a thin wrapper over shipped SDK helpers. The rollout is phased on purpose: the SDK and CLI now cover the widened frozen downstream read surface, while MCP keeps its narrower governance-first and business-truth read slices on the same local seam. That MCP layer stays local stdio only and read-only in every phase.
+
+For the principal-governed read family, the honest default is `tenantId` plus `principalId`, with `adminSessionId` only as an optional companion on some routes. Local and sim probes without real governed credentials can prove route wiring, transport behavior, reachability, or auth-guard posture only. They do not prove full governed semantics.
 
 ### Advanced endpoint override
 
@@ -233,7 +237,7 @@ node dist/cli.js pricing-bases
 node dist/cli.js media-asset --media-asset-id media-1
 ```
 
-The full truth-fetch command group also includes detail and collection reads for account records, account agent bindings, richer governance deep reads such as agent readiness, summaries, authority profiles, authority ladders, and capability profiles, plus broader business truth families for canonical semantics, pricing, document artifacts, media assets, evidence assets, attachment bindings, and file resources. These commands stay read-only and operator-facing.
+The full truth-fetch command group also includes detail and collection reads for account records, account agent bindings, richer governance deep reads such as `agent-registrations`, `agent-registration`, `authority-profiles`, `capability-profiles`, and `agent-capability-profile`, plus `participation-states`, `participation-state`, `task-dispatches`, and `task-dispatch` around the frozen participation/task family. These commands stay operator-facing, and the governed read routes still require real principal context when you want more than local auth-posture proof.
 
 Bounded preview and export commands:
 
@@ -295,7 +299,7 @@ This repository already supports a local OpenClaw Gateway and node-host integrat
 - local stdio MCP server
 - remote HTTPS Bidvia API
 
-The shipped local MCP seam exposes read-only truth-fetch tools, review-safe tooling, and explicit execution tooling, but only through a local stdio server. The truth-fetch rollout is phased: governance-first MCP reads ship first, business-truth reads ship second, and both stay thin wrappers over the shipped SDK helpers. This does not imply hosted MCP service, hosted Bidvia runtime behavior, remote registry participation, login, OAuth, auth implementation, capability-truth integration, notification or task truth, multi-agent coordination truth, or live negotiation.
+The shipped local MCP seam exposes read-only truth-fetch tools, review-safe tooling, and explicit execution tooling, but only through a local stdio server. The truth-fetch rollout is phased: governance-first MCP reads ship first, business-truth reads ship second, and both stay thin wrappers over the shipped SDK helpers. This does not imply hosted MCP service, hosted Bidvia runtime behavior, remote registry participation, login, OAuth, auth implementation, integrated Core capability truth refresh, full governed notification semantics, broader multi-agent coordination authority, or live negotiation.
 
 Start here if that is your path:
 
@@ -329,12 +333,12 @@ The current mainline uses three release categories, and they should stay separat
 These are implemented in code today and available to users now. They include:
 
 - the typed SDK client and helper builders
-- the typed SDK truth-fetch read wrappers for the approved account, richer governance deep-read, semantic, pricing, and asset groups
+- the typed SDK truth-fetch read wrappers for the approved account, richer governance deep-read, semantic, pricing, and asset groups, including agent registrations, authority profiles, capability profiles, the singular per-registration capability profile, and the shipped participation/task visibility family
 - the local stdio MCP truth-fetch read tools, shipped in two phases: governance-first first, then business-truth collection and detail reads second
 - bounded scenario planning and verification bundle support
 - review-packet preview and export helpers, now with richer review-safe readback around the already-shipped bounded slices
 - explicit local execution commands with `--dry-run`
-- explicit CLI truth-fetch commands for the same approved read groups
+- explicit CLI truth-fetch commands for the same approved read groups, centered on `agent-registrations`, `agent-registration`, `authority-profiles`, `capability-profiles`, `agent-capability-profile`, `participation-states`, `participation-state`, `task-dispatches`, and `task-dispatch`
 - static capability metadata, operator discovery snapshots, and local runtime-capability snapshots
 - server-capability payload normalization
 - environment-mode visibility
@@ -345,7 +349,7 @@ These are implemented in code today and available to users now. They include:
 
 The shipped MCP truth-fetch slice stays narrow: local stdio only, read-only only, and sourced from the SDK helpers already in this repo. It is not a hosted runtime, not a new auth layer, and not a new source of platform truth.
 
-In plain terms, phase order matters here. The widened governance deep-read family ships through the SDK and CLI, while MCP keeps the currently approved governance-first tools for `account-*`, `agent-presence`, and `agent-authority`. The business-truth MCP slice covers canonical semantics, pricing, document, media, evidence, and attachment reads. None of that widens the MCP layer beyond a local stdio wrapper over already-shipped SDK truth-fetch helpers.
+In plain terms, phase order matters here. The widened governance deep-read family ships through the SDK and CLI, while MCP keeps the currently approved governance-first tools for `account-*`, `agent-presence`, and `agent-authority`. The business-truth MCP slice covers canonical semantics, pricing, document, media, evidence, and attachment reads. If canonical-semantic taxonomy or lineage aliases are mentioned at all, treat them as transitional or non-final only. None of that widens the MCP layer beyond a local stdio wrapper over already-shipped SDK truth-fetch helpers.
 
 ### 2. Implemented but dependency-gated seams
 
@@ -361,7 +365,7 @@ These areas are outside the current shipped boundary:
 - remote registry behavior and remote discovery
 - live remote negotiation
 - approval-to-opportunity creation or discovery beyond the explicit current handoff seam
-- notification, task dispatch, and multi-agent truth
+- integrated Core-owned notification truth, full governed task outcome semantics beyond the shipped wrappers, and broader multi-agent coordination truth
 - login, OAuth, or any auth implementation beyond local transport/auth-provider seams
 - capability truth integration beyond local descriptive surfaces
 - broader orchestration beyond the shipped bounded slices

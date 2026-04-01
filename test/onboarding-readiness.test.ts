@@ -16,6 +16,12 @@ test('buildOnboardingReadiness defines a public-first readiness journey on the o
       environmentMode: 'production',
       environmentSelectionRequired: false,
     },
+    governedReadPosture: {
+      accessContextFamily: 'principal-governed-read',
+      requiredContext: ['tenantId', 'principalId'],
+      adminSessionOptional: true,
+      operatorGuidance: 'On local docker host, authority and presence require a valid admin session plus operator context. Authority-ladder is an operator-governed write and not a workspace admin-session route.',
+    },
     journey: {
       journeyKey: 'public-first-onboarding',
       label: 'Public-first onboarding readiness',
@@ -41,8 +47,8 @@ test('buildOnboardingReadiness defines a public-first readiness journey on the o
         {
           helperKey: 'getAgentReadiness',
           routePathTemplate: '/runtime/agents/:agent_registration_id/readiness',
-          accessContextFamily: 'admin-session',
-          requiredContext: ['tenantId', 'adminSessionId'],
+          accessContextFamily: 'principal-governed-read',
+          requiredContext: ['tenantId', 'principalId'],
         },
       ],
       firstSuccessNextStep: {

@@ -55,7 +55,7 @@ test('BidviaClient account truth-fetch reads use session-bound GET wrappers', as
   assert.equal((calls[3]?.init?.headers as Record<string, string>)['x-bidvia-session-id'], 'sess-1');
 });
 
-test('BidviaClient presence and authority reads use admin-session GET wrappers with tenant query', async () => {
+test('BidviaClient presence and authority reads use principal-governed GET wrappers with tenant query', async () => {
   const presenceBody = {
     agent_registration_id: 'areg-1',
     state: 'online',
@@ -69,6 +69,9 @@ test('BidviaClient presence and authority reads use admin-session GET wrappers w
     baseUrl: 'http://127.0.0.1:8787',
     context: {
       tenantId: 'tenant-a',
+      principalId: 'actor-1',
+      principalType: 'operator',
+      authorizedRole: 'admin',
       adminSessionId: 'admin-sess-1',
     },
     fetchImpl: async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -91,8 +94,34 @@ test('BidviaClient presence and authority reads use admin-session GET wrappers w
   assert.equal(String(calls[1]?.input), 'http://127.0.0.1:8787/runtime/agents/areg-1/authority?tenant_id=tenant-a');
   assert.equal(calls[0]?.init?.method, 'GET');
   assert.equal(calls[1]?.init?.method, 'GET');
+  assert.equal((calls[0]?.init?.headers as Record<string, string>)['x-authorized-tenant-id'], 'tenant-a');
+  assert.equal((calls[1]?.init?.headers as Record<string, string>)['x-authorized-tenant-id'], 'tenant-a');
+  assert.equal((calls[0]?.init?.headers as Record<string, string>)['x-bidvia-principal-id'], 'actor-1');
+  assert.equal((calls[1]?.init?.headers as Record<string, string>)['x-bidvia-principal-id'], 'actor-1');
   assert.equal((calls[0]?.init?.headers as Record<string, string>)['x-bidvia-admin-session-id'], 'admin-sess-1');
   assert.equal((calls[1]?.init?.headers as Record<string, string>)['x-bidvia-admin-session-id'], 'admin-sess-1');
+  assert.equal((calls[0]?.init?.headers as Record<string, string>)['x-bidvia-principal-type'], 'operator');
+  assert.equal((calls[1]?.init?.headers as Record<string, string>)['x-bidvia-principal-type'], 'operator');
+  assert.equal((calls[0]?.init?.headers as Record<string, string>)['x-authorized-role'], 'admin');
+  assert.equal((calls[1]?.init?.headers as Record<string, string>)['x-authorized-role'], 'admin');
+});
+
+test('BidviaClient governed reads omit principal-type and authorized-role headers when context does not provide them', async () => {
+  const { calls, fetchStub } = createFetchStub({ ok: true });
+  const client = new BidviaClient({
+    baseUrl: 'http://127.0.0.1:8787',
+    context: {
+      tenantId: 'tenant-a',
+      principalId: 'actor-1',
+    },
+    fetchImpl: fetchStub,
+  });
+
+  await client.getAgentPresence('areg-1');
+
+  const headers = calls[0]?.init?.headers as Record<string, string>;
+  assert.equal(headers['x-bidvia-principal-type'], undefined);
+  assert.equal(headers['x-authorized-role'], undefined);
 });
 
 test('BidviaClient semantic, pricing, and asset-binding reads use the frozen truth-fetch routes as thin GET wrappers', async () => {
@@ -167,10 +196,10 @@ test('BidviaClient account, presence, and authority truth-fetch reads guard the 
     },
   });
 
-  const missingTenantAndAdminSessionClient = new BidviaClient({
+  const missingPrincipalClient = new BidviaClient({
     baseUrl: 'http://127.0.0.1:8787',
     context: {
-      tenantId: '',
+      tenantId: 'tenant-a',
     },
     fetchImpl: async (input: RequestInfo | URL, init?: RequestInit) => {
       calls.push({ input, init });
@@ -194,46 +223,66 @@ test('BidviaClient account, presence, and authority truth-fetch reads guard the 
     await missingSessionClient.listAccountRecords();
   }, /sessionId is required for session routes/);
   await assert.rejects(async () => {
-    await missingTenantAndAdminSessionClient.getAgentPresence('areg-1');
+    await missingPrincipalClient.getAgentPresence('areg-1');
+  }, /principalId is required for governed read routes/);
+  await assert.rejects(async () => {
+    await missingPrincipalClient.getAgentAuthority('areg-1');
+  }, /principalId is required for governed read routes/);
+  const missingTenantClient = new BidviaClient({
+    baseUrl: 'http://127.0.0.1:8787',
+    context: {
+      tenantId: '',
+      principalId: 'actor-1',
+    },
+    fetchImpl: async (input: RequestInfo | URL, init?: RequestInit) => {
+      calls.push({ input, init });
+      return new Response(JSON.stringify({ ok: true }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      });
+    },
+  });
+  await assert.rejects(async () => {
+    await missingTenantClient.getAgentPresence('areg-1');
   }, /tenantId is required for tenant-scoped read routes/);
   await assert.rejects(async () => {
-    await missingTenantAndAdminSessionClient.getAgentAuthority('areg-1');
+    await missingTenantClient.getAgentAuthority('areg-1');
   }, /tenantId is required for tenant-scoped read routes/);
   await assert.rejects(async () => {
-    await missingTenantAndAdminSessionClient.listCanonicalSemanticConcepts();
+    await missingTenantClient.listCanonicalSemanticConcepts();
   }, /tenantId is required for tenant-scoped read routes/);
   await assert.rejects(async () => {
-    await missingTenantAndAdminSessionClient.getCanonicalSemanticConcept('csc-1');
+    await missingTenantClient.getCanonicalSemanticConcept('csc-1');
   }, /tenantId is required for tenant-scoped read routes/);
   await assert.rejects(async () => {
-    await missingTenantAndAdminSessionClient.listPricingBases();
+    await missingTenantClient.listPricingBases();
   }, /tenantId is required for tenant-scoped read routes/);
   await assert.rejects(async () => {
-    await missingTenantAndAdminSessionClient.getPricingBasis('pb-1');
+    await missingTenantClient.getPricingBasis('pb-1');
   }, /tenantId is required for tenant-scoped read routes/);
   await assert.rejects(async () => {
-    await missingTenantAndAdminSessionClient.listDocumentArtifacts();
+    await missingTenantClient.listDocumentArtifacts();
   }, /tenantId is required for tenant-scoped read routes/);
   await assert.rejects(async () => {
-    await missingTenantAndAdminSessionClient.getDocumentArtifact('da-1');
+    await missingTenantClient.getDocumentArtifact('da-1');
   }, /tenantId is required for tenant-scoped read routes/);
   await assert.rejects(async () => {
-    await missingTenantAndAdminSessionClient.listMediaAssets();
+    await missingTenantClient.listMediaAssets();
   }, /tenantId is required for tenant-scoped read routes/);
   await assert.rejects(async () => {
-    await missingTenantAndAdminSessionClient.getMediaAsset('ma-1');
+    await missingTenantClient.getMediaAsset('ma-1');
   }, /tenantId is required for tenant-scoped read routes/);
   await assert.rejects(async () => {
-    await missingTenantAndAdminSessionClient.listEvidenceAssets();
+    await missingTenantClient.listEvidenceAssets();
   }, /tenantId is required for tenant-scoped read routes/);
   await assert.rejects(async () => {
-    await missingTenantAndAdminSessionClient.getEvidenceAsset('ea-1');
+    await missingTenantClient.getEvidenceAsset('ea-1');
   }, /tenantId is required for tenant-scoped read routes/);
   await assert.rejects(async () => {
-    await missingTenantAndAdminSessionClient.listAttachmentBindings();
+    await missingTenantClient.listAttachmentBindings();
   }, /tenantId is required for tenant-scoped read routes/);
   await assert.rejects(async () => {
-    await missingTenantAndAdminSessionClient.getAttachmentBinding('ab-1');
+    await missingTenantClient.getAttachmentBinding('ab-1');
   }, /tenantId is required for tenant-scoped read routes/);
   assert.equal(calls.length, 0);
 });

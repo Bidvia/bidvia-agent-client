@@ -31,10 +31,13 @@ Do **not** continue if any metadata value has drifted or become contradictory.
 
 1. Read `CHANGELOG.md` before publication.
 2. Confirm the current release entry accurately reflects the shipped surface:
-   - typed SDK helpers for onboarding and registration-bound operations
-   - CLI readiness, route-context, visibility, and bounded review/verification flows
-   - the stable installed MCP surface `bidvia mcp-server`
-   - OpenClaw-compatible config export through `openclaw-mcp-config`
+    - typed SDK helpers for onboarding and registration-bound operations
+    - widened SDK/CLI truth-fetch visibility for agent registrations, authority profiles, capability profiles, the singular per-registration capability profile, and the shipped participation/task family
+    - CLI readiness, route-context, visibility, and bounded review/verification flows
+    - the stable installed MCP surface `bidvia mcp-server`
+    - OpenClaw-compatible config export through `openclaw-mcp-config`
+    - the principal-governed read posture, `tenantId` plus `principalId`, with optional admin-session companionship on some routes
+    - the boundary that credential-less local or sim probes prove wiring, transport behavior, reachability, or auth-posture only
 3. Confirm the changelog does **not** overclaim hosted runtime, hosted MCP, remote registry/discovery, login, or Core truth closure.
 
 ## 4. Package smoke confirmation

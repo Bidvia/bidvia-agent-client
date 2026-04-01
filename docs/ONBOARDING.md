@@ -1,6 +1,6 @@
 # Onboarding Guide
 
-This guide supports the current local-first package surface. For current execution sequencing and scope, use `.sisyphus/plans/agent-client-next-version-productization.md` as the active plan. That current wave stays inside grounded Track 1 client-owned productization and does not reopen Core truth closure.
+This guide supports the current local-first package surface. For current execution sequencing and scope, use `.sisyphus/plans/agent-client-core-vnext-alignment-and-joint-debug.md` as the active plan. That current wave stays inside grounded Track 1 client-owned productization and does not reopen Core truth closure.
 
 ## Goal
 
@@ -70,14 +70,18 @@ After that guided path is clear, use the supporting read-only commands when you 
 4. `verification-bundle-preview` or `verification-bundle-export` when the bounded run should be reviewable later
 5. explicit local execution commands when you need payload preview for `heartbeat`, `sync-upload`, `evidence`, or `proposal`
 
-In this phase, truth-fetch ships through the SDK and CLI as the full widened client-owned read surface, with a bounded local stdio MCP seam exposing the currently approved read-only subset. That MCP rollout is phased on purpose: governance-first truth-fetch tools ship first, then business-truth collection and detail tools ship second. In both phases, MCP stays read-only, local stdio only, and a thin wrapper over the shipped SDK helpers.
+In this phase, truth-fetch ships through the SDK and CLI as the widened frozen downstream read surface, with a bounded local stdio MCP seam exposing the currently approved read-only subset. That MCP rollout is phased on purpose: governance-first truth-fetch tools ship first, then business-truth collection and detail tools ship second. In both phases, MCP stays read-only, local stdio only, and a thin wrapper over the shipped SDK helpers.
 
 The honest phase split is:
 
 - the SDK and CLI expose the widened governance deep-read family and the broader business truth-fetch families listed below
+- the canonical frozen governance reads now visible in SDK and CLI include `GET /runtime/agents/registrations`, `GET /runtime/agents/:registrationId`, `GET /runtime/authority-profiles`, `GET /runtime/capability-profiles`, and `GET /runtime/agents/:registrationId/capability-profile`
+- the same public surface also includes the shipped participation-state and task-dispatch wrappers, while keeping local helper aliases clearly local
 - the MCP seam keeps the currently approved governance-first tools for `account-*`, `agent-presence`, and `agent-authority`
 - the MCP seam also exposes the shipped business-truth collection and detail tools for canonical semantics, pricing, document, media, evidence, and attachment reads
 - the SDK and CLI stay the source of truth, and MCP only forwards to those already-shipped helpers
+
+Principal-governed reads require real `tenantId` plus `principalId`, with `adminSessionId` only as an optional companion on some routes. Local and sim probes without governed credentials can still prove route wiring, transport behavior, reachability, or auth-guard posture, but they do not prove full governed semantics.
 
 Safe order for truth-fetch work:
 
@@ -173,8 +177,8 @@ This registry does not negotiate with a live runtime, fetch server-provided capa
 The repo now ships a broad read-only truth-fetch layer across the SDK and CLI for approved frozen Core read routes. Today that covers:
 
 - account agents, account agent bindings, and account records
-- richer governance deep reads for agent presence, authority, readiness, summaries, authority profiles, authority ladders, and capability profiles
-- broader canonical semantic reads for concepts, labels, mappings, taxonomy entries, and lineage links
+- richer governance deep reads for agent registrations, registration detail, agent presence, authority, readiness, summaries, authority profiles, capability profiles, and the singular per-registration capability profile
+- broader canonical semantic reads for concepts, labels, and mappings, with taxonomy or lineage aliases treated as transitional or non-final if they appear at all
 - broader pricing reads for bases, rule atoms, quotation method modules, quote templates, quotations, and explanations
 - broader document, media, evidence, attachment, and file-resource reads
 
@@ -206,15 +210,15 @@ node dist/cli.js pricing-bases
 node dist/cli.js media-asset --media-asset-id media-1
 ```
 
-This truth-fetch layer stays read-only. The MCP portion stays local stdio only and does not add hosted runtime behavior, hosted MCP, remote registry or remote discovery, login, OAuth, auth implementation, capability-truth integration, notification or task truth, multi-agent coordination truth, or live negotiation.
+This truth-fetch layer stays read-only. The MCP portion stays local stdio only and does not add hosted runtime behavior, hosted MCP, remote registry or remote discovery, login, OAuth, auth implementation, integrated Core capability-truth refresh, full governed notification semantics, broader multi-agent coordination authority, or live negotiation.
 
 Keep the deferred boundary explicit when you explain this surface to operators or SDK users:
 
 - hosted runtime and hosted MCP stay deferred
 - remote registry and remote discovery stay deferred
 - login, OAuth, and auth implementation stay deferred
-- capability-truth integration and live negotiation stay deferred
-- notification truth, task dispatch truth, and multi-agent coordination truth stay deferred
+- integrated Core capability-truth refresh and live negotiation stay deferred
+- notification truth and broader multi-agent coordination truth beyond the shipped frozen participation/task wrappers stay deferred
 - approval -> opportunity closure stays deferred beyond the explicit current handoff seam
 
 ## Local runtime-capability snapshot
@@ -443,8 +447,9 @@ If you point the client at a real runtime instead of the stubbed example flow, u
 
 Additional context now supported for production-proven routes:
 
-- `adminSessionId` for admin-session detail routes
-- `companyId` for operator-context write routes
+- `tenantId` plus `principalId` are the primary requirement for principal-governed reads
+- `adminSessionId` is optional on some governed detail routes, not the primary default
+- `companyId` remains route-specific for operator-context write routes
 
 Recommended domain profile defaults for current rollout:
 

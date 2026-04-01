@@ -42,6 +42,7 @@ test('capability contract exposes bounded descriptive metadata labels', () => {
     'registration',
     'session',
     'admin-session',
+    'principal-governed-read',
     'operator-company',
     'scenario',
   ]);
@@ -260,8 +261,8 @@ test('capability registry exposes approved truth-fetch helpers as local read-onl
       helperKey: 'getAgentPresence',
       routePathTemplate: '/runtime/agents/:agent_registration_id/presence',
       httpMethod: 'GET',
-      accessContextFamily: 'admin-session',
-      requiredContext: ['tenantId', 'adminSessionId'],
+      accessContextFamily: 'principal-governed-read',
+      requiredContext: ['tenantId', 'principalId'],
       scope: 'read',
       level: 'atomic-route',
       localCapabilityTier: 'L0-observe-only',
@@ -271,8 +272,8 @@ test('capability registry exposes approved truth-fetch helpers as local read-onl
       helperKey: 'getAgentAuthority',
       routePathTemplate: '/runtime/agents/:agent_registration_id/authority',
       httpMethod: 'GET',
-      accessContextFamily: 'admin-session',
-      requiredContext: ['tenantId', 'adminSessionId'],
+      accessContextFamily: 'principal-governed-read',
+      requiredContext: ['tenantId', 'principalId'],
       scope: 'read',
       level: 'atomic-route',
       localCapabilityTier: 'L0-observe-only',
@@ -422,18 +423,32 @@ test('capability registry exposes shipped widened T2 and T3 truth-fetch helpers 
   const shippedExpandedHelperKeys = [
     'getAgentReadiness',
     'getAgentSummary',
+    'listAgentRegistrations',
+    'getAgentRegistration',
+    'listAuthorityProfiles',
+    'listCapabilityProfiles',
     'getAgentAuthorityProfile',
     'getAgentAuthorityLadder',
-    'listAgentCapabilityProfiles',
     'getAgentCapabilityProfile',
     'listCanonicalSemanticLabels',
     'getCanonicalSemanticLabel',
     'listCanonicalSemanticMappings',
     'getCanonicalSemanticMapping',
-    'listCanonicalSemanticTaxonomyEntries',
-    'getCanonicalSemanticTaxonomyEntry',
-    'listCanonicalSemanticLineageLinks',
-    'getCanonicalSemanticLineageLink',
+    'listParticipationStates',
+    'getParticipationState',
+    'createParticipationState',
+    'createLease',
+    'listTaskDispatches',
+    'getTaskDispatch',
+    'createTaskDispatch',
+    'assignTaskDispatch',
+    'suspendTaskDispatch',
+    'resumeTaskDispatch',
+    'completeTaskDispatch',
+    'failTaskDispatch',
+    'createClaim',
+    'acceptClaim',
+    'rejectClaim',
     'listPricingRuleAtoms',
     'getPricingRuleAtom',
     'listPricingQuotationMethodModules',
@@ -459,18 +474,32 @@ test('next-stage discovery groups no longer relabel shipped widened helpers as m
   const shippedExpandedHelperKeys = new Set([
     'getAgentReadiness',
     'getAgentSummary',
+    'listAgentRegistrations',
+    'getAgentRegistration',
+    'listAuthorityProfiles',
+    'listCapabilityProfiles',
     'getAgentAuthorityProfile',
     'getAgentAuthorityLadder',
-    'listAgentCapabilityProfiles',
     'getAgentCapabilityProfile',
     'listCanonicalSemanticLabels',
     'getCanonicalSemanticLabel',
     'listCanonicalSemanticMappings',
     'getCanonicalSemanticMapping',
-    'listCanonicalSemanticTaxonomyEntries',
-    'getCanonicalSemanticTaxonomyEntry',
-    'listCanonicalSemanticLineageLinks',
-    'getCanonicalSemanticLineageLink',
+    'listParticipationStates',
+    'getParticipationState',
+    'createParticipationState',
+    'createLease',
+    'listTaskDispatches',
+    'getTaskDispatch',
+    'createTaskDispatch',
+    'assignTaskDispatch',
+    'suspendTaskDispatch',
+    'resumeTaskDispatch',
+    'completeTaskDispatch',
+    'failTaskDispatch',
+    'createClaim',
+    'acceptClaim',
+    'rejectClaim',
     'listPricingRuleAtoms',
     'getPricingRuleAtom',
     'listPricingQuotationMethodModules',
@@ -503,7 +532,77 @@ test('next-stage discovery contracts expose metadata-only route status labels fo
   ]);
 });
 
-test('next-stage governance discovery group describes richer admin-session deep reads without claiming server truth', () => {
+test('capability registry keeps singular capability-profile truth canonical and demotes stale alias-only metadata', () => {
+  assert.deepEqual(getRouteCapability('getAgentCapabilityProfile'), {
+    helperKey: 'getAgentCapabilityProfile',
+    routePathTemplate: '/runtime/agents/:agent_registration_id/capability-profile',
+    httpMethod: 'GET',
+    accessContextFamily: 'principal-governed-read',
+    requiredContext: ['tenantId', 'principalId'],
+    scope: 'read',
+    level: 'atomic-route',
+    localCapabilityTier: 'L0-observe-only',
+    localCapabilityRiskTier: 'observe-only',
+  });
+
+  assert.equal(getRouteCapability('listAgentCapabilityProfiles'), undefined);
+  assert.equal(getRouteCapability('listCanonicalSemanticTaxonomyEntries'), undefined);
+  assert.equal(getRouteCapability('getCanonicalSemanticTaxonomyEntry'), undefined);
+  assert.equal(getRouteCapability('listCanonicalSemanticLineageLinks'), undefined);
+  assert.equal(getRouteCapability('getCanonicalSemanticLineageLink'), undefined);
+});
+
+test('capability registry describes principal-governed reads and canonical participation or task families honestly', () => {
+  assert.deepEqual(getRouteCapability('getAgentReadiness'), {
+    helperKey: 'getAgentReadiness',
+    routePathTemplate: '/runtime/agents/:agent_registration_id/readiness',
+    httpMethod: 'GET',
+    accessContextFamily: 'principal-governed-read',
+    requiredContext: ['tenantId', 'principalId'],
+    scope: 'read',
+    level: 'atomic-route',
+    localCapabilityTier: 'L0-observe-only',
+    localCapabilityRiskTier: 'observe-only',
+  });
+
+  assert.deepEqual(getRouteCapability('listParticipationStates'), {
+    helperKey: 'listParticipationStates',
+    routePathTemplate: '/runtime/agents/:agent_registration_id/participation-states',
+    httpMethod: 'GET',
+    accessContextFamily: 'principal-governed-read',
+    requiredContext: ['tenantId', 'principalId'],
+    scope: 'read',
+    level: 'atomic-route',
+    localCapabilityTier: 'L0-observe-only',
+    localCapabilityRiskTier: 'observe-only',
+  });
+
+  assert.deepEqual(getRouteCapability('createTaskDispatch'), {
+    helperKey: 'createTaskDispatch',
+    routePathTemplate: '/runtime/agents/:agent_registration_id/task-dispatches',
+    httpMethod: 'POST',
+    accessContextFamily: 'operator-company',
+    requiredContext: ['tenantId', 'principalId', 'companyId'],
+    scope: 'write',
+    level: 'atomic-route',
+    localCapabilityTier: 'L3-governed-commercial',
+    localCapabilityRiskTier: 'governed-commercial',
+  });
+
+  assert.deepEqual(getRouteCapability('rejectClaim'), {
+    helperKey: 'rejectClaim',
+    routePathTemplate: '/runtime/agents/:agent_registration_id/claims/:claim_id/reject',
+    httpMethod: 'POST',
+    accessContextFamily: 'operator-company',
+    requiredContext: ['tenantId', 'principalId', 'companyId'],
+    scope: 'write',
+    level: 'atomic-route',
+    localCapabilityTier: 'L3-governed-commercial',
+    localCapabilityRiskTier: 'governed-commercial',
+  });
+});
+
+test('next-stage governance discovery group stays metadata-only after shipped principal-governed reads moved into canonical route metadata', () => {
   const expectedGroup: BidviaNextStageReadRouteDiscoveryGroup = {
     groupKey: 'governance-deep-reads',
     label: 'Richer governance deep reads',

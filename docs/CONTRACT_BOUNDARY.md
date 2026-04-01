@@ -1,6 +1,6 @@
 # Contract Boundary
 
-This boundary reference supports the active execution plan at `.sisyphus/plans/agent-client-next-version-productization.md`. Read it as release-boundary guidance for the current shipped local-first surface, not as a competing roadmap.
+This boundary reference supports the active execution plan at `.sisyphus/plans/agent-client-core-vnext-alignment-and-joint-debug.md`. Read it as release-boundary guidance for the current shipped local-first surface, not as a competing roadmap.
 
 ## Rule
 
@@ -14,6 +14,8 @@ This boundary reference supports the active execution plan at `.sisyphus/plans/a
 - sync upload/download semantics
 - evidence submission semantics
 - proposal submission semantics
+- frozen governance truth-fetch reads for registrations, authority profiles, capability profiles, and the singular per-registration capability profile
+- frozen participation-state and task-dispatch wrapper families where this repo already exposes them
 - review / approval / operator-only boundaries
 - fail-close behavior
 
@@ -41,6 +43,8 @@ This boundary reference supports the active execution plan at `.sisyphus/plans/a
 - evidence
 - proposal
 - review-safe status operations
+- principal-governed reads over the frozen downstream families now adopted in the SDK/CLI
+- participation-state visibility and task-dispatch visibility/action wrappers already frozen downstream and exposed here
 - production-proven commercial-action helper family
 - production-proven listing / match / connection / approval / package helper slices
 - verification bundle export
@@ -56,3 +60,21 @@ This boundary reference supports the active execution plan at `.sisyphus/plans/a
 - `GET /runtime/agents/:registration_id/sync/download`
 - `POST /runtime/agents/:registration_id/evidence-submissions`
 - `POST /runtime/agents/:registration_id/proposals`
+- `GET /runtime/agents/registrations`
+- `GET /runtime/agents/:registration_id`
+- `GET /runtime/authority-profiles`
+- `GET /runtime/capability-profiles`
+- `GET /runtime/agents/:registration_id/capability-profile`
+- `GET /runtime/agents/:registration_id/participation-states`
+- `GET /runtime/agents/:registration_id/participation-states/:participation_state_id`
+- `POST /runtime/agents/:registration_id/participation-states`
+- `GET /runtime/agents/:registration_id/task-dispatches`
+- `GET /runtime/agents/:registration_id/task-dispatches/:task_dispatch_id`
+- `POST /runtime/agents/:registration_id/task-dispatches`
+
+## Governed read posture
+
+- principal-governed reads require `tenantId` plus `principalId`
+- `adminSessionId` is optional on some detail routes, not the primary gate for the widened read family
+- credential-less local or sim probes can prove route wiring, transport behavior, reachability, or auth-guard posture only
+- full governed semantics still require real operator credentials and context

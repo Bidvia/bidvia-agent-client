@@ -2,8 +2,8 @@
 
 > Status: reference-only support material
 >
-> The active execution plan for the current wave is `.sisyphus/plans/agent-client-next-version-productization.md`.
-> Read this file as long-horizon sequencing support only. Current execution stays grounded in Track 1 client-owned productization, while Core truth closure remains deferred to later work.
+> The active execution plan for the current wave is `.sisyphus/plans/agent-client-core-vnext-alignment-and-joint-debug.md`.
+> Read this file as long-horizon sequencing support only. Current execution stays grounded in Track 1 client-owned productization, while broader Core truth closure remains deferred to later work.
 
 ## Product direction
 
@@ -21,6 +21,7 @@ Today the mainline already includes:
 
 - shipped local helpers for onboarding, claim, heartbeat, sync, evidence, proposal, and related governed execution flows
 - shipped local helper coverage for pricing, media, evidence, document, attachment, proposal, review, and authorized-use explanation surfaces
+- shipped SDK/CLI visibility for the frozen registration, authority-profile, capability-profile, singular agent-capability-profile, participation-state, and task-dispatch route families now adopted downstream
 - shipped local scenario-envelope builders plus bounded scenario families for registration lifecycle, registered-agent operations, industry-universe, connection approval, commercial-action continuation, and one honest cross-chain coordinator path across shipped slices
 - shipped local review-packet, verification-bundle, CLI preview/export, static capability metadata, local runtime snapshot, server-capability normalization, static MCP catalog, bounded local stdio MCP server, and environment-mode visibility surfaces
 
@@ -35,6 +36,7 @@ Keep every roadmap claim inside one of these three buckets:
 These are implemented and should be described as local repo-owned surfaces:
 
 - governed execution helpers and bounded business-chain helpers already present in code and tests
+- widened frozen downstream read surfaces already present in the SDK and CLI, including principal-governed registration/profile reads and the shipped participation/task wrappers
 - bounded scenario planning and bounded orchestration slices already present in code and tests
 - verification-bundle and review-packet packaging already present in code and tests
 - static capability metadata, local runtime-capability snapshot output, server-capability normalization, static MCP-facing catalog output, bounded local stdio MCP server, and read-only environment-mode visibility
@@ -86,18 +88,18 @@ Track 1 is complete when the repo presents a stable integration product around i
 
 L2 begins Track 2. The goal is to close the gap between local descriptive surfaces and frozen Core truth consumption, without shifting authority ownership away from Core.
 
-#### Track 2. Core collaboration closure for capability truth, presence and notification semantics, and multi-agent coordination
+#### Track 2. Core collaboration closure for capability truth refresh, notification semantics, and broader multi-agent coordination
 
-Track 2 focuses on the seams that cannot become fully real until Bidvia Core exposes frozen truth. Core truth consumption, presence and notification semantics, task semantics, and broader multi-agent coordination remain downstream of L1 and remain Core-dependent.
+Track 2 focuses on the seams that cannot become fully real until Bidvia Core exposes frozen truth. Core truth refresh, notification semantics, and broader multi-agent coordination remain downstream of L1 and remain Core-dependent, even though the current SDK and CLI already expose the frozen registration/profile and participation/task route families confirmed for this repo.
 
 Primary outcomes:
 
 - consume frozen Core capability truth so local capability views no longer stop at descriptive local knowledge
 - move capability refresh from an implemented but blocked seam toward a real Core-truth consumption path, while preserving fail-closed behavior until truth is available
-- close remaining semantics around presence, notifications, task participation, and other coordination surfaces only where Core-owned truth makes those semantics trustworthy
+- close remaining semantics around notifications and broader coordination surfaces only where Core-owned truth makes those semantics trustworthy beyond the shipped frozen wrappers
 - strengthen multi-agent coordination only where Core semantics are frozen and where the client still remains an integration product, not an authority owner
 
-L2 is complete when the client can consume frozen Core truth for the collaboration semantics it already describes, especially capability truth and coordination semantics, without overstating client ownership.
+L2 is complete when the client can consume frozen Core truth for the collaboration semantics it already describes, especially capability truth refresh and broader coordination semantics beyond the shipped frozen wrappers, without overstating client ownership.
 
 ### L3. Runtime, adapter, and multi-agent collaboration expansion
 

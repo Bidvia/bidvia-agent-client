@@ -39,6 +39,12 @@ function buildPublicDefaults() {
 export function buildOnboardingReadiness() {
   return {
     defaults: buildPublicDefaults(),
+    governedReadPosture: {
+      accessContextFamily: 'principal-governed-read' as const,
+      requiredContext: ['tenantId', 'principalId'] as const,
+      adminSessionOptional: true,
+      operatorGuidance: 'On local docker host, authority and presence require a valid admin session plus operator context. Authority-ladder is an operator-governed write and not a workspace admin-session route.',
+    },
     journey: {
       journeyKey: 'public-first-onboarding',
       label: 'Public-first onboarding readiness',

@@ -36,9 +36,17 @@ Review-packet and verification output now carry richer operator-facing detail, i
 
 The CLI is easier to use as a local operator surface. Grouped help, stronger preview flows, and clearer command organization make the current packaged surface easier to discover and safer to run.
 
+### Frozen downstream truth-fetch alignment
+
+This version aligns the public docs and release language to the frozen downstream families now visible in the SDK and CLI. That includes `GET /runtime/agents/registrations`, `GET /runtime/agents/:registrationId`, `GET /runtime/authority-profiles`, `GET /runtime/capability-profiles`, `GET /runtime/agents/:registrationId/capability-profile`, plus the shipped participation-state and task-dispatch wrappers. The singular per-registration capability profile is the canonical read surface. If taxonomy or lineage aliases are mentioned at all, treat them as transitional or non-final only.
+
+### Principal-governed read posture, kept honest
+
+The widened governed read surface now follows the principal-governed posture already adopted in the client. In practice, that means `tenantId` plus `principalId` are the primary requirement, with admin-session context only as an optional companion on some routes. Credential-less local or sim probes can prove wiring, transport behavior, reachability, or auth-guard posture only. They do not prove full governed semantics.
+
 ### Expanded local stdio MCP surfaces
 
-The local stdio MCP seam now exposes a broader, better-aligned bounded tool surface across review-safe and explicit execution tooling. This remains a local stdio server only. It should not be read as hosted MCP behavior or remote registry participation.
+The local stdio MCP seam now exposes a broader, better-aligned bounded tool surface across review-safe and explicit execution tooling. This remains a local stdio server only. It should not be read as hosted MCP behavior or remote registry participation. MCP also stays intentionally narrower than the SDK/CLI truth-fetch surface and remains mostly read-only.
 
 ### Docs and examples alignment
 
@@ -61,6 +69,8 @@ This version ships real local value in the package itself:
 - broader but still bounded orchestration slices
 - richer review-packet and verification output
 - richer CLI operator flows
+- frozen downstream truth-fetch alignment across docs and release language
+- principal-governed read posture documented honestly
 - expanded local stdio MCP surfaces
 - aligned docs and examples for the local path
 
@@ -82,7 +92,7 @@ This release does not claim any of the following:
 
 ## Verification status
 
-This local-only version is documented as a completed shipped package surface with aligned CLI, SDK, MCP, docs, examples, and validation framing. The package remains client-owned where it ships local operator value, and Core-deferred where frozen external truth is still required.
+This local-only version is documented as a completed shipped package surface with aligned CLI, SDK, MCP, docs, examples, and validation framing. The package remains client-owned where it ships local operator value, and Core-deferred where frozen external truth is still required. The adopted frozen read families are documented as shipped SDK/CLI visibility, not as hosted runtime or client-owned authority.
 
 ## Next-step notes
 

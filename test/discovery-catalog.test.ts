@@ -70,6 +70,50 @@ test('buildLocalDiscoveryCatalog returns operator-readable local mappings withou
       },
     ],
   });
+
+  const capabilityProfile = catalog.find((entry) => entry.helperKey === 'getAgentCapabilityProfile');
+  assert.deepEqual(capabilityProfile, {
+    helperKey: 'getAgentCapabilityProfile',
+    routePathTemplate: '/runtime/agents/:agent_registration_id/capability-profile',
+    httpMethod: 'GET',
+    accessContextFamily: 'principal-governed-read',
+    requiredContext: ['tenantId', 'principalId'],
+    scope: 'read',
+    level: 'atomic-route',
+    localCapabilityTier: 'L0-observe-only',
+    localCapabilityRiskTier: 'observe-only',
+    discoveryKind: 'read',
+    recommendedOutputMode: 'truth-fetch-result',
+    sourceOfTruth: 'local-sdk-helpers',
+    localOnly: true,
+    remoteDiscovery: false,
+    cliCommands: ['agent-capability-profile'],
+    mcpTools: [],
+  });
+
+  const participationStates = catalog.find((entry) => entry.helperKey === 'listParticipationStates');
+  assert.deepEqual(participationStates, {
+    helperKey: 'listParticipationStates',
+    routePathTemplate: '/runtime/agents/:agent_registration_id/participation-states',
+    httpMethod: 'GET',
+    accessContextFamily: 'principal-governed-read',
+    requiredContext: ['tenantId', 'principalId'],
+    scope: 'read',
+    level: 'atomic-route',
+    localCapabilityTier: 'L0-observe-only',
+    localCapabilityRiskTier: 'observe-only',
+    discoveryKind: 'read',
+    recommendedOutputMode: 'truth-fetch-result',
+    sourceOfTruth: 'local-sdk-helpers',
+    localOnly: true,
+    remoteDiscovery: false,
+    cliCommands: [],
+    mcpTools: [],
+  });
+
+  assert.equal(catalog.some((entry) => entry.helperKey === 'listAgentCapabilityProfiles'), false);
+  assert.equal(catalog.some((entry) => entry.helperKey === 'listCanonicalSemanticTaxonomyEntries'), false);
+  assert.equal(catalog.some((entry) => entry.helperKey === 'listCanonicalSemanticLineageLinks'), false);
 });
 
 test('buildLocalMcpToolCatalog derives MCP descriptors from the shared local discovery catalog', () => {
@@ -91,4 +135,24 @@ test('buildLocalMcpToolCatalog derives MCP descriptors from the shared local dis
     accessContextFamily: 'registration',
     requiredContext: ['tenantId', 'registrationId', 'principalId'],
   });
+
+  assert.deepEqual(mcpTools.find((tool) => tool.toolName === 'agent-presence-read'), {
+    toolName: 'agent-presence-read',
+    description: 'Reads the current governed agent presence through the shipped SDK helper.',
+    inputSchemaRef: {
+      schemaKey: 'BidviaAgentRegistrationIdentifierInput',
+    },
+    outputMode: 'truth-fetch-result',
+    helperRef: {
+      helperKey: 'getAgentPresence',
+      capabilityKey: 'getAgentPresence',
+    },
+    localCapabilityTier: 'L0-observe-only',
+    localCapabilityRiskTier: 'observe-only',
+    accessContextFamily: 'principal-governed-read',
+    requiredContext: ['tenantId', 'principalId'],
+  });
+
+  assert.equal(mcpTools.some((tool) => tool.toolName === 'agent-readiness-read'), false);
+  assert.equal(mcpTools.some((tool) => tool.toolName === 'task-dispatches-read'), false);
 });

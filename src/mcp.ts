@@ -239,7 +239,7 @@ function requireDispatchExecutionClient(
 
 function requireAgentRegistrationId(input: unknown): string {
   if (typeof input !== 'object' || input === null) {
-    throw new Error('agentRegistrationId is required for governance agent reads');
+    throw new Error('agentRegistrationId is required for principal-governed agent reads');
   }
 
   const registrationId =
@@ -251,7 +251,7 @@ function requireAgentRegistrationId(input: unknown): string {
       : undefined);
 
   if (!registrationId) {
-    throw new Error('agentRegistrationId is required for governance agent reads');
+    throw new Error('agentRegistrationId is required for principal-governed agent reads');
   }
 
   return registrationId;

@@ -158,6 +158,10 @@ test('MCP tool catalog covers the current bounded preview, truth-fetch, export, 
       'proposal-execution',
     ],
   );
+
+  assert.equal(bidviaMcpTools.some((tool) => tool.toolName === 'agent-readiness-read'), false);
+  assert.equal(bidviaMcpTools.some((tool) => tool.toolName === 'agent-capability-profile-read'), false);
+  assert.equal(bidviaMcpTools.some((tool) => tool.toolName === 'create-task-dispatch-execution'), false);
 });
 
 test('MCP tool catalog lookup returns descriptive bounded slice metadata', () => {
@@ -316,8 +320,8 @@ test('governance truth-fetch MCP descriptor metadata matches helper mapping and 
     },
     localCapabilityTier: 'L0-observe-only',
     localCapabilityRiskTier: 'observe-only',
-    accessContextFamily: 'admin-session',
-    requiredContext: ['tenantId', 'adminSessionId'],
+    accessContextFamily: 'principal-governed-read',
+    requiredContext: ['tenantId', 'principalId'],
   });
 
   assert.deepEqual(getMcpToolDescriptor('agent-authority-read') as BidviaMcpDescriptorWithContext, {
@@ -333,8 +337,8 @@ test('governance truth-fetch MCP descriptor metadata matches helper mapping and 
     },
     localCapabilityTier: 'L0-observe-only',
     localCapabilityRiskTier: 'observe-only',
-    accessContextFamily: 'admin-session',
-    requiredContext: ['tenantId', 'adminSessionId'],
+    accessContextFamily: 'principal-governed-read',
+    requiredContext: ['tenantId', 'principalId'],
   });
 
   assert.deepEqual(getMcpToolDescriptor('canonical-semantic-concepts-read') as BidviaMcpDescriptorWithContext, {
@@ -680,6 +684,28 @@ test('dispatchMcpToolCall routes business truth-fetch collection tools through t
       },
     },
   ]);
+});
+
+test('dispatchMcpToolCall keeps bounded MCP governance reads on the existing approved subset only', () => {
+  assert.equal(getMcpToolDescriptor('agent-readiness-read'), undefined);
+  assert.equal(getMcpToolDescriptor('agent-summary-read'), undefined);
+  assert.equal(getMcpToolDescriptor('agent-capability-profile-read'), undefined);
+  assert.equal(getMcpToolDescriptor('task-dispatch-read'), undefined);
+});
+
+test('dispatchMcpToolCall reports principal-governed registration input requirements for agent reads', async () => {
+  await assert.rejects(
+    async () => dispatchMcpToolCallWithExecution(
+      {
+        toolName: 'agent-presence-read',
+        arguments: {},
+      },
+      {
+        createExecutionClient: () => ({}) as never,
+      },
+    ),
+    /agentRegistrationId is required for principal-governed agent reads/,
+  );
 });
 
 test('dispatchMcpToolCall routes business truth-fetch detail tools through tenant SDK reads with explicit IDs', async () => {
@@ -1044,7 +1070,7 @@ test('dispatchMcpToolCall routes governance truth-fetch account tools through se
   });
 });
 
-test('dispatchMcpToolCall routes governance truth-fetch presence and authority tools through admin-session SDK reads', async () => {
+test('dispatchMcpToolCall routes governance truth-fetch presence and authority tools through principal-governed SDK reads', async () => {
   const calls: Array<{ helper: string; registrationId: string }> = [];
 
   const result = await Promise.all([

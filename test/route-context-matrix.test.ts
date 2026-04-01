@@ -16,6 +16,7 @@ test('buildRouteContextMatrix defines the guided route-context rows for public o
       environmentMode: string;
       environmentSelectionRequired: boolean;
     };
+    governedReadPosture: Record<string, unknown>;
     rows: Array<Record<string, unknown>>;
     firstSuccessNextSteps: Record<string, unknown>;
   };
@@ -24,6 +25,13 @@ test('buildRouteContextMatrix defines the guided route-context rows for public o
     baseUrl: 'https://api.bidvia.ai',
     environmentMode: 'production',
     environmentSelectionRequired: false,
+  });
+
+  assert.deepEqual(typedMatrix.governedReadPosture, {
+    accessContextFamily: 'principal-governed-read',
+    requiredContext: ['tenantId', 'principalId'],
+    adminSessionOptional: true,
+    operatorGuidance: 'On local docker host, authority and presence require a valid admin session plus operator context. Authority-ladder is an operator-governed write and not a workspace admin-session route.',
   });
 
   assert.deepEqual(typedMatrix.rows.slice(0, 4), [
@@ -58,8 +66,8 @@ test('buildRouteContextMatrix defines the guided route-context rows for public o
       helperKey: 'getAgentReadiness',
       routePathTemplate: '/runtime/agents/:agent_registration_id/readiness',
       routeFamily: 'agent-runtime',
-      accessContextFamily: 'admin-session',
-      requiredContext: ['tenantId', 'adminSessionId'],
+      accessContextFamily: 'principal-governed-read',
+      requiredContext: ['tenantId', 'principalId'],
       operationKind: 'read-only',
       localCapabilityRiskTier: 'observe-only',
       relevance: 'public-first-common',

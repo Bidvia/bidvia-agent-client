@@ -13,8 +13,13 @@ function readText(relativePath: string) {
 
 test('public release docs no longer depend on transitional publication wording in the main install path', () => {
   const readme = readText('README.md');
+  const onboardingGuide = readText('docs/ONBOARDING.md');
+  const contractBoundary = readText('docs/CONTRACT_BOUNDARY.md');
+  const roadmap = readText('docs/ROADMAP.md');
   const onboardingDoc = readText('docs/OPENCLAW_GATEWAY_ONBOARDING.md');
   const smokeDoc = readText('docs/OPENCLAW_GATEWAY_SMOKE.md');
+  const releaseChecklist = readText('docs/INTERNAL_RELEASE_CHECKLIST.md');
+  const releaseNotes = readText('docs/RELEASE_NOTES_LOCAL_ONLY_NEXT_VERSION.md');
   const openClawExample = readText('examples/openclaw-gateway-bidvia-setup.md');
 
   for (const document of [readme, onboardingDoc, smokeDoc]) {
@@ -38,4 +43,24 @@ test('public release docs no longer depend on transitional publication wording i
   assert.match(smokeDoc, /bidvia mcp-server/);
   assert.doesNotMatch(readme, /bidvia-agent-client openclaw-mcp-config/);
   assert.doesNotMatch(smokeDoc, /bidvia-agent-client openclaw-mcp-config/);
+
+  for (const document of [readme, onboardingGuide, contractBoundary, roadmap]) {
+    assert.match(document, /\.sisyphus\/plans\/agent-client-core-vnext-alignment-and-joint-debug\.md/);
+    assert.doesNotMatch(document, /agent-client-next-version-productization/);
+  }
+
+  for (const document of [readme, onboardingGuide, contractBoundary, releaseChecklist, releaseNotes]) {
+    assert.match(document, /tenantId/);
+    assert.match(document, /principalId/);
+  }
+
+  for (const document of [readme, onboardingGuide, contractBoundary, releaseNotes]) {
+    assert.match(document, /capability-profile/);
+    assert.match(document, /authority-profiles/);
+  }
+
+  assert.match(readme, /task-dispatch/);
+  assert.match(onboardingGuide, /participation-state/);
+  assert.match(contractBoundary, /\/runtime\/agents\/:registration_id\/task-dispatches/);
+  assert.match(smokeDoc, /credential-less local or sim probes/i);
 });

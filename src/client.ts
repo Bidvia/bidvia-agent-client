@@ -1,4 +1,10 @@
 import type {
+  BidviaAgentAuthorityLadderWriteInput,
+  BidviaAgentAuthorityProfileWriteInput,
+  BidviaAgentCapabilityProfileWriteInput,
+  BidviaClaimAcceptInput,
+  BidviaClaimRejectInput,
+  BidviaClaimWriteInput,
   BidviaClientAuth,
   BidviaClientAuthInput,
   BidviaCommercialActionCreateInput,
@@ -18,12 +24,20 @@ import type {
   BidviaExportOpportunityPackageInput,
   BidviaGenerateMatchCandidatesInput,
   BidviaHeartbeatInput,
+  BidviaLeaseWriteInput,
+  BidviaParticipationStateWriteInput,
   BidviaProposalSubmissionInput,
   BidviaProvisionalAgentClaimInput,
   BidviaProvisionalAgentCreateInput,
   BidviaSyncUploadInput,
   BidviaActivateListingInput,
   BidviaApproveConnectionRequestInput,
+  BidviaTaskDispatchAssignInput,
+  BidviaTaskDispatchCompleteInput,
+  BidviaTaskDispatchFailInput,
+  BidviaTaskDispatchResumeInput,
+  BidviaTaskDispatchSuspendInput,
+  BidviaTaskDispatchWriteInput,
   BidviaVerificationBundle,
 } from './contracts.js';
 import { exportLegacyVerificationBundle } from './verification.js';
@@ -210,7 +224,7 @@ export class BidviaClient {
       {
       context,
       method: 'GET',
-      headers: this.requireAdminSessionHeaders(context),
+      headers: this.requireGovernedReadHeaders(context),
       requestPolicy,
       },
     );
@@ -223,7 +237,7 @@ export class BidviaClient {
       {
       context,
       method: 'GET',
-      headers: this.requireAdminSessionHeaders(context),
+      headers: this.requireGovernedReadHeaders(context),
       requestPolicy,
       },
     );
@@ -236,7 +250,7 @@ export class BidviaClient {
       {
         context,
         method: 'GET',
-        headers: this.requireAdminSessionHeaders(context),
+        headers: this.requireGovernedReadHeaders(context),
         requestPolicy,
       },
     );
@@ -249,7 +263,49 @@ export class BidviaClient {
       {
         context,
         method: 'GET',
-        headers: this.requireAdminSessionHeaders(context),
+        headers: this.requireGovernedReadHeaders(context),
+        requestPolicy,
+      },
+    );
+  }
+
+  async listAgentRegistrations(requestPolicy?: BidviaClientRequestPolicy) {
+    const context = this.resolveRequestContext(requestPolicy);
+    return this.request(
+      `/runtime/agents/registrations?tenant_id=${encodeURIComponent(this.requireTenantId(context))}`,
+      {
+        context,
+        method: 'GET',
+        headers: this.requireGovernedReadHeaders(context),
+        requestPolicy,
+      },
+    );
+  }
+
+  async getAgentRegistration(
+    agentRegistrationId: string,
+    requestPolicy?: BidviaClientRequestPolicy,
+  ) {
+    const context = this.resolveRequestContext(requestPolicy);
+    return this.request(
+      `/runtime/agents/${encodeURIComponent(agentRegistrationId)}?tenant_id=${encodeURIComponent(this.requireTenantId(context))}`,
+      {
+        context,
+        method: 'GET',
+        headers: this.requireGovernedReadHeaders(context),
+        requestPolicy,
+      },
+    );
+  }
+
+  async listAuthorityProfiles(requestPolicy?: BidviaClientRequestPolicy) {
+    const context = this.resolveRequestContext(requestPolicy);
+    return this.request(
+      `/runtime/authority-profiles?tenant_id=${encodeURIComponent(this.requireTenantId(context))}`,
+      {
+        context,
+        method: 'GET',
+        headers: this.requireGovernedReadHeaders(context),
         requestPolicy,
       },
     );
@@ -265,7 +321,7 @@ export class BidviaClient {
       {
         context,
         method: 'GET',
-        headers: this.requireAdminSessionHeaders(context),
+        headers: this.requireGovernedReadHeaders(context),
         requestPolicy,
       },
     );
@@ -281,23 +337,20 @@ export class BidviaClient {
       {
         context,
         method: 'GET',
-        headers: this.requireAdminSessionHeaders(context),
+        headers: this.requireGovernedReadHeaders(context),
         requestPolicy,
       },
     );
   }
 
-  async listAgentCapabilityProfiles(
-    agentRegistrationId: string,
-    requestPolicy?: BidviaClientRequestPolicy,
-  ) {
+  async listCapabilityProfiles(requestPolicy?: BidviaClientRequestPolicy) {
     const context = this.resolveRequestContext(requestPolicy);
     return this.request(
-      `/runtime/agents/${encodeURIComponent(agentRegistrationId)}/capability-profiles?tenant_id=${encodeURIComponent(this.requireTenantId(context))}`,
+      `/runtime/capability-profiles?tenant_id=${encodeURIComponent(this.requireTenantId(context))}`,
       {
         context,
         method: 'GET',
-        headers: this.requireAdminSessionHeaders(context),
+        headers: this.requireGovernedReadHeaders(context),
         requestPolicy,
       },
     );
@@ -305,16 +358,454 @@ export class BidviaClient {
 
   async getAgentCapabilityProfile(
     agentRegistrationId: string,
-    capabilityProfileId: string,
+    requestPolicy?: BidviaClientRequestPolicy,
+  ): Promise<unknown>;
+  async getAgentCapabilityProfile(
+    agentRegistrationId: string,
+    legacyCapabilityProfileId: string,
+    requestPolicy?: BidviaClientRequestPolicy,
+  ): Promise<unknown>;
+  async getAgentCapabilityProfile(
+    agentRegistrationId: string,
+    legacyCapabilityProfileIdOrRequestPolicy?: string | BidviaClientRequestPolicy,
+    requestPolicy?: BidviaClientRequestPolicy,
+  ) {
+    const resolvedRequestPolicy =
+      typeof legacyCapabilityProfileIdOrRequestPolicy === 'string'
+        ? requestPolicy
+        : legacyCapabilityProfileIdOrRequestPolicy;
+    const context = this.resolveRequestContext(resolvedRequestPolicy);
+    return this.request(
+      `/runtime/agents/${encodeURIComponent(agentRegistrationId)}/capability-profile?tenant_id=${encodeURIComponent(this.requireTenantId(context))}`,
+      {
+        context,
+        method: 'GET',
+        headers: this.requireGovernedReadHeaders(context),
+        requestPolicy: resolvedRequestPolicy,
+      },
+    );
+  }
+
+  async postAgentAuthorityProfile(
+    agentRegistrationId: string,
+    input: BidviaAgentAuthorityProfileWriteInput,
     requestPolicy?: BidviaClientRequestPolicy,
   ) {
     const context = this.resolveRequestContext(requestPolicy);
     return this.request(
-      `/runtime/agents/${encodeURIComponent(agentRegistrationId)}/capability-profiles/${encodeURIComponent(capabilityProfileId)}?tenant_id=${encodeURIComponent(this.requireTenantId(context))}`,
+      `/runtime/agents/${encodeURIComponent(agentRegistrationId)}/authority-profile?tenant_id=${encodeURIComponent(this.requireTenantId(context))}`,
+      {
+        context,
+        method: 'POST',
+        headers: this.requireOperatorActionHeaders(context),
+        body: {
+          principal_ref: input.principalRef,
+          tenant_scope: input.tenantScope,
+          company_scope: input.companyScope,
+          authorized_action_scopes: input.authorizedActionScopes,
+          commercial_authority_level: input.commercialAuthorityLevel,
+          status: input.status,
+        },
+        requestPolicy,
+      },
+    );
+  }
+
+  async postAgentAuthorityLadder(
+    agentRegistrationId: string,
+    input: BidviaAgentAuthorityLadderWriteInput,
+    requestPolicy?: BidviaClientRequestPolicy,
+  ) {
+    const context = this.resolveRequestContext(requestPolicy);
+    return this.request(
+      `/runtime/agents/${encodeURIComponent(agentRegistrationId)}/authority-ladder?tenant_id=${encodeURIComponent(this.requireTenantId(context))}`,
+      {
+        context,
+        method: 'POST',
+        headers: this.requireOperatorActionHeaders(context),
+        body: {
+          authority_rung: input.authorityRung,
+          granted_action_scopes: input.grantedActionScopes,
+          downgraded_from_rung: input.downgradedFromRung,
+          granted_at: input.grantedAt,
+          rationale: input.rationale,
+        },
+        requestPolicy,
+      },
+    );
+  }
+
+  async postAgentCapabilityProfile(
+    agentRegistrationId: string,
+    input: BidviaAgentCapabilityProfileWriteInput,
+    requestPolicy?: BidviaClientRequestPolicy,
+  ) {
+    const context = this.resolveRequestContext(requestPolicy);
+    return this.request(
+      `/runtime/agents/${encodeURIComponent(agentRegistrationId)}/capability-profile?tenant_id=${encodeURIComponent(this.requireTenantId(context))}`,
+      {
+        context,
+        method: 'POST',
+        headers: this.requireOperatorActionHeaders(context),
+        body: {
+          domain_strengths: input.domainStrengths,
+          template_domains: input.templateDomains,
+          workflow_roles: input.workflowRoles,
+          allowed_runtime_scopes: input.allowedRuntimeScopes,
+          quality_signals: input.qualitySignals,
+          adoption_rate: input.adoptionRate,
+          evidence_score: input.evidenceScore,
+          risk_reliability_band: input.riskReliabilityBand,
+          routing_priority: input.routingPriority,
+        },
+        requestPolicy,
+      },
+    );
+  }
+
+  async listParticipationStates(
+    agentRegistrationId: string,
+    requestPolicy?: BidviaClientRequestPolicy,
+  ) {
+    const context = this.resolveRequestContext(requestPolicy);
+    return this.request(this.agentRuntimePath(agentRegistrationId, '/participation-states', context), {
+      context,
+      method: 'GET',
+      headers: this.requireGovernedReadHeaders(context),
+      requestPolicy,
+    });
+  }
+
+  async createParticipationState(
+    agentRegistrationId: string,
+    input: BidviaParticipationStateWriteInput,
+    requestPolicy?: BidviaClientRequestPolicy,
+  ) {
+    const context = this.resolveRequestContext(requestPolicy);
+    return this.request(this.agentRuntimePath(agentRegistrationId, '/participation-states', context), {
+      context,
+      method: 'POST',
+      headers: this.requireOperatorActionHeaders(context),
+      body: {
+        state: input.state,
+        reason: input.reason,
+        now: input.now,
+        ...(input.participationRole === undefined
+          ? {}
+          : { participation_role: input.participationRole }),
+        ...(input.visibility === undefined ? {} : { visibility: input.visibility }),
+        ...(input.contextHandoffState === undefined
+          ? {}
+          : { context_handoff_state: input.contextHandoffState }),
+        ...(input.contextHandoffRef === undefined
+          ? {}
+          : { context_handoff_ref: input.contextHandoffRef }),
+        ...(input.coordinationOwnerKind === undefined
+          ? {}
+          : { coordination_owner_kind: input.coordinationOwnerKind }),
+        ...(input.coordinationOwnerRef === undefined
+          ? {}
+          : { coordination_owner_ref: input.coordinationOwnerRef }),
+      },
+      requestPolicy,
+    });
+  }
+
+  async getParticipationState(
+    agentRegistrationId: string,
+    participationStateId: string,
+    requestPolicy?: BidviaClientRequestPolicy,
+  ) {
+    const context = this.resolveRequestContext(requestPolicy);
+    return this.request(
+      this.agentRuntimePath(
+        agentRegistrationId,
+        `/participation-states/${encodeURIComponent(participationStateId)}`,
+        context,
+      ),
       {
         context,
         method: 'GET',
-        headers: this.requireAdminSessionHeaders(context),
+        headers: this.requireGovernedReadHeaders(context),
+        requestPolicy,
+      },
+    );
+  }
+
+  async createLease(
+    agentRegistrationId: string,
+    input: BidviaLeaseWriteInput,
+    requestPolicy?: BidviaClientRequestPolicy,
+  ) {
+    const context = this.resolveRequestContext(requestPolicy);
+    return this.request(this.agentRuntimePath(agentRegistrationId, '/leases', context), {
+      context,
+      method: 'POST',
+      headers: this.requireOperatorActionHeaders(context),
+      body: {
+        lease_scope: input.leaseScope,
+        now: input.now,
+        expires_at: input.expiresAt,
+      },
+      requestPolicy,
+    });
+  }
+
+  async listTaskDispatches(
+    agentRegistrationId: string,
+    requestPolicy?: BidviaClientRequestPolicy,
+  ) {
+    const context = this.resolveRequestContext(requestPolicy);
+    return this.request(this.agentRuntimePath(agentRegistrationId, '/task-dispatches', context), {
+      context,
+      method: 'GET',
+      headers: this.requireGovernedReadHeaders(context),
+      requestPolicy,
+    });
+  }
+
+  async createTaskDispatch(
+    agentRegistrationId: string,
+    input: BidviaTaskDispatchWriteInput,
+    requestPolicy?: BidviaClientRequestPolicy,
+  ) {
+    const context = this.resolveRequestContext(requestPolicy);
+    return this.request(this.agentRuntimePath(agentRegistrationId, '/task-dispatches', context), {
+      context,
+      method: 'POST',
+      headers: this.requireOperatorActionHeaders(context),
+      body: {
+        task_kind: input.taskKind,
+        task_ref: input.taskRef,
+        now: input.now,
+        reason: input.reason,
+      },
+      requestPolicy,
+    });
+  }
+
+  async getTaskDispatch(
+    agentRegistrationId: string,
+    taskDispatchId: string,
+    requestPolicy?: BidviaClientRequestPolicy,
+  ) {
+    const context = this.resolveRequestContext(requestPolicy);
+    return this.request(
+      this.agentRuntimePath(
+        agentRegistrationId,
+        `/task-dispatches/${encodeURIComponent(taskDispatchId)}`,
+        context,
+      ),
+      {
+        context,
+        method: 'GET',
+        headers: this.requireGovernedReadHeaders(context),
+        requestPolicy,
+      },
+    );
+  }
+
+  async assignTaskDispatch(
+    agentRegistrationId: string,
+    taskDispatchId: string,
+    input: BidviaTaskDispatchAssignInput,
+    requestPolicy?: BidviaClientRequestPolicy,
+  ) {
+    const context = this.resolveRequestContext(requestPolicy);
+    return this.request(
+      this.agentRuntimePath(
+        agentRegistrationId,
+        `/task-dispatches/${encodeURIComponent(taskDispatchId)}/assign`,
+        context,
+      ),
+      {
+        context,
+        method: 'POST',
+        headers: this.requireOperatorActionHeaders(context),
+        body: {
+          assigned_to_registration_id: input.assignedToRegistrationId,
+          now: input.now,
+          reason: input.reason,
+        },
+        requestPolicy,
+      },
+    );
+  }
+
+  async suspendTaskDispatch(
+    agentRegistrationId: string,
+    taskDispatchId: string,
+    input: BidviaTaskDispatchSuspendInput,
+    requestPolicy?: BidviaClientRequestPolicy,
+  ) {
+    const context = this.resolveRequestContext(requestPolicy);
+    return this.request(
+      this.agentRuntimePath(
+        agentRegistrationId,
+        `/task-dispatches/${encodeURIComponent(taskDispatchId)}/suspend`,
+        context,
+      ),
+      {
+        context,
+        method: 'POST',
+        headers: this.requireOperatorActionHeaders(context),
+        body: {
+          now: input.now,
+          reason: input.reason,
+        },
+        requestPolicy,
+      },
+    );
+  }
+
+  async resumeTaskDispatch(
+    agentRegistrationId: string,
+    taskDispatchId: string,
+    input: BidviaTaskDispatchResumeInput,
+    requestPolicy?: BidviaClientRequestPolicy,
+  ) {
+    const context = this.resolveRequestContext(requestPolicy);
+    return this.request(
+      this.agentRuntimePath(
+        agentRegistrationId,
+        `/task-dispatches/${encodeURIComponent(taskDispatchId)}/resume`,
+        context,
+      ),
+      {
+        context,
+        method: 'POST',
+        headers: this.requireOperatorActionHeaders(context),
+        body: {
+          now: input.now,
+          reason: input.reason,
+        },
+        requestPolicy,
+      },
+    );
+  }
+
+  async completeTaskDispatch(
+    agentRegistrationId: string,
+    taskDispatchId: string,
+    input: BidviaTaskDispatchCompleteInput,
+    requestPolicy?: BidviaClientRequestPolicy,
+  ) {
+    const context = this.resolveRequestContext(requestPolicy);
+    return this.request(
+      this.agentRuntimePath(
+        agentRegistrationId,
+        `/task-dispatches/${encodeURIComponent(taskDispatchId)}/complete`,
+        context,
+      ),
+      {
+        context,
+        method: 'POST',
+        headers: this.requireOperatorActionHeaders(context),
+        body: {
+          now: input.now,
+          reason: input.reason,
+          outcome_ref: input.outcomeRef,
+        },
+        requestPolicy,
+      },
+    );
+  }
+
+  async failTaskDispatch(
+    agentRegistrationId: string,
+    taskDispatchId: string,
+    input: BidviaTaskDispatchFailInput,
+    requestPolicy?: BidviaClientRequestPolicy,
+  ) {
+    const context = this.resolveRequestContext(requestPolicy);
+    return this.request(
+      this.agentRuntimePath(
+        agentRegistrationId,
+        `/task-dispatches/${encodeURIComponent(taskDispatchId)}/fail`,
+        context,
+      ),
+      {
+        context,
+        method: 'POST',
+        headers: this.requireOperatorActionHeaders(context),
+        body: {
+          now: input.now,
+          reason: input.reason,
+          outcome_ref: input.outcomeRef,
+        },
+        requestPolicy,
+      },
+    );
+  }
+
+  async createClaim(
+    agentRegistrationId: string,
+    input: BidviaClaimWriteInput,
+    requestPolicy?: BidviaClientRequestPolicy,
+  ) {
+    const context = this.resolveRequestContext(requestPolicy);
+    return this.request(this.agentRuntimePath(agentRegistrationId, '/claims', context), {
+      context,
+      method: 'POST',
+      headers: this.requireOperatorActionHeaders(context),
+      body: {
+        claim_kind: input.claimKind,
+        claim_ref: input.claimRef,
+        now: input.now,
+        ...(input.taskDispatchId === undefined ? {} : { task_dispatch_id: input.taskDispatchId }),
+      },
+      requestPolicy,
+    });
+  }
+
+  async acceptClaim(
+    agentRegistrationId: string,
+    claimId: string,
+    input: BidviaClaimAcceptInput,
+    requestPolicy?: BidviaClientRequestPolicy,
+  ) {
+    const context = this.resolveRequestContext(requestPolicy);
+    return this.request(
+      this.agentRuntimePath(
+        agentRegistrationId,
+        `/claims/${encodeURIComponent(claimId)}/accept`,
+        context,
+      ),
+      {
+        context,
+        method: 'POST',
+        headers: this.requireOperatorActionHeaders(context),
+        body: {
+          now: input.now,
+          ...(input.taskDispatchId === undefined ? {} : { task_dispatch_id: input.taskDispatchId }),
+        },
+        requestPolicy,
+      },
+    );
+  }
+
+  async rejectClaim(
+    agentRegistrationId: string,
+    claimId: string,
+    input: BidviaClaimRejectInput,
+    requestPolicy?: BidviaClientRequestPolicy,
+  ) {
+    const context = this.resolveRequestContext(requestPolicy);
+    return this.request(
+      this.agentRuntimePath(
+        agentRegistrationId,
+        `/claims/${encodeURIComponent(claimId)}/reject`,
+        context,
+      ),
+      {
+        context,
+        method: 'POST',
+        headers: this.requireOperatorActionHeaders(context),
+        body: {
+          reason: input.reason,
+          now: input.now,
+          ...(input.taskDispatchId === undefined ? {} : { task_dispatch_id: input.taskDispatchId }),
+        },
         requestPolicy,
       },
     );
@@ -1010,6 +1501,14 @@ export class BidviaClient {
     return `/runtime/agents/${encodeURIComponent(registrationId)}${suffix}?tenant_id=${encodeURIComponent(tenantId)}`;
   }
 
+  private agentRuntimePath(
+    agentRegistrationId: string,
+    suffix: string,
+    context: BidviaClientContext,
+  ) {
+    return `/runtime/agents/${encodeURIComponent(agentRegistrationId)}${suffix}?tenant_id=${encodeURIComponent(this.requireTenantId(context))}`;
+  }
+
   private requireTenantId(context: BidviaClientContext) {
     const tenantId = context.tenantId;
     if (!tenantId) {
@@ -1023,10 +1522,10 @@ export class BidviaClient {
     if (!principalId) {
       throw new Error('principalId is required for registration-bound operations');
     }
-    return {
+    return this.appendOptionalPrincipalContextHeaders(context, {
       'x-authorized-tenant-id': context.tenantId,
       'x-bidvia-principal-id': principalId,
-    };
+    });
   }
 
   private requireSessionHeaders(context: BidviaClientContext) {
@@ -1049,14 +1548,44 @@ export class BidviaClient {
     };
   }
 
+  private requireGovernedReadHeaders(context: BidviaClientContext) {
+    const principalId = context.principalId;
+    if (!principalId) {
+      throw new Error('principalId is required for governed read routes');
+    }
+    const headers = this.appendOptionalPrincipalContextHeaders(context, {
+      'x-authorized-tenant-id': context.tenantId,
+      'x-bidvia-principal-id': principalId,
+    });
+    if (context.adminSessionId) {
+      headers['x-bidvia-admin-session-id'] = context.adminSessionId;
+    }
+    return headers;
+  }
+
   private requireOperatorActionHeaders(context: BidviaClientContext) {
     const principalId = this.requirePrincipalId(context);
     const companyId = this.requireCompanyId(context);
-    return {
+    return this.appendOptionalPrincipalContextHeaders(context, {
       'x-authorized-tenant-id': context.tenantId,
       'x-bidvia-principal-id': principalId,
       'x-authorized-company-id': companyId,
-    };
+    });
+  }
+
+  private appendOptionalPrincipalContextHeaders(
+    context: BidviaClientContext,
+    headers: Record<string, string>,
+  ) {
+    if (context.principalType) {
+      headers['x-bidvia-principal-type'] = context.principalType;
+    }
+
+    if (context.authorizedRole) {
+      headers['x-authorized-role'] = context.authorizedRole;
+    }
+
+    return headers;
   }
 
   private requirePrincipalId(context: BidviaClientContext) {

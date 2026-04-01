@@ -4,6 +4,7 @@ import type {
   BidviaAgentIdentityRecord,
   BidviaAgentIdentityState,
   BidviaAgentParticipationState,
+  BidviaLocalParticipationState,
   BidviaAgentPresenceState,
   BidviaAgentReadinessState,
   BidviaAgentRegistrationState,
@@ -27,6 +28,11 @@ export interface BuildAgentBindingStateOptions {
 export interface BuildAgentParticipationStateOptions {
   status: BidviaAgentParticipationState['status'];
   taskId?: string;
+}
+
+export interface BuildLocalParticipationStateOptions {
+  localStatus: BidviaLocalParticipationState['localStatus'];
+  localTaskRef?: string;
 }
 
 export interface BuildAgentPresenceStateOptions {
@@ -92,15 +98,27 @@ export function buildAgentBindingState({
   };
 }
 
+export function buildLocalParticipationState({
+  localStatus,
+  localTaskRef,
+}: BuildLocalParticipationStateOptions): BidviaLocalParticipationState {
+  return {
+    kind: 'local-participation-state',
+    localStatus,
+    ...(localTaskRef === undefined ? {} : { localTaskRef }),
+    status: localStatus,
+    ...(localTaskRef === undefined ? {} : { taskId: localTaskRef }),
+  };
+}
+
 export function buildAgentParticipationState({
   status,
   taskId,
 }: BuildAgentParticipationStateOptions): BidviaAgentParticipationState {
-  return {
-    kind: 'participation-state',
-    status,
-    taskId,
-  };
+  return buildLocalParticipationState({
+    localStatus: status,
+    localTaskRef: taskId,
+  });
 }
 
 export function buildAgentPresenceState({

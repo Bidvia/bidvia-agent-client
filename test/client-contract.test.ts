@@ -124,6 +124,117 @@ test('BidviaClient makes commercial action writes explicit under operator princi
   assert.equal((calls[0]?.init?.headers as Record<string, string>)['x-authorized-company-id'], 'company-a');
 });
 
+test('BidviaClient supports frozen governance write wrappers under principal-governed headers', async () => {
+  const { calls, fetchStub } = createFetchStub();
+  const client = new BidviaClient({
+    baseUrl: 'http://127.0.0.1:8787',
+    context: {
+      tenantId: 'tenant-a',
+      principalId: 'actor-1',
+      principalType: 'operator',
+      authorizedRole: 'admin',
+      companyId: 'company-a',
+    },
+    fetchImpl: fetchStub,
+  });
+
+  await client.postAgentAuthorityProfile('areg-1', {
+    principalRef: 'principal://actor-1',
+    tenantScope: 'tenant-a',
+    companyScope: 'company-a',
+    authorizedActionScopes: ['agents:governance:write'],
+    commercialAuthorityLevel: 'LEVEL_3',
+    status: 'ACTIVE',
+  });
+  await client.postAgentAuthorityLadder('areg-1', {
+    authorityRung: 'RUNG_2',
+    grantedActionScopes: ['agents:governance:write'],
+    downgradedFromRung: 'RUNG_3',
+    grantedAt: '2026-03-25T19:10:00Z',
+    rationale: 'operator approval',
+  });
+  await client.postAgentCapabilityProfile('areg-1', {
+    domainStrengths: ['industrial-chemicals'],
+    templateDomains: ['supply-match'],
+    workflowRoles: ['coordinator'],
+    allowedRuntimeScopes: ['routing:governed'],
+    qualitySignals: ['verified-evidence'],
+    adoptionRate: 0.8,
+    evidenceScore: 0.91,
+    riskReliabilityBand: 'LOW_RISK',
+    routingPriority: 10,
+  });
+
+  assert.equal(calls.length, 3);
+  assert.equal(String(calls[0]?.input), 'http://127.0.0.1:8787/runtime/agents/areg-1/authority-profile?tenant_id=tenant-a');
+  assert.equal(String(calls[1]?.input), 'http://127.0.0.1:8787/runtime/agents/areg-1/authority-ladder?tenant_id=tenant-a');
+  assert.equal(String(calls[2]?.input), 'http://127.0.0.1:8787/runtime/agents/areg-1/capability-profile?tenant_id=tenant-a');
+  assert.equal(calls[0]?.init?.method, 'POST');
+  assert.equal(calls[1]?.init?.method, 'POST');
+  assert.equal(calls[2]?.init?.method, 'POST');
+  assert.equal((calls[0]?.init?.headers as Record<string, string>)['x-authorized-tenant-id'], 'tenant-a');
+  assert.equal((calls[0]?.init?.headers as Record<string, string>)['x-bidvia-principal-id'], 'actor-1');
+  assert.equal((calls[0]?.init?.headers as Record<string, string>)['x-authorized-company-id'], 'company-a');
+  assert.equal((calls[0]?.init?.headers as Record<string, string>)['x-bidvia-principal-type'], 'operator');
+  assert.equal((calls[0]?.init?.headers as Record<string, string>)['x-authorized-role'], 'admin');
+  assert.equal((calls[1]?.init?.headers as Record<string, string>)['x-bidvia-principal-type'], 'operator');
+  assert.equal((calls[1]?.init?.headers as Record<string, string>)['x-authorized-role'], 'admin');
+  assert.equal((calls[2]?.init?.headers as Record<string, string>)['x-bidvia-principal-type'], 'operator');
+  assert.equal((calls[2]?.init?.headers as Record<string, string>)['x-authorized-role'], 'admin');
+  assert.equal((calls[1]?.init?.headers as Record<string, string>)['x-authorized-company-id'], 'company-a');
+  assert.equal((calls[2]?.init?.headers as Record<string, string>)['x-authorized-company-id'], 'company-a');
+  assert.deepEqual(JSON.parse(String(calls[0]?.init?.body)), {
+    principal_ref: 'principal://actor-1',
+    tenant_scope: 'tenant-a',
+    company_scope: 'company-a',
+    authorized_action_scopes: ['agents:governance:write'],
+    commercial_authority_level: 'LEVEL_3',
+    status: 'ACTIVE',
+  });
+  assert.deepEqual(JSON.parse(String(calls[1]?.init?.body)), {
+    authority_rung: 'RUNG_2',
+    granted_action_scopes: ['agents:governance:write'],
+    downgraded_from_rung: 'RUNG_3',
+    granted_at: '2026-03-25T19:10:00Z',
+    rationale: 'operator approval',
+  });
+  assert.deepEqual(JSON.parse(String(calls[2]?.init?.body)), {
+    domain_strengths: ['industrial-chemicals'],
+    template_domains: ['supply-match'],
+    workflow_roles: ['coordinator'],
+    allowed_runtime_scopes: ['routing:governed'],
+    quality_signals: ['verified-evidence'],
+    adoption_rate: 0.8,
+    evidence_score: 0.91,
+    risk_reliability_band: 'LOW_RISK',
+    routing_priority: 10,
+  });
+});
+
+test('BidviaClient operator-governed writes omit principal-type and authorized-role headers when absent', async () => {
+  const { calls, fetchStub } = createFetchStub();
+  const client = new BidviaClient({
+    baseUrl: 'http://127.0.0.1:8787',
+    context: {
+      tenantId: 'tenant-a',
+      principalId: 'actor-1',
+      companyId: 'company-a',
+    },
+    fetchImpl: fetchStub,
+  });
+
+  await client.postAgentAuthorityLadder('areg-1', {
+    authorityRung: 'RUNG_2',
+    grantedActionScopes: ['agents:governance:write'],
+    grantedAt: '2026-03-25T19:10:00Z',
+    rationale: 'operator approval',
+  });
+
+  const headers = calls[0]?.init?.headers as Record<string, string>;
+  assert.equal(headers['x-bidvia-principal-type'], undefined);
+  assert.equal(headers['x-authorized-role'], undefined);
+});
+
 test('BidviaClient supports the commercial-action helper family proven in production wave-3', async () => {
   const { calls, fetchStub } = createFetchStub();
   const client = new BidviaClient({

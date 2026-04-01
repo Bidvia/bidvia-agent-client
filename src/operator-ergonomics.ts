@@ -88,6 +88,10 @@ function buildHints(params: {
         return 'BIDVIA_REGISTRATION_ID';
       case 'principalId':
         return 'BIDVIA_PRINCIPAL_ID';
+      case 'principalType':
+        return 'BIDVIA_PRINCIPAL_TYPE';
+      case 'authorizedRole':
+        return 'BIDVIA_AUTHORIZED_ROLE';
       case 'tenantId':
         return 'BIDVIA_TENANT_ID';
       case 'sessionId':

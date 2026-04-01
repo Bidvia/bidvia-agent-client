@@ -58,6 +58,12 @@ export interface BidviaRouteContextMatrix {
     environmentMode: string;
     environmentSelectionRequired: false;
   };
+  governedReadPosture: {
+    accessContextFamily: 'principal-governed-read';
+    requiredContext: ['tenantId', 'principalId'];
+    adminSessionOptional: true;
+    operatorGuidance: string;
+  };
   rows: BidviaRouteContextMatrixRow[];
   firstSuccessNextSteps: Record<
     BidviaRouteContextJourneyKey,
@@ -184,11 +190,17 @@ function buildMatrixRow(
 export function buildRouteContextMatrix(): BidviaRouteContextMatrix {
   const discoveryCatalogMap = buildDiscoveryCatalogMap();
 
-  return {
-    defaults: buildPublicDefaults(),
-    rows: routeContextJourneyDefinitions.flatMap((journey) => (
-      journey.helperKeys.map((helperKey) => buildMatrixRow(journey, helperKey, discoveryCatalogMap))
-    )),
+    return {
+      defaults: buildPublicDefaults(),
+      governedReadPosture: {
+        accessContextFamily: 'principal-governed-read',
+        requiredContext: ['tenantId', 'principalId'],
+        adminSessionOptional: true,
+        operatorGuidance: 'On local docker host, authority and presence require a valid admin session plus operator context. Authority-ladder is an operator-governed write and not a workspace admin-session route.',
+      },
+      rows: routeContextJourneyDefinitions.flatMap((journey) => (
+        journey.helperKeys.map((helperKey) => buildMatrixRow(journey, helperKey, discoveryCatalogMap))
+      )),
     firstSuccessNextSteps: Object.fromEntries(
       routeContextJourneyDefinitions.map((journey) => [journey.journeyKey, journey.firstSuccessNextStep]),
     ) as BidviaRouteContextMatrix['firstSuccessNextSteps'],

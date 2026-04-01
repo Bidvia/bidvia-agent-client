@@ -123,9 +123,12 @@ function createClient() {
     context: {
       tenantId: process.env.BIDVIA_TENANT_ID ?? 'tenant-a',
       principalId: process.env.BIDVIA_PRINCIPAL_ID,
+      principalType: process.env.BIDVIA_PRINCIPAL_TYPE,
+      authorizedRole: process.env.BIDVIA_AUTHORIZED_ROLE,
       registrationId: process.env.BIDVIA_REGISTRATION_ID,
       sessionId: process.env.BIDVIA_SESSION_ID,
       adminSessionId: process.env.BIDVIA_ADMIN_SESSION_ID,
+      companyId: process.env.BIDVIA_COMPANY_ID,
     },
   });
 }
@@ -179,10 +182,17 @@ type BidviaCliTruthFetchCommand =
   | 'agent-authority'
   | 'agent-readiness'
   | 'agent-summary'
+  | 'agent-registrations'
+  | 'agent-registration'
+  | 'authority-profiles'
   | 'agent-authority-profile'
   | 'agent-authority-ladder'
-  | 'agent-capability-profiles'
+  | 'capability-profiles'
   | 'agent-capability-profile'
+  | 'participation-states'
+  | 'participation-state'
+  | 'task-dispatches'
+  | 'task-dispatch'
   | 'canonical-semantic-concepts'
   | 'canonical-semantic-concept'
   | 'canonical-semantic-labels'
@@ -225,6 +235,8 @@ type BidviaCliSupportedValueFlag =
   | '--input'
   | '--registration-id'
   | '--capability-profile-id'
+  | '--participation-state-id'
+  | '--task-dispatch-id'
   | '--concept-id'
   | '--label-id'
   | '--mapping-id'
@@ -247,6 +259,8 @@ const bidviaCliSupportedValueFlags = new Set<BidviaCliSupportedValueFlag>([
   '--input',
   '--registration-id',
   '--capability-profile-id',
+  '--participation-state-id',
+  '--task-dispatch-id',
   '--concept-id',
   '--label-id',
   '--mapping-id',
@@ -275,20 +289,23 @@ const truthFetchVisibilityHelpLines = [
   '  agent-authority --registration-id ...',
   '  agent-readiness --registration-id ...',
   '  agent-summary --registration-id ...',
+  '  agent-registrations',
+  '  agent-registration --registration-id ...',
+  '  authority-profiles',
   '  agent-authority-profile --registration-id ...',
   '  agent-authority-ladder --registration-id ...',
-  '  agent-capability-profiles --registration-id ...',
-  '  agent-capability-profile --registration-id ... --capability-profile-id ...',
+  '  capability-profiles',
+  '  agent-capability-profile --registration-id ...',
+  '  participation-states --registration-id ...',
+  '  participation-state --registration-id ... --participation-state-id ...',
+  '  task-dispatches --registration-id ...',
+  '  task-dispatch --registration-id ... --task-dispatch-id ...',
   '  canonical-semantic-concepts',
   '  canonical-semantic-concept --concept-id ...',
   '  canonical-semantic-labels',
   '  canonical-semantic-label --label-id ...',
   '  canonical-semantic-mappings',
   '  canonical-semantic-mapping --mapping-id ...',
-  '  canonical-semantic-taxonomy-entries',
-  '  canonical-semantic-taxonomy-entry --taxonomy-entry-id ...',
-  '  canonical-semantic-lineage-links',
-  '  canonical-semantic-lineage-link --lineage-link-id ...',
   '  pricing-bases',
   '  pricing-basis --pricing-basis-id ...',
   '  pricing-rule-atoms',
@@ -314,16 +331,54 @@ const truthFetchVisibilityHelpLines = [
   '  target-attachment-bindings --target-ref ...',
 ] as const;
 
+const truthFetchSupportedFlagsByCommand = {
+  'account-agent': ['--registration-id'],
+  'agent-presence': ['--registration-id'],
+  'agent-authority': ['--registration-id'],
+  'agent-readiness': ['--registration-id'],
+  'agent-summary': ['--registration-id'],
+  'agent-registration': ['--registration-id'],
+  'agent-authority-profile': ['--registration-id'],
+  'agent-authority-ladder': ['--registration-id'],
+  'capability-profiles': [],
+  'agent-capability-profile': ['--registration-id', '--capability-profile-id'],
+  'participation-states': ['--registration-id'],
+  'participation-state': ['--registration-id', '--participation-state-id'],
+  'task-dispatches': ['--registration-id'],
+  'task-dispatch': ['--registration-id', '--task-dispatch-id'],
+  'canonical-semantic-concept': ['--concept-id'],
+  'canonical-semantic-label': ['--label-id'],
+  'canonical-semantic-mapping': ['--mapping-id'],
+  'canonical-semantic-taxonomy-entry': ['--taxonomy-entry-id'],
+  'canonical-semantic-lineage-link': ['--lineage-link-id'],
+  'pricing-basis': ['--pricing-basis-id'],
+  'pricing-rule-atom': ['--pricing-rule-atom-id'],
+  'pricing-quotation-method-module': ['--pricing-quotation-method-module-id'],
+  'pricing-quote-template': ['--pricing-quote-template-id'],
+  'pricing-quotation': ['--pricing-quotation-id'],
+  'pricing-explanation': ['--pricing-explanation-id'],
+  'document-artifact': ['--document-artifact-id'],
+  'media-asset': ['--media-asset-id'],
+  'evidence-asset': ['--evidence-asset-id'],
+  'attachment-binding': ['--attachment-binding-id'],
+  'file-resource': ['--file-resource-id'],
+  'target-attachment-bindings': ['--target-ref'],
+} as const satisfies Partial<Record<string, readonly BidviaCliSupportedValueFlag[]>>;
+
 const truthFetchRequiredFlagsByCommand = {
   'account-agent': ['--registration-id'],
   'agent-presence': ['--registration-id'],
   'agent-authority': ['--registration-id'],
   'agent-readiness': ['--registration-id'],
   'agent-summary': ['--registration-id'],
+  'agent-registration': ['--registration-id'],
   'agent-authority-profile': ['--registration-id'],
   'agent-authority-ladder': ['--registration-id'],
-  'agent-capability-profiles': ['--registration-id'],
-  'agent-capability-profile': ['--registration-id', '--capability-profile-id'],
+  'agent-capability-profile': ['--registration-id'],
+  'participation-states': ['--registration-id'],
+  'participation-state': ['--registration-id', '--participation-state-id'],
+  'task-dispatches': ['--registration-id'],
+  'task-dispatch': ['--registration-id', '--task-dispatch-id'],
   'canonical-semantic-concept': ['--concept-id'],
   'canonical-semantic-label': ['--label-id'],
   'canonical-semantic-mapping': ['--mapping-id'],
@@ -347,6 +402,9 @@ const truthFetchCollectionCommands = new Set([
   'account-agents',
   'account-agent-bindings',
   'account-records',
+  'agent-registrations',
+  'authority-profiles',
+  'capability-profiles',
   'canonical-semantic-concepts',
   'canonical-semantic-labels',
   'canonical-semantic-mappings',
@@ -390,19 +448,48 @@ const truthFetchCommandDefinitions: Record<BidviaCliTruthFetchCommand, BidviaCli
   'agent-summary': {
     run: (client, parsedArgs) => client.getAgentSummary(parsedArgs.flagValues['--registration-id']!),
   },
+  'agent-registrations': {
+    run: (client) => client.listAgentRegistrations(),
+  },
+  'agent-registration': {
+    run: (client, parsedArgs) => client.getAgentRegistration(parsedArgs.flagValues['--registration-id']!),
+  },
+  'authority-profiles': {
+    run: (client) => client.listAuthorityProfiles(),
+  },
   'agent-authority-profile': {
     run: (client, parsedArgs) => client.getAgentAuthorityProfile(parsedArgs.flagValues['--registration-id']!),
   },
   'agent-authority-ladder': {
     run: (client, parsedArgs) => client.getAgentAuthorityLadder(parsedArgs.flagValues['--registration-id']!),
   },
-  'agent-capability-profiles': {
-    run: (client, parsedArgs) => client.listAgentCapabilityProfiles(parsedArgs.flagValues['--registration-id']!),
+  'capability-profiles': {
+    run: (client) => client.listCapabilityProfiles(),
   },
   'agent-capability-profile': {
-    run: (client, parsedArgs) => client.getAgentCapabilityProfile(
+    run: (client, parsedArgs) => {
+      const capabilityProfileId = parsedArgs.flagValues['--capability-profile-id'];
+      return capabilityProfileId
+        ? client.getAgentCapabilityProfile(parsedArgs.flagValues['--registration-id']!, capabilityProfileId)
+        : client.getAgentCapabilityProfile(parsedArgs.flagValues['--registration-id']!);
+    },
+  },
+  'participation-states': {
+    run: (client, parsedArgs) => client.listParticipationStates(parsedArgs.flagValues['--registration-id']!),
+  },
+  'participation-state': {
+    run: (client, parsedArgs) => client.getParticipationState(
       parsedArgs.flagValues['--registration-id']!,
-      parsedArgs.flagValues['--capability-profile-id']!,
+      parsedArgs.flagValues['--participation-state-id']!,
+    ),
+  },
+  'task-dispatches': {
+    run: (client, parsedArgs) => client.listTaskDispatches(parsedArgs.flagValues['--registration-id']!),
+  },
+  'task-dispatch': {
+    run: (client, parsedArgs) => client.getTaskDispatch(
+      parsedArgs.flagValues['--registration-id']!,
+      parsedArgs.flagValues['--task-dispatch-id']!,
     ),
   },
   'canonical-semantic-concepts': {
@@ -523,9 +610,9 @@ function getSupportedValueFlagsForCommand(command: string): readonly BidviaCliSu
     return ['--input'];
   }
 
-  const requiredFlags = truthFetchRequiredFlagsByCommand[command as keyof typeof truthFetchRequiredFlagsByCommand];
-  if (requiredFlags) {
-    return requiredFlags;
+  const supportedFlags = truthFetchSupportedFlagsByCommand[command as keyof typeof truthFetchSupportedFlagsByCommand];
+  if (supportedFlags) {
+    return supportedFlags;
   }
 
   if (truthFetchCollectionCommands.has(command)) {
@@ -746,6 +833,8 @@ export interface BidviaCliDependencies {
   resolveExecutionContext: () => {
     tenantId: string;
     principalId?: string;
+    principalType?: string;
+    authorizedRole?: string;
     registrationId?: string;
     sessionId?: string;
     adminSessionId?: string;
@@ -799,6 +888,8 @@ function createDefaultCliDependencies(): BidviaCliDependencies {
     resolveExecutionContext: () => ({
       tenantId: process.env.BIDVIA_TENANT_ID ?? 'tenant-a',
       principalId: process.env.BIDVIA_PRINCIPAL_ID,
+      principalType: process.env.BIDVIA_PRINCIPAL_TYPE,
+      authorizedRole: process.env.BIDVIA_AUTHORIZED_ROLE,
       registrationId: process.env.BIDVIA_REGISTRATION_ID,
       sessionId: process.env.BIDVIA_SESSION_ID,
       adminSessionId: process.env.BIDVIA_ADMIN_SESSION_ID,

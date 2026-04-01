@@ -1,58 +1,140 @@
-export interface BidviaLocalTaskShell {
-  scope: 'local-participation-shell';
+export interface BidviaLocalTaskParticipationObservation {
+  scope: 'local-task-participation';
+  localTaskRef: string;
   taskId: string;
+  localCoordinationRef?: string;
   schedulerDecisionRef?: string;
 }
 
-export interface BidviaTaskOfferShell extends BidviaLocalTaskShell {
-  kind: 'task-offer';
+export interface BidviaLocalTaskOfferObservation
+  extends BidviaLocalTaskParticipationObservation {
+  kind: 'local-task-offer-observation';
   offerId: string;
   observedAt: string;
+  summary: string;
   offerSummary: string;
   leaseExpiresAt?: string;
   timeoutAt?: string;
 }
 
-export interface BidviaTaskClaimShell extends BidviaLocalTaskShell {
-  kind: 'task-claim';
+export interface BidviaLocalTaskClaimIntent extends BidviaLocalTaskParticipationObservation {
+  kind: 'local-task-claim-intent';
   offerId: string;
   claimId: string;
+  observedAt: string;
   claimedAt: string;
+  summary: string;
   claimSummary: string;
 }
 
-export interface BidviaTaskAckShell extends BidviaLocalTaskShell {
-  kind: 'task-ack';
+export interface BidviaLocalTaskAckObservation extends BidviaLocalTaskParticipationObservation {
+  kind: 'local-task-ack-observation';
   claimId: string;
   ackId: string;
+  observedAt: string;
   acknowledgedAt: string;
+  summary: string;
   ackSummary: string;
 }
 
-export interface BidviaTaskLeaseShell extends BidviaLocalTaskShell {
-  kind: 'task-lease';
+export interface BidviaLocalTaskLeaseObservation extends BidviaLocalTaskParticipationObservation {
+  kind: 'local-task-lease-observation';
   leaseId: string;
+  observedAt: string;
   leasedAt: string;
   leaseExpiresAt: string;
+  summary: string;
   leaseSummary: string;
 }
 
-export interface BidviaTaskTimeoutShell extends BidviaLocalTaskShell {
-  kind: 'task-timeout';
+export interface BidviaLocalTaskTimeoutObservation extends BidviaLocalTaskParticipationObservation {
+  kind: 'local-task-timeout-observation';
   timeoutId: string;
+  observedAt: string;
   timedOutAt: string;
+  summary: string;
   timeoutSummary: string;
   priorLeaseId?: string;
 }
 
-export interface BidviaTaskRetryAwarenessShell extends BidviaLocalTaskShell {
-  kind: 'task-retry-awareness';
+export interface BidviaLocalTaskRetryAwareness {
+  kind: 'local-task-retry-awareness';
+  scope: 'local-task-participation';
+  localTaskRef: string;
+  taskId: string;
   observedAt: string;
   attempt: number;
   maxAttempts: number;
   retryable: boolean;
   nextRetryAt?: string;
   rationale: string;
+  localCoordinationRef?: string;
+  schedulerDecisionRef?: string;
+}
+
+export type BidviaLocalTaskShell = BidviaLocalTaskParticipationObservation;
+export type BidviaTaskOfferShell = BidviaLocalTaskOfferObservation;
+export type BidviaTaskClaimShell = BidviaLocalTaskClaimIntent;
+export type BidviaTaskAckShell = BidviaLocalTaskAckObservation;
+export type BidviaTaskLeaseShell = BidviaLocalTaskLeaseObservation;
+export type BidviaTaskTimeoutShell = BidviaLocalTaskTimeoutObservation;
+export type BidviaTaskRetryAwarenessShell = BidviaLocalTaskRetryAwareness;
+
+export interface BuildLocalTaskOfferObservationOptions {
+  localTaskRef: string;
+  offerId: string;
+  observedAt: string;
+  summary: string;
+  leaseExpiresAt?: string;
+  timeoutAt?: string;
+  localCoordinationRef?: string;
+}
+
+export interface BuildLocalTaskClaimIntentOptions {
+  localTaskRef: string;
+  offerId: string;
+  claimId: string;
+  observedAt: string;
+  summary: string;
+  localCoordinationRef?: string;
+}
+
+export interface BuildLocalTaskAckObservationOptions {
+  localTaskRef: string;
+  claimId: string;
+  ackId: string;
+  observedAt: string;
+  summary: string;
+  localCoordinationRef?: string;
+}
+
+export interface BuildLocalTaskLeaseObservationOptions {
+  localTaskRef: string;
+  leaseId: string;
+  observedAt: string;
+  leaseExpiresAt: string;
+  summary: string;
+  localCoordinationRef?: string;
+}
+
+export interface BuildLocalTaskTimeoutObservationOptions {
+  localTaskRef: string;
+  timeoutId: string;
+  observedAt: string;
+  summary: string;
+  priorLeaseId?: string;
+  localCoordinationRef?: string;
+}
+
+export interface BuildLocalTaskRetryAwarenessOptions {
+  localTaskRef: string;
+  observedAt: string;
+  attempt: number;
+  maxAttempts: number;
+  retryable: boolean;
+  nextRetryAt?: string;
+  rationale: string;
+  localCoordinationRef?: string;
 }
 
 export interface BuildTaskOfferShellOptions {
@@ -112,6 +194,177 @@ export interface BuildTaskRetryAwarenessShellOptions {
   schedulerDecisionRef?: string;
 }
 
+export function buildLocalTaskOfferObservation({
+  localTaskRef,
+  offerId,
+  observedAt,
+  summary,
+  leaseExpiresAt,
+  timeoutAt,
+  localCoordinationRef,
+}: BuildLocalTaskOfferObservationOptions): BidviaLocalTaskOfferObservation {
+  return {
+    kind: 'local-task-offer-observation',
+    scope: 'local-task-participation',
+    localTaskRef,
+    taskId: localTaskRef,
+    offerId,
+    observedAt,
+    summary,
+    offerSummary: summary,
+    ...(leaseExpiresAt === undefined ? {} : { leaseExpiresAt }),
+    ...(timeoutAt === undefined ? {} : { timeoutAt }),
+    ...(localCoordinationRef === undefined
+      ? {}
+      : {
+          localCoordinationRef,
+          schedulerDecisionRef: localCoordinationRef,
+        }),
+  };
+}
+
+export function buildLocalTaskClaimIntent({
+  localTaskRef,
+  offerId,
+  claimId,
+  observedAt,
+  summary,
+  localCoordinationRef,
+}: BuildLocalTaskClaimIntentOptions): BidviaLocalTaskClaimIntent {
+  return {
+    kind: 'local-task-claim-intent',
+    scope: 'local-task-participation',
+    localTaskRef,
+    taskId: localTaskRef,
+    offerId,
+    claimId,
+    observedAt,
+    claimedAt: observedAt,
+    summary,
+    claimSummary: summary,
+    ...(localCoordinationRef === undefined
+      ? {}
+      : {
+          localCoordinationRef,
+          schedulerDecisionRef: localCoordinationRef,
+        }),
+  };
+}
+
+export function buildLocalTaskAckObservation({
+  localTaskRef,
+  claimId,
+  ackId,
+  observedAt,
+  summary,
+  localCoordinationRef,
+}: BuildLocalTaskAckObservationOptions): BidviaLocalTaskAckObservation {
+  return {
+    kind: 'local-task-ack-observation',
+    scope: 'local-task-participation',
+    localTaskRef,
+    taskId: localTaskRef,
+    claimId,
+    ackId,
+    observedAt,
+    acknowledgedAt: observedAt,
+    summary,
+    ackSummary: summary,
+    ...(localCoordinationRef === undefined
+      ? {}
+      : {
+          localCoordinationRef,
+          schedulerDecisionRef: localCoordinationRef,
+        }),
+  };
+}
+
+export function buildLocalTaskLeaseObservation({
+  localTaskRef,
+  leaseId,
+  observedAt,
+  leaseExpiresAt,
+  summary,
+  localCoordinationRef,
+}: BuildLocalTaskLeaseObservationOptions): BidviaLocalTaskLeaseObservation {
+  return {
+    kind: 'local-task-lease-observation',
+    scope: 'local-task-participation',
+    localTaskRef,
+    taskId: localTaskRef,
+    leaseId,
+    observedAt,
+    leasedAt: observedAt,
+    leaseExpiresAt,
+    summary,
+    leaseSummary: summary,
+    ...(localCoordinationRef === undefined
+      ? {}
+      : {
+          localCoordinationRef,
+          schedulerDecisionRef: localCoordinationRef,
+        }),
+  };
+}
+
+export function buildLocalTaskTimeoutObservation({
+  localTaskRef,
+  timeoutId,
+  observedAt,
+  summary,
+  priorLeaseId,
+  localCoordinationRef,
+}: BuildLocalTaskTimeoutObservationOptions): BidviaLocalTaskTimeoutObservation {
+  return {
+    kind: 'local-task-timeout-observation',
+    scope: 'local-task-participation',
+    localTaskRef,
+    taskId: localTaskRef,
+    timeoutId,
+    observedAt,
+    timedOutAt: observedAt,
+    summary,
+    timeoutSummary: summary,
+    ...(priorLeaseId === undefined ? {} : { priorLeaseId }),
+    ...(localCoordinationRef === undefined
+      ? {}
+      : {
+          localCoordinationRef,
+          schedulerDecisionRef: localCoordinationRef,
+        }),
+  };
+}
+
+export function buildLocalTaskRetryAwareness({
+  localTaskRef,
+  observedAt,
+  attempt,
+  maxAttempts,
+  retryable,
+  nextRetryAt,
+  rationale,
+  localCoordinationRef,
+}: BuildLocalTaskRetryAwarenessOptions): BidviaLocalTaskRetryAwareness {
+  return {
+    kind: 'local-task-retry-awareness',
+    scope: 'local-task-participation',
+    localTaskRef,
+    taskId: localTaskRef,
+    observedAt,
+    attempt,
+    maxAttempts,
+    retryable,
+    rationale,
+    ...(nextRetryAt === undefined ? {} : { nextRetryAt }),
+    ...(localCoordinationRef === undefined
+      ? {}
+      : {
+          localCoordinationRef,
+          schedulerDecisionRef: localCoordinationRef,
+        }),
+  };
+}
+
 export function buildTaskOfferShell({
   taskId,
   offerId,
@@ -121,17 +374,15 @@ export function buildTaskOfferShell({
   timeoutAt,
   schedulerDecisionRef,
 }: BuildTaskOfferShellOptions): BidviaTaskOfferShell {
-  return {
-    kind: 'task-offer',
-    scope: 'local-participation-shell',
-    taskId,
+  return buildLocalTaskOfferObservation({
+    localTaskRef: taskId,
     offerId,
     observedAt,
-    offerSummary,
-    ...(leaseExpiresAt === undefined ? {} : { leaseExpiresAt }),
-    ...(timeoutAt === undefined ? {} : { timeoutAt }),
-    ...(schedulerDecisionRef === undefined ? {} : { schedulerDecisionRef }),
-  };
+    summary: offerSummary,
+    leaseExpiresAt,
+    timeoutAt,
+    localCoordinationRef: schedulerDecisionRef,
+  });
 }
 
 export function buildTaskClaimShell({
@@ -142,16 +393,14 @@ export function buildTaskClaimShell({
   claimSummary,
   schedulerDecisionRef,
 }: BuildTaskClaimShellOptions): BidviaTaskClaimShell {
-  return {
-    kind: 'task-claim',
-    scope: 'local-participation-shell',
-    taskId,
+  return buildLocalTaskClaimIntent({
+    localTaskRef: taskId,
     offerId,
     claimId,
-    claimedAt,
-    claimSummary,
-    ...(schedulerDecisionRef === undefined ? {} : { schedulerDecisionRef }),
-  };
+    observedAt: claimedAt,
+    summary: claimSummary,
+    localCoordinationRef: schedulerDecisionRef,
+  });
 }
 
 export function buildTaskAckShell({
@@ -162,16 +411,14 @@ export function buildTaskAckShell({
   ackSummary,
   schedulerDecisionRef,
 }: BuildTaskAckShellOptions): BidviaTaskAckShell {
-  return {
-    kind: 'task-ack',
-    scope: 'local-participation-shell',
-    taskId,
+  return buildLocalTaskAckObservation({
+    localTaskRef: taskId,
     claimId,
     ackId,
-    acknowledgedAt,
-    ackSummary,
-    ...(schedulerDecisionRef === undefined ? {} : { schedulerDecisionRef }),
-  };
+    observedAt: acknowledgedAt,
+    summary: ackSummary,
+    localCoordinationRef: schedulerDecisionRef,
+  });
 }
 
 export function buildTaskLeaseShell({
@@ -182,16 +429,14 @@ export function buildTaskLeaseShell({
   leaseSummary,
   schedulerDecisionRef,
 }: BuildTaskLeaseShellOptions): BidviaTaskLeaseShell {
-  return {
-    kind: 'task-lease',
-    scope: 'local-participation-shell',
-    taskId,
+  return buildLocalTaskLeaseObservation({
+    localTaskRef: taskId,
     leaseId,
-    leasedAt,
+    observedAt: leasedAt,
     leaseExpiresAt,
-    leaseSummary,
-    ...(schedulerDecisionRef === undefined ? {} : { schedulerDecisionRef }),
-  };
+    summary: leaseSummary,
+    localCoordinationRef: schedulerDecisionRef,
+  });
 }
 
 export function buildTaskTimeoutShell({
@@ -202,16 +447,14 @@ export function buildTaskTimeoutShell({
   priorLeaseId,
   schedulerDecisionRef,
 }: BuildTaskTimeoutShellOptions): BidviaTaskTimeoutShell {
-  return {
-    kind: 'task-timeout',
-    scope: 'local-participation-shell',
-    taskId,
+  return buildLocalTaskTimeoutObservation({
+    localTaskRef: taskId,
     timeoutId,
-    timedOutAt,
-    timeoutSummary,
-    ...(priorLeaseId === undefined ? {} : { priorLeaseId }),
-    ...(schedulerDecisionRef === undefined ? {} : { schedulerDecisionRef }),
-  };
+    observedAt: timedOutAt,
+    summary: timeoutSummary,
+    priorLeaseId,
+    localCoordinationRef: schedulerDecisionRef,
+  });
 }
 
 export function buildTaskRetryAwarenessShell({
@@ -224,16 +467,14 @@ export function buildTaskRetryAwarenessShell({
   rationale,
   schedulerDecisionRef,
 }: BuildTaskRetryAwarenessShellOptions): BidviaTaskRetryAwarenessShell {
-  return {
-    kind: 'task-retry-awareness',
-    scope: 'local-participation-shell',
-    taskId,
+  return buildLocalTaskRetryAwareness({
+    localTaskRef: taskId,
     observedAt,
     attempt,
     maxAttempts,
     retryable,
+    nextRetryAt,
     rationale,
-    ...(nextRetryAt === undefined ? {} : { nextRetryAt }),
-    ...(schedulerDecisionRef === undefined ? {} : { schedulerDecisionRef }),
-  };
+    localCoordinationRef: schedulerDecisionRef,
+  });
 }

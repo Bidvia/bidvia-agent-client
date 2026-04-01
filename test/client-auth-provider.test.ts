@@ -23,6 +23,8 @@ test('BidviaClient injects static local auth and header inputs into the shared r
     context: {
       tenantId: 'tenant-a',
       principalId: 'actor-1',
+      principalType: 'operator',
+      authorizedRole: 'admin',
       registrationId: 'areg-client-1',
     },
     auth: {
@@ -45,6 +47,8 @@ test('BidviaClient injects static local auth and header inputs into the shared r
   assert.equal(headers['x-client-local-header'], 'local-static-1');
   assert.equal(headers['x-authorized-tenant-id'], 'tenant-a');
   assert.equal(headers['x-bidvia-principal-id'], 'actor-1');
+  assert.equal(headers['x-bidvia-principal-type'], 'operator');
+  assert.equal(headers['x-authorized-role'], 'admin');
 });
 
 test('BidviaClient resolves async auth and header providers on every request', async () => {
