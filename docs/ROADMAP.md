@@ -4,6 +4,8 @@
 >
 > The active execution plan for the current wave is `.sisyphus/plans/agent-client-core-vnext-alignment-and-joint-debug.md`.
 > Read this file as long-horizon sequencing support only. Current execution stays grounded in Track 1 client-owned productization, while broader Core truth closure remains deferred to later work.
+>
+> The next-version OpenClaw-focused design and implementation planning follow-up lives in `docs/superpowers/specs/2026-04-01-openclaw-official-integration-design.md` and `docs/superpowers/plans/2026-04-01-openclaw-next-version-integration.md`.
 
 ## Product direction
 
@@ -40,7 +42,9 @@ These are implemented and should be described as local repo-owned surfaces:
 - bounded scenario planning and bounded orchestration slices already present in code and tests
 - verification-bundle and review-packet packaging already present in code and tests
 - static capability metadata, local runtime-capability snapshot output, server-capability normalization, static MCP-facing catalog output, bounded local stdio MCP server, and read-only environment-mode visibility
-- local operator and integrator surfaces, including the current OpenClaw Gateway path where the repo already provides local guidance and bounded tooling support
+- local operator and integrator surfaces, including the current OpenClaw Gateway path where the repo already provides local guidance, bounded tooling support, and the next-version stdio-MCP-first plus companion-bundle OpenClaw packaging story
+
+For the next OpenClaw-compatible version, the roadmap language should stay specific: `bidvia mcp-server` remains the primary OpenClaw runtime handoff, `openclaw-bundle-export` is additive packaging around that same local server, and native-plugin-first or HTTP MCP claims stay deferred.
 
 ### Implemented but dependency-gated seams
 

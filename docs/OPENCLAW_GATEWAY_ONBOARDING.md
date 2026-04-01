@@ -12,7 +12,7 @@ It is intentionally bounded to the current shipped model:
 
 It does **not** assume any hosted Bidvia runtime, hosted MCP service, or remote registry behavior.
 
-The current SDK and CLI already expose the widened frozen downstream read surface for agent registrations, authority profiles, capability profiles, the singular per-registration capability profile, and the shipped participation-state/task-dispatch family. The OpenClaw path remains narrower: MCP is still a local stdio seam, mostly read-only, and intentionally smaller than the full SDK/CLI surface.
+The current SDK and CLI already expose the widened frozen downstream read surface for agent registrations, authority profiles, capability profiles, the singular per-registration capability profile, and the shipped participation-state/task-dispatch family. The OpenClaw path now uses that same local-first foundation more directly: stdio MCP is the primary OpenClaw runtime path, and the companion bundle is additive packaging around that same local server.
 
 ## Scope boundary
 
@@ -21,8 +21,8 @@ Use this guide when you want to:
 1. install `@bidvia/client` in an environment managed by OpenClaw Gateway or a node-host
 2. export the shipped OpenClaw/operator config instead of reconstructing it by hand
 3. configure the minimum Bidvia context variables for the default public path
-4. verify the default public endpoint resolution and local capability surfaces with read-only commands
-5. choose whether the next integration step is direct CLI/operator usage or local stdio MCP server wiring into OpenClaw
+4. verify the default public endpoint resolution and local capability surfaces with smoke commands
+5. choose whether the next integration step is direct CLI/operator usage, primary stdio MCP handoff, or additive companion-bundle packaging into OpenClaw
 6. optionally pin an explicit Bidvia API base URL when the operator needs local, sim, regional, or other managed endpoint control
 
 This guide is **not** the full smoke catalogue. Keep expanded smoke procedures in `docs/OPENCLAW_GATEWAY_SMOKE.md`.
@@ -52,11 +52,12 @@ Follow this order:
 
 1. install the package
 2. run `bidvia openclaw-mcp-config`
-3. run `bidvia route-context-matrix`
-4. set the minimum Bidvia context environment variables
-5. run the read-only topology and capability smoke commands
-6. decide whether the OpenClaw integration entry should be local CLI/operator checks first or local stdio MCP server consumption
-7. only if needed, add an explicit `BIDVIA_BASE_URL` override for local, sim, regional, or operator-managed environments
+3. optionally run `bidvia openclaw-bundle-export`
+4. run `bidvia route-context-matrix`
+5. set the minimum Bidvia context environment variables
+6. run the topology, capability, and local MCP smoke commands
+7. decide whether the OpenClaw integration entry should stay CLI/operator-first or move straight to local stdio MCP consumption
+8. only if needed, add an explicit `BIDVIA_BASE_URL` override for local, sim, regional, or operator-managed environments
 
 Do **not** start by assuming hosted runtime or remote negotiation exists.
 
@@ -89,12 +90,13 @@ Use that output as the handoff source for:
 - the local-only, non-hosted boundary flags
 - the visible next success step, `route-context-matrix`
 
-The shipped config export is now intentionally split into two layers:
+The shipped OpenClaw export story is intentionally split into two layers:
 
 - primary installed execution surface: `bidvia mcp-server`
+- additive packaging surface: `bidvia openclaw-bundle-export --output <directory>`
 - repo-local development/build fallback: `node dist/mcp-server.js`
 
-Use the exported fragment as the primary handoff. Keep the direct `dist/` entrypoint only as the development/build fallback.
+Use the exported fragment as the primary handoff. If the operator or agent wants a supported local bundle layout on disk, export `bidvia openclaw-bundle-export --output ./bidvia-openclaw-bundle` after the config export and keep it pointed back at the same installed server. Keep the direct `dist/` entrypoint only as the development/build fallback.
 
 ## Step 3 — use the default public endpoint first
 
@@ -127,7 +129,7 @@ For OpenClaw Gateway operators, the safe default is:
 - keep the shared install/configure layer minimal
 - add per-agent/per-route context only when the target helper family actually needs it
 
-## Step 5 — confirm guided route context, then run the read-only local smoke sequence
+## Step 5 — confirm guided route context, then run the local smoke sequence
 
 Before wiring OpenClaw tools, confirm the guided route context:
 
@@ -142,7 +144,7 @@ Use this to confirm:
 - the required context family is visible before you enable local execution
 - the visible next success step for the operator journey stays `registered-agent-operations-plan`
 
-Then run the read-only smoke commands in this order:
+Then run the smoke commands in this order:
 
 ### 5.1 Launch topology smoke
 
@@ -196,8 +198,9 @@ bidvia --help
 
 The current shipped local-only CLI surface includes:
 
-- read-only visibility commands
+- visibility and local operator commands
 - the stable installed MCP subcommand `mcp-server`
+- the companion bundle export command `openclaw-bundle-export`
 - explicit execution commands for `heartbeat`, `sync-upload`, `evidence`, and `proposal`, each with `--dry-run`
 - review-safe scenario plan and review-packet preview/export commands
 - verification-bundle preview/export commands
@@ -236,7 +239,7 @@ Those root-domain mappings are compatibility metadata, not the active profile re
 
 ## Step 6 — choose the integration entry mode
 
-After the local read-only smoke checks pass, choose one of these operator paths.
+After the local smoke checks pass, choose one of these operator paths.
 
 ### Option A — CLI/operator-first path
 
@@ -284,12 +287,13 @@ That local execution surface is still not login. Transport/auth-provider hardeni
 At the end of onboarding, the operator should have these facts written down explicitly:
 
 1. the `openclaw-mcp-config` output that will be used as the local handoff source
-2. which canonical Bidvia API domain is being used
-3. whether the deployment is using the default public API or an explicit operator override
-4. whether the deployment is currently relying on compatibility-window profile mapping
-5. which environment variables are globally set for the Gateway context
-6. which variables are injected per agent / per route family
-7. whether the first integration step is CLI-first or stdio MCP-first
+2. whether `openclaw-bundle-export` was also generated as additive packaging for the same server
+3. which canonical Bidvia API domain is being used
+4. whether the deployment is using the default public API or an explicit operator override
+5. whether the deployment is currently relying on compatibility-window profile mapping
+6. which environment variables are globally set for the Gateway context
+7. which variables are injected per agent / per route family
+8. whether the first integration step is CLI-first or stdio MCP-first
 
 Do not leave these as tribal knowledge.
 
@@ -299,11 +303,12 @@ For most OpenClaw Gateway installations, the safest baseline is:
 
 1. install and build locally
 2. export `openclaw-mcp-config`
-3. confirm `route-context-matrix`
-4. rely on the default public API unless operator control requires an override
-5. set the minimal shared Bidvia tenant/principal values
-6. run the four read-only smoke commands
-7. only then wire the exported `bidvia mcp-server` fragment into OpenClaw if the Gateway side is ready, using `node dist/mcp-server.js` only as the repo-local fallback
+3. optionally export `openclaw-bundle-export`
+4. confirm `route-context-matrix`
+5. rely on the default public API unless operator control requires an override
+6. set the minimal shared Bidvia tenant/principal values
+7. run the four local smoke commands
+8. only then wire the exported `bidvia mcp-server` fragment into OpenClaw if the Gateway side is ready, using the companion bundle only as additive packaging and `node dist/mcp-server.js` only as the repo-local fallback
 
 This order reduces ambiguity and keeps the integration bounded to shipped local surfaces.
 
@@ -313,6 +318,8 @@ This onboarding guide does **not** claim any of the following:
 
 - hosted Bidvia runtime integration
 - hosted MCP service
+- HTTP MCP as a supported primary path
+- native-plugin-first OpenClaw runtime
 - remote registry discovery
 - live remote capability negotiation
 - automatic approval-to-opportunity seam crossing

@@ -29,7 +29,7 @@ test('buildLocalRuntimeCapabilitySnapshot defaults to the public global API whil
     true,
   );
   assert.equal(snapshot.mcpTools.source, 'local-static');
-  assert.equal(snapshot.mcpTools.items.length, 30);
+  assert.equal(snapshot.mcpTools.items.length, 64);
   assert.equal(snapshot.mcpTools.schemaVersion, '2026-03-27');
   assert.equal(snapshot.mcpTools.version, 'local-runtime-capability-snapshot');
   assert.equal(snapshot.mcpTools.revision, 'repo-mcp-tools');

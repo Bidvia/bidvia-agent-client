@@ -1,5 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { mkdtempSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
 
 import type { BidviaHeartbeatInput } from '../src/contracts.ts';
 import { runCli } from '../src/cli.ts';
@@ -78,4 +81,76 @@ test('runCli does not create a client for read-only commands', async () => {
     baseUrl: 'http://127.0.0.1:8787',
     environmentMode: 'local',
   }]);
+});
+
+test('runCli requires an explicit output path before writing the companion bundle to disk', async () => {
+  const printed: unknown[] = [];
+
+  const exitCode = await runCli(['openclaw-bundle-export'], {
+    printJson: (value) => {
+      printed.push(value);
+    },
+    printLine: () => {
+      throw new Error('help output should not be used for openclaw-bundle-export');
+    },
+  });
+
+  assert.equal(exitCode, 1);
+  assert.deepEqual(printed, [{
+    error: {
+      code: 'invalid-input',
+      command: 'openclaw-bundle-export',
+      message: 'Missing required --output for openclaw-bundle-export.',
+      details: ['--output'],
+    },
+  }]);
+});
+
+test('runCli describes the companion bundle as additive packaging around the stdio MCP path after writing to disk', async () => {
+  const printed: unknown[] = [];
+  const outputDirectory = path.join(mkdtempSync(path.join(tmpdir(), 'bidvia-openclaw-cli-exec-')), 'bundle');
+
+  const exitCode = await runCli(['openclaw-bundle-export', '--output', outputDirectory], {
+    printJson: (value) => {
+      printed.push(value);
+    },
+    printLine: () => {
+      throw new Error('help output should not be used for openclaw-bundle-export');
+    },
+  });
+
+  assert.equal(exitCode, 0);
+  assert.equal(printed.length, 1);
+
+  const output = printed[0] as {
+    command: string;
+    scope: string;
+    outputPath: string;
+    writtenFiles: string[];
+    operatorNotes: {
+      executionBoundary: string;
+      developmentNote: string;
+      primaryPath?: string;
+      deferredNativePlugin?: string;
+    };
+  };
+
+  assert.equal(output.command, 'openclaw-bundle-export');
+  assert.equal(output.scope, 'local-only');
+  assert.equal(output.outputPath, outputDirectory);
+  assert.deepEqual(output.writtenFiles, [
+    '.codex-plugin/plugin.json',
+    '.mcp.json',
+    'docs/bidvia-openclaw-local-operator.md',
+  ]);
+  assert.match(output.operatorNotes.executionBoundary, /local stdio MCP server/i);
+  assert.match(output.operatorNotes.developmentNote, /development-only/i);
+  assert.equal(
+    output.operatorNotes.primaryPath,
+    'Primary OpenClaw path: export stdio MCP config first, then add the companion bundle when you want bundle/bootstrap packaging around the same local server.',
+  );
+  assert.equal(
+    output.operatorNotes.deferredNativePlugin,
+    'Native-plugin-first and HTTP MCP paths stay out of scope for this version.',
+  );
 });

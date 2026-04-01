@@ -1,22 +1,24 @@
 import { buildLocalRuntimeCapabilitySnapshot } from './runtime-capabilities.js';
 
+export interface BidviaOpenClawMcpServerConfig {
+  command: 'bidvia';
+  args: ['mcp-server'];
+  env: {
+    BIDVIA_BASE_URL: string;
+    BIDVIA_TENANT_ID: '<required>';
+    BIDVIA_SESSION_ID: '<optional>';
+    BIDVIA_ADMIN_SESSION_ID: '<optional>';
+    BIDVIA_REGISTRATION_ID: '<optional>';
+    BIDVIA_PRINCIPAL_ID: '<optional>';
+    BIDVIA_PRINCIPAL_TYPE: '<optional>';
+    BIDVIA_AUTHORIZED_ROLE: '<optional>';
+    BIDVIA_COMPANY_ID: '<optional>';
+  };
+}
+
 export interface BidviaOpenClawConfig {
   mcpServers: {
-    bidvia: {
-      command: 'bidvia';
-      args: ['mcp-server'];
-        env: {
-          BIDVIA_BASE_URL: string;
-          BIDVIA_TENANT_ID: '<required>';
-          BIDVIA_SESSION_ID: '<optional>';
-          BIDVIA_ADMIN_SESSION_ID: '<optional>';
-          BIDVIA_REGISTRATION_ID: '<optional>';
-          BIDVIA_PRINCIPAL_ID: '<optional>';
-          BIDVIA_PRINCIPAL_TYPE: '<optional>';
-          BIDVIA_AUTHORIZED_ROLE: '<optional>';
-          BIDVIA_COMPANY_ID: '<optional>';
-        };
-    };
+    bidvia: BidviaOpenClawMcpServerConfig;
   };
   localExecutionExpectations: {
     transport: 'stdio';
@@ -41,26 +43,30 @@ function buildPublicDefaults() {
   };
 }
 
-export function buildOpenClawConfig(): BidviaOpenClawConfig {
+export function buildOpenClawMcpServerConfig(): BidviaOpenClawMcpServerConfig {
   const defaults = buildPublicDefaults();
 
   return {
+    command: 'bidvia',
+    args: ['mcp-server'],
+    env: {
+      BIDVIA_BASE_URL: defaults.baseUrl,
+      BIDVIA_TENANT_ID: '<required>',
+      BIDVIA_SESSION_ID: '<optional>',
+      BIDVIA_ADMIN_SESSION_ID: '<optional>',
+      BIDVIA_REGISTRATION_ID: '<optional>',
+      BIDVIA_PRINCIPAL_ID: '<optional>',
+      BIDVIA_PRINCIPAL_TYPE: '<optional>',
+      BIDVIA_AUTHORIZED_ROLE: '<optional>',
+      BIDVIA_COMPANY_ID: '<optional>',
+    },
+  };
+}
+
+export function buildOpenClawConfig(): BidviaOpenClawConfig {
+  return {
     mcpServers: {
-      bidvia: {
-        command: 'bidvia',
-        args: ['mcp-server'],
-        env: {
-          BIDVIA_BASE_URL: defaults.baseUrl,
-          BIDVIA_TENANT_ID: '<required>',
-          BIDVIA_SESSION_ID: '<optional>',
-          BIDVIA_ADMIN_SESSION_ID: '<optional>',
-          BIDVIA_REGISTRATION_ID: '<optional>',
-          BIDVIA_PRINCIPAL_ID: '<optional>',
-          BIDVIA_PRINCIPAL_TYPE: '<optional>',
-          BIDVIA_AUTHORIZED_ROLE: '<optional>',
-          BIDVIA_COMPANY_ID: '<optional>',
-        },
-      },
+      bidvia: buildOpenClawMcpServerConfig(),
     },
     localExecutionExpectations: {
       transport: 'stdio',

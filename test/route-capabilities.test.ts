@@ -602,6 +602,44 @@ test('capability registry describes principal-governed reads and canonical parti
   });
 });
 
+test('capability registry promotes shipped governed profile writes into canonical route metadata', () => {
+  assert.deepEqual(getRouteCapability('postAgentAuthorityProfile'), {
+    helperKey: 'postAgentAuthorityProfile',
+    routePathTemplate: '/runtime/agents/:agent_registration_id/authority-profile',
+    httpMethod: 'POST',
+    accessContextFamily: 'operator-company',
+    requiredContext: ['tenantId', 'principalId', 'companyId'],
+    scope: 'write',
+    level: 'atomic-route',
+    localCapabilityTier: 'L3-governed-commercial',
+    localCapabilityRiskTier: 'governed-commercial',
+  });
+
+  assert.deepEqual(getRouteCapability('postAgentAuthorityLadder'), {
+    helperKey: 'postAgentAuthorityLadder',
+    routePathTemplate: '/runtime/agents/:agent_registration_id/authority-ladder',
+    httpMethod: 'POST',
+    accessContextFamily: 'operator-company',
+    requiredContext: ['tenantId', 'principalId', 'companyId'],
+    scope: 'write',
+    level: 'atomic-route',
+    localCapabilityTier: 'L3-governed-commercial',
+    localCapabilityRiskTier: 'governed-commercial',
+  });
+
+  assert.deepEqual(getRouteCapability('postAgentCapabilityProfile'), {
+    helperKey: 'postAgentCapabilityProfile',
+    routePathTemplate: '/runtime/agents/:agent_registration_id/capability-profile',
+    httpMethod: 'POST',
+    accessContextFamily: 'operator-company',
+    requiredContext: ['tenantId', 'principalId', 'companyId'],
+    scope: 'write',
+    level: 'atomic-route',
+    localCapabilityTier: 'L3-governed-commercial',
+    localCapabilityRiskTier: 'governed-commercial',
+  });
+});
+
 test('next-stage governance discovery group stays metadata-only after shipped principal-governed reads moved into canonical route metadata', () => {
   const expectedGroup: BidviaNextStageReadRouteDiscoveryGroup = {
     groupKey: 'governance-deep-reads',

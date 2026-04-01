@@ -5,6 +5,7 @@ import { BidviaClient } from '../src/client.ts';
 import type { BidviaClientContext, BidviaMcpToolCallResponse } from '../src/contracts.ts';
 import { runCli } from '../src/cli.ts';
 import { dispatchMcpToolCall } from '../src/mcp.ts';
+import { buildMcpMissingContextMessage } from '../src/operator-ergonomics.ts';
 
 const dispatchMcpToolCallWithExecution = dispatchMcpToolCall as unknown as (
   request: {
@@ -185,5 +186,12 @@ test('dispatchMcpToolCall adds execution preflight metadata and rejects missing 
       },
     ),
     /MCP tool heartbeat-execution is missing required local execution context: registrationId, principalId\./,
+  );
+});
+
+test('buildMcpMissingContextMessage gives OpenClaw agents the next local remediation step', () => {
+  assert.equal(
+    buildMcpMissingContextMessage('create-commercial-action-execution', ['companyId', 'principalId']),
+    'MCP tool create-commercial-action-execution is missing required local execution context: companyId, principalId. Use bidvia route-context-matrix to confirm the next Bidvia context family, then set BIDVIA_COMPANY_ID and BIDVIA_PRINCIPAL_ID before retrying this local stdio MCP tool.',
   );
 });

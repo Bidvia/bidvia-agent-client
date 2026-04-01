@@ -36,6 +36,8 @@ test('runCli help lists truth-fetch read-only commands under the visibility grou
   assert.equal(exitCode, 0);
   const expectedVisibilityLines = [
     'bidvia',
+    'OpenClaw primary path: export stdio MCP config first, then add the companion bundle when you want bundle/bootstrap packaging.',
+    'OpenClaw scope for this version: local-first, Core-truth-consuming, stdio MCP primary.',
     'Visibility commands:',
     '  environment-mode',
     '  runtime-capabilities',
@@ -44,6 +46,7 @@ test('runCli help lists truth-fetch read-only commands under the visibility grou
     '  operator-discovery',
     '  onboarding-readiness',
     '  openclaw-mcp-config',
+    '  openclaw-bundle-export --output ...',
     '  route-context-matrix',
     '  account-agents',
     '  account-agent --registration-id ...',

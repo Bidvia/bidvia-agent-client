@@ -9,7 +9,7 @@ Use it after basic install and configuration are complete, and before you treat 
 This smoke guide is intentionally bounded to the shipped local operator path:
 
 - local package build and validation
-- local CLI read-only checks
+- local CLI/operator checks
 - stable local stdio MCP execution surface availability
 - remote HTTPS API domain visibility only
 
@@ -37,7 +37,7 @@ Run the smoke checks in this order:
 1. build check
 2. test check
 3. contract validation check
-4. OpenClaw config export smoke
+4. OpenClaw config and bundle export smoke
 5. route-context matrix smoke
 6. launch topology smoke
 7. environment mode smoke
@@ -114,12 +114,13 @@ High-level meaning:
 - the local install may no longer reflect the expected frozen client contract
 - do not continue to operator rollout until resolved
 
-## 4. OpenClaw config export smoke
+## 4. OpenClaw config and bundle export smoke
 
 ### Command
 
 ```bash
 bidvia openclaw-mcp-config
+bidvia openclaw-bundle-export --output ./bidvia-openclaw-bundle
 ```
 
 ### What this proves
@@ -127,8 +128,9 @@ bidvia openclaw-mcp-config
 - the shipped local stdio MCP handoff can be exported without repo archaeology
 - the default public `BIDVIA_BASE_URL` is visible in the operator config
 - the installed MCP command is handed off as `bidvia mcp-server`
+- the companion bundle can be exported as additive packaging around that same local server and materialized to disk
 - the repo-local MCP fallback remains visible as `node dist/mcp-server.js`
-- the boundary stays local-only, non-hosted, and non-discovery
+- the boundary stays local-only, non-hosted, non-HTTP, and non-discovery
 - the visible next success step remains `route-context-matrix`
 
 ### If this fails
@@ -245,7 +247,7 @@ Treat it as a local visibility-layer problem.
 
 High-level meaning:
 
-- the operator has lost one of the main read-only diagnostics surfaces
+- the operator has lost one of the main local diagnostics surfaces
 - do not proceed to Gateway integration without restoring that visibility
 
 ## 9. Server-capability normalization smoke
@@ -318,6 +320,7 @@ High-level meaning:
 - `npm test` passes
 - `npm run validate` passes
 - `openclaw-mcp-config` returns the shipped local stdio handoff with the expected default public base URL and boundary flags
+- `openclaw-bundle-export` returns the supported additive bundle layout pointing back to the same local server
 - `route-context-matrix` keeps the public-first rows primary and the operator row secondary
 - `launch-topology-smoke` returns the expected default public resolution or the intended explicit override, plus the canonical `api.*` and compatibility mapping information
 - `environment-mode` reflects the intended environment
@@ -340,6 +343,7 @@ If an operator only has time for the shortest meaningful check, use this exact o
 ```bash
 npm run build
 node dist/cli.js openclaw-mcp-config
+node dist/cli.js openclaw-bundle-export
 node dist/cli.js route-context-matrix
 node dist/cli.js launch-topology-smoke
 node dist/cli.js environment-mode
@@ -359,14 +363,15 @@ If you want the grouped local-only command surface before or after the smoke run
 node dist/cli.js --help
 ```
 
-That help output is the quickest way to confirm the current packaged CLI still includes read-only visibility commands, explicit execution commands with `--dry-run`, review-safe plan/review/export commands, and verification-bundle preview/export commands.
+That help output is the quickest way to confirm the current packaged CLI still includes visibility commands, the primary stdio MCP handoff, the additive bundle export, explicit execution commands with `--dry-run`, review-safe plan/review/export commands, and verification-bundle preview/export commands.
 
 ## Relationship to the main onboarding guide
 
 Use `docs/OPENCLAW_GATEWAY_ONBOARDING.md` for:
 
 - install/configure order
-- `openclaw-mcp-config` as the operator handoff source
+- `openclaw-mcp-config` as the primary operator handoff source
+- `openclaw-bundle-export` as additive bundle/bootstrap packaging for the same server
 - `route-context-matrix` before execution enablement
 - default public path first, with explicit override guidance second
 - compatibility-window explanation

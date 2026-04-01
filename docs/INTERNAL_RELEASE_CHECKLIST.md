@@ -20,7 +20,7 @@ Confirm `package.json` still matches the intended public release shape:
 
 - `name: @bidvia/client`
 - `version` matches the intended release tag/version
-- `repository.url: https://github.com/Bidvia/bidvia-agent-client.git`
+- `repository.url: git+https://github.com/Bidvia/bidvia-agent-client.git`
 - `homepage: https://github.com/Bidvia/bidvia-agent-client`
 - `bugs.url: https://github.com/Bidvia/bidvia-agent-client/issues`
 - `releaseGate.npmPublished: false`

@@ -124,7 +124,7 @@ function createDefaultExecutionClient(): BidviaClient {
   return new BidviaClient({
     baseUrl: resolveBidviaBaseUrlFromEnv(),
     context: {
-      tenantId: process.env.BIDVIA_TENANT_ID ?? 'tenant-a',
+      tenantId: process.env.BIDVIA_TENANT_ID ?? '',
       principalId: process.env.BIDVIA_PRINCIPAL_ID,
       registrationId: process.env.BIDVIA_REGISTRATION_ID,
       sessionId: process.env.BIDVIA_SESSION_ID,

@@ -56,7 +56,7 @@ test('package distribution metadata exposes stable installed SDK, CLI, and local
   ]);
   assert.deepEqual(packageJson.repository, {
     type: 'git',
-    url: 'https://github.com/Bidvia/bidvia-agent-client.git',
+    url: 'git+https://github.com/Bidvia/bidvia-agent-client.git',
   });
   assert.equal(packageJson.homepage, 'https://github.com/Bidvia/bidvia-agent-client');
   assert.deepEqual(packageJson.bugs, {
@@ -75,6 +75,13 @@ test('package metadata declares the installed MCP execution surface without losi
   });
   assert.equal((packageJson.exports as Record<string, unknown>)['./mcp-server'], './dist/src/mcp-server.js');
   assert.equal(fileExists('mcp-server.ts'), true);
+});
+
+test('package source tree includes the OpenClaw companion bundle export alongside the existing stdio MCP handoff surfaces', () => {
+  assert.equal(fileExists('src/openclaw-config-export.ts'), true);
+  assert.equal(fileExists('src/openclaw-bundle-export.ts'), true);
+  assert.equal(fileExists('src/cli.ts'), true);
+  assert.equal(fileExists('src/index.ts'), true);
 });
 
 test('public package support files and release-readiness validation entrypoints are present when publication metadata is gated', () => {

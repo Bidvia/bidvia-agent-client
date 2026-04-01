@@ -2,6 +2,8 @@
 
 This boundary reference supports the active execution plan at `.sisyphus/plans/agent-client-core-vnext-alignment-and-joint-debug.md`. Read it as release-boundary guidance for the current shipped local-first surface, not as a competing roadmap.
 
+For the next OpenClaw-compatible version, keep one release-language rule explicit: this repo owns local operator ergonomics and guidance, while Bidvia Core still owns the truth being consumed.
+
 ## Rule
 
 `Bidvia-agent-client` consumes agent-access truth from Bidvia core. It does not define that truth.
@@ -27,6 +29,7 @@ This boundary reference supports the active execution plan at `.sisyphus/plans/a
 - onboarding guidance for internal team agents and seed-user agents
 - scenario packaging and verification-bundle export on the agent side
 - agent-side operating guidance for how to use frozen production contracts safely
+- OpenClaw local operator guidance for `openclaw-mcp-config`, companion bundle export, and local stdio MCP handoff
 
 ## Hard rules
 
@@ -34,6 +37,7 @@ This boundary reference supports the active execution plan at `.sisyphus/plans/a
 - heartbeat and presence do not create authority
 - client convenience must not bypass platform truth
 - proposals and evidence remain explicit platform operations
+- OpenClaw wording must stay local-first, stdio-MCP-first, and must not claim hosted runtime, HTTP MCP, or control-plane ownership
 
 ## Current frozen focus
 
