@@ -29,6 +29,7 @@ import type {
   BidviaProposalSubmissionInput,
   BidviaProvisionalAgentClaimInput,
   BidviaProvisionalAgentCreateInput,
+  BidviaQueryProvisionalAgentInput,
   BidviaSyncUploadInput,
   BidviaActivateListingInput,
   BidviaApproveConnectionRequestInput,
@@ -106,8 +107,17 @@ export class BidviaClient {
   async queryProvisionalAgent(
     provisionalAgentRef: string,
     requestPolicy?: BidviaClientRequestPolicy,
+  ): Promise<unknown>;
+  async queryProvisionalAgent(
+    input: BidviaQueryProvisionalAgentInput,
+    requestPolicy?: BidviaClientRequestPolicy,
+  ): Promise<unknown>;
+  async queryProvisionalAgent(
+    input: string | BidviaQueryProvisionalAgentInput,
+    requestPolicy?: BidviaClientRequestPolicy,
   ) {
     const context = this.resolveRequestContext(requestPolicy);
+    const provisionalAgentRef = typeof input === 'string' ? input : input.provisionalAgentRef;
     const search = new URLSearchParams({ provisional_agent_ref: provisionalAgentRef });
     return this.request(`/runtime/agents/provisional?${search.toString()}`, {
       context,
