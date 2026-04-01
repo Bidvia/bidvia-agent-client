@@ -4,6 +4,8 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import * as publicSurface from '../src/index.ts';
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const workspaceRoot = path.resolve(__dirname, '..');
 
@@ -63,4 +65,13 @@ test('public release docs no longer depend on transitional publication wording i
   assert.match(onboardingGuide, /participation-state/);
   assert.match(contractBoundary, /\/runtime\/agents\/:registration_id\/task-dispatches/);
   assert.match(smokeDoc, /credential-less local or sim probes/i);
+});
+
+test('public release surface exports the OpenClaw config and companion bundle helpers from the main package entrypoint', () => {
+  const exports = publicSurface as Record<string, unknown>;
+
+  assert.equal(typeof exports.buildOpenClawConfig, 'function');
+  assert.equal(typeof exports.exportOpenClawConfig, 'function');
+  assert.equal(typeof exports.buildOpenClawCompanionBundle, 'function');
+  assert.equal(typeof exports.exportOpenClawCompanionBundle, 'function');
 });

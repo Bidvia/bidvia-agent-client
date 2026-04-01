@@ -60,9 +60,248 @@ type BidviaMcpDispatchDependencies = {
   createExecutionClient?: () => BidviaClient;
 };
 
+type BidviaGenericExecutionDispatch = (client: BidviaClient, input: unknown) => Promise<unknown>;
+
 function createReviewSafeDispatchClient(): BidviaClient {
   return {} as BidviaClient;
 }
+
+function requireObjectInput(input: unknown, errorMessage: string): Record<string, unknown> {
+  if (typeof input !== 'object' || input === null) {
+    throw new Error(errorMessage);
+  }
+
+  return input as Record<string, unknown>;
+}
+
+function buildExecutionPayload(
+  input: unknown,
+  fieldNamesToStrip: readonly string[],
+  errorMessage: string,
+): Record<string, unknown> {
+  const objectInput = requireObjectInput(input, errorMessage);
+  const payload = { ...objectInput };
+
+  for (const fieldName of fieldNamesToStrip) {
+    delete payload[fieldName];
+  }
+
+  return payload;
+}
+
+function requireExecutionStringInput(
+  input: unknown,
+  fieldNames: readonly string[],
+  errorMessage: string,
+): string {
+  const objectInput = requireObjectInput(input, errorMessage);
+
+  for (const fieldName of fieldNames) {
+    if (typeof objectInput[fieldName] === 'string' && objectInput[fieldName]) {
+      return objectInput[fieldName] as string;
+    }
+  }
+
+  throw new Error(errorMessage);
+}
+
+const widenedExecutionDispatchersByCapabilityKey: Record<string, BidviaGenericExecutionDispatch> = {
+  createProvisionalAgent(client, input) {
+    return client.createProvisionalAgent(
+      requireObjectInput(input, 'createProvisionalAgent input is required for MCP execution') as never,
+    );
+  },
+  claimProvisionalAgent(client, input) {
+    return client.claimProvisionalAgent(
+      requireObjectInput(input, 'claimProvisionalAgent input is required for MCP execution') as never,
+    );
+  },
+  downloadSync(client) {
+    return client.downloadSync();
+  },
+  createParticipationState(client, input) {
+    return client.createParticipationState(
+      requireAgentRegistrationId(input),
+      buildExecutionPayload(
+        input,
+        ['agentRegistrationId', 'registrationId'],
+        'agentRegistrationId is required for governed participation execution',
+      ) as never,
+    );
+  },
+  createLease(client, input) {
+    return client.createLease(
+      requireAgentRegistrationId(input),
+      buildExecutionPayload(
+        input,
+        ['agentRegistrationId', 'registrationId'],
+        'agentRegistrationId is required for governed lease execution',
+      ) as never,
+    );
+  },
+  createTaskDispatch(client, input) {
+    return client.createTaskDispatch(
+      requireAgentRegistrationId(input),
+      buildExecutionPayload(
+        input,
+        ['agentRegistrationId', 'registrationId'],
+        'agentRegistrationId is required for governed task dispatch execution',
+      ) as never,
+    );
+  },
+  assignTaskDispatch(client, input) {
+    return client.assignTaskDispatch(
+      requireAgentRegistrationId(input),
+      requireExecutionStringInput(
+        input,
+        ['taskDispatchId'],
+        'taskDispatchId is required for governed task dispatch assignment execution',
+      ),
+      buildExecutionPayload(
+        input,
+        ['agentRegistrationId', 'registrationId', 'taskDispatchId'],
+        'agentRegistrationId and taskDispatchId are required for governed task dispatch assignment execution',
+      ) as never,
+    );
+  },
+  suspendTaskDispatch(client, input) {
+    return client.suspendTaskDispatch(
+      requireAgentRegistrationId(input),
+      requireExecutionStringInput(
+        input,
+        ['taskDispatchId'],
+        'taskDispatchId is required for governed task dispatch suspension execution',
+      ),
+      buildExecutionPayload(
+        input,
+        ['agentRegistrationId', 'registrationId', 'taskDispatchId'],
+        'agentRegistrationId and taskDispatchId are required for governed task dispatch suspension execution',
+      ) as never,
+    );
+  },
+  resumeTaskDispatch(client, input) {
+    return client.resumeTaskDispatch(
+      requireAgentRegistrationId(input),
+      requireExecutionStringInput(
+        input,
+        ['taskDispatchId'],
+        'taskDispatchId is required for governed task dispatch resume execution',
+      ),
+      buildExecutionPayload(
+        input,
+        ['agentRegistrationId', 'registrationId', 'taskDispatchId'],
+        'agentRegistrationId and taskDispatchId are required for governed task dispatch resume execution',
+      ) as never,
+    );
+  },
+  completeTaskDispatch(client, input) {
+    return client.completeTaskDispatch(
+      requireAgentRegistrationId(input),
+      requireExecutionStringInput(
+        input,
+        ['taskDispatchId'],
+        'taskDispatchId is required for governed task dispatch completion execution',
+      ),
+      buildExecutionPayload(
+        input,
+        ['agentRegistrationId', 'registrationId', 'taskDispatchId'],
+        'agentRegistrationId and taskDispatchId are required for governed task dispatch completion execution',
+      ) as never,
+    );
+  },
+  failTaskDispatch(client, input) {
+    return client.failTaskDispatch(
+      requireAgentRegistrationId(input),
+      requireExecutionStringInput(
+        input,
+        ['taskDispatchId'],
+        'taskDispatchId is required for governed task dispatch failure execution',
+      ),
+      buildExecutionPayload(
+        input,
+        ['agentRegistrationId', 'registrationId', 'taskDispatchId'],
+        'agentRegistrationId and taskDispatchId are required for governed task dispatch failure execution',
+      ) as never,
+    );
+  },
+  createClaim(client, input) {
+    return client.createClaim(
+      requireAgentRegistrationId(input),
+      buildExecutionPayload(
+        input,
+        ['agentRegistrationId', 'registrationId'],
+        'agentRegistrationId is required for governed claim execution',
+      ) as never,
+    );
+  },
+  acceptClaim(client, input) {
+    return client.acceptClaim(
+      requireAgentRegistrationId(input),
+      requireExecutionStringInput(input, ['claimId'], 'claimId is required for governed claim acceptance execution'),
+      buildExecutionPayload(
+        input,
+        ['agentRegistrationId', 'registrationId', 'claimId'],
+        'agentRegistrationId and claimId are required for governed claim acceptance execution',
+      ) as never,
+    );
+  },
+  rejectClaim(client, input) {
+    return client.rejectClaim(
+      requireAgentRegistrationId(input),
+      requireExecutionStringInput(input, ['claimId'], 'claimId is required for governed claim rejection execution'),
+      buildExecutionPayload(
+        input,
+        ['agentRegistrationId', 'registrationId', 'claimId'],
+        'agentRegistrationId and claimId are required for governed claim rejection execution',
+      ) as never,
+    );
+  },
+  postAgentAuthorityProfile(client, input) {
+    return client.postAgentAuthorityProfile(
+      requireAgentRegistrationId(input),
+      buildExecutionPayload(
+        input,
+        ['agentRegistrationId', 'registrationId'],
+        'agentRegistrationId is required for governed authority profile execution',
+      ) as never,
+    );
+  },
+  postAgentAuthorityLadder(client, input) {
+    return client.postAgentAuthorityLadder(
+      requireAgentRegistrationId(input),
+      buildExecutionPayload(
+        input,
+        ['agentRegistrationId', 'registrationId'],
+        'agentRegistrationId is required for governed authority ladder execution',
+      ) as never,
+    );
+  },
+  postAgentCapabilityProfile(client, input) {
+    return client.postAgentCapabilityProfile(
+      requireAgentRegistrationId(input),
+      buildExecutionPayload(
+        input,
+        ['agentRegistrationId', 'registrationId'],
+        'agentRegistrationId is required for governed capability profile execution',
+      ) as never,
+    );
+  },
+  createCommercialAction(client, input) {
+    return client.createCommercialAction(
+      requireObjectInput(input, 'createCommercialAction input is required for MCP execution') as never,
+    );
+  },
+  requestCommercialActionApproval(client, input) {
+    return client.requestCommercialActionApproval(
+      requireObjectInput(input, 'requestCommercialActionApproval input is required for MCP execution') as never,
+    );
+  },
+  executeCommercialAction(client, input) {
+    return client.executeCommercialAction(
+      requireObjectInput(input, 'executeCommercialAction input is required for MCP execution') as never,
+    );
+  },
+};
 
 function dispatchIndustryUniverseTool(
   descriptor: BidviaMcpToolDescriptor,
@@ -199,11 +438,6 @@ async function dispatchRegisteredAgentExecutionTool(
   input: unknown,
   dependencies: BidviaMcpDispatchDependencies,
 ): Promise<BidviaMcpToolCallResponse<BidviaMcpDispatchResult>> {
-  const adapter = getRegisteredAgentExecutionAdapter(descriptor.helperRef.helperKey);
-  if (!adapter) {
-    throw new Error(`unsupported MCP helper dispatch: ${descriptor.helperRef.helperKey}`);
-  }
-
   if (!dependencies.createExecutionClient) {
     throw new Error(`MCP tool ${descriptor.toolName} requires a local execution client factory`);
   }
@@ -214,7 +448,18 @@ async function dispatchRegisteredAgentExecutionTool(
     throw new Error(buildMcpMissingContextMessage(descriptor.toolName, preflight.missingContext));
   }
 
-  const executionResult = await adapter.run(client, input);
+  const adapter = getRegisteredAgentExecutionAdapter(descriptor.helperRef.helperKey);
+  const directDispatcher = descriptor.helperRef.capabilityKey === undefined
+    ? undefined
+    : widenedExecutionDispatchersByCapabilityKey[descriptor.helperRef.capabilityKey];
+
+  if (!adapter && !directDispatcher) {
+    throw new Error(`unsupported MCP helper dispatch: ${descriptor.helperRef.helperKey}`);
+  }
+
+  const executionResult = adapter
+    ? await adapter.run(client, input)
+    : await directDispatcher!(client, input);
 
   return {
     toolName: descriptor.toolName,
@@ -306,6 +551,52 @@ async function dispatchGovernanceTruthFetchTool(
       outputMode: descriptor.outputMode,
       result: {
         truthFetchResult: await client.listAccountRecords(),
+      },
+    };
+  }
+
+  if (descriptor.helperRef.helperKey === 'queryProvisionalAgent') {
+    return {
+      toolName: descriptor.toolName,
+      outputMode: descriptor.outputMode,
+      result: {
+        truthFetchResult: await client.queryProvisionalAgent(
+          requireStringInput(
+            input,
+            'provisionalAgentRef',
+            'provisionalAgentRef is required for provisional agent reads',
+          ),
+        ),
+      },
+    };
+  }
+
+  if (descriptor.helperRef.helperKey === 'listAgentRegistrations') {
+    return {
+      toolName: descriptor.toolName,
+      outputMode: descriptor.outputMode,
+      result: {
+        truthFetchResult: await client.listAgentRegistrations(),
+      },
+    };
+  }
+
+  if (descriptor.helperRef.helperKey === 'listAuthorityProfiles') {
+    return {
+      toolName: descriptor.toolName,
+      outputMode: descriptor.outputMode,
+      result: {
+        truthFetchResult: await client.listAuthorityProfiles(),
+      },
+    };
+  }
+
+  if (descriptor.helperRef.helperKey === 'listCapabilityProfiles') {
+    return {
+      toolName: descriptor.toolName,
+      outputMode: descriptor.outputMode,
+      result: {
+        truthFetchResult: await client.listCapabilityProfiles(),
       },
     };
   }
@@ -459,6 +750,120 @@ async function dispatchGovernanceTruthFetchTool(
   }
 
   const registrationId = requireAgentRegistrationId(input);
+
+  if (descriptor.helperRef.helperKey === 'getAgentReadiness') {
+    return {
+      toolName: descriptor.toolName,
+      outputMode: descriptor.outputMode,
+      result: {
+        truthFetchResult: await client.getAgentReadiness(registrationId),
+      },
+    };
+  }
+
+  if (descriptor.helperRef.helperKey === 'getAgentSummary') {
+    return {
+      toolName: descriptor.toolName,
+      outputMode: descriptor.outputMode,
+      result: {
+        truthFetchResult: await client.getAgentSummary(registrationId),
+      },
+    };
+  }
+
+  if (descriptor.helperRef.helperKey === 'getAgentRegistration') {
+    return {
+      toolName: descriptor.toolName,
+      outputMode: descriptor.outputMode,
+      result: {
+        truthFetchResult: await client.getAgentRegistration(registrationId),
+      },
+    };
+  }
+
+  if (descriptor.helperRef.helperKey === 'getAgentAuthorityProfile') {
+    return {
+      toolName: descriptor.toolName,
+      outputMode: descriptor.outputMode,
+      result: {
+        truthFetchResult: await client.getAgentAuthorityProfile(registrationId),
+      },
+    };
+  }
+
+  if (descriptor.helperRef.helperKey === 'getAgentAuthorityLadder') {
+    return {
+      toolName: descriptor.toolName,
+      outputMode: descriptor.outputMode,
+      result: {
+        truthFetchResult: await client.getAgentAuthorityLadder(registrationId),
+      },
+    };
+  }
+
+  if (descriptor.helperRef.helperKey === 'getAgentCapabilityProfile') {
+    return {
+      toolName: descriptor.toolName,
+      outputMode: descriptor.outputMode,
+      result: {
+        truthFetchResult: await client.getAgentCapabilityProfile(registrationId),
+      },
+    };
+  }
+
+  if (descriptor.helperRef.helperKey === 'listParticipationStates') {
+    return {
+      toolName: descriptor.toolName,
+      outputMode: descriptor.outputMode,
+      result: {
+        truthFetchResult: await client.listParticipationStates(registrationId),
+      },
+    };
+  }
+
+  if (descriptor.helperRef.helperKey === 'getParticipationState') {
+    return {
+      toolName: descriptor.toolName,
+      outputMode: descriptor.outputMode,
+      result: {
+        truthFetchResult: await client.getParticipationState(
+          registrationId,
+          requireStringInput(
+            input,
+            'participationStateId',
+            'participationStateId is required for participation state reads',
+          ),
+        ),
+      },
+    };
+  }
+
+  if (descriptor.helperRef.helperKey === 'listTaskDispatches') {
+    return {
+      toolName: descriptor.toolName,
+      outputMode: descriptor.outputMode,
+      result: {
+        truthFetchResult: await client.listTaskDispatches(registrationId),
+      },
+    };
+  }
+
+  if (descriptor.helperRef.helperKey === 'getTaskDispatch') {
+    return {
+      toolName: descriptor.toolName,
+      outputMode: descriptor.outputMode,
+      result: {
+        truthFetchResult: await client.getTaskDispatch(
+          registrationId,
+          requireStringInput(
+            input,
+            'taskDispatchId',
+            'taskDispatchId is required for task dispatch reads',
+          ),
+        ),
+      },
+    };
+  }
 
   if (descriptor.helperRef.helperKey === 'getAgentPresence') {
     return {

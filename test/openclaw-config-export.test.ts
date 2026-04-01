@@ -8,6 +8,7 @@ test('buildOpenClawConfig and exportOpenClawConfig produce an OpenClaw-consumpti
 
   assert.equal(typeof exports.buildOpenClawConfig, 'function');
   assert.equal(typeof exports.exportOpenClawConfig, 'function');
+  assert.equal(typeof exports.buildOpenClawCompanionBundle, 'function');
 
   const config = (exports.buildOpenClawConfig as () => unknown)();
   const exported = (exports.exportOpenClawConfig as (value: unknown) => unknown)(config);
@@ -44,4 +45,12 @@ test('buildOpenClawConfig and exportOpenClawConfig produce an OpenClaw-consumpti
       rationale: 'Confirm the required context family for each guided route before enabling local OpenClaw operator execution.',
     },
   });
+
+  const bundle = (exports.buildOpenClawCompanionBundle as () => {
+    files: Array<{ relativePath: string; content: string }>;
+  })();
+  const mcpConfigFile = bundle.files.find((file) => file.relativePath === '.mcp.json');
+
+  assert.ok(mcpConfigFile);
+  assert.deepEqual(JSON.parse(mcpConfigFile.content), exported);
 });

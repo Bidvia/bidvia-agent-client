@@ -34,7 +34,7 @@ test('buildRouteContextMatrix defines the guided route-context rows for public o
     operatorGuidance: 'On local docker host, authority and presence require a valid admin session plus operator context. Authority-ladder is an operator-governed write and not a workspace admin-session route.',
   });
 
-  assert.deepEqual(typedMatrix.rows.slice(0, 4), [
+  assert.deepEqual(typedMatrix.rows.slice(0, 6), [
     {
       journeyKey: 'public-first-onboarding',
       helperKey: 'createProvisionalAgent',
@@ -76,6 +76,19 @@ test('buildRouteContextMatrix defines the guided route-context rows for public o
     },
     {
       journeyKey: 'local-openclaw-operator',
+      helperKey: 'claimProvisionalAgent',
+      routePathTemplate: '/runtime/agents/provisional/claim',
+      routeFamily: 'agent-onboarding',
+      accessContextFamily: 'session',
+      requiredContext: ['tenantId', 'sessionId'],
+      operationKind: 'execute',
+      localCapabilityRiskTier: 'runtime-execution',
+      relevance: 'operator-secondary',
+      presentationTier: 'secondary',
+      recommendedOutputMode: 'execution-result',
+    },
+    {
+      journeyKey: 'local-openclaw-operator',
       helperKey: 'postHeartbeat',
       routePathTemplate: '/runtime/agents/:registrationId/heartbeat',
       routeFamily: 'agent-runtime',
@@ -83,6 +96,19 @@ test('buildRouteContextMatrix defines the guided route-context rows for public o
       requiredContext: ['tenantId', 'registrationId', 'principalId'],
       operationKind: 'execute',
       localCapabilityRiskTier: 'runtime-execution',
+      relevance: 'operator-secondary',
+      presentationTier: 'secondary',
+      recommendedOutputMode: 'execution-result',
+    },
+    {
+      journeyKey: 'local-openclaw-operator',
+      helperKey: 'createCommercialAction',
+      routePathTemplate: '/runtime/commercial-actions',
+      routeFamily: 'agent-runtime',
+      accessContextFamily: 'operator-company',
+      requiredContext: ['tenantId', 'principalId', 'companyId'],
+      operationKind: 'execute',
+      localCapabilityRiskTier: 'governed-commercial',
       relevance: 'operator-secondary',
       presentationTier: 'secondary',
       recommendedOutputMode: 'execution-result',

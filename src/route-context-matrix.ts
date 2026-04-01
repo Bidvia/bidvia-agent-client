@@ -91,7 +91,7 @@ const routeContextJourneyDefinitions: readonly BidviaRouteContextJourneyDefiniti
   },
   {
     journeyKey: 'local-openclaw-operator',
-    helperKeys: ['postHeartbeat'],
+    helperKeys: ['claimProvisionalAgent', 'postHeartbeat', 'createCommercialAction'],
     relevance: 'operator-secondary',
     presentationTier: 'secondary',
     firstSuccessNextStep: {

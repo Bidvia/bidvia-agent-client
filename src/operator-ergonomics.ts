@@ -74,6 +74,27 @@ function collectMissingContext(
   return requiredContext.filter((contextKey) => !context[contextKey]);
 }
 
+function toEnvKey(contextKey: BidviaScenarioContextKey): string {
+  switch (contextKey) {
+    case 'registrationId':
+      return 'BIDVIA_REGISTRATION_ID';
+    case 'principalId':
+      return 'BIDVIA_PRINCIPAL_ID';
+    case 'principalType':
+      return 'BIDVIA_PRINCIPAL_TYPE';
+    case 'authorizedRole':
+      return 'BIDVIA_AUTHORIZED_ROLE';
+    case 'tenantId':
+      return 'BIDVIA_TENANT_ID';
+    case 'sessionId':
+      return 'BIDVIA_SESSION_ID';
+    case 'adminSessionId':
+      return 'BIDVIA_ADMIN_SESSION_ID';
+    case 'companyId':
+      return 'BIDVIA_COMPANY_ID';
+  }
+}
+
 function buildHints(params: {
   surface: 'cli' | 'mcp';
   localCapabilityRiskTier: string;
@@ -81,27 +102,6 @@ function buildHints(params: {
   dryRun: boolean;
 }): string[] {
   const hints: string[] = [];
-
-  const toEnvKey = (contextKey: BidviaScenarioContextKey): string => {
-    switch (contextKey) {
-      case 'registrationId':
-        return 'BIDVIA_REGISTRATION_ID';
-      case 'principalId':
-        return 'BIDVIA_PRINCIPAL_ID';
-      case 'principalType':
-        return 'BIDVIA_PRINCIPAL_TYPE';
-      case 'authorizedRole':
-        return 'BIDVIA_AUTHORIZED_ROLE';
-      case 'tenantId':
-        return 'BIDVIA_TENANT_ID';
-      case 'sessionId':
-        return 'BIDVIA_SESSION_ID';
-      case 'adminSessionId':
-        return 'BIDVIA_ADMIN_SESSION_ID';
-      case 'companyId':
-        return 'BIDVIA_COMPANY_ID';
-    }
-  };
 
   if (params.surface === 'cli' && params.dryRun) {
     hints.push('Dry-run stays local and does not execute the remote registration-bound route.');
@@ -207,5 +207,6 @@ export function buildMcpMissingContextMessage(
   toolName: string,
   missingContext: readonly BidviaScenarioContextKey[],
 ): string {
-  return `MCP tool ${toolName} is missing required local execution context: ${missingContext.join(', ')}.`;
+  const envKeys = missingContext.map(toEnvKey);
+  return `MCP tool ${toolName} is missing required local execution context: ${missingContext.join(', ')}. Use bidvia route-context-matrix to confirm the next Bidvia context family, then set ${envKeys.join(' and ')} before retrying this local stdio MCP tool.`;
 }

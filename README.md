@@ -11,11 +11,11 @@ Today, this package ships a usable current mainline client surface for the froze
 This package currently gives external users two guided journeys:
 
 - one primary public CLI-first journey for readiness, route context, bounded first success, and local operator visibility
-- one secondary OpenClaw/operator journey for local stdio MCP wiring against the same remote HTTPS Bidvia API
+- one secondary OpenClaw/operator journey where local stdio MCP is the primary OpenClaw path and the companion bundle is additive packaging around that same local runtime
 
 The same package also ships an SDK for Bidvia agent access routes, onboarding flows, registration-bound operations, the frozen downstream truth-fetch reads now adopted in the client surface, bounded scenario planning, and verification-safe exports.
 
-The widened frozen read surface now visible in the SDK and CLI includes the canonical families behind `GET /runtime/agents/registrations`, `GET /runtime/agents/:registrationId`, `GET /runtime/authority-profiles`, `GET /runtime/capability-profiles`, `GET /runtime/agents/:registrationId/capability-profile`, plus the shipped participation-state and task-dispatch read/write wrappers where the client already exposes them. MCP stays intentionally narrower, mostly read-only, and limited to the approved local stdio subset.
+The widened frozen read surface now visible in the SDK and CLI includes the canonical families behind `GET /runtime/agents/registrations`, `GET /runtime/agents/:registrationId`, `GET /runtime/authority-profiles`, `GET /runtime/capability-profiles`, `GET /runtime/agents/:registrationId/capability-profile`, plus the shipped participation-state and task-dispatch read/write wrappers where the client already exposes them. The local stdio MCP surface is now wider too, covering the approved OpenClaw-facing read, review-safe, and explicit execution families that already ship in this repo. It still stays local-first and bounded to the approved stdio runtime.
 
 The current mainline remains explicitly bounded to the frozen Bidvia Commercial Universe V1 / Core V12 framing. This repo can improve client ergonomics, but it must not invent platform truth or widen governance authority on its own.
 
@@ -97,6 +97,7 @@ Current installed path:
 
 ```bash
 bidvia openclaw-mcp-config
+bidvia openclaw-bundle-export --output ./bidvia-openclaw-bundle
 bidvia route-context-matrix
 ```
 
@@ -104,10 +105,11 @@ Developer fallback path:
 
 ```bash
 node dist/cli.js openclaw-mcp-config
+node dist/cli.js openclaw-bundle-export --output ./bidvia-openclaw-bundle
 node dist/cli.js route-context-matrix
 ```
 
-Use `openclaw-mcp-config` to export the OpenClaw-compatible `command` / `args` / `env` fragment first. The installed execution story is `bidvia mcp-server`; the repo-local development fallback remains `node dist/mcp-server.js`. Then use `route-context-matrix` to confirm which context family the guided operator route needs before enabling execution.
+Use `openclaw-mcp-config` first to export the OpenClaw-compatible `command` / `args` / `env` fragment for the primary stdio MCP path. Use `openclaw-bundle-export --output ./bidvia-openclaw-bundle` when you want companion bundle/bootstrap packaging around that same local server written to disk. The installed execution story is still `bidvia mcp-server`, and the repo-local development fallback remains `node dist/mcp-server.js`. Then use `route-context-matrix` to confirm which context family the guided operator route needs before enabling execution.
 
 Continue with:
 
@@ -153,7 +155,7 @@ In practice, the SDK currently covers:
 - richer review-safe readback for already-shipped bounded orchestration slices
 - local capability and server-payload normalization helpers
 
-The truth-fetch expansion now ships across the SDK and CLI, with the local stdio MCP layer exposing the currently approved read-only subset as a thin wrapper over shipped SDK helpers. The rollout is phased on purpose: the SDK and CLI now cover the widened frozen downstream read surface, while MCP keeps its narrower governance-first and business-truth read slices on the same local seam. That MCP layer stays local stdio only and read-only in every phase.
+The truth-fetch expansion now ships across the SDK and CLI, with the local stdio MCP layer exposing the approved OpenClaw-facing subset as a thin wrapper over shipped SDK helpers. The rollout is phased on purpose: the SDK and CLI now cover the widened frozen downstream read surface, while MCP exposes the currently approved governance, business-truth, review-safe, and explicit execution slices on the same local seam. That MCP layer stays local stdio only in every phase, and it stays Core-truth-consuming rather than truth-owning.
 
 For the principal-governed read family, the honest default is `tenantId` plus `principalId`, with `adminSessionId` only as an optional companion on some routes. Local and sim probes without real governed credentials can prove route wiring, transport behavior, reachability, or auth-guard posture only. They do not prove full governed semantics.
 
@@ -213,10 +215,11 @@ Guided OpenClaw/operator handoff, developer fallback path:
 
 ```bash
 node dist/cli.js openclaw-mcp-config
+node dist/cli.js openclaw-bundle-export
 node dist/cli.js route-context-matrix
 ```
 
-That export now describes the stable installed MCP surface directly: `bidvia mcp-server` is the intended installed command, while `node dist/mcp-server.js` remains the repo-local fallback.
+`openclaw-mcp-config` is the primary OpenClaw handoff because it points directly at `bidvia mcp-server`. `openclaw-bundle-export` is additive packaging for operators and agents that want bundle/bootstrap guidance around that same local runtime. `node dist/mcp-server.js` remains the repo-local fallback.
 
 Start with grouped help when you want the current local-only command surface:
 
@@ -299,12 +302,13 @@ This repository already supports a local OpenClaw Gateway and node-host integrat
 - local stdio MCP server
 - remote HTTPS Bidvia API
 
-The shipped local MCP seam exposes read-only truth-fetch tools, review-safe tooling, and explicit execution tooling, but only through a local stdio server. The truth-fetch rollout is phased: governance-first MCP reads ship first, business-truth reads ship second, and both stay thin wrappers over the shipped SDK helpers. This does not imply hosted MCP service, hosted Bidvia runtime behavior, remote registry participation, login, OAuth, auth implementation, integrated Core capability truth refresh, full governed notification semantics, broader multi-agent coordination authority, or live negotiation.
+The shipped local MCP seam exposes widened truth-fetch tools, review-safe tooling, and explicit execution tooling, but only through a local stdio server. The truth-fetch rollout is phased: governance-first MCP reads ship first, business-truth reads ship second, and both stay thin wrappers over the shipped SDK helpers. The next OpenClaw-compatible release keeps stdio MCP first, companion bundle export second, and leaves HTTP MCP, hosted runtime behavior, remote registry participation, native-plugin-first runtime, login, OAuth, auth implementation, integrated Core capability truth refresh, full governed notification semantics, broader multi-agent coordination authority, and live negotiation out of scope.
 
 Start here if that is your path:
 
 ```bash
 bidvia openclaw-mcp-config
+bidvia openclaw-bundle-export
 bidvia route-context-matrix
 ```
 
@@ -312,6 +316,7 @@ Developer fallback path:
 
 ```bash
 node dist/cli.js openclaw-mcp-config
+node dist/cli.js openclaw-bundle-export
 node dist/cli.js route-context-matrix
 ```
 
@@ -320,7 +325,7 @@ Then continue with:
 - `docs/OPENCLAW_GATEWAY_ONBOARDING.md` for install and configuration order
 - `docs/OPENCLAW_GATEWAY_SMOKE.md` for the detailed smoke sequence
 
-For Gateway users on the public path, the safest order is still: install locally, export the operator config from `openclaw-mcp-config`, confirm route context with `route-context-matrix`, run the read-only smoke commands against the default public API, then wire the local stdio MCP server only if the Gateway side is ready.
+For Gateway users on the public path, the safest order is still: install locally, export the operator config from `openclaw-mcp-config`, optionally export the companion bundle from `openclaw-bundle-export`, confirm route context with `route-context-matrix`, run the smoke commands against the default public API, then wire the local stdio MCP server only if the Gateway side is ready.
 
 If your Gateway deployment needs an operator-selected endpoint instead, set `BIDVIA_BASE_URL` explicitly before the smoke flow. Keep the boundary the same: local stdio MCP on your side, remote HTTPS Bidvia API on the other side.
 
@@ -334,7 +339,7 @@ These are implemented in code today and available to users now. They include:
 
 - the typed SDK client and helper builders
 - the typed SDK truth-fetch read wrappers for the approved account, richer governance deep-read, semantic, pricing, and asset groups, including agent registrations, authority profiles, capability profiles, the singular per-registration capability profile, and the shipped participation/task visibility family
-- the local stdio MCP truth-fetch read tools, shipped in two phases: governance-first first, then business-truth collection and detail reads second
+- the local stdio MCP tool surface for the approved governance, business-truth, review-safe, and explicit execution families, shipped in phases on the same local server
 - bounded scenario planning and verification bundle support
 - review-packet preview and export helpers, now with richer review-safe readback around the already-shipped bounded slices
 - explicit local execution commands with `--dry-run`
@@ -343,13 +348,13 @@ These are implemented in code today and available to users now. They include:
 - server-capability payload normalization
 - environment-mode visibility
 - the local CLI command surface
-- the local stdio MCP descriptor and server seam, including review-safe and explicit execution tools
+- the local stdio MCP descriptor and server seam, including review-safe and explicit execution tools plus the companion OpenClaw bundle export
 - OpenClaw Gateway operator documentation for the local path
 - transport/auth-provider hardening for local execution paths
 
-The shipped MCP truth-fetch slice stays narrow: local stdio only, read-only only, and sourced from the SDK helpers already in this repo. It is not a hosted runtime, not a new auth layer, and not a new source of platform truth.
+The shipped MCP slice stays local stdio only and sourced from the SDK helpers already in this repo. It is not a hosted runtime, not HTTP MCP, not a native-plugin-first package, not a new auth layer, and not a new source of platform truth.
 
-In plain terms, phase order matters here. The widened governance deep-read family ships through the SDK and CLI, while MCP keeps the currently approved governance-first tools for `account-*`, `agent-presence`, and `agent-authority`. The business-truth MCP slice covers canonical semantics, pricing, document, media, evidence, and attachment reads. If canonical-semantic taxonomy or lineage aliases are mentioned at all, treat them as transitional or non-final only. None of that widens the MCP layer beyond a local stdio wrapper over already-shipped SDK truth-fetch helpers.
+In plain terms, phase order matters here. The widened governance deep-read family ships through the SDK and CLI, while MCP now covers the approved governance, business-truth, review-safe, and explicit execution families that already ship in this repo. If canonical-semantic taxonomy or lineage aliases are mentioned at all, treat them as transitional or non-final only. None of that widens the MCP layer beyond a local stdio wrapper over already-shipped SDK helpers, and none of it turns the client into a hosted or control-plane-owning product.
 
 ### 2. Implemented but dependency-gated seams
 

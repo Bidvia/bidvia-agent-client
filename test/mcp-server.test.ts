@@ -5,6 +5,73 @@ import { PassThrough } from 'node:stream';
 import { BidviaClient } from '../src/client.ts';
 import { runLocalMcpServer } from '../src/mcp-server.ts';
 
+const expectedMcpServerToolNames = [
+  'industry-universe-plan-preview',
+  'industry-universe-review-packet-preview',
+  'industry-universe-review-packet-export',
+  'connection-approval-plan-preview',
+  'connection-approval-review-packet-preview',
+  'connection-approval-review-packet-export',
+  'opportunity-package-handoff-plan-preview',
+  'opportunity-package-handoff-review-packet-preview',
+  'opportunity-package-handoff-review-packet-export',
+  'account-agents-read',
+  'account-agent-bindings-read',
+  'account-records-read',
+  'agent-presence-read',
+  'agent-authority-read',
+  'canonical-semantic-concepts-read',
+  'canonical-semantic-concept-read',
+  'pricing-bases-read',
+  'pricing-basis-read',
+  'document-artifacts-read',
+  'document-artifact-read',
+  'media-assets-read',
+  'media-asset-read',
+  'evidence-assets-read',
+  'evidence-asset-read',
+  'attachment-bindings-read',
+  'attachment-binding-read',
+  'heartbeat-execution',
+  'sync-upload-execution',
+  'evidence-execution',
+  'proposal-execution',
+  'query-provisional-agent-read',
+  'agent-readiness-read',
+  'agent-summary-read',
+  'agent-registrations-read',
+  'agent-registration-read',
+  'authority-profiles-read',
+  'agent-authority-profile-read',
+  'agent-authority-ladder-read',
+  'capability-profiles-read',
+  'agent-capability-profile-read',
+  'participation-states-read',
+  'participation-state-read',
+  'task-dispatches-read',
+  'task-dispatch-read',
+  'create-provisional-agent-execution',
+  'claim-provisional-agent-execution',
+  'download-sync-execution',
+  'create-participation-state-execution',
+  'create-lease-execution',
+  'create-task-dispatch-execution',
+  'assign-task-dispatch-execution',
+  'suspend-task-dispatch-execution',
+  'resume-task-dispatch-execution',
+  'complete-task-dispatch-execution',
+  'fail-task-dispatch-execution',
+  'create-claim-execution',
+  'accept-claim-execution',
+  'reject-claim-execution',
+  'agent-authority-profile-write-execution',
+  'agent-authority-ladder-write-execution',
+  'agent-capability-profile-write-execution',
+  'create-commercial-action-execution',
+  'request-commercial-action-approval-execution',
+  'execute-commercial-action-execution',
+] as const;
+
 const runLocalMcpServerWithDependencies = runLocalMcpServer as unknown as (
   input: NodeJS.ReadableStream,
   output: NodeJS.WritableStream,
@@ -191,38 +258,7 @@ test('local MCP stdio server exposes bounded tool metadata and handles review-sa
       reviewSafeLocalOnly: true,
       executionRequiresLocalExecutionClient: true,
     });
-    assert.deepEqual(listResponse.result.tools.map((tool) => tool.name), [
-      'industry-universe-plan-preview',
-      'industry-universe-review-packet-preview',
-      'industry-universe-review-packet-export',
-      'connection-approval-plan-preview',
-      'connection-approval-review-packet-preview',
-      'connection-approval-review-packet-export',
-      'opportunity-package-handoff-plan-preview',
-      'opportunity-package-handoff-review-packet-preview',
-      'opportunity-package-handoff-review-packet-export',
-      'account-agents-read',
-      'account-agent-bindings-read',
-      'account-records-read',
-      'agent-presence-read',
-      'agent-authority-read',
-      'canonical-semantic-concepts-read',
-      'canonical-semantic-concept-read',
-      'pricing-bases-read',
-      'pricing-basis-read',
-      'document-artifacts-read',
-      'document-artifact-read',
-      'media-assets-read',
-      'media-asset-read',
-      'evidence-assets-read',
-      'evidence-asset-read',
-      'attachment-bindings-read',
-      'attachment-binding-read',
-      'heartbeat-execution',
-      'sync-upload-execution',
-      'evidence-execution',
-      'proposal-execution',
-    ]);
+    assert.deepEqual(listResponse.result.tools.map((tool) => tool.name), expectedMcpServerToolNames);
     assert.deepEqual(
       listResponse.result.tools.find((tool) => tool.name === 'heartbeat-execution'),
       {
@@ -738,5 +774,74 @@ test('local MCP stdio server default execution client supports business truth-fe
     } else {
       process.env.BIDVIA_TENANT_ID = originalEnv.BIDVIA_TENANT_ID;
     }
+  }
+});
+
+test('local MCP stdio server dispatches widened Task 2 execution helpers and returns actionable missing-context remediation', async () => {
+  const input = new PassThrough();
+  const output = new PassThrough();
+
+  runLocalMcpServerWithDependencies(input, output, {
+    createExecutionClient: () => ({
+      options: {
+        context: {
+          tenantId: 'tenant-a',
+        },
+      },
+      async createProvisionalAgent(receivedInput: { displayName: string }) {
+        return {
+          ok: true,
+          route: 'create-provisional-agent',
+          displayName: receivedInput.displayName,
+        };
+      },
+    }) as never,
+  });
+
+  try {
+    input.write(encodeFrame({
+      jsonrpc: '2.0',
+      id: 501,
+      method: 'tools/call',
+      params: {
+        name: 'create-provisional-agent-execution',
+        arguments: {
+          displayName: 'Operator Seed Agent',
+        },
+      },
+    }));
+    const successResponse = await readFrame(output) as { result: { content: Array<{ text: string }> } };
+    const successPayload = JSON.parse(successResponse.result.content[0]!.text);
+    assert.deepEqual(successPayload.result, {
+      executionResult: {
+        ok: true,
+        route: 'create-provisional-agent',
+        displayName: 'Operator Seed Agent',
+      },
+    });
+
+    input.write(encodeFrame({
+      jsonrpc: '2.0',
+      id: 502,
+      method: 'tools/call',
+      params: {
+        name: 'create-commercial-action-execution',
+        arguments: {
+          commercialActionId: 'commercial-action-1',
+        },
+      },
+    }));
+    const remediationResponse = await readFrame(output);
+    assert.deepEqual(remediationResponse, {
+      jsonrpc: '2.0',
+      id: 502,
+      error: {
+        code: -32000,
+        message: 'MCP tool create-commercial-action-execution is missing required local execution context: principalId, companyId. Use bidvia route-context-matrix to confirm the next Bidvia context family, then set BIDVIA_PRINCIPAL_ID and BIDVIA_COMPANY_ID before retrying this local stdio MCP tool.',
+      },
+    });
+  } finally {
+    input.end();
+    output.end();
   }
 });

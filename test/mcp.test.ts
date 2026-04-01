@@ -26,6 +26,75 @@ type BidviaMcpDescriptorWithContext = BidviaMcpToolDescriptor & {
   requiredContext: string[];
 };
 
+const expectedBidviaMcpToolNames = [
+  'industry-universe-plan-preview',
+  'industry-universe-review-packet-preview',
+  'industry-universe-review-packet-export',
+  'connection-approval-plan-preview',
+  'connection-approval-review-packet-preview',
+  'connection-approval-review-packet-export',
+  'opportunity-package-handoff-plan-preview',
+  'opportunity-package-handoff-review-packet-preview',
+  'opportunity-package-handoff-review-packet-export',
+  'account-agents-read',
+  'account-agent-bindings-read',
+  'account-records-read',
+  'agent-presence-read',
+  'agent-authority-read',
+  'canonical-semantic-concepts-read',
+  'canonical-semantic-concept-read',
+  'pricing-bases-read',
+  'pricing-basis-read',
+  'document-artifacts-read',
+  'document-artifact-read',
+  'media-assets-read',
+  'media-asset-read',
+  'evidence-assets-read',
+  'evidence-asset-read',
+  'attachment-bindings-read',
+  'attachment-binding-read',
+  'heartbeat-execution',
+  'sync-upload-execution',
+  'evidence-execution',
+  'proposal-execution',
+  'query-provisional-agent-read',
+  'agent-readiness-read',
+  'agent-summary-read',
+  'agent-registrations-read',
+  'agent-registration-read',
+  'authority-profiles-read',
+  'agent-authority-profile-read',
+  'agent-authority-ladder-read',
+  'capability-profiles-read',
+  'agent-capability-profile-read',
+  'participation-states-read',
+  'participation-state-read',
+  'task-dispatches-read',
+  'task-dispatch-read',
+  'create-provisional-agent-execution',
+  'claim-provisional-agent-execution',
+  'download-sync-execution',
+  'create-participation-state-execution',
+  'create-lease-execution',
+  'create-task-dispatch-execution',
+  'assign-task-dispatch-execution',
+  'suspend-task-dispatch-execution',
+  'resume-task-dispatch-execution',
+  'complete-task-dispatch-execution',
+  'fail-task-dispatch-execution',
+  'create-claim-execution',
+  'accept-claim-execution',
+  'reject-claim-execution',
+  'agent-authority-profile-write-execution',
+  'agent-authority-ladder-write-execution',
+  'agent-capability-profile-write-execution',
+  'create-commercial-action-execution',
+  'request-commercial-action-approval-execution',
+  'execute-commercial-action-execution',
+] as const;
+
+const expectedBidviaReadToolNames = expectedBidviaMcpToolNames.filter((toolName) => toolName.endsWith('-read'));
+
 const dispatchMcpToolCallWithExecution = dispatchMcpToolCall as unknown as (
   request: BidviaMcpToolCallRequest,
   dependencies?: {
@@ -123,45 +192,11 @@ test('MCP tool catalog gives every shipped tool complete local tier and risk met
 });
 
 test('MCP tool catalog covers the current bounded preview, truth-fetch, export, and local execution slices only', () => {
-  assert.deepEqual(
-    bidviaMcpTools.map((tool) => tool.toolName),
-    [
-      'industry-universe-plan-preview',
-      'industry-universe-review-packet-preview',
-      'industry-universe-review-packet-export',
-      'connection-approval-plan-preview',
-      'connection-approval-review-packet-preview',
-      'connection-approval-review-packet-export',
-      'opportunity-package-handoff-plan-preview',
-      'opportunity-package-handoff-review-packet-preview',
-      'opportunity-package-handoff-review-packet-export',
-      'account-agents-read',
-      'account-agent-bindings-read',
-      'account-records-read',
-      'agent-presence-read',
-      'agent-authority-read',
-      'canonical-semantic-concepts-read',
-      'canonical-semantic-concept-read',
-      'pricing-bases-read',
-      'pricing-basis-read',
-      'document-artifacts-read',
-      'document-artifact-read',
-      'media-assets-read',
-      'media-asset-read',
-      'evidence-assets-read',
-      'evidence-asset-read',
-      'attachment-bindings-read',
-      'attachment-binding-read',
-      'heartbeat-execution',
-      'sync-upload-execution',
-      'evidence-execution',
-      'proposal-execution',
-    ],
-  );
+  assert.deepEqual(bidviaMcpTools.map((tool) => tool.toolName), expectedBidviaMcpToolNames);
 
-  assert.equal(bidviaMcpTools.some((tool) => tool.toolName === 'agent-readiness-read'), false);
-  assert.equal(bidviaMcpTools.some((tool) => tool.toolName === 'agent-capability-profile-read'), false);
-  assert.equal(bidviaMcpTools.some((tool) => tool.toolName === 'create-task-dispatch-execution'), false);
+  assert.equal(bidviaMcpTools.some((tool) => tool.toolName === 'agent-readiness-read'), true);
+  assert.equal(bidviaMcpTools.some((tool) => tool.toolName === 'agent-capability-profile-read'), true);
+  assert.equal(bidviaMcpTools.some((tool) => tool.toolName === 'create-task-dispatch-execution'), true);
 });
 
 test('MCP tool catalog lookup returns descriptive bounded slice metadata', () => {
@@ -234,25 +269,7 @@ test('governance truth-fetch MCP catalog exposes the governance-first read-only 
     .filter((tool) => tool.toolName.endsWith('-read'))
     .map((tool) => tool.toolName);
 
-  assert.deepEqual(governanceToolNames, [
-    'account-agents-read',
-    'account-agent-bindings-read',
-    'account-records-read',
-    'agent-presence-read',
-    'agent-authority-read',
-    'canonical-semantic-concepts-read',
-    'canonical-semantic-concept-read',
-    'pricing-bases-read',
-    'pricing-basis-read',
-    'document-artifacts-read',
-    'document-artifact-read',
-    'media-assets-read',
-    'media-asset-read',
-    'evidence-assets-read',
-    'evidence-asset-read',
-    'attachment-bindings-read',
-    'attachment-binding-read',
-  ]);
+  assert.deepEqual(governanceToolNames, expectedBidviaReadToolNames);
 });
 
 test('governance truth-fetch MCP descriptor metadata matches helper mapping and explicit context', () => {
@@ -686,11 +703,225 @@ test('dispatchMcpToolCall routes business truth-fetch collection tools through t
   ]);
 });
 
-test('dispatchMcpToolCall keeps bounded MCP governance reads on the existing approved subset only', () => {
-  assert.equal(getMcpToolDescriptor('agent-readiness-read'), undefined);
-  assert.equal(getMcpToolDescriptor('agent-summary-read'), undefined);
-  assert.equal(getMcpToolDescriptor('agent-capability-profile-read'), undefined);
-  assert.equal(getMcpToolDescriptor('task-dispatch-read'), undefined);
+test('dispatchMcpToolCall exposes widened Task 1 governance read descriptors in the MCP catalog', () => {
+  assert.equal(getMcpToolDescriptor('agent-readiness-read')?.toolName, 'agent-readiness-read');
+  assert.equal(getMcpToolDescriptor('agent-summary-read')?.toolName, 'agent-summary-read');
+  assert.equal(getMcpToolDescriptor('agent-capability-profile-read')?.toolName, 'agent-capability-profile-read');
+  assert.equal(getMcpToolDescriptor('task-dispatch-read')?.toolName, 'task-dispatch-read');
+});
+
+test('dispatchMcpToolCall routes widened Task 2 collection and onboarding read tools through shipped SDK helpers', async () => {
+  const calls: Array<{ helper: string; input?: unknown }> = [];
+  const client = {
+    async queryProvisionalAgent(input: string) {
+      calls.push({ helper: 'queryProvisionalAgent', input });
+      return {
+        provisionalAgentRef: input,
+      };
+    },
+    async listAgentRegistrations() {
+      calls.push({ helper: 'listAgentRegistrations' });
+      return {
+        items: [{ registrationId: 'areg-1' }],
+      };
+    },
+    async listAuthorityProfiles() {
+      calls.push({ helper: 'listAuthorityProfiles' });
+      return {
+        items: [{ authorityProfileId: 'authority-profile-1' }],
+      };
+    },
+    async listCapabilityProfiles() {
+      calls.push({ helper: 'listCapabilityProfiles' });
+      return {
+        items: [{ capabilityProfileId: 'capability-profile-1' }],
+      };
+    },
+  };
+
+  const results = await Promise.all([
+    dispatchMcpToolCallWithExecution(
+      {
+        toolName: 'query-provisional-agent-read',
+        arguments: {
+          provisionalAgentRef: 'prov-42',
+        },
+      },
+      {
+        createExecutionClient: () => client as never,
+      },
+    ),
+    dispatchMcpToolCallWithExecution(
+      {
+        toolName: 'agent-registrations-read',
+        arguments: {},
+      },
+      {
+        createExecutionClient: () => client as never,
+      },
+    ),
+    dispatchMcpToolCallWithExecution(
+      {
+        toolName: 'authority-profiles-read',
+        arguments: {},
+      },
+      {
+        createExecutionClient: () => client as never,
+      },
+    ),
+    dispatchMcpToolCallWithExecution(
+      {
+        toolName: 'capability-profiles-read',
+        arguments: {},
+      },
+      {
+        createExecutionClient: () => client as never,
+      },
+    ),
+  ]);
+
+  assert.deepEqual(calls, [
+    {
+      helper: 'queryProvisionalAgent',
+      input: 'prov-42',
+    },
+    { helper: 'listAgentRegistrations' },
+    { helper: 'listAuthorityProfiles' },
+    { helper: 'listCapabilityProfiles' },
+  ]);
+  assert.deepEqual(results.map((result) => result.result), [
+    {
+      truthFetchResult: {
+        provisionalAgentRef: 'prov-42',
+      },
+    },
+    {
+      truthFetchResult: {
+        items: [{ registrationId: 'areg-1' }],
+      },
+    },
+    {
+      truthFetchResult: {
+        items: [{ authorityProfileId: 'authority-profile-1' }],
+      },
+    },
+    {
+      truthFetchResult: {
+        items: [{ capabilityProfileId: 'capability-profile-1' }],
+      },
+    },
+  ]);
+});
+
+test('dispatchMcpToolCall routes widened Task 2 registration-bound read tools through shipped SDK helpers', async () => {
+  const calls: Array<{ helper: string; registrationId: string; id?: string }> = [];
+  const client = {
+    async getAgentReadiness(registrationId: string) {
+      calls.push({ helper: 'getAgentReadiness', registrationId });
+      return {
+        registrationId,
+        readiness: 'ready',
+      };
+    },
+    async getAgentSummary(registrationId: string) {
+      calls.push({ helper: 'getAgentSummary', registrationId });
+      return {
+        registrationId,
+        summary: 'ok',
+      };
+    },
+    async getAgentRegistration(registrationId: string) {
+      calls.push({ helper: 'getAgentRegistration', registrationId });
+      return {
+        registrationId,
+      };
+    },
+    async getAgentAuthorityProfile(registrationId: string) {
+      calls.push({ helper: 'getAgentAuthorityProfile', registrationId });
+      return {
+        registrationId,
+        authorityProfileId: 'authority-profile-1',
+      };
+    },
+    async getAgentAuthorityLadder(registrationId: string) {
+      calls.push({ helper: 'getAgentAuthorityLadder', registrationId });
+      return {
+        registrationId,
+        ladder: 'operator',
+      };
+    },
+    async getAgentCapabilityProfile(registrationId: string) {
+      calls.push({ helper: 'getAgentCapabilityProfile', registrationId });
+      return {
+        registrationId,
+        capabilityProfileId: 'capability-profile-1',
+      };
+    },
+    async listParticipationStates(registrationId: string) {
+      calls.push({ helper: 'listParticipationStates', registrationId });
+      return {
+        items: [{ participationStateId: 'ps-1' }],
+      };
+    },
+    async getParticipationState(registrationId: string, participationStateId: string) {
+      calls.push({ helper: 'getParticipationState', registrationId, id: participationStateId });
+      return {
+        registrationId,
+        participationStateId,
+      };
+    },
+    async listTaskDispatches(registrationId: string) {
+      calls.push({ helper: 'listTaskDispatches', registrationId });
+      return {
+        items: [{ taskDispatchId: 'td-1' }],
+      };
+    },
+    async getTaskDispatch(registrationId: string, taskDispatchId: string) {
+      calls.push({ helper: 'getTaskDispatch', registrationId, id: taskDispatchId });
+      return {
+        registrationId,
+        taskDispatchId,
+      };
+    },
+  };
+
+  const results = await Promise.all([
+    dispatchMcpToolCallWithExecution({ toolName: 'agent-readiness-read', arguments: { registrationId: 'areg-10' } }, { createExecutionClient: () => client as never }),
+    dispatchMcpToolCallWithExecution({ toolName: 'agent-summary-read', arguments: { registrationId: 'areg-11' } }, { createExecutionClient: () => client as never }),
+    dispatchMcpToolCallWithExecution({ toolName: 'agent-registration-read', arguments: { registrationId: 'areg-12' } }, { createExecutionClient: () => client as never }),
+    dispatchMcpToolCallWithExecution({ toolName: 'agent-authority-profile-read', arguments: { registrationId: 'areg-13' } }, { createExecutionClient: () => client as never }),
+    dispatchMcpToolCallWithExecution({ toolName: 'agent-authority-ladder-read', arguments: { registrationId: 'areg-14' } }, { createExecutionClient: () => client as never }),
+    dispatchMcpToolCallWithExecution({ toolName: 'agent-capability-profile-read', arguments: { registrationId: 'areg-15' } }, { createExecutionClient: () => client as never }),
+    dispatchMcpToolCallWithExecution({ toolName: 'participation-states-read', arguments: { registrationId: 'areg-16' } }, { createExecutionClient: () => client as never }),
+    dispatchMcpToolCallWithExecution({ toolName: 'participation-state-read', arguments: { registrationId: 'areg-17', participationStateId: 'ps-42' } }, { createExecutionClient: () => client as never }),
+    dispatchMcpToolCallWithExecution({ toolName: 'task-dispatches-read', arguments: { registrationId: 'areg-18' } }, { createExecutionClient: () => client as never }),
+    dispatchMcpToolCallWithExecution({ toolName: 'task-dispatch-read', arguments: { registrationId: 'areg-19', taskDispatchId: 'td-42' } }, { createExecutionClient: () => client as never }),
+  ]);
+
+  assert.deepEqual(calls, [
+    { helper: 'getAgentReadiness', registrationId: 'areg-10' },
+    { helper: 'getAgentSummary', registrationId: 'areg-11' },
+    { helper: 'getAgentRegistration', registrationId: 'areg-12' },
+    { helper: 'getAgentAuthorityProfile', registrationId: 'areg-13' },
+    { helper: 'getAgentAuthorityLadder', registrationId: 'areg-14' },
+    { helper: 'getAgentCapabilityProfile', registrationId: 'areg-15' },
+    { helper: 'listParticipationStates', registrationId: 'areg-16' },
+    { helper: 'getParticipationState', registrationId: 'areg-17', id: 'ps-42' },
+    { helper: 'listTaskDispatches', registrationId: 'areg-18' },
+    { helper: 'getTaskDispatch', registrationId: 'areg-19', id: 'td-42' },
+  ]);
+  assert.deepEqual(results.map((result) => result.result), [
+    { truthFetchResult: { registrationId: 'areg-10', readiness: 'ready' } },
+    { truthFetchResult: { registrationId: 'areg-11', summary: 'ok' } },
+    { truthFetchResult: { registrationId: 'areg-12' } },
+    { truthFetchResult: { registrationId: 'areg-13', authorityProfileId: 'authority-profile-1' } },
+    { truthFetchResult: { registrationId: 'areg-14', ladder: 'operator' } },
+    { truthFetchResult: { registrationId: 'areg-15', capabilityProfileId: 'capability-profile-1' } },
+    { truthFetchResult: { items: [{ participationStateId: 'ps-1' }] } },
+    { truthFetchResult: { registrationId: 'areg-17', participationStateId: 'ps-42' } },
+    { truthFetchResult: { items: [{ taskDispatchId: 'td-1' }] } },
+    { truthFetchResult: { registrationId: 'areg-19', taskDispatchId: 'td-42' } },
+  ]);
 });
 
 test('dispatchMcpToolCall reports principal-governed registration input requirements for agent reads', async () => {
@@ -994,6 +1225,123 @@ test('dispatchMcpToolCall routes local execution tools through the explicit runt
       expiresAt: '2026-03-29T10:05:00Z',
     },
   });
+});
+
+test('dispatchMcpToolCall routes widened Task 2 execution helpers through the shipped local client surface', async () => {
+  const calls: Array<{ helper: string; input?: unknown }> = [];
+
+  const results = await Promise.all([
+    dispatchMcpToolCallWithExecution(
+      {
+        toolName: 'create-provisional-agent-execution',
+        arguments: {
+          displayName: 'Operator Seed Agent',
+        },
+      },
+      {
+        createExecutionClient: () => ({
+          options: {
+            context: {
+              tenantId: 'tenant-a',
+            },
+          },
+          async createProvisionalAgent(input: unknown) {
+            calls.push({ helper: 'createProvisionalAgent', input });
+            return {
+              provisionalAgentRef: 'prov-1',
+            };
+          },
+          async createCommercialAction(input: unknown) {
+            calls.push({ helper: 'createCommercialAction', input });
+            return {
+              commercialActionId: 'commercial-action-1',
+            };
+          },
+        }) as never,
+      },
+    ),
+    dispatchMcpToolCallWithExecution(
+      {
+        toolName: 'create-commercial-action-execution',
+        arguments: {
+          commercialActionId: 'commercial-action-1',
+        },
+      },
+      {
+        createExecutionClient: () => ({
+          options: {
+            context: {
+              tenantId: 'tenant-a',
+              principalId: 'principal-a',
+              companyId: 'company-a',
+            },
+          },
+          async createProvisionalAgent(input: unknown) {
+            calls.push({ helper: 'createProvisionalAgent', input });
+            return {
+              provisionalAgentRef: 'prov-1',
+            };
+          },
+          async createCommercialAction(input: unknown) {
+            calls.push({ helper: 'createCommercialAction', input });
+            return {
+              commercialActionId: 'commercial-action-1',
+            };
+          },
+        }) as never,
+      },
+    ),
+  ]);
+
+  assert.deepEqual(calls, [
+    {
+      helper: 'createProvisionalAgent',
+      input: {
+        displayName: 'Operator Seed Agent',
+      },
+    },
+    {
+      helper: 'createCommercialAction',
+      input: {
+        commercialActionId: 'commercial-action-1',
+      },
+    },
+  ]);
+  assert.deepEqual(results.map((result) => result.result), [
+    {
+      executionResult: {
+        provisionalAgentRef: 'prov-1',
+      },
+    },
+    {
+      executionResult: {
+        commercialActionId: 'commercial-action-1',
+      },
+    },
+  ]);
+});
+
+test('dispatchMcpToolCall gives widened MCP execution tools precise missing-context remediation', async () => {
+  await assert.rejects(
+    () => dispatchMcpToolCallWithExecution(
+      {
+        toolName: 'create-commercial-action-execution',
+        arguments: {
+          commercialActionId: 'commercial-action-1',
+        },
+      },
+      {
+        createExecutionClient: () => ({
+          options: {
+            context: {
+              tenantId: 'tenant-a',
+            },
+          },
+        }) as never,
+      },
+    ),
+    /MCP tool create-commercial-action-execution is missing required local execution context: principalId, companyId\. Use bidvia route-context-matrix to confirm the next Bidvia context family, then set BIDVIA_PRINCIPAL_ID and BIDVIA_COMPANY_ID before retrying this local stdio MCP tool\./,
+  );
 });
 
 test('dispatchMcpToolCall routes governance truth-fetch account tools through session-bound SDK reads', async () => {

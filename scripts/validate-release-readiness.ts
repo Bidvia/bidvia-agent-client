@@ -63,7 +63,7 @@ function main(): void {
   });
   assert.deepEqual(packageJson.repository, {
     type: 'git',
-    url: 'https://github.com/Bidvia/bidvia-agent-client.git',
+    url: 'git+https://github.com/Bidvia/bidvia-agent-client.git',
   });
   assert.equal(packageJson.homepage, 'https://github.com/Bidvia/bidvia-agent-client');
   assert.deepEqual(packageJson.bugs, {

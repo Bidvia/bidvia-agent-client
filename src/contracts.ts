@@ -211,6 +211,10 @@ export interface BidviaAgentAuthorityProfileWriteInput {
   status: string;
 }
 
+export interface BidviaAgentAuthorityProfileExecutionInput
+  extends BidviaAgentRegistrationIdentifierInput,
+    BidviaAgentAuthorityProfileWriteInput {}
+
 export interface BidviaAgentAuthorityLadderWriteInput {
   authorityRung: string;
   grantedActionScopes: string[];
@@ -218,6 +222,10 @@ export interface BidviaAgentAuthorityLadderWriteInput {
   grantedAt: string;
   rationale: string;
 }
+
+export interface BidviaAgentAuthorityLadderExecutionInput
+  extends BidviaAgentRegistrationIdentifierInput,
+    BidviaAgentAuthorityLadderWriteInput {}
 
 export interface BidviaAgentCapabilityProfileWriteInput {
   domainStrengths: string[];
@@ -231,6 +239,10 @@ export interface BidviaAgentCapabilityProfileWriteInput {
   routingPriority: number;
 }
 
+export interface BidviaAgentCapabilityProfileExecutionInput
+  extends BidviaAgentRegistrationIdentifierInput,
+    BidviaAgentCapabilityProfileWriteInput {}
+
 export interface BidviaParticipationStateWriteInput {
   state: string;
   reason: string;
@@ -243,11 +255,19 @@ export interface BidviaParticipationStateWriteInput {
   coordinationOwnerRef?: string;
 }
 
+export interface BidviaParticipationStateExecutionInput
+  extends BidviaAgentRegistrationIdentifierInput,
+    BidviaParticipationStateWriteInput {}
+
 export interface BidviaLeaseWriteInput {
   leaseScope: string;
   now: string;
   expiresAt: string;
 }
+
+export interface BidviaLeaseExecutionInput
+  extends BidviaAgentRegistrationIdentifierInput,
+    BidviaLeaseWriteInput {}
 
 export interface BidviaTaskDispatchWriteInput {
   taskKind: string;
@@ -256,21 +276,41 @@ export interface BidviaTaskDispatchWriteInput {
   reason: string;
 }
 
+export interface BidviaTaskDispatchExecutionInput
+  extends BidviaAgentRegistrationIdentifierInput,
+    BidviaTaskDispatchWriteInput {}
+
 export interface BidviaTaskDispatchAssignInput {
   assignedToRegistrationId: string;
   now: string;
   reason: string;
 }
 
+export interface BidviaTaskDispatchIdentifierInput extends BidviaAgentRegistrationIdentifierInput {
+  taskDispatchId: string;
+}
+
+export interface BidviaTaskDispatchAssignExecutionInput
+  extends BidviaTaskDispatchIdentifierInput,
+    BidviaTaskDispatchAssignInput {}
+
 export interface BidviaTaskDispatchSuspendInput {
   now: string;
   reason: string;
 }
 
+export interface BidviaTaskDispatchSuspendExecutionInput
+  extends BidviaTaskDispatchIdentifierInput,
+    BidviaTaskDispatchSuspendInput {}
+
 export interface BidviaTaskDispatchResumeInput {
   now: string;
   reason: string;
 }
+
+export interface BidviaTaskDispatchResumeExecutionInput
+  extends BidviaTaskDispatchIdentifierInput,
+    BidviaTaskDispatchResumeInput {}
 
 export interface BidviaTaskDispatchCompleteInput {
   now: string;
@@ -278,11 +318,19 @@ export interface BidviaTaskDispatchCompleteInput {
   outcomeRef: string;
 }
 
+export interface BidviaTaskDispatchCompleteExecutionInput
+  extends BidviaTaskDispatchIdentifierInput,
+    BidviaTaskDispatchCompleteInput {}
+
 export interface BidviaTaskDispatchFailInput {
   now: string;
   reason: string;
   outcomeRef: string;
 }
+
+export interface BidviaTaskDispatchFailExecutionInput
+  extends BidviaTaskDispatchIdentifierInput,
+    BidviaTaskDispatchFailInput {}
 
 export interface BidviaClaimWriteInput {
   claimKind: string;
@@ -291,16 +339,32 @@ export interface BidviaClaimWriteInput {
   taskDispatchId?: string;
 }
 
+export interface BidviaClaimExecutionInput
+  extends BidviaAgentRegistrationIdentifierInput,
+    BidviaClaimWriteInput {}
+
 export interface BidviaClaimAcceptInput {
   now: string;
   taskDispatchId?: string;
 }
+
+export interface BidviaClaimIdentifierInput extends BidviaAgentRegistrationIdentifierInput {
+  claimId: string;
+}
+
+export interface BidviaClaimAcceptExecutionInput
+  extends BidviaClaimIdentifierInput,
+    BidviaClaimAcceptInput {}
 
 export interface BidviaClaimRejectInput {
   reason: string;
   now: string;
   taskDispatchId?: string;
 }
+
+export interface BidviaClaimRejectExecutionInput
+  extends BidviaClaimIdentifierInput,
+    BidviaClaimRejectInput {}
 
 export interface BidviaCommercialActionScenarioPlanInput {
   scenarioId: string;
@@ -898,6 +962,10 @@ export interface BidviaAgentAuthorityState {
 
 export interface BidviaAgentRegistrationIdentifierInput {
   agentRegistrationId: string;
+}
+
+export interface BidviaParticipationStateIdentifierInput extends BidviaAgentRegistrationIdentifierInput {
+  participationStateId: string;
 }
 
 export type BidviaTruthFetchEmptyInput = Record<string, never>;

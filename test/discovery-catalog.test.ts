@@ -88,7 +88,12 @@ test('buildLocalDiscoveryCatalog returns operator-readable local mappings withou
     localOnly: true,
     remoteDiscovery: false,
     cliCommands: ['agent-capability-profile'],
-    mcpTools: [],
+    mcpTools: [
+      {
+        toolName: 'agent-capability-profile-read',
+        outputMode: 'truth-fetch-result',
+      },
+    ],
   });
 
   const participationStates = catalog.find((entry) => entry.helperKey === 'listParticipationStates');
@@ -108,7 +113,114 @@ test('buildLocalDiscoveryCatalog returns operator-readable local mappings withou
     localOnly: true,
     remoteDiscovery: false,
     cliCommands: [],
-    mcpTools: [],
+    mcpTools: [
+      {
+        toolName: 'participation-states-read',
+        outputMode: 'truth-fetch-result',
+      },
+    ],
+  });
+
+  const createProvisionalAgent = catalog.find((entry) => entry.helperKey === 'createProvisionalAgent');
+  assert.deepEqual(createProvisionalAgent, {
+    helperKey: 'createProvisionalAgent',
+    routePathTemplate: '/runtime/agents/provisional',
+    httpMethod: 'POST',
+    accessContextFamily: 'tenant',
+    requiredContext: ['tenantId'],
+    scope: 'write',
+    level: 'atomic-route',
+    localCapabilityTier: 'L2-registration-runtime',
+    localCapabilityRiskTier: 'runtime-execution',
+    discoveryKind: 'execute',
+    recommendedOutputMode: 'execution-result',
+    sourceOfTruth: 'local-sdk-helpers',
+    localOnly: true,
+    remoteDiscovery: false,
+    cliCommands: [],
+    mcpTools: [
+      {
+        toolName: 'create-provisional-agent-execution',
+        outputMode: 'execution-result',
+      },
+    ],
+  });
+
+  const createTaskDispatch = catalog.find((entry) => entry.helperKey === 'createTaskDispatch');
+  assert.deepEqual(createTaskDispatch, {
+    helperKey: 'createTaskDispatch',
+    routePathTemplate: '/runtime/agents/:agent_registration_id/task-dispatches',
+    httpMethod: 'POST',
+    accessContextFamily: 'operator-company',
+    requiredContext: ['tenantId', 'principalId', 'companyId'],
+    scope: 'write',
+    level: 'atomic-route',
+    localCapabilityTier: 'L3-governed-commercial',
+    localCapabilityRiskTier: 'governed-commercial',
+    discoveryKind: 'execute',
+    recommendedOutputMode: 'execution-result',
+    sourceOfTruth: 'local-sdk-helpers',
+    localOnly: true,
+    remoteDiscovery: false,
+    cliCommands: [],
+    mcpTools: [
+      {
+        toolName: 'create-task-dispatch-execution',
+        outputMode: 'execution-result',
+      },
+    ],
+  });
+
+  const postAgentCapabilityProfile = catalog.find((entry) => entry.helperKey === 'postAgentCapabilityProfile');
+  assert.deepEqual(postAgentCapabilityProfile, {
+    helperKey: 'postAgentCapabilityProfile',
+    routePathTemplate: '/runtime/agents/:agent_registration_id/capability-profile',
+    httpMethod: 'POST',
+    accessContextFamily: 'operator-company',
+    requiredContext: ['tenantId', 'principalId', 'companyId'],
+    scope: 'write',
+    level: 'atomic-route',
+    localCapabilityTier: 'L3-governed-commercial',
+    localCapabilityRiskTier: 'governed-commercial',
+    discoveryKind: 'execute',
+    recommendedOutputMode: 'execution-result',
+    sourceOfTruth: 'local-sdk-helpers',
+    localOnly: true,
+    remoteDiscovery: false,
+    cliCommands: [],
+    mcpTools: [
+      {
+        toolName: 'agent-capability-profile-write-execution',
+        outputMode: 'execution-result',
+      },
+    ],
+  });
+
+  const requestCommercialActionApproval = catalog.find(
+    (entry) => entry.helperKey === 'requestCommercialActionApproval',
+  );
+  assert.deepEqual(requestCommercialActionApproval, {
+    helperKey: 'requestCommercialActionApproval',
+    routePathTemplate: '/runtime/commercial-actions/:commercialActionRequestId/request-approval',
+    httpMethod: 'POST',
+    accessContextFamily: 'operator-company',
+    requiredContext: ['tenantId', 'principalId', 'companyId'],
+    scope: 'write',
+    level: 'atomic-route',
+    localCapabilityTier: 'L3-governed-commercial',
+    localCapabilityRiskTier: 'governed-commercial',
+    discoveryKind: 'execute',
+    recommendedOutputMode: 'execution-result',
+    sourceOfTruth: 'local-sdk-helpers',
+    localOnly: true,
+    remoteDiscovery: false,
+    cliCommands: [],
+    mcpTools: [
+      {
+        toolName: 'request-commercial-action-approval-execution',
+        outputMode: 'execution-result',
+      },
+    ],
   });
 
   assert.equal(catalog.some((entry) => entry.helperKey === 'listAgentCapabilityProfiles'), false);
@@ -153,6 +265,54 @@ test('buildLocalMcpToolCatalog derives MCP descriptors from the shared local dis
     requiredContext: ['tenantId', 'principalId'],
   });
 
-  assert.equal(mcpTools.some((tool) => tool.toolName === 'agent-readiness-read'), false);
-  assert.equal(mcpTools.some((tool) => tool.toolName === 'task-dispatches-read'), false);
+  assert.deepEqual(mcpTools.find((tool) => tool.toolName === 'agent-readiness-read'), {
+    toolName: 'agent-readiness-read',
+    description: 'Reads the current governed agent readiness through the shipped SDK helper.',
+    inputSchemaRef: {
+      schemaKey: 'BidviaAgentRegistrationIdentifierInput',
+    },
+    outputMode: 'truth-fetch-result',
+    helperRef: {
+      helperKey: 'getAgentReadiness',
+      capabilityKey: 'getAgentReadiness',
+    },
+    localCapabilityTier: 'L0-observe-only',
+    localCapabilityRiskTier: 'observe-only',
+    accessContextFamily: 'principal-governed-read',
+    requiredContext: ['tenantId', 'principalId'],
+  });
+
+  assert.deepEqual(mcpTools.find((tool) => tool.toolName === 'task-dispatches-read'), {
+    toolName: 'task-dispatches-read',
+    description: 'Reads the current governed task dispatches through the shipped SDK helper.',
+    inputSchemaRef: {
+      schemaKey: 'BidviaAgentRegistrationIdentifierInput',
+    },
+    outputMode: 'truth-fetch-result',
+    helperRef: {
+      helperKey: 'listTaskDispatches',
+      capabilityKey: 'listTaskDispatches',
+    },
+    localCapabilityTier: 'L0-observe-only',
+    localCapabilityRiskTier: 'observe-only',
+    accessContextFamily: 'principal-governed-read',
+    requiredContext: ['tenantId', 'principalId'],
+  });
+
+  assert.deepEqual(mcpTools.find((tool) => tool.toolName === 'agent-capability-profile-write-execution'), {
+    toolName: 'agent-capability-profile-write-execution',
+    description: 'Executes the governed agent capability profile write through the shipped SDK helper.',
+    inputSchemaRef: {
+      schemaKey: 'BidviaAgentCapabilityProfileExecutionInput',
+    },
+    outputMode: 'execution-result',
+    helperRef: {
+      helperKey: 'agent-capability-profile-write-execution',
+      capabilityKey: 'postAgentCapabilityProfile',
+    },
+    localCapabilityTier: 'L3-governed-commercial',
+    localCapabilityRiskTier: 'governed-commercial',
+    accessContextFamily: 'operator-company',
+    requiredContext: ['tenantId', 'principalId', 'companyId'],
+  });
 });

@@ -56,6 +56,9 @@ import {
   buildOnboardingReadiness,
 } from './onboarding-readiness.js';
 import {
+  writeOpenClawCompanionBundle,
+} from './openclaw-bundle-export.js';
+import {
   buildOpenClawConfig,
   exportOpenClawConfig,
 } from './openclaw-config-export.js';
@@ -253,7 +256,8 @@ type BidviaCliSupportedValueFlag =
   | '--evidence-asset-id'
   | '--attachment-binding-id'
   | '--file-resource-id'
-  | '--target-ref';
+  | '--target-ref'
+  | '--output';
 
 const bidviaCliSupportedValueFlags = new Set<BidviaCliSupportedValueFlag>([
   '--input',
@@ -278,6 +282,7 @@ const bidviaCliSupportedValueFlags = new Set<BidviaCliSupportedValueFlag>([
   '--attachment-binding-id',
   '--file-resource-id',
   '--target-ref',
+  '--output',
 ]);
 
 const truthFetchVisibilityHelpLines = [
@@ -606,6 +611,10 @@ const truthFetchCommandDefinitions: Record<BidviaCliTruthFetchCommand, BidviaCli
 };
 
 function getSupportedValueFlagsForCommand(command: string): readonly BidviaCliSupportedValueFlag[] {
+  if (command === 'openclaw-bundle-export') {
+    return ['--output'];
+  }
+
   if (command === 'verification-bundle-preview' || command === 'verification-bundle-export') {
     return ['--input'];
   }
@@ -912,6 +921,8 @@ function createDefaultCliDependencies(): BidviaCliDependencies {
 
 function printHelp(printLine: (value: string) => void): void {
   printLine('bidvia');
+  printLine('OpenClaw primary path: export stdio MCP config first, then add the companion bundle when you want bundle/bootstrap packaging.');
+  printLine('OpenClaw scope for this version: local-first, Core-truth-consuming, stdio MCP primary.');
   printLine('Visibility commands:');
   printLine('  environment-mode');
   printLine('  runtime-capabilities');
@@ -920,6 +931,7 @@ function printHelp(printLine: (value: string) => void): void {
   printLine('  operator-discovery');
   printLine('  onboarding-readiness');
   printLine('  openclaw-mcp-config');
+    printLine('  openclaw-bundle-export --output ...');
   printLine('  route-context-matrix');
   for (const line of truthFetchVisibilityHelpLines) {
     printLine(line);
@@ -1140,6 +1152,39 @@ export async function runCli(
       operatorNotes: {
         transportBoundary: 'Local stdio MCP on your side, remote HTTPS Bidvia API on the other side.',
         endpointOverride: 'Advanced/operator-only: set BIDVIA_BASE_URL only when you need a non-default deployment endpoint.',
+      },
+    });
+    return 0;
+  }
+
+  if (command === 'openclaw-bundle-export') {
+    const outputPath = parsedArgs.flagValues['--output'];
+    if (!outputPath) {
+      return printStructuredFailure(
+        dependencies,
+        buildStructuredFailure(
+          command,
+          'invalid-input',
+          'Missing required --output for openclaw-bundle-export.',
+          {
+            details: ['--output'],
+          },
+        ),
+      );
+    }
+
+    const writeResult = await writeOpenClawCompanionBundle(outputPath);
+
+    dependencies.printJson({
+      command,
+      scope: 'local-only',
+      outputPath: writeResult.outputPath,
+      writtenFiles: writeResult.writtenFiles,
+      operatorNotes: {
+        primaryPath: 'Primary OpenClaw path: export stdio MCP config first, then add the companion bundle when you want bundle/bootstrap packaging around the same local server.',
+        executionBoundary: 'Bundle/bootstrap only: Bidvia execution still runs through the local stdio MCP server at `bidvia mcp-server`.',
+        developmentNote: 'Repo-local fallbacks such as `node dist/mcp-server.js` stay development-only and are not the primary bundle handoff.',
+        deferredNativePlugin: 'Native-plugin-first and HTTP MCP paths stay out of scope for this version.',
       },
     });
     return 0;
