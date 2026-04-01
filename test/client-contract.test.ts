@@ -48,6 +48,28 @@ test('BidviaClient uses the frozen provisional->query->claim onboarding contract
   assert.equal((calls[2]?.init?.headers as Record<string, string>)['x-bidvia-session-id'], 'sess-1');
 });
 
+test('BidviaClient accepts object-shaped provisional query input for onboarding symmetry', async () => {
+  const { calls, fetchStub } = createFetchStub();
+  const client = new BidviaClient({
+    baseUrl: 'http://127.0.0.1:8787',
+    context: {
+      tenantId: 'tenant-a',
+    },
+    fetchImpl: fetchStub,
+  });
+
+  const queryProvisionalAgent = Reflect.get(client, 'queryProvisionalAgent');
+
+  assert.equal(typeof queryProvisionalAgent, 'function');
+
+  await Reflect.apply(queryProvisionalAgent, client, [{
+    provisionalAgentRef: 'prov-agent-2',
+  }]);
+
+  assert.equal(calls.length, 1);
+  assert.equal(String(calls[0]?.input), 'http://127.0.0.1:8787/runtime/agents/provisional?provisional_agent_ref=prov-agent-2');
+});
+
 test('BidviaClient uses the frozen registration-bound heartbeat/sync/evidence/proposal contract', async () => {
   const { calls, fetchStub } = createFetchStub();
   const client = new BidviaClient({
