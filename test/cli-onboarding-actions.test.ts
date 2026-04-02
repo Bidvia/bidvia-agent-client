@@ -354,6 +354,57 @@ test('runCli writes only non-secret local onboarding state after a successful cl
   }
 });
 
+test('runCli claim-provisional-agent persists nested registration identity fields from the SIM claim response shape', async () => {
+  const tempDirectory = mkdtempSync(path.join(tmpdir(), 'bidvia-cli-onboarding-actions-claim-nested-'));
+  const statePath = path.join(tempDirectory, 'onboarding-state.json');
+
+  const exitCode = await runCli([
+    'claim-provisional-agent',
+    '--provisional-agent-ref',
+    'prov-agent-claim-nested',
+    '--claim-token',
+    'claim-token-nested',
+  ], {
+    createClient: () => ({
+      claimProvisionalAgent: async () => ({
+        provisionalAgentRef: 'prov-agent-claim-nested',
+        registration: {
+          agent_registration_id: 'areg-nested',
+          principal_id: 'principal-nested',
+          tenant_id: 'company-nested',
+        },
+        sessionId: 'session-secret-should-not-persist',
+      }),
+    }) as never,
+    resolveExecutionContext: () => ({
+      tenantId: 'tenant-nested',
+      sessionId: 'session-nested',
+    }),
+    resolveProcessEnv: () => ({
+      BIDVIA_TENANT_ID: 'tenant-nested',
+      BIDVIA_SESSION_ID: 'session-nested',
+      BIDVIA_STATE_PATH: statePath,
+    }),
+    readLocalOnboardingState: async () => null,
+    now: () => '2026-04-02T12:05:15.000Z',
+    printJson: () => {},
+    printLine: () => {
+      throw new Error('claim-provisional-agent should not print help lines');
+    },
+  });
+
+  assert.equal(exitCode, 0);
+  assert.deepEqual(JSON.parse(readFileSync(statePath, 'utf8')), {
+    tenantId: 'tenant-nested',
+    principalId: 'principal-nested',
+    companyId: 'company-nested',
+    registrationId: 'areg-nested',
+    lastCompletedStep: 'claim-provisional-agent',
+    createdAt: '2026-04-02T12:05:15.000Z',
+    updatedAt: '2026-04-02T12:05:15.000Z',
+  });
+});
+
 test('runCli claim-provisional-agent does not persist stale claimed identity fields when current claim omits them', async () => {
   const tempDirectory = mkdtempSync(path.join(tmpdir(), 'bidvia-cli-onboarding-actions-claim-fresh-'));
   const statePath = path.join(tempDirectory, 'onboarding-state.json');

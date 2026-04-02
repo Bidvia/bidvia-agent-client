@@ -523,6 +523,29 @@ function readOnboardingResultString(
   return typeof candidate === 'string' ? candidate : undefined;
 }
 
+function readOnboardingRegistrationResultString(
+  value: unknown,
+  camelKey: 'principalId' | 'companyId' | 'registrationId',
+  snakeKeys: readonly string[],
+): string | undefined {
+  if (!value || typeof value !== 'object') {
+    return undefined;
+  }
+
+  const registration = (value as Record<string, unknown>).registration;
+
+  if (!registration || typeof registration !== 'object') {
+    return undefined;
+  }
+
+  const record = registration as Record<string, unknown>;
+  const candidate = record[camelKey] ?? snakeKeys
+    .map((key) => record[key])
+    .find((nestedValue) => typeof nestedValue === 'string');
+
+  return typeof candidate === 'string' ? candidate : undefined;
+}
+
 function readNonEmptyEnvValue(
   env: NodeJS.ProcessEnv,
   key: 'BIDVIA_TENANT_ID' | 'BIDVIA_PRINCIPAL_ID' | 'BIDVIA_COMPANY_ID' | 'BIDVIA_REGISTRATION_ID' | 'BIDVIA_SESSION_ID' | 'BIDVIA_ADMIN_SESSION_ID',
@@ -1185,10 +1208,13 @@ function buildPersistedOnboardingActionState(
   }
 
   const claimedPrincipalId = readOnboardingResultString(result, 'principalId', 'principal_id')
+    ?? readOnboardingRegistrationResultString(result, 'principalId', ['principal_id'])
     ?? (effectiveContext.principalId.source === 'env' ? effectiveContext.principalId.value ?? undefined : undefined);
   const claimedCompanyId = readOnboardingResultString(result, 'companyId', 'company_id')
+    ?? readOnboardingRegistrationResultString(result, 'companyId', ['company_id', 'tenant_id'])
     ?? (effectiveContext.companyId.source === 'env' ? effectiveContext.companyId.value ?? undefined : undefined);
   const claimedRegistrationId = readOnboardingResultString(result, 'registrationId', 'registration_id')
+    ?? readOnboardingRegistrationResultString(result, 'registrationId', ['agent_registration_id', 'registration_id'])
     ?? (effectiveContext.registrationId.source === 'env' ? effectiveContext.registrationId.value ?? undefined : undefined);
 
   return {
