@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { PassThrough } from 'node:stream';
+import packageJson from '../package.json' with { type: 'json' };
 
 import { BidviaClient } from '../src/client.ts';
 import { runLocalMcpServer } from '../src/mcp-server.ts';
@@ -206,7 +207,7 @@ test('local MCP stdio server exposes bounded tool metadata and handles review-sa
         protocolVersion: '2024-11-05',
         serverInfo: {
           name: '@bidvia/client',
-          version: '0.1.0',
+          version: packageJson.version,
         },
         capabilities: {
           tools: {},

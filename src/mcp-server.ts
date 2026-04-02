@@ -1,5 +1,6 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import packageJson from '../package.json' with { type: 'json' };
 
 import { BidviaClient } from './client.js';
 import { resolveBidviaBaseUrlFromEnv } from './config.js';
@@ -53,7 +54,7 @@ function buildInitializeResponse(id: string | number | null): JsonRpcSuccessResp
       protocolVersion: '2024-11-05',
       serverInfo: {
         name: '@bidvia/client',
-        version: '0.1.0',
+        version: packageJson.version,
       },
       capabilities: {
         tools: {},

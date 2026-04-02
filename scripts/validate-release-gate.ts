@@ -14,6 +14,7 @@ type PackEntry = {
 
 type PackageJson = {
   name?: string;
+  version?: string;
   bin?: Record<string, string>;
   exports?: Record<string, unknown>;
 };
@@ -52,7 +53,7 @@ function main(): void {
   }
 
   assert.match(readme, /bidvia openclaw-mcp-config/);
-  assert.match(readme, /bidvia onboarding-readiness/);
+  assert.match(readme, /bidvia onboard/);
   assert.match(onboardingDoc, /bidvia openclaw-mcp-config/);
   assert.match(smokeDoc, /bidvia openclaw-mcp-config/);
   assert.match(smokeDoc, /bidvia mcp-server/);
@@ -99,6 +100,7 @@ function main(): void {
       './mcp-server': './dist/src/mcp-server.js',
       './package.json': './package.json',
     });
+    assert.equal(typeof installedPackageJson.version, 'string');
 
     const helpOutput = run('node_modules/.bin/bidvia', ['--help'], tempRoot);
     assert.match(helpOutput, /bidvia/);
@@ -128,7 +130,8 @@ function main(): void {
     );
     assert.match(initializeOutput, /Content-Length:/);
     assert.match(initializeOutput, /"protocolVersion":"2024-11-05"/);
-    assert.match(initializeOutput, /"serverInfo":\{"name":"@bidvia\/client","version":"0\.1\.0"\}/);
+    const versionPattern = new RegExp(`"serverInfo":\\{\"name\":\"@bidvia/client\",\"version\":\"${installedPackageJson.version?.replace(/\./g, '\\.')}\"\\}`);
+    assert.match(initializeOutput, versionPattern);
   } finally {
     rmSync(tempRoot, { recursive: true, force: true });
     unlinkSync(tarballPath);
