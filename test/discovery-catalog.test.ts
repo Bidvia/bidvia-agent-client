@@ -127,6 +127,7 @@ test('buildLocalDiscoveryCatalog returns operator-readable local mappings withou
     routePathTemplate: '/runtime/agents/provisional',
     httpMethod: 'POST',
     accessContextFamily: 'tenant',
+    contextSemantic: 'public-provisional',
     requiredContext: ['tenantId'],
     scope: 'write',
     level: 'atomic-route',
@@ -141,6 +142,57 @@ test('buildLocalDiscoveryCatalog returns operator-readable local mappings withou
     mcpTools: [
       {
         toolName: 'create-provisional-agent-execution',
+        outputMode: 'execution-result',
+      },
+    ],
+  });
+
+  const queryProvisionalAgent = catalog.find((entry) => entry.helperKey === 'queryProvisionalAgent');
+  assert.deepEqual(queryProvisionalAgent, {
+    helperKey: 'queryProvisionalAgent',
+    routePathTemplate: '/runtime/agents/provisional',
+    httpMethod: 'GET',
+    accessContextFamily: 'tenant',
+    contextSemantic: 'public-provisional',
+    requiredContext: ['tenantId'],
+    scope: 'read',
+    level: 'atomic-route',
+    localCapabilityTier: 'L0-observe-only',
+    localCapabilityRiskTier: 'observe-only',
+    discoveryKind: 'read',
+    recommendedOutputMode: 'truth-fetch-result',
+    sourceOfTruth: 'local-sdk-helpers',
+    localOnly: true,
+    remoteDiscovery: false,
+    cliCommands: [],
+    mcpTools: [
+      {
+        toolName: 'query-provisional-agent-read',
+        outputMode: 'truth-fetch-result',
+      },
+    ],
+  });
+
+  const claimProvisionalAgent = catalog.find((entry) => entry.helperKey === 'claimProvisionalAgent');
+  assert.deepEqual(claimProvisionalAgent, {
+    helperKey: 'claimProvisionalAgent',
+    routePathTemplate: '/runtime/agents/provisional/claim',
+    httpMethod: 'POST',
+    accessContextFamily: 'session',
+    requiredContext: ['tenantId', 'sessionId'],
+    scope: 'write',
+    level: 'atomic-route',
+    localCapabilityTier: 'L2-registration-runtime',
+    localCapabilityRiskTier: 'runtime-execution',
+    discoveryKind: 'execute',
+    recommendedOutputMode: 'execution-result',
+    sourceOfTruth: 'local-sdk-helpers',
+    localOnly: true,
+    remoteDiscovery: false,
+    cliCommands: [],
+    mcpTools: [
+      {
+        toolName: 'claim-provisional-agent-execution',
         outputMode: 'execution-result',
       },
     ],
@@ -282,6 +334,24 @@ test('buildLocalMcpToolCatalog derives MCP descriptors from the shared local dis
     requiredContext: ['tenantId', 'principalId'],
   });
 
+  assert.deepEqual(mcpTools.find((tool) => tool.toolName === 'query-provisional-agent-read'), {
+    toolName: 'query-provisional-agent-read',
+    description: 'Reads public provisional agent status through the shipped SDK helper.',
+    inputSchemaRef: {
+      schemaKey: 'BidviaQueryProvisionalAgentInput',
+    },
+    outputMode: 'truth-fetch-result',
+    helperRef: {
+      helperKey: 'queryProvisionalAgent',
+      capabilityKey: 'queryProvisionalAgent',
+    },
+    localCapabilityTier: 'L0-observe-only',
+    localCapabilityRiskTier: 'observe-only',
+    accessContextFamily: 'tenant',
+    contextSemantic: 'public-provisional',
+    requiredContext: ['tenantId'],
+  });
+
   assert.deepEqual(mcpTools.find((tool) => tool.toolName === 'task-dispatches-read'), {
     toolName: 'task-dispatches-read',
     description: 'Reads the current governed task dispatches through the shipped SDK helper.',
@@ -314,5 +384,40 @@ test('buildLocalMcpToolCatalog derives MCP descriptors from the shared local dis
     localCapabilityRiskTier: 'governed-commercial',
     accessContextFamily: 'operator-company',
     requiredContext: ['tenantId', 'principalId', 'companyId'],
+  });
+
+  assert.deepEqual(mcpTools.find((tool) => tool.toolName === 'create-provisional-agent-execution'), {
+    toolName: 'create-provisional-agent-execution',
+    description: 'Executes public provisional agent creation through the shipped SDK helper.',
+    inputSchemaRef: {
+      schemaKey: 'BidviaProvisionalAgentCreateInput',
+    },
+    outputMode: 'execution-result',
+    helperRef: {
+      helperKey: 'createProvisionalAgent',
+      capabilityKey: 'createProvisionalAgent',
+    },
+    localCapabilityTier: 'L2-registration-runtime',
+    localCapabilityRiskTier: 'runtime-execution',
+    accessContextFamily: 'tenant',
+    contextSemantic: 'public-provisional',
+    requiredContext: ['tenantId'],
+  });
+
+  assert.deepEqual(mcpTools.find((tool) => tool.toolName === 'claim-provisional-agent-execution'), {
+    toolName: 'claim-provisional-agent-execution',
+    description: 'Executes the session-bound provisional agent claim through the shipped SDK helper.',
+    inputSchemaRef: {
+      schemaKey: 'BidviaProvisionalAgentClaimInput',
+    },
+    outputMode: 'execution-result',
+    helperRef: {
+      helperKey: 'claimProvisionalAgent',
+      capabilityKey: 'claimProvisionalAgent',
+    },
+    localCapabilityTier: 'L2-registration-runtime',
+    localCapabilityRiskTier: 'runtime-execution',
+    accessContextFamily: 'session',
+    requiredContext: ['tenantId', 'sessionId'],
   });
 });

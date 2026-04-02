@@ -1,9 +1,23 @@
 import type {
   BidviaNextStageReadRouteDiscoveryGroup,
+  BidviaRouteCapabilityContextSemantic,
   BidviaRouteCapability,
 } from './contracts.js';
 
-const bidviaShippedExpandedReadRouteCapabilities: ReadonlyArray<BidviaRouteCapability> = [
+type BidviaRouteCapabilityWithOptionalContextSemantic = Omit<BidviaRouteCapability, 'contextSemantic'> & {
+  contextSemantic?: BidviaRouteCapabilityContextSemantic;
+};
+
+function applyRouteContextSemantic(
+  capability: BidviaRouteCapabilityWithOptionalContextSemantic,
+): BidviaRouteCapability {
+  return {
+    ...capability,
+    contextSemantic: capability.contextSemantic ?? capability.accessContextFamily,
+  };
+}
+
+const bidviaShippedExpandedReadRouteCapabilities: ReadonlyArray<BidviaRouteCapabilityWithOptionalContextSemantic> = [
   {
     helperKey: 'getAgentReadiness',
     routePathTemplate: '/runtime/agents/:agent_registration_id/readiness',
@@ -325,12 +339,13 @@ const bidviaShippedExpandedReadRouteCapabilities: ReadonlyArray<BidviaRouteCapab
   },
 ];
 
-export const bidviaRouteCapabilities: ReadonlyArray<BidviaRouteCapability> = [
+const bidviaBaseRouteCapabilities: ReadonlyArray<BidviaRouteCapabilityWithOptionalContextSemantic> = [
   {
     helperKey: 'createProvisionalAgent',
     routePathTemplate: '/runtime/agents/provisional',
     httpMethod: 'POST',
     accessContextFamily: 'tenant',
+    contextSemantic: 'public-provisional',
     requiredContext: ['tenantId'],
     scope: 'write',
     level: 'atomic-route',
@@ -342,6 +357,7 @@ export const bidviaRouteCapabilities: ReadonlyArray<BidviaRouteCapability> = [
     routePathTemplate: '/runtime/agents/provisional',
     httpMethod: 'GET',
     accessContextFamily: 'tenant',
+    contextSemantic: 'public-provisional',
     requiredContext: ['tenantId'],
     scope: 'read',
     level: 'atomic-route',
@@ -985,6 +1001,11 @@ export const bidviaRouteCapabilities: ReadonlyArray<BidviaRouteCapability> = [
     ],
   },
 ];
+
+export const bidviaRouteCapabilities: ReadonlyArray<BidviaRouteCapability> = [
+  ...bidviaBaseRouteCapabilities,
+  ...bidviaShippedExpandedReadRouteCapabilities,
+].map((capability) => applyRouteContextSemantic(capability));
 
 export const bidviaNextStageReadRouteDiscoveryGroups: ReadonlyArray<
   BidviaNextStageReadRouteDiscoveryGroup

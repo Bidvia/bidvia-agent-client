@@ -21,7 +21,7 @@ function setEnvVar(name: string, value: string | undefined) {
   };
 }
 
-test('runCli help lists truth-fetch read-only commands under the visibility group', async () => {
+test('runCli help lists truth-fetch read-only commands under the advanced governance and review group', async () => {
   const lines: string[] = [];
 
   const exitCode = await runCli(['--help'], {
@@ -38,16 +38,34 @@ test('runCli help lists truth-fetch read-only commands under the visibility grou
     'bidvia',
     'OpenClaw primary path: export stdio MCP config first, then add the companion bundle when you want bundle/bootstrap packaging.',
     'OpenClaw scope for this version: local-first, Core-truth-consuming, stdio MCP primary.',
-    'Visibility commands:',
+    'Getting Started (Learn):',
+    '  onboard',
+    '  context show',
+    '  whoami',
+    '  doctor',
+    '  onboarding-readiness',
+    '  route-context-matrix',
+    '  openclaw-mcp-config',
+    '  openclaw-bundle-export --output ...',
+    'Agent Onboarding (Public Provisional -> Claim):',
+    '  create-provisional-agent --provisional-agent-ref ...',
+    '  query-provisional-agent --provisional-agent-ref ...',
+    '  claim-provisional-agent --provisional-agent-ref ... --claim-token ...',
+    'Agent Runtime (Run):',
+    '  registration-lifecycle-plan',
+    '  registered-agent-operations-plan',
+    '  mcp-server',
+    '  heartbeat [--dry-run]',
+    '  sync-upload [--dry-run]',
+    '  evidence [--dry-run]',
+    '  proposal [--dry-run]',
+    'Diagnostics:',
     '  environment-mode',
     '  runtime-capabilities',
     '  launch-topology-smoke',
     '  server-capabilities',
     '  operator-discovery',
-    '  onboarding-readiness',
-    '  openclaw-mcp-config',
-    '  openclaw-bundle-export --output ...',
-    '  route-context-matrix',
+    'Advanced Governance / Internal Review:',
     '  account-agents',
     '  account-agent --registration-id ...',
     '  account-agent-bindings',
@@ -98,7 +116,7 @@ test('runCli help lists truth-fetch read-only commands under the visibility grou
     '  target-attachment-bindings --target-ref ...',
   ];
   assert.deepEqual(lines.slice(0, expectedVisibilityLines.length), expectedVisibilityLines);
-  assert.equal(lines[expectedVisibilityLines.length], 'Execution commands:');
+  assert.equal(lines[expectedVisibilityLines.length], '  industry-universe-plan');
   assert(!lines.includes('  agent-capability-profiles --registration-id ...'));
   assert(!lines.includes('  canonical-semantic-taxonomy-entries'));
   assert(!lines.includes('  canonical-semantic-lineage-links'));

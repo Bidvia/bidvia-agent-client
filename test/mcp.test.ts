@@ -23,6 +23,7 @@ import type { BidviaIndustryUniverseScenarioPlan } from '../src/universe.ts';
 
 type BidviaMcpDescriptorWithContext = BidviaMcpToolDescriptor & {
   accessContextFamily: string;
+  contextSemantic?: string;
   requiredContext: string[];
 };
 
@@ -235,6 +236,112 @@ test('MCP tool catalog lookup returns descriptive bounded slice metadata', () =>
   });
 
   assert.equal(getMcpToolDescriptor('missing-tool'), undefined);
+});
+
+test('MCP provisional descriptors keep public create query semantics distinct from session-bound claim', () => {
+  assert.deepEqual(getMcpToolDescriptor('query-provisional-agent-read') as BidviaMcpDescriptorWithContext, {
+    toolName: 'query-provisional-agent-read',
+    description: 'Reads public provisional agent status through the shipped SDK helper.',
+    inputSchemaRef: {
+      schemaKey: 'BidviaQueryProvisionalAgentInput',
+    },
+    outputMode: 'truth-fetch-result',
+    helperRef: {
+      helperKey: 'queryProvisionalAgent',
+      capabilityKey: 'queryProvisionalAgent',
+    },
+    localCapabilityTier: 'L0-observe-only',
+    localCapabilityRiskTier: 'observe-only',
+    accessContextFamily: 'tenant',
+    contextSemantic: 'public-provisional',
+    requiredContext: ['tenantId'],
+  });
+
+  assert.deepEqual(getMcpToolDescriptor('create-provisional-agent-execution') as BidviaMcpDescriptorWithContext, {
+    toolName: 'create-provisional-agent-execution',
+    description: 'Executes public provisional agent creation through the shipped SDK helper.',
+    inputSchemaRef: {
+      schemaKey: 'BidviaProvisionalAgentCreateInput',
+    },
+    outputMode: 'execution-result',
+    helperRef: {
+      helperKey: 'createProvisionalAgent',
+      capabilityKey: 'createProvisionalAgent',
+    },
+    localCapabilityTier: 'L2-registration-runtime',
+    localCapabilityRiskTier: 'runtime-execution',
+    accessContextFamily: 'tenant',
+    contextSemantic: 'public-provisional',
+    requiredContext: ['tenantId'],
+  });
+
+  assert.deepEqual(getMcpToolDescriptor('claim-provisional-agent-execution') as BidviaMcpDescriptorWithContext, {
+    toolName: 'claim-provisional-agent-execution',
+    description: 'Executes the session-bound provisional agent claim through the shipped SDK helper.',
+    inputSchemaRef: {
+      schemaKey: 'BidviaProvisionalAgentClaimInput',
+    },
+    outputMode: 'execution-result',
+    helperRef: {
+      helperKey: 'claimProvisionalAgent',
+      capabilityKey: 'claimProvisionalAgent',
+    },
+    localCapabilityTier: 'L2-registration-runtime',
+    localCapabilityRiskTier: 'runtime-execution',
+    accessContextFamily: 'session',
+    requiredContext: ['tenantId', 'sessionId'],
+  });
+});
+
+test('dispatchMcpToolCall missing-context wording keeps public provisional create distinct from session-bound claim', async () => {
+  await assert.rejects(
+    () => dispatchMcpToolCallWithExecution(
+      {
+        toolName: 'create-provisional-agent-execution',
+        arguments: {
+          displayName: 'Operator Seed Agent',
+        },
+      },
+      {
+        createExecutionClient: () => ({
+          options: {
+            context: {},
+          },
+          async createProvisionalAgent() {
+            throw new Error('should not dispatch without required context');
+          },
+        }) as never,
+      },
+    ),
+    {
+      message: 'MCP tool create-provisional-agent-execution stays in public provisional entry, but this local stdio MCP tool still needs tenantId for deterministic execution against the configured API. Use bidvia route-context-matrix to confirm the next Bidvia context family, then set BIDVIA_TENANT_ID before retrying this local stdio MCP tool.',
+    },
+  );
+
+  await assert.rejects(
+    () => dispatchMcpToolCallWithExecution(
+      {
+        toolName: 'claim-provisional-agent-execution',
+        arguments: {
+          provisionalAgentRef: 'prov-claim-1',
+          claimToken: 'claim-token-1',
+        },
+      },
+      {
+        createExecutionClient: () => ({
+          options: {
+            context: {},
+          },
+          async claimProvisionalAgent() {
+            throw new Error('should not dispatch without required context');
+          },
+        }) as never,
+      },
+    ),
+    {
+      message: 'MCP tool claim-provisional-agent-execution is the session-bound provisional claim step and needs tenantId, sessionId before retrying this local stdio MCP tool. Use bidvia route-context-matrix to confirm the next Bidvia context family, then set BIDVIA_TENANT_ID and BIDVIA_SESSION_ID before retrying this local stdio MCP tool.',
+    },
+  );
 });
 
 test('MCP tool catalog export returns stable machine-readable descriptor data', () => {

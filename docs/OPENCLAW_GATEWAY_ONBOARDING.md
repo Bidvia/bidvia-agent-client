@@ -14,6 +14,8 @@ It does **not** assume any hosted Bidvia runtime, hosted MCP service, or remote 
 
 The current SDK and CLI already expose the widened frozen downstream read surface for agent registrations, authority profiles, capability profiles, the singular per-registration capability profile, and the shipped participation-state/task-dispatch family. The OpenClaw path now uses that same local-first foundation more directly: stdio MCP is the primary OpenClaw runtime path, and the companion bundle is additive packaging around that same local server.
 
+The public first-access website work for the same release remains spec-only in `docs/WEBSITE_FIRST_ACCESS_HANDOFF.md`. It does not add website code to this repo and it does not change the OpenClaw runtime order described here.
+
 ## Scope boundary
 
 Use this guide when you want to:
@@ -110,6 +112,12 @@ This simplified default does not remove operator control. Explicit endpoint sele
 
 Set the minimum environment variables that match the intended route family.
 
+Keep the semantics split explicit while you do this:
+
+- public provisional create -> query -> claim is separate from Governed Run
+- claim is the session-bound bridge between those two sides
+- `doctor`, `route-context-matrix`, `registration-lifecycle-plan`, and later runtime helpers belong on the Governed Run side
+
 Common base variables:
 
 ```bash
@@ -120,7 +128,7 @@ export BIDVIA_PRINCIPAL_ID="actor-gateway-1"
 Add these only when the route family needs them:
 
 - `BIDVIA_REGISTRATION_ID` for registration-bound runtime helpers
-- `BIDVIA_SESSION_ID` for claim/onboarding surfaces
+- `BIDVIA_SESSION_ID` for the session-bound claim step and related onboarding surfaces
 - principal-governed reads require `BIDVIA_TENANT_ID` plus `BIDVIA_PRINCIPAL_ID`, with `adminSessionId`-style behavior only as an optional companion on some routes
 - `companyId`-style operator write scope is also route-specific and should not be assumed globally
 
@@ -139,10 +147,10 @@ bidvia route-context-matrix
 
 Use this to confirm:
 
-- the public-first rows stay primary
-- the local OpenClaw/operator row stays secondary
+- the Public Provisional rows stay primary before claim and Governed Run
+- the Governed Run rows stay secondary after claim
 - the required context family is visible before you enable local execution
-- the visible next success step for the operator journey stays `registered-agent-operations-plan`
+- the visible next success step for Governed Run stays `registered-agent-operations-plan`
 
 Then run the smoke commands in this order:
 
@@ -198,7 +206,7 @@ bidvia --help
 
 The current shipped local-only CLI surface includes:
 
-- visibility and local operator commands
+- the Learn and diagnostics first-access commands such as `onboard`, `context show`, `whoami`, and `doctor`
 - the stable installed MCP subcommand `mcp-server`
 - the companion bundle export command `openclaw-bundle-export`
 - explicit execution commands for `heartbeat`, `sync-upload`, `evidence`, and `proposal`, each with `--dry-run`

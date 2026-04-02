@@ -36,12 +36,14 @@ function deriveLocalRouteClassification(routeCapability: {
 }): {
   localCapabilityTier: BidviaLocalCapabilityTier;
   localCapabilityRiskTier: BidviaLocalCapabilityRiskTier;
+  contextSemantic: BidviaRouteCapability['contextSemantic'];
 } {
   const localCapability = getRouteCapabilityFromLocalCatalog(routeCapability.helper_key);
   if (localCapability) {
     return {
       localCapabilityTier: localCapability.localCapabilityTier,
       localCapabilityRiskTier: localCapability.localCapabilityRiskTier,
+      contextSemantic: localCapability.contextSemantic,
     };
   }
 
@@ -49,6 +51,7 @@ function deriveLocalRouteClassification(routeCapability: {
     return {
       localCapabilityTier: 'L1-review-safe',
       localCapabilityRiskTier: 'review-safe',
+      contextSemantic: routeCapability.access_context_family,
     };
   }
 
@@ -56,6 +59,7 @@ function deriveLocalRouteClassification(routeCapability: {
     return {
       localCapabilityTier: 'L0-observe-only',
       localCapabilityRiskTier: 'observe-only',
+      contextSemantic: routeCapability.access_context_family,
     };
   }
 
@@ -67,12 +71,14 @@ function deriveLocalRouteClassification(routeCapability: {
     return {
       localCapabilityTier: 'L2-registration-runtime',
       localCapabilityRiskTier: 'runtime-execution',
+      contextSemantic: routeCapability.access_context_family,
     };
   }
 
   return {
     localCapabilityTier: 'L3-governed-commercial',
     localCapabilityRiskTier: 'governed-commercial',
+    contextSemantic: routeCapability.access_context_family,
   };
 }
 
@@ -80,6 +86,7 @@ function deriveLocalMcpClassification(toolName: string): {
   localCapabilityTier: BidviaLocalCapabilityTier;
   localCapabilityRiskTier: BidviaLocalCapabilityRiskTier;
   accessContextFamily: BidviaMcpToolDescriptor['accessContextFamily'];
+  contextSemantic?: BidviaMcpToolDescriptor['contextSemantic'];
   requiredContext: BidviaMcpToolDescriptor['requiredContext'];
 } {
   const localDescriptor = getLocalMcpToolDescriptor(toolName);
@@ -88,6 +95,7 @@ function deriveLocalMcpClassification(toolName: string): {
       localCapabilityTier: localDescriptor.localCapabilityTier,
       localCapabilityRiskTier: localDescriptor.localCapabilityRiskTier,
       accessContextFamily: localDescriptor.accessContextFamily,
+      ...(localDescriptor.contextSemantic ? { contextSemantic: localDescriptor.contextSemantic } : {}),
       requiredContext: [...localDescriptor.requiredContext],
     };
   }
@@ -96,6 +104,7 @@ function deriveLocalMcpClassification(toolName: string): {
     localCapabilityTier: 'L1-review-safe',
     localCapabilityRiskTier: 'review-safe',
     accessContextFamily: 'scenario',
+    contextSemantic: 'scenario',
     requiredContext: [],
   };
 }
@@ -137,6 +146,7 @@ function normalizeMcpTools(
         capabilityKey: mcpTool.helper_ref.capability_key,
       },
       ...classification,
+      ...(mcpTool.context_semantic ? { contextSemantic: mcpTool.context_semantic } : {}),
     };
   });
 }

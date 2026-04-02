@@ -34,6 +34,7 @@ test('normalizeServerCapabilityPayload maps server-provided capability payloads 
           helper_key: 'buildIndustryUniverseScenarioPlan',
           capability_key: 'buildIndustryUniverseScenarioPlan',
         },
+        context_semantic: 'scenario',
       },
     ],
     mcp_server: {
@@ -41,6 +42,10 @@ test('normalizeServerCapabilityPayload maps server-provided capability payloads 
       transport: 'stdio',
       supported_methods: ['initialize', 'tools/list', 'tools/call'],
     },
+  } as Parameters<typeof normalizeServerCapabilityPayload>[0] & {
+    mcp_tools: Array<Parameters<typeof normalizeServerCapabilityPayload>[0]['mcp_tools'][number] & {
+      context_semantic: 'scenario';
+    }>;
   });
 
   assert.equal(snapshot.environmentMode, 'production');
@@ -56,6 +61,7 @@ test('normalizeServerCapabilityPayload maps server-provided capability payloads 
   assert.equal(snapshot.routeCapabilities.fallbackPolicy, 'retain-server-derived-snapshot-until-replaced');
   assert.equal(snapshot.mcpTools.source, 'server-derived');
   assert.equal(snapshot.mcpTools.items[0]?.toolName, 'industry-universe-plan-preview');
+  assert.equal(snapshot.mcpTools.items[0]?.contextSemantic, 'scenario');
   assert.equal(snapshot.mcpTools.schemaVersion, '2026-03-27');
   assert.equal(snapshot.mcpTools.version, 'server-capability-payload');
   assert.equal(snapshot.mcpTools.etag, null);
@@ -164,6 +170,7 @@ test('normalizeServerCapabilityPayload classifies widened truth-fetch reads from
       routePathTemplate: '/runtime/canonical-semantic-concepts',
       httpMethod: 'GET',
       accessContextFamily: 'tenant',
+      contextSemantic: 'tenant',
       requiredContext: ['tenantId'],
       scope: 'read',
       level: 'atomic-route',
@@ -175,6 +182,7 @@ test('normalizeServerCapabilityPayload classifies widened truth-fetch reads from
       routePathTemplate: '/runtime/attachment-bindings/:attachment_binding_id',
       httpMethod: 'GET',
       accessContextFamily: 'tenant',
+      contextSemantic: 'tenant',
       requiredContext: ['tenantId'],
       scope: 'read',
       level: 'atomic-route',

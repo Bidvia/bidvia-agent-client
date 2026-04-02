@@ -8,6 +8,13 @@ import type {
   BidviaLocalRuntimeCapabilitySnapshot,
 } from '../src/contracts.ts';
 
+function withDefaultContextSemantic<T extends { accessContextFamily: string }>(value: T): T & { contextSemantic: string } {
+  return {
+    ...value,
+    contextSemantic: value.accessContextFamily,
+  };
+}
+
 test('buildLocalRuntimeCapabilitySnapshot defaults to the public global API while keeping its capability view derived from shipped facts only', () => {
   const snapshot = buildLocalRuntimeCapabilitySnapshot();
 
@@ -102,7 +109,7 @@ test('buildLocalRuntimeCapabilitySnapshot keeps deferred server negotiation expl
   );
   assert.deepEqual(
     snapshot.routeCapabilities.items.find((capability) => capability.helperKey === 'postHeartbeat'),
-    {
+    withDefaultContextSemantic({
       helperKey: 'postHeartbeat',
       routePathTemplate: '/runtime/agents/:registrationId/heartbeat',
       httpMethod: 'POST',
@@ -112,11 +119,11 @@ test('buildLocalRuntimeCapabilitySnapshot keeps deferred server negotiation expl
       level: 'atomic-route',
       localCapabilityTier: 'L2-registration-runtime',
       localCapabilityRiskTier: 'runtime-execution',
-    },
+    }),
   );
   assert.deepEqual(
     snapshot.routeCapabilities.items.find((capability) => capability.helperKey === 'getAttachmentBinding'),
-    {
+    withDefaultContextSemantic({
       helperKey: 'getAttachmentBinding',
       routePathTemplate: '/runtime/attachment-bindings/:attachment_binding_id',
       httpMethod: 'GET',
@@ -126,7 +133,7 @@ test('buildLocalRuntimeCapabilitySnapshot keeps deferred server negotiation expl
       level: 'atomic-route',
       localCapabilityTier: 'L0-observe-only',
       localCapabilityRiskTier: 'observe-only',
-    },
+    }),
   );
   assert.deepEqual(
     snapshot.mcpTools.items.find((tool) => tool.toolName === 'industry-universe-plan-preview'),
@@ -154,7 +161,7 @@ test('buildLocalRuntimeCapabilitySnapshot includes shipped widened read helpers 
 
   assert.deepEqual(
     snapshot.routeCapabilities.items.find((capability) => capability.helperKey === 'getAgentReadiness'),
-    {
+    withDefaultContextSemantic({
       helperKey: 'getAgentReadiness',
       routePathTemplate: '/runtime/agents/:agent_registration_id/readiness',
       httpMethod: 'GET',
@@ -164,11 +171,11 @@ test('buildLocalRuntimeCapabilitySnapshot includes shipped widened read helpers 
       level: 'atomic-route',
       localCapabilityTier: 'L0-observe-only',
       localCapabilityRiskTier: 'observe-only',
-    },
+    }),
   );
   assert.deepEqual(
     snapshot.routeCapabilities.items.find((capability) => capability.helperKey === 'listCanonicalSemanticLabels'),
-    {
+    withDefaultContextSemantic({
       helperKey: 'listCanonicalSemanticLabels',
       routePathTemplate: '/runtime/canonical-semantic-labels',
       httpMethod: 'GET',
@@ -178,11 +185,11 @@ test('buildLocalRuntimeCapabilitySnapshot includes shipped widened read helpers 
       level: 'atomic-route',
       localCapabilityTier: 'L0-observe-only',
       localCapabilityRiskTier: 'observe-only',
-    },
+    }),
   );
   assert.deepEqual(
     snapshot.routeCapabilities.items.find((capability) => capability.helperKey === 'getPricingExplanation'),
-    {
+    withDefaultContextSemantic({
       helperKey: 'getPricingExplanation',
       routePathTemplate: '/runtime/pricing-explanations/:pricing_explanation_id',
       httpMethod: 'GET',
@@ -192,11 +199,11 @@ test('buildLocalRuntimeCapabilitySnapshot includes shipped widened read helpers 
       level: 'atomic-route',
       localCapabilityTier: 'L0-observe-only',
       localCapabilityRiskTier: 'observe-only',
-    },
+    }),
   );
   assert.deepEqual(
     snapshot.routeCapabilities.items.find((capability) => capability.helperKey === 'listTargetAttachmentBindings'),
-    {
+    withDefaultContextSemantic({
       helperKey: 'listTargetAttachmentBindings',
       routePathTemplate: '/runtime/targets/:target_ref/attachment-bindings',
       httpMethod: 'GET',
@@ -206,6 +213,6 @@ test('buildLocalRuntimeCapabilitySnapshot includes shipped widened read helpers 
       level: 'atomic-route',
       localCapabilityTier: 'L0-observe-only',
       localCapabilityRiskTier: 'observe-only',
-    },
+    }),
   );
 });

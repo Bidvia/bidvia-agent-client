@@ -486,6 +486,20 @@ export const bidviaRouteCapabilityAccessContextFamilies = [
 export type BidviaRouteCapabilityAccessContextFamily =
   (typeof bidviaRouteCapabilityAccessContextFamilies)[number];
 
+export const bidviaRouteCapabilityContextSemantics = [
+  'public-provisional',
+  'tenant',
+  'registration',
+  'session',
+  'admin-session',
+  'principal-governed-read',
+  'operator-company',
+  'scenario',
+] as const;
+
+export type BidviaRouteCapabilityContextSemantic =
+  (typeof bidviaRouteCapabilityContextSemantics)[number];
+
 export const bidviaRouteCapabilityScopes = ['read', 'write'] as const;
 
 export type BidviaRouteCapabilityScope = (typeof bidviaRouteCapabilityScopes)[number];
@@ -522,6 +536,7 @@ export interface BidviaRouteCapability {
   routePathTemplate: string;
   httpMethod: BidviaRouteCapabilityHttpMethod;
   accessContextFamily: BidviaRouteCapabilityAccessContextFamily;
+  contextSemantic?: BidviaRouteCapabilityContextSemantic;
   requiredContext: BidviaScenarioContextKey[];
   scope: BidviaRouteCapabilityScope;
   level: BidviaRouteCapabilityLevel;
@@ -732,6 +747,7 @@ export interface BidviaMcpToolDescriptor {
   localCapabilityTier: BidviaLocalCapabilityTier;
   localCapabilityRiskTier: BidviaLocalCapabilityRiskTier;
   accessContextFamily: BidviaRouteCapabilityAccessContextFamily;
+  contextSemantic?: BidviaRouteCapabilityContextSemantic;
   requiredContext: BidviaScenarioContextKey[];
 }
 
@@ -1120,6 +1136,7 @@ export interface BidviaServerCapabilityPayloadMcpTool {
     helper_key: string;
     capability_key?: string;
   };
+  context_semantic?: BidviaRouteCapabilityContextSemantic;
 }
 
 export interface BidviaServerCapabilityPayloadMcpServer {

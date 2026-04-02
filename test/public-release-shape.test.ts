@@ -20,6 +20,7 @@ test('public release docs no longer depend on transitional publication wording i
   const roadmap = readText('docs/ROADMAP.md');
   const onboardingDoc = readText('docs/OPENCLAW_GATEWAY_ONBOARDING.md');
   const smokeDoc = readText('docs/OPENCLAW_GATEWAY_SMOKE.md');
+  const websiteHandoff = readText('docs/WEBSITE_FIRST_ACCESS_HANDOFF.md');
   const releaseChecklist = readText('docs/INTERNAL_RELEASE_CHECKLIST.md');
   const releaseNotes = readText('docs/RELEASE_NOTES_LOCAL_ONLY_NEXT_VERSION.md');
   const openClawExample = readText('examples/openclaw-gateway-bidvia-setup.md');
@@ -39,10 +40,17 @@ test('public release docs no longer depend on transitional publication wording i
   }
 
   assert.match(readme, /bidvia openclaw-mcp-config/);
-  assert.match(readme, /bidvia onboarding-readiness/);
+  assert.match(readme, /bidvia onboard/);
+  assert.match(onboardingGuide, /bidvia onboard/);
   assert.match(onboardingDoc, /bidvia openclaw-mcp-config/);
   assert.match(smokeDoc, /bidvia openclaw-mcp-config/);
   assert.match(smokeDoc, /bidvia mcp-server/);
+  assert.match(websiteHandoff, /Learn/);
+  assert.match(websiteHandoff, /Public Provisional create -> query -> claim/);
+  assert.match(websiteHandoff, /Governed Run/);
+  assert.match(websiteHandoff, /bidvia onboard/);
+  assert.match(websiteHandoff, /stdio MCP first/i);
+  assert.doesNotMatch(websiteHandoff, /HTTP MCP product/i);
   assert.doesNotMatch(readme, /bidvia-agent-client openclaw-mcp-config/);
   assert.doesNotMatch(smokeDoc, /bidvia-agent-client openclaw-mcp-config/);
 

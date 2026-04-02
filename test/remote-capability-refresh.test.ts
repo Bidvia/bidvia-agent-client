@@ -41,6 +41,7 @@ test('refreshRemoteCapabilityTruth consumes provided frozen core payloads and me
             helper_key: 'refreshRemoteCapabilityTruth',
             capability_key: 'refreshRemoteCapabilityTruth',
           },
+          context_semantic: 'scenario',
         },
       ],
       mcp_server: {
@@ -48,6 +49,10 @@ test('refreshRemoteCapabilityTruth consumes provided frozen core payloads and me
         transport: 'stdio',
         supported_methods: ['initialize', 'tools/list', 'tools/call'],
       },
+    } as Parameters<typeof refreshRemoteCapabilityTruth>[0]['coreCapabilityPayload'] & {
+      mcp_tools: Array<NonNullable<Parameters<typeof refreshRemoteCapabilityTruth>[0]['coreCapabilityPayload']>['mcp_tools'][number] & {
+        context_semantic: 'scenario';
+      }>;
     },
   });
 
@@ -62,6 +67,7 @@ test('refreshRemoteCapabilityTruth consumes provided frozen core payloads and me
       routePathTemplate: '/runtime/capabilities/refresh',
       httpMethod: 'GET',
       accessContextFamily: 'tenant',
+      contextSemantic: 'tenant',
       requiredContext: ['tenantId'],
       scope: 'read',
       level: 'atomic-route',
@@ -85,6 +91,7 @@ test('refreshRemoteCapabilityTruth consumes provided frozen core payloads and me
     localCapabilityTier: 'L1-review-safe',
     localCapabilityRiskTier: 'review-safe',
     accessContextFamily: 'scenario',
+    contextSemantic: 'scenario',
     requiredContext: [],
   });
   assert.equal(refreshed.localMcpServer.effectiveSource, 'server-derived');

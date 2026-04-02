@@ -1,6 +1,14 @@
 import type {
   BidviaLocalDiscoveryCatalogEntry,
 } from './discovery-catalog.js';
+import {
+  listOnboardingJourneyDefinitions,
+  type BidviaOnboardingJourneyDefinition,
+  type BidviaOnboardingJourneyKey,
+  type BidviaOnboardingJourneyRelevance,
+  type BidviaOnboardingJourneyPresentationTier,
+  type BidviaOnboardingJourneyStage,
+} from './onboarding-journey.js';
 import type {
   BidviaMcpToolOutputMode,
   BidviaRouteCapability,
@@ -8,15 +16,18 @@ import type {
 } from './contracts.js';
 import { getRouteCapability } from './capabilities.js';
 import { buildLocalDiscoveryCatalog } from './discovery-catalog.js';
+import { buildGovernedReadPosture } from './governed-read-posture.js';
 import { buildLocalRuntimeCapabilitySnapshot } from './runtime-capabilities.js';
 
-type BidviaRouteContextJourneyKey = 'public-first-onboarding' | 'local-openclaw-operator';
+type BidviaRouteContextJourneyKey = BidviaOnboardingJourneyKey;
 
-type BidviaRouteContextRelevance = 'public-first-common' | 'operator-secondary';
+type BidviaRouteContextRelevance = BidviaOnboardingJourneyRelevance;
 
-type BidviaRouteContextPresentationTier = 'primary' | 'secondary';
+type BidviaRouteContextPresentationTier = BidviaOnboardingJourneyPresentationTier;
 
 type BidviaRouteContextOperationKind = 'read-only' | 'execute';
+
+type BidviaRouteContextJourneyStage = BidviaOnboardingJourneyStage;
 
 type BidviaRouteContextFamily =
   | 'agent-onboarding'
@@ -27,23 +38,14 @@ type BidviaRouteContextFamily =
   | 'assets'
   | 'scenario';
 
-interface BidviaRouteContextJourneyDefinition {
-  journeyKey: BidviaRouteContextJourneyKey;
-  helperKeys: readonly string[];
-  relevance: BidviaRouteContextRelevance;
-  presentationTier: BidviaRouteContextPresentationTier;
-  firstSuccessNextStep: {
-    command: string;
-    rationale: string;
-  };
-}
-
 export interface BidviaRouteContextMatrixRow {
   journeyKey: BidviaRouteContextJourneyKey;
   helperKey: string;
   routePathTemplate: string;
   routeFamily: BidviaRouteContextFamily;
+  journeyStage: BidviaRouteContextJourneyStage;
   accessContextFamily: BidviaRouteCapability['accessContextFamily'];
+  contextSemantic: BidviaRouteCapability['contextSemantic'];
   requiredContext: BidviaScenarioContextKey[];
   operationKind: BidviaRouteContextOperationKind;
   localCapabilityRiskTier: BidviaRouteCapability['localCapabilityRiskTier'];
@@ -67,39 +69,29 @@ export interface BidviaRouteContextMatrix {
   rows: BidviaRouteContextMatrixRow[];
   firstSuccessNextSteps: Record<
     BidviaRouteContextJourneyKey,
-    BidviaRouteContextJourneyDefinition['firstSuccessNextStep']
+    BidviaOnboardingJourneyDefinition['firstSuccessNextStep']
   >;
 }
 
 export interface BidviaRouteContextNextStepHint {
   journeyKey: BidviaRouteContextJourneyKey;
+  journeyStage: BidviaRouteContextJourneyStage;
   relevance: BidviaRouteContextRelevance;
   command: string;
   rationale: string;
 }
 
-const routeContextJourneyDefinitions: readonly BidviaRouteContextJourneyDefinition[] = [
-  {
-    journeyKey: 'public-first-onboarding',
-    helperKeys: ['createProvisionalAgent', 'claimProvisionalAgent', 'getAgentReadiness'],
-    relevance: 'public-first-common',
-    presentationTier: 'primary',
-    firstSuccessNextStep: {
-      command: 'registration-lifecycle-plan',
-      rationale: 'Stay on the shipped onboarding chain before switching into post-registration runtime execution.',
-    },
-  },
-  {
-    journeyKey: 'local-openclaw-operator',
-    helperKeys: ['claimProvisionalAgent', 'postHeartbeat', 'createCommercialAction'],
-    relevance: 'operator-secondary',
-    presentationTier: 'secondary',
-    firstSuccessNextStep: {
-      command: 'registered-agent-operations-plan',
-      rationale: 'Use the post-onboarding operations plan after the local MCP operator path has the required registration context.',
-    },
-  },
-] as const;
+function requireJourneyHelperStage(
+  journey: BidviaOnboardingJourneyDefinition,
+  helperKey: string,
+): BidviaRouteContextJourneyStage {
+  const helperStep = journey.helperSteps.find((entry) => entry.helperKey === helperKey);
+  if (!helperStep) {
+    throw new Error(`Missing onboarding journey helper stage for ${journey.journeyKey}:${helperKey}`);
+  }
+
+  return helperStep.journeyStage;
+}
 
 function requireRouteCapability(helperKey: string): BidviaRouteCapability {
   const capability = getRouteCapability(helperKey);
@@ -164,7 +156,7 @@ function inferRouteFamily(routePathTemplate: string): BidviaRouteContextFamily {
 }
 
 function buildMatrixRow(
-  journey: BidviaRouteContextJourneyDefinition,
+  journey: BidviaOnboardingJourneyDefinition,
   helperKey: string,
   discoveryCatalogMap: Map<string, BidviaLocalDiscoveryCatalogEntry>,
 ): BidviaRouteContextMatrixRow {
@@ -176,7 +168,9 @@ function buildMatrixRow(
     helperKey: capability.helperKey,
     routePathTemplate: capability.routePathTemplate,
     routeFamily: inferRouteFamily(capability.routePathTemplate),
+    journeyStage: requireJourneyHelperStage(journey, capability.helperKey),
     accessContextFamily: capability.accessContextFamily,
+    contextSemantic: capability.contextSemantic,
     requiredContext: [...capability.requiredContext],
     operationKind: buildOperationKind(capability),
     localCapabilityRiskTier: capability.localCapabilityRiskTier,
@@ -189,27 +183,24 @@ function buildMatrixRow(
 
 export function buildRouteContextMatrix(): BidviaRouteContextMatrix {
   const discoveryCatalogMap = buildDiscoveryCatalogMap();
+  const journeys = listOnboardingJourneyDefinitions();
 
-    return {
-      defaults: buildPublicDefaults(),
-      governedReadPosture: {
-        accessContextFamily: 'principal-governed-read',
-        requiredContext: ['tenantId', 'principalId'],
-        adminSessionOptional: true,
-        operatorGuidance: 'On local docker host, authority and presence require a valid admin session plus operator context. Authority-ladder is an operator-governed write and not a workspace admin-session route.',
-      },
-      rows: routeContextJourneyDefinitions.flatMap((journey) => (
-        journey.helperKeys.map((helperKey) => buildMatrixRow(journey, helperKey, discoveryCatalogMap))
-      )),
+  return {
+    defaults: buildPublicDefaults(),
+    governedReadPosture: buildGovernedReadPosture(),
+    rows: journeys.flatMap((journey) => (
+      journey.helperSteps.map(({ helperKey }) => buildMatrixRow(journey, helperKey, discoveryCatalogMap))
+    )),
     firstSuccessNextSteps: Object.fromEntries(
-      routeContextJourneyDefinitions.map((journey) => [journey.journeyKey, journey.firstSuccessNextStep]),
+      journeys.map((journey) => [journey.journeyKey, journey.firstSuccessNextStep]),
     ) as BidviaRouteContextMatrix['firstSuccessNextSteps'],
   };
 }
 
 export function buildRouteContextMatrixNextStepHints(): BidviaRouteContextNextStepHint[] {
-  return routeContextJourneyDefinitions.map((journey) => ({
+  return listOnboardingJourneyDefinitions().map((journey) => ({
     journeyKey: journey.journeyKey,
+    journeyStage: journey.firstSuccessNextStep.journeyStage,
     relevance: journey.relevance,
     command: journey.firstSuccessNextStep.command,
     rationale: journey.firstSuccessNextStep.rationale,

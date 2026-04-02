@@ -4,7 +4,14 @@ import assert from 'node:assert/strict';
 import type { BidviaHeartbeatInput } from '../src/contracts.ts';
 import { runCli } from '../src/cli.ts';
 
-test('runCli prints grouped help output for visibility, execution, review-safe, and verification commands', async () => {
+function withDefaultContextSemantic<T extends { accessContextFamily: string }>(value: T): T & { contextSemantic: string } {
+  return {
+    ...value,
+    contextSemantic: value.accessContextFamily,
+  };
+}
+
+test('runCli prints grouped help output for the learn, create-claim, run, diagnostics, and advanced review journey', async () => {
   const lines: string[] = [];
 
   const exitCode = await runCli(['--help'], {
@@ -21,16 +28,34 @@ test('runCli prints grouped help output for visibility, execution, review-safe, 
     'bidvia',
     'OpenClaw primary path: export stdio MCP config first, then add the companion bundle when you want bundle/bootstrap packaging.',
     'OpenClaw scope for this version: local-first, Core-truth-consuming, stdio MCP primary.',
-    'Visibility commands:',
+    'Getting Started (Learn):',
+    '  onboard',
+    '  context show',
+    '  whoami',
+    '  doctor',
+    '  onboarding-readiness',
+    '  route-context-matrix',
+    '  openclaw-mcp-config',
+    '  openclaw-bundle-export --output ...',
+    'Agent Onboarding (Public Provisional -> Claim):',
+    '  create-provisional-agent --provisional-agent-ref ...',
+    '  query-provisional-agent --provisional-agent-ref ...',
+    '  claim-provisional-agent --provisional-agent-ref ... --claim-token ...',
+    'Agent Runtime (Run):',
+    '  registration-lifecycle-plan',
+    '  registered-agent-operations-plan',
+    '  mcp-server',
+    '  heartbeat [--dry-run]',
+    '  sync-upload [--dry-run]',
+    '  evidence [--dry-run]',
+    '  proposal [--dry-run]',
+    'Diagnostics:',
     '  environment-mode',
     '  runtime-capabilities',
     '  launch-topology-smoke',
     '  server-capabilities',
     '  operator-discovery',
-    '  onboarding-readiness',
-    '  openclaw-mcp-config',
-    '  openclaw-bundle-export --output ...',
-    '  route-context-matrix',
+    'Advanced Governance / Internal Review:',
     '  account-agents',
     '  account-agent --registration-id ...',
     '  account-agent-bindings',
@@ -79,13 +104,6 @@ test('runCli prints grouped help output for visibility, execution, review-safe, 
     '  file-resources',
     '  file-resource --file-resource-id ...',
     '  target-attachment-bindings --target-ref ...',
-    'Execution commands:',
-    '  mcp-server',
-    '  heartbeat [--dry-run]',
-    '  sync-upload [--dry-run]',
-    '  evidence [--dry-run]',
-    '  proposal [--dry-run]',
-    'Review-safe commands:',
     '  industry-universe-plan',
     '  industry-universe-review-packet-preview',
     '  industry-universe-review-packet-export',
@@ -95,9 +113,6 @@ test('runCli prints grouped help output for visibility, execution, review-safe, 
     '  opportunity-package-handoff-plan',
     '  opportunity-package-handoff-review-packet-preview',
     '  opportunity-package-handoff-review-packet-export',
-    '  registration-lifecycle-plan',
-    '  registered-agent-operations-plan',
-    'Verification commands:',
     '  multi-business-chain-verification-wave-preview',
     '  commercial-action-verification-wave-preview',
     '  verification-bundle-preview [--input registration-lifecycle|registered-agent-operations]',
@@ -149,6 +164,7 @@ test('runCli prints operator discovery snapshots for CLI route metadata and loca
     level: 'atomic-route',
     localCapabilityTier: 'L0-observe-only',
     localCapabilityRiskTier: 'observe-only',
+    contextSemantic: 'session',
   });
   assert.deepEqual(snapshot.cli.routeCapabilities.find((entry) => entry.helperKey === 'getAgentReadiness'), {
     helperKey: 'getAgentReadiness',
@@ -160,6 +176,7 @@ test('runCli prints operator discovery snapshots for CLI route metadata and loca
     level: 'atomic-route',
     localCapabilityTier: 'L0-observe-only',
     localCapabilityRiskTier: 'observe-only',
+    contextSemantic: 'principal-governed-read',
   });
   assert.deepEqual(snapshot.cli.routeCapabilities.find((entry) => entry.helperKey === 'listCanonicalSemanticLabels'), {
     helperKey: 'listCanonicalSemanticLabels',
@@ -171,6 +188,7 @@ test('runCli prints operator discovery snapshots for CLI route metadata and loca
     level: 'atomic-route',
     localCapabilityTier: 'L0-observe-only',
     localCapabilityRiskTier: 'observe-only',
+    contextSemantic: 'tenant',
   });
   assert.deepEqual(snapshot.cli.nextStageReadRouteDiscoveryGroups.find((entry) => entry.groupKey === 'governance-deep-reads'), {
     groupKey: 'governance-deep-reads',
@@ -183,15 +201,17 @@ test('runCli prints operator discovery snapshots for CLI route metadata and loca
   assert.deepEqual(snapshot.cli.nextStepHints, [
     {
       journeyKey: 'public-first-onboarding',
+      journeyStage: 'governed-run-execution',
       relevance: 'public-first-common',
       command: 'registration-lifecycle-plan',
-      rationale: 'Stay on the shipped onboarding chain before switching into post-registration runtime execution.',
+      rationale: 'Use the lifecycle plan next so the first successful onboarding path stays aligned with the shipped provisional-to-registration chain.',
     },
     {
-      journeyKey: 'local-openclaw-operator',
-      relevance: 'operator-secondary',
+      journeyKey: 'governed-run',
+      journeyStage: 'governed-run-execution',
+      relevance: 'governed-run-secondary',
       command: 'registered-agent-operations-plan',
-      rationale: 'Use the post-onboarding operations plan after the local MCP operator path has the required registration context.',
+      rationale: 'Use the post-onboarding operations plan after Governed Run has the required registration context.',
     },
   ]);
   assert.deepEqual(snapshot.mcp.serverBoundary, {
@@ -255,37 +275,47 @@ test('runCli prints public-first onboarding readiness without requiring environm
     },
     journey: {
       journeyKey: 'public-first-onboarding',
-      label: 'Public-first onboarding readiness',
+      label: 'Public provisional onboarding',
       steps: [
         {
           helperKey: 'createProvisionalAgent',
           routePathTemplate: '/runtime/agents/provisional',
           accessContextFamily: 'tenant',
+          contextSemantic: 'public-provisional',
           requiredContext: ['tenantId'],
         },
         {
           helperKey: 'queryProvisionalAgent',
           routePathTemplate: '/runtime/agents/provisional',
           accessContextFamily: 'tenant',
+          contextSemantic: 'public-provisional',
           requiredContext: ['tenantId'],
         },
         {
           helperKey: 'claimProvisionalAgent',
           routePathTemplate: '/runtime/agents/provisional/claim',
           accessContextFamily: 'session',
+          contextSemantic: 'session',
           requiredContext: ['tenantId', 'sessionId'],
-        },
-        {
-          helperKey: 'getAgentReadiness',
-          routePathTemplate: '/runtime/agents/:agent_registration_id/readiness',
-          accessContextFamily: 'principal-governed-read',
-          requiredContext: ['tenantId', 'principalId'],
         },
       ],
       firstSuccessNextStep: {
         command: 'registration-lifecycle-plan',
         rationale: 'Use the lifecycle plan next so the first successful onboarding path stays aligned with the shipped provisional-to-registration chain.',
+        journeyStage: 'governed-run-execution',
       },
+    },
+    postClaimSupport: {
+      label: 'Governed-run support',
+      steps: [
+        {
+          helperKey: 'getAgentReadiness',
+          routePathTemplate: '/runtime/agents/:agent_registration_id/readiness',
+          accessContextFamily: 'principal-governed-read',
+          contextSemantic: 'principal-governed-read',
+          requiredContext: ['tenantId', 'principalId'],
+        },
+      ],
     },
   }]);
 });
@@ -364,7 +394,7 @@ test('runCli dispatches the stable installed MCP server subcommand while leaving
   assert.equal(runLocalMcpServerCalls, 1);
 });
 
-test('runCli prints a route-context matrix that keeps public-first rows ahead of operator-secondary rows', async () => {
+test('runCli prints a route-context matrix that keeps public-first rows ahead of governed-run rows', async () => {
   const printed: unknown[] = [];
 
   const exitCode = await runCli(['route-context-matrix'], {
@@ -396,7 +426,9 @@ test('runCli prints a route-context matrix that keeps public-first rows ahead of
         helperKey: 'createProvisionalAgent',
         routePathTemplate: '/runtime/agents/provisional',
         routeFamily: 'agent-onboarding',
+        journeyStage: 'public-provisional',
         accessContextFamily: 'tenant',
+        contextSemantic: 'public-provisional',
         requiredContext: ['tenantId'],
         operationKind: 'execute',
         localCapabilityRiskTier: 'runtime-execution',
@@ -406,24 +438,13 @@ test('runCli prints a route-context matrix that keeps public-first rows ahead of
       },
       {
         journeyKey: 'public-first-onboarding',
-        helperKey: 'claimProvisionalAgent',
-        routePathTemplate: '/runtime/agents/provisional/claim',
+        helperKey: 'queryProvisionalAgent',
+        routePathTemplate: '/runtime/agents/provisional',
         routeFamily: 'agent-onboarding',
-        accessContextFamily: 'session',
-        requiredContext: ['tenantId', 'sessionId'],
-        operationKind: 'execute',
-        localCapabilityRiskTier: 'runtime-execution',
-        relevance: 'public-first-common',
-        presentationTier: 'primary',
-        recommendedOutputMode: 'execution-result',
-      },
-      {
-        journeyKey: 'public-first-onboarding',
-        helperKey: 'getAgentReadiness',
-        routePathTemplate: '/runtime/agents/:agent_registration_id/readiness',
-        routeFamily: 'agent-runtime',
-        accessContextFamily: 'principal-governed-read',
-        requiredContext: ['tenantId', 'principalId'],
+        journeyStage: 'public-provisional',
+        accessContextFamily: 'tenant',
+        contextSemantic: 'public-provisional',
+        requiredContext: ['tenantId'],
         operationKind: 'read-only',
         localCapabilityRiskTier: 'observe-only',
         relevance: 'public-first-common',
@@ -431,41 +452,62 @@ test('runCli prints a route-context matrix that keeps public-first rows ahead of
         recommendedOutputMode: 'truth-fetch-result',
       },
       {
-        journeyKey: 'local-openclaw-operator',
+        journeyKey: 'public-first-onboarding',
         helperKey: 'claimProvisionalAgent',
         routePathTemplate: '/runtime/agents/provisional/claim',
         routeFamily: 'agent-onboarding',
+        journeyStage: 'public-provisional',
         accessContextFamily: 'session',
+        contextSemantic: 'session',
         requiredContext: ['tenantId', 'sessionId'],
         operationKind: 'execute',
         localCapabilityRiskTier: 'runtime-execution',
-        relevance: 'operator-secondary',
-        presentationTier: 'secondary',
+        relevance: 'public-first-common',
+        presentationTier: 'primary',
         recommendedOutputMode: 'execution-result',
       },
       {
-        journeyKey: 'local-openclaw-operator',
+        journeyKey: 'governed-run',
+        helperKey: 'getAgentReadiness',
+        routePathTemplate: '/runtime/agents/:agent_registration_id/readiness',
+        routeFamily: 'agent-runtime',
+        journeyStage: 'governed-run-support',
+        accessContextFamily: 'principal-governed-read',
+        contextSemantic: 'principal-governed-read',
+        requiredContext: ['tenantId', 'principalId'],
+        operationKind: 'read-only',
+        localCapabilityRiskTier: 'observe-only',
+        relevance: 'governed-run-secondary',
+        presentationTier: 'secondary',
+        recommendedOutputMode: 'truth-fetch-result',
+      },
+      {
+        journeyKey: 'governed-run',
         helperKey: 'postHeartbeat',
         routePathTemplate: '/runtime/agents/:registrationId/heartbeat',
         routeFamily: 'agent-runtime',
+        journeyStage: 'governed-run-execution',
         accessContextFamily: 'registration',
+        contextSemantic: 'registration',
         requiredContext: ['tenantId', 'registrationId', 'principalId'],
         operationKind: 'execute',
         localCapabilityRiskTier: 'runtime-execution',
-        relevance: 'operator-secondary',
+        relevance: 'governed-run-secondary',
         presentationTier: 'secondary',
         recommendedOutputMode: 'execution-result',
       },
       {
-        journeyKey: 'local-openclaw-operator',
+        journeyKey: 'governed-run',
         helperKey: 'createCommercialAction',
         routePathTemplate: '/runtime/commercial-actions',
         routeFamily: 'agent-runtime',
+        journeyStage: 'governed-run-execution',
         accessContextFamily: 'operator-company',
+        contextSemantic: 'operator-company',
         requiredContext: ['tenantId', 'principalId', 'companyId'],
         operationKind: 'execute',
         localCapabilityRiskTier: 'governed-commercial',
-        relevance: 'operator-secondary',
+        relevance: 'governed-run-secondary',
         presentationTier: 'secondary',
         recommendedOutputMode: 'execution-result',
       },
@@ -473,11 +515,13 @@ test('runCli prints a route-context matrix that keeps public-first rows ahead of
     firstSuccessNextSteps: {
       'public-first-onboarding': {
         command: 'registration-lifecycle-plan',
-        rationale: 'Stay on the shipped onboarding chain before switching into post-registration runtime execution.',
+        rationale: 'Use the lifecycle plan next so the first successful onboarding path stays aligned with the shipped provisional-to-registration chain.',
+        journeyStage: 'governed-run-execution',
       },
-      'local-openclaw-operator': {
+      'governed-run': {
         command: 'registered-agent-operations-plan',
-        rationale: 'Use the post-onboarding operations plan after the local MCP operator path has the required registration context.',
+        rationale: 'Use the post-onboarding operations plan after Governed Run has the required registration context.',
+        journeyStage: 'governed-run-execution',
       },
     },
   }]);
@@ -630,10 +674,10 @@ test('runCli dry-runs execution commands with structured output instead of invok
       localCapabilityTier: 'L2-registration-runtime',
       localCapabilityRiskTier: 'runtime-execution',
       requiredContext: ['tenantId', 'registrationId', 'principalId'],
-      missingContext: ['registrationId', 'principalId'],
+      missingContext: ['tenantId', 'registrationId', 'principalId'],
       hints: [
         'Dry-run stays local and does not execute the remote registration-bound route.',
-        'Set BIDVIA_REGISTRATION_ID and BIDVIA_PRINCIPAL_ID before running the real execution command.',
+        'Set BIDVIA_TENANT_ID and BIDVIA_REGISTRATION_ID and BIDVIA_PRINCIPAL_ID before running the real execution command.',
         'Risk tier runtime-execution means the non-dry-run command writes to the remote runtime route.',
       ],
     },

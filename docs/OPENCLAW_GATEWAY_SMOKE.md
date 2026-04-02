@@ -15,6 +15,8 @@ This smoke guide is intentionally bounded to the shipped local operator path:
 
 It does **not** assume any hosted Bidvia runtime, hosted MCP service, or remote registry behavior.
 
+The website first-access work for this release is documented separately as a handoff contract in `docs/WEBSITE_FIRST_ACCESS_HANDOFF.md`. It stays spec-only and does not change the local stdio MCP-first smoke order in this document.
+
 ## Scope boundary
 
 This guide answers one question only:
@@ -153,9 +155,9 @@ bidvia route-context-matrix
 ### What this proves
 
 - the public-first onboarding rows stay primary
-- the local OpenClaw/operator row stays secondary
+- the governed-run rows stay secondary
 - the required context family is visible before local operator execution is enabled
-- the visible operator next success step remains `registered-agent-operations-plan`
+- the visible governed-run next success step remains `registered-agent-operations-plan`
 
 ### If this fails
 
@@ -321,7 +323,7 @@ High-level meaning:
 - `npm run validate` passes
 - `openclaw-mcp-config` returns the shipped local stdio handoff with the expected default public base URL and boundary flags
 - `openclaw-bundle-export` returns the supported additive bundle layout pointing back to the same local server
-- `route-context-matrix` keeps the public-first rows primary and the operator row secondary
+- `route-context-matrix` keeps the public-first rows primary and the governed-run rows secondary
 - `launch-topology-smoke` returns the expected default public resolution or the intended explicit override, plus the canonical `api.*` and compatibility mapping information
 - `environment-mode` reflects the intended environment
 - `runtime-capabilities` returns local-static and deferred surfaces as expected
@@ -363,7 +365,7 @@ If you want the grouped local-only command surface before or after the smoke run
 node dist/cli.js --help
 ```
 
-That help output is the quickest way to confirm the current packaged CLI still includes visibility commands, the primary stdio MCP handoff, the additive bundle export, explicit execution commands with `--dry-run`, review-safe plan/review/export commands, and verification-bundle preview/export commands.
+That help output is the quickest way to confirm the current packaged CLI still includes the Learn commands, the Public Provisional create -> query -> claim chain, the Governed Run commands, the primary stdio MCP handoff, the additive bundle export, explicit execution commands with `--dry-run`, review-safe plan/review/export commands, and verification-bundle preview/export commands.
 
 ## Relationship to the main onboarding guide
 

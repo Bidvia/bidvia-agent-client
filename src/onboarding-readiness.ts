@@ -1,4 +1,8 @@
 import { getRouteCapability } from './capabilities.js';
+import {
+  requireOnboardingJourneyDefinition,
+} from './onboarding-journey.js';
+import { buildGovernedReadPosture } from './governed-read-posture.js';
 import { buildLocalRuntimeCapabilitySnapshot } from './runtime-capabilities.js';
 import type {
   BidviaRouteCapability,
@@ -9,6 +13,7 @@ interface BidviaGuidedRouteStep {
   helperKey: string;
   routePathTemplate: string;
   accessContextFamily: BidviaRouteCapability['accessContextFamily'];
+  contextSemantic: BidviaRouteCapability['contextSemantic'];
   requiredContext: BidviaScenarioContextKey[];
 }
 
@@ -22,6 +27,7 @@ function requireGuidedRouteStep(helperKey: string): BidviaGuidedRouteStep {
     helperKey: capability.helperKey,
     routePathTemplate: capability.routePathTemplate,
     accessContextFamily: capability.accessContextFamily,
+    contextSemantic: capability.contextSemantic,
     requiredContext: [...capability.requiredContext],
   };
 }
@@ -37,27 +43,21 @@ function buildPublicDefaults() {
 }
 
 export function buildOnboardingReadiness() {
+  const journey = requireOnboardingJourneyDefinition('public-first-onboarding');
+  const postClaimSupportSteps = [requireGuidedRouteStep('getAgentReadiness')];
+
   return {
     defaults: buildPublicDefaults(),
-    governedReadPosture: {
-      accessContextFamily: 'principal-governed-read' as const,
-      requiredContext: ['tenantId', 'principalId'] as const,
-      adminSessionOptional: true,
-      operatorGuidance: 'On local docker host, authority and presence require a valid admin session plus operator context. Authority-ladder is an operator-governed write and not a workspace admin-session route.',
-    },
+    governedReadPosture: buildGovernedReadPosture(),
     journey: {
-      journeyKey: 'public-first-onboarding',
-      label: 'Public-first onboarding readiness',
-      steps: [
-        requireGuidedRouteStep('createProvisionalAgent'),
-        requireGuidedRouteStep('queryProvisionalAgent'),
-        requireGuidedRouteStep('claimProvisionalAgent'),
-        requireGuidedRouteStep('getAgentReadiness'),
-      ],
-      firstSuccessNextStep: {
-        command: 'registration-lifecycle-plan',
-        rationale: 'Use the lifecycle plan next so the first successful onboarding path stays aligned with the shipped provisional-to-registration chain.',
-      },
+      journeyKey: journey.journeyKey,
+      label: journey.label,
+      steps: journey.helperSteps.map(({ helperKey }) => requireGuidedRouteStep(helperKey)),
+      firstSuccessNextStep: journey.firstSuccessNextStep,
+    },
+    postClaimSupport: {
+      label: 'Governed-run support',
+      steps: postClaimSupportSteps,
     },
   };
 }

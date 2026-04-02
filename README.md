@@ -10,8 +10,8 @@ Today, this package ships a usable current mainline client surface for the froze
 
 This package currently gives external users two guided journeys:
 
-- one primary public CLI-first journey for readiness, route context, bounded first success, and local operator visibility
-- one secondary OpenClaw/operator journey where local stdio MCP is the primary OpenClaw path and the companion bundle is additive packaging around that same local runtime
+- one primary public CLI-first journey organized as Learn, then Public Provisional create -> query -> claim, then Governed Run
+- one secondary Governed Run journey where local stdio MCP remains a packaging/integration path, not a separate onboarding semantics layer
 
 The same package also ships an SDK for Bidvia agent access routes, onboarding flows, registration-bound operations, the frozen downstream truth-fetch reads now adopted in the client surface, bounded scenario planning, and verification-safe exports.
 
@@ -62,36 +62,51 @@ For the normal public package path, start with the package defaults. The CLI res
 Current installed path:
 
 ```bash
-bidvia onboarding-readiness
-bidvia route-context-matrix
-bidvia registration-lifecycle-plan
+bidvia onboard
+bidvia context show
+bidvia whoami
+bidvia doctor
 ```
 
 Developer fallback path:
 
 ```bash
-node dist/cli.js onboarding-readiness
-node dist/cli.js route-context-matrix
-node dist/cli.js registration-lifecycle-plan
+node dist/cli.js onboard
+node dist/cli.js context show
+node dist/cli.js whoami
+node dist/cli.js doctor
 ```
 
-Use those commands for three different questions:
+Use the first three commands for the Learn stage, and keep `doctor` as a supporting governed-run diagnostic once context starts to exist:
 
-- `onboarding-readiness` shows the current public-first onboarding chain and keeps endpoint selection implicit
-- `route-context-matrix` shows which context family each guided route needs before you cross from onboarding into runtime work
-- `registration-lifecycle-plan` is the first bounded success step once you are ready to stay on the shipped provisional-to-registration chain
+- `onboard` is the primary first-run entry point and rerunnable local guide
+- `context show` shows effective local context and where each field came from
+- `whoami` summarizes local identity without implying platform login
+- `doctor` shows local diagnostics and, when enough context exists, the optional readiness live check on the governed side of the journey
 
-When onboarding is already complete and you are moving into post-registration work, the next bounded public step is visible, not buried:
+When you need the explicit public provisional chain, keep create -> query -> claim visible instead of hiding query behind a browser flow or shorthand:
 
 ```bash
-node dist/cli.js registered-agent-operations-plan
+bidvia create-provisional-agent --provisional-agent-ref ...
+bidvia query-provisional-agent --provisional-agent-ref ...
+bidvia claim-provisional-agent --provisional-agent-ref ... --claim-token ...
 ```
 
-`docs/ONBOARDING.md` expands this public path and shows where the read-only visibility commands fit around it.
+When local context is ready and you are crossing into Run, use the bounded runtime path:
 
-### Secondary OpenClaw/operator journey
+```bash
+bidvia route-context-matrix
+bidvia registration-lifecycle-plan
+bidvia registered-agent-operations-plan
+```
 
-If your path is a local OpenClaw Gateway or node-host install, start from the shipped operator handoff instead of reconstructing the MCP config by hand:
+`docs/ONBOARDING.md` expands this Learn → Public Provisional create -> query -> claim → Governed Run path and shows where the supporting diagnostics fit around it.
+
+In that split, `claim-provisional-agent` is session-bound, and `doctor`, `route-context-matrix`, and the plan commands belong to Governed Run rather than to the official public provisional chain.
+
+### Secondary Governed Run journey
+
+If your path includes a local OpenClaw Gateway or node-host install, treat that as one way to enter the same Governed Run surface rather than as a separate onboarding journey:
 
 Current installed path:
 
@@ -109,7 +124,7 @@ node dist/cli.js openclaw-bundle-export --output ./bidvia-openclaw-bundle
 node dist/cli.js route-context-matrix
 ```
 
-Use `openclaw-mcp-config` first to export the OpenClaw-compatible `command` / `args` / `env` fragment for the primary stdio MCP path. Use `openclaw-bundle-export --output ./bidvia-openclaw-bundle` when you want companion bundle/bootstrap packaging around that same local server written to disk. The installed execution story is still `bidvia mcp-server`, and the repo-local development fallback remains `node dist/mcp-server.js`. Then use `route-context-matrix` to confirm which context family the guided operator route needs before enabling execution.
+Use `openclaw-mcp-config` first to export the OpenClaw-compatible `command` / `args` / `env` fragment for the primary stdio MCP path. Use `openclaw-bundle-export --output ./bidvia-openclaw-bundle` when you want companion bundle/bootstrap packaging around that same local server written to disk. The installed execution story is still `bidvia mcp-server`, and the repo-local development fallback remains `node dist/mcp-server.js`. Then use `route-context-matrix` to confirm which context family the guided Governed Run route needs before enabling execution.
 
 Continue with:
 
@@ -191,12 +206,18 @@ Developer fallback path:
 node dist/cli.js --help
 ```
 
-For the normal public package path, CLI commands resolve against `https://api.bidvia.ai`. Start with the public CLI-first journey before you reach for explicit overrides.
+For the normal public package path, CLI commands resolve against `https://api.bidvia.ai`. Start with `bidvia onboard` before you reach for explicit overrides.
 
 Guided public journey, current installed path:
 
 ```bash
-bidvia onboarding-readiness
+bidvia onboard
+bidvia context show
+bidvia whoami
+bidvia doctor
+bidvia create-provisional-agent --provisional-agent-ref ...
+bidvia query-provisional-agent --provisional-agent-ref ...
+bidvia claim-provisional-agent --provisional-agent-ref ... --claim-token ...
 bidvia route-context-matrix
 bidvia registration-lifecycle-plan
 bidvia registered-agent-operations-plan
@@ -205,13 +226,19 @@ bidvia registered-agent-operations-plan
 Developer fallback path:
 
 ```bash
-node dist/cli.js onboarding-readiness
+node dist/cli.js onboard
+node dist/cli.js context show
+node dist/cli.js whoami
+node dist/cli.js doctor
+node dist/cli.js create-provisional-agent --provisional-agent-ref ...
+node dist/cli.js query-provisional-agent --provisional-agent-ref ...
+node dist/cli.js claim-provisional-agent --provisional-agent-ref ... --claim-token ...
 node dist/cli.js route-context-matrix
 node dist/cli.js registration-lifecycle-plan
 node dist/cli.js registered-agent-operations-plan
 ```
 
-Guided OpenClaw/operator handoff, developer fallback path:
+Governed Run packaging/integration handoff, developer fallback path:
 
 ```bash
 node dist/cli.js openclaw-mcp-config
@@ -219,7 +246,7 @@ node dist/cli.js openclaw-bundle-export
 node dist/cli.js route-context-matrix
 ```
 
-`openclaw-mcp-config` is the primary OpenClaw handoff because it points directly at `bidvia mcp-server`. `openclaw-bundle-export` is additive packaging for operators and agents that want bundle/bootstrap guidance around that same local runtime. `node dist/mcp-server.js` remains the repo-local fallback.
+`openclaw-mcp-config` is the primary OpenClaw handoff because it points directly at `bidvia mcp-server`. `openclaw-bundle-export` is additive packaging for operators and agents that want bundle/bootstrap guidance around that same local runtime. `node dist/mcp-server.js` remains the repo-local fallback. Those steps support the same Governed Run journey rather than defining a separate OpenClaw-owned onboarding path.
 
 Start with grouped help when you want the current local-only command surface:
 
@@ -227,7 +254,7 @@ Start with grouped help when you want the current local-only command surface:
 node dist/cli.js --help
 ```
 
-Read-only visibility commands:
+Supporting diagnostics and visibility commands:
 
 ```bash
 node dist/cli.js environment-mode
@@ -241,6 +268,8 @@ node dist/cli.js media-asset --media-asset-id media-1
 ```
 
 The full truth-fetch command group also includes detail and collection reads for account records, account agent bindings, richer governance deep reads such as `agent-registrations`, `agent-registration`, `authority-profiles`, `capability-profiles`, and `agent-capability-profile`, plus `participation-states`, `participation-state`, `task-dispatches`, and `task-dispatch` around the frozen participation/task family. These commands stay operator-facing, and the governed read routes still require real principal context when you want more than local auth-posture proof.
+
+`onboarding-readiness` remains available as a supporting read-only explainer, but `onboard` is now the visible public first-run entry point.
 
 Bounded preview and export commands:
 
@@ -325,7 +354,7 @@ Then continue with:
 - `docs/OPENCLAW_GATEWAY_ONBOARDING.md` for install and configuration order
 - `docs/OPENCLAW_GATEWAY_SMOKE.md` for the detailed smoke sequence
 
-For Gateway users on the public path, the safest order is still: install locally, export the operator config from `openclaw-mcp-config`, optionally export the companion bundle from `openclaw-bundle-export`, confirm route context with `route-context-matrix`, run the smoke commands against the default public API, then wire the local stdio MCP server only if the Gateway side is ready.
+For Gateway users on the public path, the safest order is still: install locally, export the operator config from `openclaw-mcp-config`, optionally export the companion bundle from `openclaw-bundle-export`, confirm route context with `route-context-matrix`, run the smoke commands against the default public API, then wire the local stdio MCP server only if the Gateway side is ready. The website handoff stays spec-only in `docs/WEBSITE_FIRST_ACCESS_HANDOFF.md` and does not change this OpenClaw runtime order.
 
 If your Gateway deployment needs an operator-selected endpoint instead, set `BIDVIA_BASE_URL` explicitly before the smoke flow. Keep the boundary the same: local stdio MCP on your side, remote HTTPS Bidvia API on the other side.
 
@@ -384,9 +413,10 @@ That means you can use it today for governed agent access, bounded reviewable fl
 
 ## Recommended docs next
 
-- `docs/ONBOARDING.md` for the primary public CLI-first onboarding and operating path
+- `docs/ONBOARDING.md` for the primary public CLI-first Learn → Public Provisional create -> query -> claim → Governed Run path
 - `docs/OPENCLAW_GATEWAY_ONBOARDING.md` for Gateway and node-host installation
 - `docs/OPENCLAW_GATEWAY_SMOKE.md` for Gateway smoke verification
+- `docs/WEBSITE_FIRST_ACCESS_HANDOFF.md` for the website-team handoff contract
 - `docs/CONTRACT_BOUNDARY.md` for contract and authority boundaries
 
 ## License

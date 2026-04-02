@@ -7,6 +7,7 @@ import type {
   BidviaRouteCapabilityLevel,
 } from '../src/contracts.ts';
 import {
+  bidviaRouteCapabilityContextSemantics,
   bidviaLocalCapabilityRiskTiers,
   bidviaLocalCapabilityTiers,
   bidviaNextStageReadRouteDiscoveryGroupKeys,
@@ -23,6 +24,13 @@ import {
   getNextStageReadRouteDiscoveryGroup,
 } from '../src/capabilities.ts';
 
+function withDefaultContextSemantic(capability: BidviaRouteCapability): BidviaRouteCapability {
+  return {
+    ...capability,
+    contextSemantic: capability.accessContextFamily,
+  };
+}
+
 test('capability contract exposes bounded descriptive metadata labels', () => {
   assert.deepEqual(bidviaLocalCapabilityTiers, [
     'L0-observe-only',
@@ -38,6 +46,16 @@ test('capability contract exposes bounded descriptive metadata labels', () => {
   ]);
   assert.deepEqual(bidviaRouteCapabilityHttpMethods, ['GET', 'POST']);
   assert.deepEqual(bidviaRouteCapabilityAccessContextFamilies, [
+    'tenant',
+    'registration',
+    'session',
+    'admin-session',
+    'principal-governed-read',
+    'operator-company',
+    'scenario',
+  ]);
+  assert.deepEqual(bidviaRouteCapabilityContextSemantics, [
+    'public-provisional',
     'tenant',
     'registration',
     'session',
@@ -156,11 +174,51 @@ test('capability registry covers representative shipped helpers and route famili
 });
 
 test('capability registry lookup returns descriptive admin and operator route metadata', () => {
+  assert.deepEqual(getRouteCapability('createProvisionalAgent'), {
+    helperKey: 'createProvisionalAgent',
+    routePathTemplate: '/runtime/agents/provisional',
+    httpMethod: 'POST',
+    accessContextFamily: 'tenant',
+    contextSemantic: 'public-provisional',
+    requiredContext: ['tenantId'],
+    scope: 'write',
+    level: 'atomic-route',
+    localCapabilityTier: 'L2-registration-runtime',
+    localCapabilityRiskTier: 'runtime-execution',
+  });
+
+  assert.deepEqual(getRouteCapability('queryProvisionalAgent'), {
+    helperKey: 'queryProvisionalAgent',
+    routePathTemplate: '/runtime/agents/provisional',
+    httpMethod: 'GET',
+    accessContextFamily: 'tenant',
+    contextSemantic: 'public-provisional',
+    requiredContext: ['tenantId'],
+    scope: 'read',
+    level: 'atomic-route',
+    localCapabilityTier: 'L0-observe-only',
+    localCapabilityRiskTier: 'observe-only',
+  });
+
+  assert.deepEqual(getRouteCapability('claimProvisionalAgent'), {
+    helperKey: 'claimProvisionalAgent',
+    routePathTemplate: '/runtime/agents/provisional/claim',
+    httpMethod: 'POST',
+    accessContextFamily: 'session',
+    contextSemantic: 'session',
+    requiredContext: ['tenantId', 'sessionId'],
+    scope: 'write',
+    level: 'atomic-route',
+    localCapabilityTier: 'L2-registration-runtime',
+    localCapabilityRiskTier: 'runtime-execution',
+  });
+
   assert.deepEqual(getRouteCapability('getCommercialActionStatus'), {
     helperKey: 'getCommercialActionStatus',
     routePathTemplate: '/runtime/commercial-actions/:commercialActionRequestId/status',
     httpMethod: 'GET',
     accessContextFamily: 'admin-session',
+    contextSemantic: 'admin-session',
     requiredContext: ['tenantId', 'adminSessionId'],
     scope: 'read',
     level: 'atomic-route',
@@ -173,6 +231,7 @@ test('capability registry lookup returns descriptive admin and operator route me
     routePathTemplate: '/runtime/listings',
     httpMethod: 'POST',
     accessContextFamily: 'operator-company',
+    contextSemantic: 'operator-company',
     requiredContext: ['tenantId', 'principalId', 'companyId'],
     scope: 'write',
     level: 'atomic-route',
@@ -187,6 +246,7 @@ test('capability registry lookup returns shipped scenario-helper route metadata'
     routePathTemplate: '/scenarios/industry-universe',
     httpMethod: 'POST',
     accessContextFamily: 'scenario',
+    contextSemantic: 'scenario',
     requiredContext: ['tenantId', 'principalId', 'companyId'],
     scope: 'write',
     level: 'scenario-helper',
@@ -415,7 +475,7 @@ test('capability registry exposes approved truth-fetch helpers as local read-onl
 
   assert.deepEqual(
     expectedTruthFetchCapabilities.map((capability) => getRouteCapability(capability.helperKey)),
-    expectedTruthFetchCapabilities,
+    expectedTruthFetchCapabilities.map((capability) => withDefaultContextSemantic(capability)),
   );
 });
 
@@ -538,6 +598,7 @@ test('capability registry keeps singular capability-profile truth canonical and 
     routePathTemplate: '/runtime/agents/:agent_registration_id/capability-profile',
     httpMethod: 'GET',
     accessContextFamily: 'principal-governed-read',
+    contextSemantic: 'principal-governed-read',
     requiredContext: ['tenantId', 'principalId'],
     scope: 'read',
     level: 'atomic-route',
@@ -558,6 +619,7 @@ test('capability registry describes principal-governed reads and canonical parti
     routePathTemplate: '/runtime/agents/:agent_registration_id/readiness',
     httpMethod: 'GET',
     accessContextFamily: 'principal-governed-read',
+    contextSemantic: 'principal-governed-read',
     requiredContext: ['tenantId', 'principalId'],
     scope: 'read',
     level: 'atomic-route',
@@ -570,6 +632,7 @@ test('capability registry describes principal-governed reads and canonical parti
     routePathTemplate: '/runtime/agents/:agent_registration_id/participation-states',
     httpMethod: 'GET',
     accessContextFamily: 'principal-governed-read',
+    contextSemantic: 'principal-governed-read',
     requiredContext: ['tenantId', 'principalId'],
     scope: 'read',
     level: 'atomic-route',
@@ -582,6 +645,7 @@ test('capability registry describes principal-governed reads and canonical parti
     routePathTemplate: '/runtime/agents/:agent_registration_id/task-dispatches',
     httpMethod: 'POST',
     accessContextFamily: 'operator-company',
+    contextSemantic: 'operator-company',
     requiredContext: ['tenantId', 'principalId', 'companyId'],
     scope: 'write',
     level: 'atomic-route',
@@ -594,6 +658,7 @@ test('capability registry describes principal-governed reads and canonical parti
     routePathTemplate: '/runtime/agents/:agent_registration_id/claims/:claim_id/reject',
     httpMethod: 'POST',
     accessContextFamily: 'operator-company',
+    contextSemantic: 'operator-company',
     requiredContext: ['tenantId', 'principalId', 'companyId'],
     scope: 'write',
     level: 'atomic-route',
@@ -608,6 +673,7 @@ test('capability registry promotes shipped governed profile writes into canonica
     routePathTemplate: '/runtime/agents/:agent_registration_id/authority-profile',
     httpMethod: 'POST',
     accessContextFamily: 'operator-company',
+    contextSemantic: 'operator-company',
     requiredContext: ['tenantId', 'principalId', 'companyId'],
     scope: 'write',
     level: 'atomic-route',
@@ -620,6 +686,7 @@ test('capability registry promotes shipped governed profile writes into canonica
     routePathTemplate: '/runtime/agents/:agent_registration_id/authority-ladder',
     httpMethod: 'POST',
     accessContextFamily: 'operator-company',
+    contextSemantic: 'operator-company',
     requiredContext: ['tenantId', 'principalId', 'companyId'],
     scope: 'write',
     level: 'atomic-route',
@@ -632,6 +699,7 @@ test('capability registry promotes shipped governed profile writes into canonica
     routePathTemplate: '/runtime/agents/:agent_registration_id/capability-profile',
     httpMethod: 'POST',
     accessContextFamily: 'operator-company',
+    contextSemantic: 'operator-company',
     requiredContext: ['tenantId', 'principalId', 'companyId'],
     scope: 'write',
     level: 'atomic-route',

@@ -7,6 +7,25 @@ import path from 'node:path';
 import type { BidviaHeartbeatInput } from '../src/contracts.ts';
 import { runCli } from '../src/cli.ts';
 
+function setEnvVar(name: string, value: string | undefined) {
+  const previousValue = process.env[name];
+
+  if (value === undefined) {
+    delete process.env[name];
+  } else {
+    process.env[name] = value;
+  }
+
+  return () => {
+    if (previousValue === undefined) {
+      delete process.env[name];
+      return;
+    }
+
+    process.env[name] = previousValue;
+  };
+}
+
 test('runCli routes heartbeat through the explicit execution adapter and creates a client for that invocation', async () => {
   const printed: unknown[] = [];
   let clientCreateCount = 0;
@@ -81,6 +100,127 @@ test('runCli does not create a client for read-only commands', async () => {
     baseUrl: 'http://127.0.0.1:8787',
     environmentMode: 'local',
   }]);
+});
+
+test('runCli environment-mode honors injected resolveProcessEnv without custom baseUrl or environment resolvers', async () => {
+  const printed: unknown[] = [];
+  const restoreBaseUrl = setEnvVar('BIDVIA_BASE_URL', 'http://127.0.0.1:9999');
+
+  try {
+    const exitCode = await runCli(['environment-mode'], {
+      resolveProcessEnv: () => ({
+        BIDVIA_BASE_URL: 'http://127.0.0.1:8787',
+      }),
+      printJson: (value) => {
+        printed.push(value);
+      },
+      printLine: () => {
+        throw new Error('help output should not be used for environment-mode');
+      },
+    });
+
+    assert.equal(exitCode, 0);
+  } finally {
+    restoreBaseUrl();
+  }
+
+  assert.deepEqual(printed, [{
+    baseUrl: 'http://127.0.0.1:8787',
+    environmentMode: 'local',
+  }]);
+});
+
+test('runCli default execution context does not silently inject tenant-a when heartbeat is missing context', async () => {
+  const printed: unknown[] = [];
+  const restoreTenantId = setEnvVar('BIDVIA_TENANT_ID', undefined);
+  const restoreRegistrationId = setEnvVar('BIDVIA_REGISTRATION_ID', undefined);
+  const restorePrincipalId = setEnvVar('BIDVIA_PRINCIPAL_ID', undefined);
+
+  try {
+    const exitCode = await runCli(['heartbeat'], {
+      createClient: () => {
+        throw new Error('heartbeat should fail preflight before creating a client');
+      },
+      printJson: (value) => {
+        printed.push(value);
+      },
+      printLine: () => {
+        throw new Error('heartbeat should not print help lines');
+      },
+    });
+
+    assert.equal(exitCode, 1);
+    const failure = printed[0] as {
+      error: {
+        code: string;
+        command: string;
+        message: string;
+        details: string[];
+        preflight: {
+          requiredContext: string[];
+          missingContext: string[];
+        };
+      };
+    };
+
+    assert.equal(failure.error.code, 'missing-context');
+    assert.equal(failure.error.command, 'heartbeat');
+    assert.equal(
+      failure.error.message,
+      'The heartbeat command requires local execution context before it can run remotely. Missing: tenantId, registrationId, principalId.',
+    );
+    assert.deepEqual(failure.error.details, ['tenantId', 'registrationId', 'principalId']);
+    assert.deepEqual(failure.error.preflight.requiredContext, ['tenantId', 'registrationId', 'principalId']);
+    assert.deepEqual(failure.error.preflight.missingContext, ['tenantId', 'registrationId', 'principalId']);
+  } finally {
+    restorePrincipalId();
+    restoreRegistrationId();
+    restoreTenantId();
+  }
+});
+
+test('runCli execution preflight honors injected resolveProcessEnv without custom resolveExecutionContext', async () => {
+  const printed: unknown[] = [];
+  let clientCreateCount = 0;
+  const client = {
+    marker: 'runtime-client-from-injected-env',
+  };
+
+  const exitCode = await runCli(['heartbeat'], {
+    createClient: () => {
+      clientCreateCount += 1;
+      return client as never;
+    },
+    resolveProcessEnv: () => ({
+      BIDVIA_TENANT_ID: 'tenant-injected-preflight',
+      BIDVIA_REGISTRATION_ID: 'areg-injected-preflight',
+      BIDVIA_PRINCIPAL_ID: 'principal-injected-preflight',
+    }),
+    now: () => '2026-03-29T10:10:00Z',
+    printJson: (value) => {
+      printed.push(value);
+    },
+    printLine: () => {
+      throw new Error('help output should not be used for heartbeat');
+    },
+    executionCommands: {
+      heartbeat: {
+        buildInput: () => ({
+          now: '2026-03-29T10:10:00Z',
+          expiresAt: '2026-03-29T10:15:00.000Z',
+        }),
+        run: async (receivedClient, now) => {
+          assert.equal(receivedClient, client);
+          assert.equal(now, '2026-03-29T10:10:00Z');
+          return { ok: true, via: 'injected-env-preflight' };
+        },
+      },
+    },
+  });
+
+  assert.equal(exitCode, 0);
+  assert.equal(clientCreateCount, 1);
+  assert.deepEqual(printed, [{ ok: true, via: 'injected-env-preflight' }]);
 });
 
 test('runCli requires an explicit output path before writing the companion bundle to disk', async () => {

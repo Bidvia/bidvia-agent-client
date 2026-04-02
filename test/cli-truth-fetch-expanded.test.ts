@@ -351,3 +351,51 @@ test('runCli default client uses tenant env context for expanded truth-fetch rea
     },
   ]);
 });
+
+test('runCli default client honors injected resolveProcessEnv values instead of ambient process env', async () => {
+  const printed: unknown[] = [];
+  const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
+  const restoreEnv = [
+    setEnvVar('BIDVIA_BASE_URL', 'http://127.0.0.1:9999'),
+    setEnvVar('BIDVIA_TENANT_ID', 'tenant-process-env'),
+  ];
+  const previousFetch = globalThis.fetch;
+
+  globalThis.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
+    calls.push({ input, init });
+
+    return new Response(JSON.stringify({ ok: true, path: String(input) }), {
+      status: 200,
+      headers: { 'content-type': 'application/json' },
+    });
+  };
+
+  try {
+    const exitCode = await runCli(['file-resource', '--file-resource-id', 'file-injected-env'], {
+      resolveProcessEnv: () => ({
+        BIDVIA_BASE_URL: 'http://127.0.0.1:8787',
+        BIDVIA_TENANT_ID: 'tenant-injected-env',
+      }),
+      printJson: (value) => {
+        printed.push(value);
+      },
+      printLine: () => {
+        throw new Error('truth-fetch reads should not print help');
+      },
+    });
+
+    assert.equal(exitCode, 0);
+  } finally {
+    globalThis.fetch = previousFetch;
+    for (const restore of restoreEnv.reverse()) {
+      restore();
+    }
+  }
+
+  assert.equal(calls.length, 1);
+  assert.equal(String(calls[0]?.input), 'http://127.0.0.1:8787/runtime/file-resources/file-injected-env');
+  assert.deepEqual(printed, [{
+    ok: true,
+    path: 'http://127.0.0.1:8787/runtime/file-resources/file-injected-env',
+  }]);
+});

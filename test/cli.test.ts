@@ -12,6 +12,9 @@ test('cli help shows stdio MCP as the primary OpenClaw path and bundle export as
   });
 
   assert.equal(result.status, 0, result.stderr || result.stdout);
+  assert.match(result.stdout, /create-provisional-agent --provisional-agent-ref/);
+  assert.match(result.stdout, /query-provisional-agent --provisional-agent-ref/);
+  assert.match(result.stdout, /claim-provisional-agent --provisional-agent-ref .* --claim-token/);
   assert.match(result.stdout, /openclaw-mcp-config/);
   assert.match(result.stdout, /openclaw-bundle-export/);
   assert.match(result.stdout, /mcp-server/);

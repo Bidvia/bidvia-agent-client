@@ -30,6 +30,7 @@ export interface BidviaLocalDiscoveryCatalogEntry extends Pick<
   | 'routePathTemplate'
   | 'httpMethod'
   | 'accessContextFamily'
+  | 'contextSemantic'
   | 'requiredContext'
   | 'scope'
   | 'level'
@@ -129,7 +130,7 @@ const localCliBindings: readonly BidviaLocalDiscoveryCliBinding[] = [
 const widenedShippedReadMcpBindings: readonly BidviaLocalDiscoveryMcpBinding[] = [
   {
     toolName: 'query-provisional-agent-read',
-    description: 'Reads the current provisional agent state through the shipped SDK helper.',
+    description: 'Reads public provisional agent status through the shipped SDK helper.',
     inputSchemaKey: 'BidviaQueryProvisionalAgentInput',
     outputMode: 'truth-fetch-result',
     helperKey: 'queryProvisionalAgent',
@@ -244,18 +245,18 @@ const widenedShippedReadMcpBindings: readonly BidviaLocalDiscoveryMcpBinding[] =
 const widenedShippedExecutionMcpBindings: readonly BidviaLocalDiscoveryMcpBinding[] = [
   {
     toolName: 'create-provisional-agent-execution',
-    description: 'Executes the provisional agent creation step through the shipped SDK helper.',
+    description: 'Executes public provisional agent creation through the shipped SDK helper.',
     inputSchemaKey: 'BidviaProvisionalAgentCreateInput',
     outputMode: 'execution-result',
-    helperKey: 'create-provisional-agent-execution',
+    helperKey: 'createProvisionalAgent',
     capabilityKey: 'createProvisionalAgent',
   },
   {
     toolName: 'claim-provisional-agent-execution',
-    description: 'Executes the provisional agent claim step through the shipped SDK helper.',
+    description: 'Executes the session-bound provisional agent claim through the shipped SDK helper.',
     inputSchemaKey: 'BidviaProvisionalAgentClaimInput',
     outputMode: 'execution-result',
-    helperKey: 'claim-provisional-agent-execution',
+    helperKey: 'claimProvisionalAgent',
     capabilityKey: 'claimProvisionalAgent',
   },
   {
@@ -681,6 +682,10 @@ function createLocalMcpToolDescriptor(binding: BidviaLocalDiscoveryMcpBinding): 
     throw new Error(`missing MCP capability metadata for ${binding.toolName}`);
   }
 
+  const contextSemantic = capability.contextSemantic !== capability.accessContextFamily
+    ? capability.contextSemantic
+    : undefined;
+
   return {
     toolName: binding.toolName,
     description: binding.description,
@@ -695,6 +700,7 @@ function createLocalMcpToolDescriptor(binding: BidviaLocalDiscoveryMcpBinding): 
     localCapabilityTier: capability.localCapabilityTier,
     localCapabilityRiskTier: capability.localCapabilityRiskTier,
     accessContextFamily: capability.accessContextFamily,
+    ...(contextSemantic ? { contextSemantic } : {}),
     requiredContext: [...capability.requiredContext],
   };
 }
@@ -723,12 +729,16 @@ export function buildLocalDiscoveryCatalog(): BidviaLocalDiscoveryCatalogEntry[]
     const mcpBindings = localMcpBindings.filter(
       (binding) => (binding.capabilityKey ?? binding.helperKey) === capability.helperKey,
     );
+    const contextSemantic = capability.contextSemantic !== capability.accessContextFamily
+      ? capability.contextSemantic
+      : undefined;
 
     return {
       helperKey: capability.helperKey,
       routePathTemplate: capability.routePathTemplate,
       httpMethod: capability.httpMethod,
       accessContextFamily: capability.accessContextFamily,
+      ...(contextSemantic ? { contextSemantic } : {}),
       requiredContext: [...capability.requiredContext],
       scope: capability.scope,
       level: capability.level,

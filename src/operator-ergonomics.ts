@@ -200,6 +200,18 @@ export function buildCliMissingContextMessage(
   command: string,
   missingContext: readonly BidviaScenarioContextKey[],
 ): string {
+  if (command === 'create-provisional-agent') {
+    return `The ${command} command can start the public provisional flow, but this local CLI still needs ${missingContext.join(', ')} to execute deterministically against the configured API. Missing: ${missingContext.join(', ')}.`;
+  }
+
+  if (command === 'query-provisional-agent') {
+    return `The ${command} command stays in the public provisional flow, but this local CLI still needs ${missingContext.join(', ')} to execute deterministically against the configured API. Missing: ${missingContext.join(', ')}.`;
+  }
+
+  if (command === 'claim-provisional-agent') {
+    return `The ${command} command is session-bound and needs ${missingContext.join(' plus ')} before it can complete the provisional claim against the configured API. Missing: ${missingContext.join(', ')}.`;
+  }
+
   return `The ${command} command requires local execution context before it can run remotely. Missing: ${missingContext.join(', ')}.`;
 }
 
@@ -208,5 +220,14 @@ export function buildMcpMissingContextMessage(
   missingContext: readonly BidviaScenarioContextKey[],
 ): string {
   const envKeys = missingContext.map(toEnvKey);
+
+   if (toolName === 'create-provisional-agent-execution' || toolName === 'query-provisional-agent-read') {
+    return `MCP tool ${toolName} stays in public provisional entry, but this local stdio MCP tool still needs ${missingContext.join(', ')} for deterministic execution against the configured API. Use bidvia route-context-matrix to confirm the next Bidvia context family, then set ${envKeys.join(' and ')} before retrying this local stdio MCP tool.`;
+  }
+
+  if (toolName === 'claim-provisional-agent-execution') {
+    return `MCP tool ${toolName} is the session-bound provisional claim step and needs ${missingContext.join(', ')} before retrying this local stdio MCP tool. Use bidvia route-context-matrix to confirm the next Bidvia context family, then set ${envKeys.join(' and ')} before retrying this local stdio MCP tool.`;
+  }
+
   return `MCP tool ${toolName} is missing required local execution context: ${missingContext.join(', ')}. Use bidvia route-context-matrix to confirm the next Bidvia context family, then set ${envKeys.join(' and ')} before retrying this local stdio MCP tool.`;
 }

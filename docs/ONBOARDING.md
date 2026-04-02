@@ -4,10 +4,10 @@ This guide supports the current local-first package surface. For current executi
 
 ## Goal
 
-This guide shows one primary public journey and one secondary operator journey:
+This guide shows one primary public journey and one secondary Governed Run journey:
 
-1. the primary public CLI-first journey for readiness, route context, and bounded first success
-2. the secondary OpenClaw/operator journey for local stdio MCP handoff after the public defaults are understood
+1. the primary public CLI-first journey organized as Learn, then Public Provisional create -> query -> claim, then Governed Run
+2. the secondary Governed Run journey, where local stdio MCP handoff is one packaging/integration path after the public defaults are understood
 
 This guide is intentionally more than an API quickstart. It explains how an agent should approach the shipped package surface in the order that matches the current repo boundary.
 
@@ -20,7 +20,7 @@ If your dominant path is a local OpenClaw Gateway / node-host install, use the d
 
 Before using this repo, remember the frozen Bidvia Commercial Universe V1 / Core V12 handoff rules:
 
-- official onboarding path is `provisional -> query -> claim`
+- official onboarding path is `create provisional -> query provisional -> claim`
 - registration-bound operations require:
   - `tenantId`
   - `principalId`
@@ -50,25 +50,64 @@ For the normal public package path, start with the package defaults. The CLI and
 Use this order:
 
 1. read the contract boundary and this onboarding guide
-2. run `node dist/cli.js onboarding-readiness`
-3. run `node dist/cli.js route-context-matrix`
-4. run `node dist/cli.js registration-lifecycle-plan`
-5. when onboarding is already complete, run `node dist/cli.js registered-agent-operations-plan`
+2. run `bidvia onboard`
+3. run `bidvia context show` or `bidvia whoami` when you need local-first visibility around the same journey
+4. run the explicit public provisional commands, `create-provisional-agent`, `query-provisional-agent`, then `claim-provisional-agent`, when onboarding material is available
+5. once claim has established session-bound identity and local context is ready, run `bidvia doctor` or `bidvia route-context-matrix`
+6. stay on the Governed Run side with `bidvia registration-lifecycle-plan`
+7. when onboarding is already complete, stay on the Governed Run side with `bidvia registered-agent-operations-plan`
 
-Those commands answer different questions:
+Those commands answer different questions across the Learn → Public Provisional create -> query -> claim → Governed Run flow:
 
-- `onboarding-readiness` shows the shipped public-first onboarding chain, the default public endpoint, and the next bounded success step
-- `route-context-matrix` shows which context family each guided route needs before you move from onboarding to runtime work
-- `registration-lifecycle-plan` keeps the first success path on the shipped provisional -> query -> claim -> registration chain
+- `onboard` is the visible first-run entry point and rerunnable local guide for the whole public path
+- `context show` shows effective local context plus source attribution
+- `whoami` summarizes local identity without claiming platform login
+- `doctor` shows local diagnostics and, when possible, an optional readiness live check on the Governed Run side after claim
+- `create-provisional-agent`, `query-provisional-agent`, and `claim-provisional-agent` keep the public provisional create -> query -> claim chain explicit
+- `claim-provisional-agent` is the session-bound transition point, not a generic tenant-scoped shortcut
+- `route-context-matrix` shows which context family each guided route needs before you move from Public Provisional into Governed Run
+- `registration-lifecycle-plan` keeps the first success path on the shipped create provisional -> query provisional -> claim -> registration chain
 - `registered-agent-operations-plan` is the visible next public path once you already have registration context
 
-After that guided path is clear, use the supporting read-only commands when you need visibility around the same journey:
+Installed package examples:
+
+```bash
+bidvia onboard
+bidvia context show
+bidvia whoami
+bidvia doctor
+bidvia create-provisional-agent --provisional-agent-ref ...
+bidvia query-provisional-agent --provisional-agent-ref ...
+bidvia claim-provisional-agent --provisional-agent-ref ... --claim-token ...
+bidvia route-context-matrix
+bidvia registration-lifecycle-plan
+bidvia registered-agent-operations-plan
+```
+
+Repo-local development examples after `npm run build`:
+
+```bash
+node dist/cli.js onboard
+node dist/cli.js context show
+node dist/cli.js whoami
+node dist/cli.js doctor
+node dist/cli.js create-provisional-agent --provisional-agent-ref ...
+node dist/cli.js query-provisional-agent --provisional-agent-ref ...
+node dist/cli.js claim-provisional-agent --provisional-agent-ref ... --claim-token ...
+node dist/cli.js route-context-matrix
+node dist/cli.js registration-lifecycle-plan
+node dist/cli.js registered-agent-operations-plan
+```
+
+After that guided path is clear, use the supporting diagnostics and review-safe commands when you need more visibility around the same journey:
 
 1. `environment-mode` when you need read-only confirmation of the current base URL classification
 2. `runtime-capabilities` when you need one local JSON view of repo-known runtime-facing facts
 3. truth-fetch CLI or SDK reads when you need approved frozen Core reads for account, richer governance deep-read, semantic, pricing, or asset facts
 4. `verification-bundle-preview` or `verification-bundle-export` when the bounded run should be reviewable later
 5. explicit local execution commands when you need payload preview for `heartbeat`, `sync-upload`, `evidence`, or `proposal`
+
+`onboarding-readiness` still exists as a supporting read-only explainer. It is no longer the primary public first-run entry point.
 
 In this phase, truth-fetch ships through the SDK and CLI as the widened frozen downstream read surface, with a bounded local stdio MCP seam exposing the currently approved read-only subset. That MCP rollout is phased on purpose: governance-first truth-fetch tools ship first, then business-truth collection and detail tools ship second. In both phases, MCP stays read-only, local stdio only, and a thin wrapper over the shipped SDK helpers.
 
@@ -91,7 +130,7 @@ Safe order for truth-fetch work:
 4. keep execution commands separate from truth-fetch reads
 5. treat returned payloads as frozen-route readbacks, not as new client-owned authority
 
-## Secondary OpenClaw/operator journey
+## Secondary Governed Run journey
 
 If your dominant path is a local OpenClaw Gateway or node-host install, do not rebuild the MCP command and env block by hand. Start with:
 
@@ -100,14 +139,16 @@ node dist/cli.js openclaw-mcp-config
 node dist/cli.js route-context-matrix
 ```
 
-Use `openclaw-mcp-config` to export the local stdio MCP command, default public endpoint, and required environment placeholders. Then use `route-context-matrix` to confirm the required context family before you enable the local operator path.
+Use `openclaw-mcp-config` to export the local stdio MCP command, default public endpoint, and required environment placeholders. Then use `route-context-matrix` to confirm the required context family before you enable the Governed Run path.
 
 After that handoff, continue in the dedicated docs:
 
 - `docs/OPENCLAW_GATEWAY_ONBOARDING.md`
 - `docs/OPENCLAW_GATEWAY_SMOKE.md`
 
-Keep the operator boundary explicit: local stdio MCP on your side, remote HTTPS Bidvia API on the other side. Explicit endpoint override stays secondary and operator-only.
+Keep the packaging boundary explicit: local stdio MCP on your side, remote HTTPS Bidvia API on the other side. Explicit endpoint override stays secondary and operator-only.
+
+Website work for this same first-access journey stays spec-only in `docs/WEBSITE_FIRST_ACCESS_HANDOFF.md`. It does not change the shipped OpenClaw runtime order in this repo.
 
 ## Environment mode visibility
 

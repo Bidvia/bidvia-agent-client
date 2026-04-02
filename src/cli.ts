@@ -2,9 +2,11 @@
 
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import packageJson from '../package.json' with { type: 'json' };
 
 import { BidviaClient, BidviaClientTransportError } from './client.js';
 import type {
+  BidviaClientContext,
   BidviaEvidenceSubmissionInput,
   BidviaHeartbeatInput,
   BidviaProposalSubmissionInput,
@@ -66,6 +68,18 @@ import {
   buildRouteContextMatrix,
   buildRouteContextMatrixNextStepHints,
 } from './route-context-matrix.js';
+import {
+  listOnboardingJourneyCommandHints,
+  requireOnboardingJourneyDefinition,
+} from './onboarding-journey.js';
+import {
+  type BidviaLocalOnboardingStateWarning,
+  type BidviaLocalOnboardingState,
+  readLocalOnboardingState,
+  readLocalOnboardingStateWithDiagnostics,
+  resolveLocalOnboardingStatePath,
+  writeLocalOnboardingState,
+} from './local-onboarding-state.js';
 import { runLocalMcpServerMain } from './mcp-server.js';
 
 function printJson(value: unknown): void {
@@ -120,19 +134,25 @@ function buildSampleServerCapabilityPayload(): BidviaServerCapabilityPayload {
   };
 }
 
-function createClient() {
+function createClient(
+  env: NodeJS.ProcessEnv = process.env,
+  contextOverride: Partial<BidviaClientContext> = {},
+) {
+  const tenantId = contextOverride.tenantId ?? env.BIDVIA_TENANT_ID;
+
   return new BidviaClient({
-    baseUrl: resolveBidviaBaseUrlFromEnv(),
+    baseUrl: resolveBidviaBaseUrlFromEnv(env),
     context: {
-      tenantId: process.env.BIDVIA_TENANT_ID ?? 'tenant-a',
-      principalId: process.env.BIDVIA_PRINCIPAL_ID,
-      principalType: process.env.BIDVIA_PRINCIPAL_TYPE,
-      authorizedRole: process.env.BIDVIA_AUTHORIZED_ROLE,
-      registrationId: process.env.BIDVIA_REGISTRATION_ID,
-      sessionId: process.env.BIDVIA_SESSION_ID,
-      adminSessionId: process.env.BIDVIA_ADMIN_SESSION_ID,
-      companyId: process.env.BIDVIA_COMPANY_ID,
-    },
+      ...(tenantId === undefined ? {} : { tenantId }),
+      principalId: env.BIDVIA_PRINCIPAL_ID,
+      principalType: env.BIDVIA_PRINCIPAL_TYPE,
+      authorizedRole: env.BIDVIA_AUTHORIZED_ROLE,
+      registrationId: env.BIDVIA_REGISTRATION_ID,
+      sessionId: env.BIDVIA_SESSION_ID,
+      adminSessionId: env.BIDVIA_ADMIN_SESSION_ID,
+      companyId: env.BIDVIA_COMPANY_ID,
+      ...contextOverride,
+    } as BidviaClientContext,
   });
 }
 
@@ -173,8 +193,44 @@ type BidviaCliStructuredFailure = {
     validInputs?: string[];
     details?: string[];
     preflight?: BidviaExecutionOperatorPreflight;
+    transport?: {
+      name: string;
+      code?: string;
+      status?: number;
+      responseBody?: unknown;
+    };
+    localState?: {
+      path: string;
+      operation: 'write';
+      name: string;
+      message: string;
+      code?: string;
+    };
   };
 };
+
+type BidviaContextValueSource = 'env' | 'local-state' | 'missing';
+
+interface BidviaReachabilityProbeResult {
+  reachable: boolean;
+  statusCode: number | null;
+  error: string | null;
+}
+
+interface BidviaDoctorReadinessContext {
+  tenantId?: string;
+  principalId?: string;
+  companyId?: string;
+  registrationId?: string;
+}
+
+interface BidviaDoctorReadinessFailure {
+  name: string;
+  message: string;
+  code?: string;
+  status?: number;
+  responseBody?: unknown;
+}
 
 type BidviaCliTruthFetchCommand =
   | 'account-agents'
@@ -234,8 +290,15 @@ type BidviaCliTruthFetchCommandDefinition = {
   run: (client: BidviaClient, parsedArgs: BidviaCliParsedArgs) => Promise<unknown>;
 };
 
+type BidviaCliOnboardingActionCommand =
+  | 'create-provisional-agent'
+  | 'query-provisional-agent'
+  | 'claim-provisional-agent';
+
 type BidviaCliSupportedValueFlag =
   | '--input'
+  | '--provisional-agent-ref'
+  | '--claim-token'
   | '--registration-id'
   | '--capability-profile-id'
   | '--participation-state-id'
@@ -261,6 +324,8 @@ type BidviaCliSupportedValueFlag =
 
 const bidviaCliSupportedValueFlags = new Set<BidviaCliSupportedValueFlag>([
   '--input',
+  '--provisional-agent-ref',
+  '--claim-token',
   '--registration-id',
   '--capability-profile-id',
   '--participation-state-id',
@@ -427,6 +492,717 @@ const truthFetchCollectionCommands = new Set([
   'attachment-bindings',
   'file-resources',
 ]);
+
+const onboardingActionSupportedFlagsByCommand = {
+  'create-provisional-agent': ['--provisional-agent-ref'],
+  'query-provisional-agent': ['--provisional-agent-ref'],
+  'claim-provisional-agent': ['--provisional-agent-ref', '--claim-token'],
+} as const satisfies Record<BidviaCliOnboardingActionCommand, readonly BidviaCliSupportedValueFlag[]>;
+
+const onboardingActionRequiredContextByCommand = {
+  'create-provisional-agent': ['tenantId'],
+  'query-provisional-agent': ['tenantId'],
+  'claim-provisional-agent': ['tenantId', 'sessionId'],
+} as const satisfies Record<
+  BidviaCliOnboardingActionCommand,
+  readonly ('tenantId' | 'sessionId')[]
+>;
+
+function readOnboardingResultString(
+  value: unknown,
+  camelKey: 'tenantId' | 'principalId' | 'companyId' | 'registrationId',
+  snakeKey: 'tenant_id' | 'principal_id' | 'company_id' | 'registration_id',
+): string | undefined {
+  if (!value || typeof value !== 'object') {
+    return undefined;
+  }
+
+  const record = value as Record<string, unknown>;
+  const candidate = record[camelKey] ?? record[snakeKey];
+
+  return typeof candidate === 'string' ? candidate : undefined;
+}
+
+function readNonEmptyEnvValue(
+  env: NodeJS.ProcessEnv,
+  key: 'BIDVIA_TENANT_ID' | 'BIDVIA_PRINCIPAL_ID' | 'BIDVIA_COMPANY_ID' | 'BIDVIA_REGISTRATION_ID' | 'BIDVIA_SESSION_ID' | 'BIDVIA_ADMIN_SESSION_ID',
+): string | undefined {
+  const candidate = env[key];
+
+  if (typeof candidate !== 'string' || candidate.length === 0) {
+    return undefined;
+  }
+
+  return candidate;
+}
+
+function buildContextValueWithSource(
+  envValue: string | undefined,
+  localStateValue: string | undefined,
+): {
+  value: string | null;
+  source: BidviaContextValueSource;
+} {
+  if (envValue !== undefined) {
+    return {
+      value: envValue,
+      source: 'env',
+    };
+  }
+
+  if (localStateValue !== undefined) {
+    return {
+      value: localStateValue,
+      source: 'local-state',
+    };
+  }
+
+  return {
+    value: null,
+    source: 'missing',
+  };
+}
+
+function buildSecretPresenceWithSource(envValue: string | undefined): {
+  present: boolean;
+  source: BidviaContextValueSource;
+} {
+  if (envValue !== undefined) {
+    return {
+      present: true,
+      source: 'env',
+    };
+  }
+
+  return {
+    present: false,
+    source: 'missing',
+  };
+}
+
+function buildEffectiveContextSnapshot(
+  env: NodeJS.ProcessEnv,
+  localState: BidviaLocalOnboardingState | null,
+) {
+  return {
+    tenantId: buildContextValueWithSource(readNonEmptyEnvValue(env, 'BIDVIA_TENANT_ID'), localState?.tenantId),
+    principalId: buildContextValueWithSource(readNonEmptyEnvValue(env, 'BIDVIA_PRINCIPAL_ID'), localState?.principalId),
+    companyId: buildContextValueWithSource(readNonEmptyEnvValue(env, 'BIDVIA_COMPANY_ID'), localState?.companyId),
+    registrationId: buildContextValueWithSource(readNonEmptyEnvValue(env, 'BIDVIA_REGISTRATION_ID'), localState?.registrationId),
+    lastCompletedStep: buildContextValueWithSource(undefined, localState?.lastCompletedStep),
+    sessionId: buildSecretPresenceWithSource(readNonEmptyEnvValue(env, 'BIDVIA_SESSION_ID')),
+    adminSessionId: buildSecretPresenceWithSource(readNonEmptyEnvValue(env, 'BIDVIA_ADMIN_SESSION_ID')),
+  };
+}
+
+function buildDoctorReadinessEligibility(effectiveContext: ReturnType<typeof buildEffectiveContextSnapshot>) {
+  const missingContext = [
+    effectiveContext.tenantId.value === null ? 'tenantId' : null,
+    effectiveContext.principalId.value === null ? 'principalId' : null,
+    effectiveContext.registrationId.value === null ? 'registrationId' : null,
+  ].filter((value): value is 'tenantId' | 'principalId' | 'registrationId' => value !== null);
+
+  return {
+    eligible: missingContext.length === 0,
+    missingContext,
+  };
+}
+
+function buildDoctorReadinessContext(
+  effectiveContext: ReturnType<typeof buildEffectiveContextSnapshot>,
+): BidviaDoctorReadinessContext {
+  return {
+    tenantId: effectiveContext.tenantId.value ?? undefined,
+    principalId: effectiveContext.principalId.value ?? undefined,
+    companyId: effectiveContext.companyId.value ?? undefined,
+    registrationId: effectiveContext.registrationId.value ?? undefined,
+  };
+}
+
+function buildOnboardingProgressSnapshot(
+  effectiveContext: ReturnType<typeof buildEffectiveContextSnapshot>,
+) {
+  const readinessEligibility = buildDoctorReadinessEligibility(effectiveContext);
+  const lastCompletedStep = effectiveContext.lastCompletedStep.value;
+  const hasExplicitProvisionalProgress = lastCompletedStep === 'create-provisional-agent'
+    || lastCompletedStep === 'query-provisional-agent';
+  const hasClaimCompleted = lastCompletedStep === 'claim-provisional-agent'
+    || (!hasExplicitProvisionalProgress && effectiveContext.registrationId.value !== null);
+
+  return {
+    readinessEligibility,
+    lastCompletedStep,
+    hasClaimCompleted,
+    hasExplicitProvisionalProgress,
+    publicProvisionalStatus: hasClaimCompleted
+      ? 'claimed'
+      : hasExplicitProvisionalProgress
+        ? 'in-progress'
+        : 'available',
+    governedRunStatus: effectiveContext.registrationId.value === null
+      ? 'not-ready'
+      : readinessEligibility.eligible
+        ? 'ready'
+        : 'needs-context',
+  };
+}
+
+function buildJourneyBoundarySnapshot(
+  effectiveContext: ReturnType<typeof buildEffectiveContextSnapshot>,
+) {
+  const onboardingProgress = buildOnboardingProgressSnapshot(effectiveContext);
+
+  return {
+    publicProvisional: {
+      label: 'Public Provisional',
+      chain: 'create -> query -> claim',
+      status: onboardingProgress.publicProvisionalStatus,
+      claimIsSessionBound: true,
+    },
+    governedRun: {
+      label: 'Governed Run',
+      startsAfter: 'successful claim',
+      status: onboardingProgress.governedRunStatus,
+    },
+  };
+}
+
+function buildStaticFirstAccessCommandHint(command: string, rationale: string) {
+  return { command, rationale };
+}
+
+function buildLocalOnboardingStateIoOptions(env: NodeJS.ProcessEnv) {
+  return {
+    env,
+  };
+}
+
+function buildLocalOnboardingStateWriteFailure(
+  command: string,
+  path: string,
+  error: unknown,
+) {
+  const normalizedError = error instanceof Error
+    ? error
+    : new Error(String(error));
+  const errorCode = (error as NodeJS.ErrnoException | undefined)?.code;
+
+  return buildStructuredFailure(
+    command,
+    'local-onboarding-state-error',
+    `Failed to persist local onboarding state at ${path}.`,
+    {
+      details: ['local-onboarding-state'],
+      localState: {
+        path,
+        operation: 'write',
+        name: normalizedError.name,
+        message: normalizedError.message,
+        ...(errorCode === undefined ? {} : { code: errorCode }),
+      },
+    },
+  );
+}
+
+async function readCliLocalOnboardingState(
+  dependencies: Pick<BidviaCliDependencies, 'readLocalOnboardingState' | 'readLocalOnboardingStateWithDiagnostics'>,
+) {
+  if (dependencies.readLocalOnboardingStateWithDiagnostics) {
+    return dependencies.readLocalOnboardingStateWithDiagnostics();
+  }
+
+  return {
+    state: await dependencies.readLocalOnboardingState(),
+    warnings: [],
+  };
+}
+
+function buildOnboardingActionCommandHints(
+  helperKeys?: readonly ('createProvisionalAgent' | 'queryProvisionalAgent' | 'claimProvisionalAgent')[],
+) {
+  const commandHints = listOnboardingJourneyCommandHints('public-first-onboarding');
+  const matchedHints = !helperKeys
+    ? commandHints
+    : helperKeys.flatMap((helperKey) => commandHints.filter((hint) => hint.helperKey === helperKey));
+
+  return matchedHints.map((hint) => ({
+    command: hint.command,
+    rationale: hint.rationale,
+  }));
+}
+
+function buildFirstAccessOnboardingSnapshot(
+  effectiveContext: ReturnType<typeof buildEffectiveContextSnapshot>,
+  command: 'doctor' | 'onboard',
+) {
+  const journey = requireOnboardingJourneyDefinition('public-first-onboarding');
+  const onboardingProgress = buildOnboardingProgressSnapshot(effectiveContext);
+
+  if (effectiveContext.tenantId.value === null) {
+    return {
+      journeyKey: journey.journeyKey,
+      journeyLabel: journey.label,
+      currentStage: {
+        key: 'missing-tenant-context',
+        label: 'Public provisional entry is available, but this local CLI still needs tenant context before create/query can run deterministically against the configured API.',
+        blocked: true,
+        blockedOn: 'create-provisional-agent',
+        lastCompletedStep: onboardingProgress.lastCompletedStep,
+      },
+      nextCommands: [
+        buildStaticFirstAccessCommandHint(
+          'bidvia context show',
+          'Inspect which effective local context fields are missing before this local CLI can run public provisional commands deterministically.',
+        ),
+        ...buildOnboardingActionCommandHints(),
+      ],
+      firstSuccessNextStep: journey.firstSuccessNextStep,
+    };
+  }
+
+  if (!onboardingProgress.hasClaimCompleted) {
+    return {
+      journeyKey: journey.journeyKey,
+      journeyLabel: journey.label,
+      currentStage: {
+        key: 'provisional-claim-pending',
+        label: 'You are still in Public Provisional. Query can continue, but claim remains the session-bound step before Governed Run.',
+        blocked: true,
+        blockedOn: 'claim-provisional-agent',
+        lastCompletedStep: onboardingProgress.lastCompletedStep,
+      },
+      nextCommands: [
+        ...buildOnboardingActionCommandHints(
+          onboardingProgress.hasExplicitProvisionalProgress
+            ? ['queryProvisionalAgent', 'claimProvisionalAgent']
+            : ['createProvisionalAgent', 'queryProvisionalAgent', 'claimProvisionalAgent'],
+        ),
+        buildStaticFirstAccessCommandHint(
+          'bidvia whoami',
+          'Confirm which effective local identity fields are available before you move from Public Provisional into Governed Run.',
+        ),
+        buildStaticFirstAccessCommandHint(
+          'bidvia doctor',
+          'Re-run doctor after claim succeeds so local diagnostics can confirm the Governed Run handoff.',
+        ),
+      ],
+      firstSuccessNextStep: journey.firstSuccessNextStep,
+    };
+  }
+
+  if (!onboardingProgress.readinessEligibility.eligible) {
+    return {
+      journeyKey: journey.journeyKey,
+      journeyLabel: journey.label,
+      currentStage: {
+        key: 'claimed-awaiting-readiness-context',
+        label: 'Public provisional claim is complete locally, but governed-run context is still incomplete.',
+        blocked: true,
+        blockedOn: 'readiness-live-check',
+        lastCompletedStep: onboardingProgress.lastCompletedStep,
+      },
+      nextCommands: [
+        buildStaticFirstAccessCommandHint(
+          'bidvia whoami',
+          'Confirm which effective local identity fields are still missing before governed-run reads.',
+        ),
+        buildStaticFirstAccessCommandHint(
+          'bidvia route-context-matrix',
+          'Confirm the boundary between public provisional entry and governed-run routes before remote reads.',
+        ),
+        buildStaticFirstAccessCommandHint(
+          'bidvia doctor',
+          'Re-run doctor after tenant, principal, and registration context are all available locally for governed-run checks.',
+        ),
+      ],
+      firstSuccessNextStep: journey.firstSuccessNextStep,
+    };
+  }
+
+  return {
+    journeyKey: journey.journeyKey,
+    journeyLabel: journey.label,
+    currentStage: {
+      key: 'ready-for-registration-lifecycle',
+      label: 'Public provisional onboarding is complete locally, and the next bounded command can move into governed run.',
+      blocked: false,
+      blockedOn: null,
+      lastCompletedStep: onboardingProgress.lastCompletedStep,
+    },
+    nextCommands: command === 'onboard'
+      ? [
+        buildStaticFirstAccessCommandHint(
+          'bidvia doctor',
+          'Confirm local diagnostics and optional readiness checks before moving into runtime work.',
+        ),
+        buildStaticFirstAccessCommandHint(
+          `bidvia ${journey.firstSuccessNextStep.command}`,
+          journey.firstSuccessNextStep.rationale,
+        ),
+      ]
+      : [
+        buildStaticFirstAccessCommandHint(
+          `bidvia ${journey.firstSuccessNextStep.command}`,
+          journey.firstSuccessNextStep.rationale,
+        ),
+      ],
+    firstSuccessNextStep: journey.firstSuccessNextStep,
+  };
+}
+
+function buildDoctorOnboardingSnapshot(
+  effectiveContext: ReturnType<typeof buildEffectiveContextSnapshot>,
+) {
+  return buildFirstAccessOnboardingSnapshot(effectiveContext, 'doctor');
+}
+
+async function probeBidviaBaseUrlReachability(baseUrl: string): Promise<BidviaReachabilityProbeResult> {
+  try {
+    const response = await fetch(baseUrl, { method: 'HEAD' });
+    return {
+      reachable: true,
+      statusCode: response.status,
+      error: null,
+    };
+  } catch (error) {
+    return {
+      reachable: false,
+      statusCode: null,
+      error: error instanceof Error ? error.message : String(error),
+    };
+  }
+}
+
+async function runDefaultDoctorReadinessCheck(
+  context: BidviaDoctorReadinessContext,
+  baseUrl: string,
+): Promise<unknown> {
+  const tenantId = context.tenantId;
+  const principalId = context.principalId;
+  const registrationId = context.registrationId;
+  if (!tenantId || !principalId || !registrationId) {
+    throw new Error('Missing registrationId for doctor readiness live check.');
+  }
+
+  const client = new BidviaClient({
+    baseUrl,
+    context: {
+      tenantId,
+      principalId,
+      registrationId,
+      ...(context.companyId === undefined ? {} : { companyId: context.companyId }),
+    },
+  });
+
+  return client.getAgentReadiness(registrationId);
+}
+
+function normalizeDoctorReadinessFailure(error: unknown): BidviaDoctorReadinessFailure {
+  if (error instanceof BidviaClientTransportError) {
+    return {
+      name: error.name,
+      message: error.message,
+      code: error.kind,
+      ...(error.status === undefined ? {} : { status: error.status }),
+      ...(error.responseBody === undefined ? {} : { responseBody: error.responseBody }),
+    };
+  }
+
+  if (error instanceof Error) {
+    return {
+      name: error.name,
+      message: error.message,
+    };
+  }
+
+  return {
+    name: 'UnknownError',
+    message: String(error),
+  };
+}
+
+function normalizeOnboardingActionTransportFailure(error: unknown) {
+  if (error instanceof BidviaClientTransportError) {
+    return {
+      message: error.message,
+      transport: {
+        name: error.name,
+        code: error.kind,
+        ...(error.status === undefined ? {} : { status: error.status }),
+        ...(error.responseBody === undefined ? {} : { responseBody: error.responseBody }),
+      },
+    };
+  }
+
+  if (error instanceof Error) {
+    return {
+      message: error.message,
+      transport: {
+        name: error.name,
+      },
+    };
+  }
+
+  return {
+    message: String(error),
+    transport: {
+      name: 'UnknownError',
+    },
+  };
+}
+
+async function buildDoctorSnapshot(
+  dependencies: Pick<
+    BidviaCliDependencies,
+    | 'cliVersion'
+    | 'resolveBaseUrl'
+    | 'resolveEnvironmentMode'
+    | 'resolveProcessEnv'
+    | 'readLocalOnboardingState'
+    | 'readLocalOnboardingStateWithDiagnostics'
+    | 'probeReachability'
+    | 'runDoctorReadinessCheck'
+  >,
+) {
+  const env = dependencies.resolveProcessEnv();
+  const localStateResult = await readCliLocalOnboardingState(dependencies);
+  const localState = localStateResult.state;
+  const effectiveContext = buildEffectiveContextSnapshot(env, localState);
+  const readinessEligibility = buildDoctorReadinessEligibility(effectiveContext);
+  const baseUrl = dependencies.resolveBaseUrl();
+  const reachabilityProbe = await dependencies.probeReachability(baseUrl);
+
+  const readinessLiveCheck = readinessEligibility.eligible
+    ? await (async () => {
+      try {
+        return {
+          attempted: true,
+          status: 'ok' as const,
+          eligibility: readinessEligibility,
+          guidance: 'Readiness live check only runs when tenantId, principalId, and registrationId are all available from env or local onboarding state.',
+          result: await dependencies.runDoctorReadinessCheck(
+            buildDoctorReadinessContext(effectiveContext),
+            baseUrl,
+          ),
+        };
+      } catch (error) {
+        return {
+          attempted: true,
+          status: 'failed' as const,
+          eligibility: readinessEligibility,
+          guidance: 'Readiness live check only runs when tenantId, principalId, and registrationId are all available from env or local onboarding state.',
+          result: null,
+          error: normalizeDoctorReadinessFailure(error),
+        };
+      }
+    })()
+    : {
+      attempted: false,
+      status: 'not-attempted' as const,
+      eligibility: readinessEligibility,
+      guidance: 'Readiness live check only runs when tenantId, principalId, and registrationId are all available from env or local onboarding state.',
+      result: null,
+    };
+
+  return {
+    command: 'doctor',
+    scope: 'local-first-read-only',
+    ...(localStateResult.warnings.length === 0 ? {} : { localStateWarnings: localStateResult.warnings }),
+    localChecks: {
+      cliVersion: dependencies.cliVersion,
+      baseUrl,
+      environmentMode: dependencies.resolveEnvironmentMode(),
+      localOnboardingState: {
+        present: localState !== null,
+      },
+      effectiveContext,
+      completeness: {
+        readinessLiveCheckEligible: readinessEligibility.eligible,
+        missingForReadinessLiveCheck: readinessEligibility.missingContext,
+      },
+    },
+    reachability: {
+      attempted: true,
+      kind: 'base-url-probe',
+      reachable: reachabilityProbe.reachable,
+      statusCode: reachabilityProbe.statusCode,
+      error: reachabilityProbe.error,
+      guidance: 'Reachability only confirms that the configured endpoint answered. It does not prove login, governed auth, or route readiness.',
+    },
+    readinessLiveCheck,
+    onboarding: buildDoctorOnboardingSnapshot(effectiveContext),
+  };
+}
+
+async function buildContextShowSnapshot(
+  env: NodeJS.ProcessEnv,
+  dependencies: Pick<BidviaCliDependencies, 'readLocalOnboardingState' | 'readLocalOnboardingStateWithDiagnostics'>,
+) {
+  const localStateResult = await readCliLocalOnboardingState(dependencies);
+  const localState = localStateResult.state;
+  const effectiveContext = buildEffectiveContextSnapshot(env, localState);
+
+  return {
+    command: 'context show',
+    scope: 'local-only',
+    ...(localStateResult.warnings.length === 0 ? {} : { localStateWarnings: localStateResult.warnings }),
+    journeyBoundary: buildJourneyBoundarySnapshot(effectiveContext),
+    context: effectiveContext,
+  };
+}
+
+async function buildWhoamiSnapshot(
+  env: NodeJS.ProcessEnv,
+  dependencies: Pick<BidviaCliDependencies, 'readLocalOnboardingState' | 'readLocalOnboardingStateWithDiagnostics'>,
+) {
+  const localStateResult = await readCliLocalOnboardingState(dependencies);
+  const localState = localStateResult.state;
+  const effectiveContext = buildEffectiveContextSnapshot(env, localState);
+
+  return {
+    command: 'whoami',
+    scope: 'local-only',
+    ...(localStateResult.warnings.length === 0 ? {} : { localStateWarnings: localStateResult.warnings }),
+    identityKind: 'effective-local-context',
+    authoritativeRemoteLoginState: false,
+    guidance: 'Reports effective local identity/context from env and local onboarding state only. This is not proof of platform login and does not replace /account/me.',
+    journeyBoundary: buildJourneyBoundarySnapshot(effectiveContext),
+    identity: {
+      tenantId: effectiveContext.tenantId,
+      principalId: effectiveContext.principalId,
+      companyId: effectiveContext.companyId,
+      registrationId: effectiveContext.registrationId,
+    },
+    localOnboardingState: {
+      present: localState !== null,
+      lastCompletedStep: effectiveContext.lastCompletedStep,
+    },
+    secretSafeSignals: {
+      sessionId: effectiveContext.sessionId,
+      adminSessionId: effectiveContext.adminSessionId,
+    },
+  };
+}
+
+async function buildOnboardSnapshot(
+  env: NodeJS.ProcessEnv,
+  dependencies: Pick<BidviaCliDependencies, 'readLocalOnboardingState' | 'readLocalOnboardingStateWithDiagnostics'>,
+) {
+  const localStateResult = await readCliLocalOnboardingState(dependencies);
+  const localState = localStateResult.state;
+  const effectiveContext = buildEffectiveContextSnapshot(env, localState);
+
+  return {
+    command: 'onboard',
+    scope: 'local-first-guided',
+    mode: 'non-interactive',
+    rerunnable: true,
+    ...(localStateResult.warnings.length === 0 ? {} : { localStateWarnings: localStateResult.warnings }),
+    localOnboardingState: {
+      present: localState !== null,
+    },
+    effectiveContext,
+    onboarding: buildFirstAccessOnboardingSnapshot(effectiveContext, 'onboard'),
+  };
+}
+
+const onboardingActionCommandDefinitions = {
+  'create-provisional-agent': {
+    run: (client, parsedArgs, now) => client.createProvisionalAgent({
+      provisionalAgentRef: parsedArgs.flagValues['--provisional-agent-ref']!,
+      now,
+    }),
+  },
+  'query-provisional-agent': {
+    run: (client, parsedArgs) => client.queryProvisionalAgent({
+      provisionalAgentRef: parsedArgs.flagValues['--provisional-agent-ref']!,
+    }),
+  },
+  'claim-provisional-agent': {
+    run: (client, parsedArgs, now) => client.claimProvisionalAgent({
+        provisionalAgentRef: parsedArgs.flagValues['--provisional-agent-ref']!,
+        claimToken: parsedArgs.flagValues['--claim-token']!,
+        now,
+      }),
+  },
+} as const satisfies Record<
+  BidviaCliOnboardingActionCommand,
+  {
+    run: (
+      client: BidviaClient,
+      parsedArgs: BidviaCliParsedArgs,
+      now: string,
+    ) => Promise<unknown>;
+  }
+>;
+
+function buildOnboardingActionExecutionContext(
+  command: BidviaCliOnboardingActionCommand,
+  env: NodeJS.ProcessEnv,
+  effectiveContext: ReturnType<typeof buildEffectiveContextSnapshot>,
+) {
+  if (command === 'create-provisional-agent' || command === 'query-provisional-agent') {
+    return {
+      tenantId: effectiveContext.tenantId.value ?? undefined,
+      principalId: undefined,
+      companyId: undefined,
+      registrationId: undefined,
+      sessionId: undefined,
+    };
+  }
+
+  return {
+    tenantId: effectiveContext.tenantId.value ?? undefined,
+    principalId: effectiveContext.principalId.value ?? undefined,
+    companyId: effectiveContext.companyId.value ?? undefined,
+    registrationId: effectiveContext.registrationId.value ?? undefined,
+    sessionId: effectiveContext.sessionId.present
+      ? readNonEmptyEnvValue(env, 'BIDVIA_SESSION_ID')
+      : undefined,
+  };
+}
+
+function buildPersistedOnboardingActionState(
+  command: BidviaCliOnboardingActionCommand,
+  result: unknown,
+  existingState: BidviaLocalOnboardingState | null,
+  effectiveContext: ReturnType<typeof buildEffectiveContextSnapshot>,
+  executionContext: ReturnType<typeof buildOnboardingActionExecutionContext>,
+  now: string,
+) {
+  if (command === 'create-provisional-agent' || command === 'query-provisional-agent') {
+    return {
+      tenantId: readOnboardingResultString(result, 'tenantId', 'tenant_id')
+        ?? executionContext.tenantId
+        ?? existingState?.tenantId,
+      ...(existingState?.principalId === undefined ? {} : { principalId: existingState.principalId }),
+      ...(existingState?.companyId === undefined ? {} : { companyId: existingState.companyId }),
+      ...(existingState?.registrationId === undefined ? {} : { registrationId: existingState.registrationId }),
+      lastCompletedStep: command,
+      createdAt: existingState?.createdAt ?? now,
+      updatedAt: now,
+    };
+  }
+
+  const claimedPrincipalId = readOnboardingResultString(result, 'principalId', 'principal_id')
+    ?? (effectiveContext.principalId.source === 'env' ? effectiveContext.principalId.value ?? undefined : undefined);
+  const claimedCompanyId = readOnboardingResultString(result, 'companyId', 'company_id')
+    ?? (effectiveContext.companyId.source === 'env' ? effectiveContext.companyId.value ?? undefined : undefined);
+  const claimedRegistrationId = readOnboardingResultString(result, 'registrationId', 'registration_id')
+    ?? (effectiveContext.registrationId.source === 'env' ? effectiveContext.registrationId.value ?? undefined : undefined);
+
+  return {
+    tenantId: readOnboardingResultString(result, 'tenantId', 'tenant_id')
+      ?? executionContext.tenantId
+      ?? existingState?.tenantId,
+    ...(claimedPrincipalId === undefined ? {} : { principalId: claimedPrincipalId }),
+    ...(claimedCompanyId === undefined ? {} : { companyId: claimedCompanyId }),
+    ...(claimedRegistrationId === undefined ? {} : { registrationId: claimedRegistrationId }),
+    lastCompletedStep: command,
+    createdAt: existingState?.createdAt ?? now,
+    updatedAt: now,
+  };
+}
 
 const truthFetchCommandDefinitions: Record<BidviaCliTruthFetchCommand, BidviaCliTruthFetchCommandDefinition> = {
   'account-agents': {
@@ -611,6 +1387,13 @@ const truthFetchCommandDefinitions: Record<BidviaCliTruthFetchCommand, BidviaCli
 };
 
 function getSupportedValueFlagsForCommand(command: string): readonly BidviaCliSupportedValueFlag[] {
+  const onboardingActionSupportedFlags = onboardingActionSupportedFlagsByCommand[
+    command as BidviaCliOnboardingActionCommand
+  ];
+  if (onboardingActionSupportedFlags) {
+    return onboardingActionSupportedFlags;
+  }
+
   if (command === 'openclaw-bundle-export') {
     return ['--output'];
   }
@@ -639,7 +1422,11 @@ const verificationBundleInputValues = [
 type BidviaVerificationBundleInput = typeof verificationBundleInputValues[number];
 
 function parseCliArgs(argv: string[]): BidviaCliParsedArgs {
-  if (argv.length === 0) {
+  const normalizedArgv = argv[0] === 'context' && argv[1] === 'show'
+    ? ['context show', ...argv.slice(2)]
+    : argv;
+
+  if (normalizedArgv.length === 0) {
     return {
       command: 'help',
       dryRun: false,
@@ -650,7 +1437,7 @@ function parseCliArgs(argv: string[]): BidviaCliParsedArgs {
     };
   }
 
-  const firstToken = argv[0];
+  const firstToken = normalizedArgv[0];
   if (firstToken === '--help' || firstToken === '-h') {
     return {
       command: 'help',
@@ -670,8 +1457,8 @@ function parseCliArgs(argv: string[]): BidviaCliParsedArgs {
   const extraPositionals: string[] = [];
   const missingValueFlags: BidviaCliSupportedValueFlag[] = [];
 
-  for (let index = 1; index < argv.length; index += 1) {
-    const token = argv[index]!;
+  for (let index = 1; index < normalizedArgv.length; index += 1) {
+    const token = normalizedArgv[index]!;
 
     if (token === '--dry-run') {
       dryRun = true;
@@ -679,7 +1466,7 @@ function parseCliArgs(argv: string[]): BidviaCliParsedArgs {
     }
 
     if (bidviaCliSupportedValueFlags.has(token as BidviaCliSupportedValueFlag)) {
-      const nextToken = argv[index + 1];
+      const nextToken = normalizedArgv[index + 1];
       if (!nextToken || nextToken.startsWith('--')) {
         missingValueFlags.push(token as BidviaCliSupportedValueFlag);
         continue;
@@ -838,9 +1625,10 @@ function buildVerificationBundlePreview(input: BidviaVerificationBundleInput, no
 }
 
 export interface BidviaCliDependencies {
-  createClient: () => BidviaClient;
+  createClient: (env?: NodeJS.ProcessEnv, contextOverride?: Partial<BidviaClientContext>) => BidviaClient;
+  cliVersion: string;
   resolveExecutionContext: () => {
-    tenantId: string;
+    tenantId?: string;
     principalId?: string;
     principalType?: string;
     authorizedRole?: string;
@@ -850,7 +1638,18 @@ export interface BidviaCliDependencies {
     companyId?: string;
   };
   resolveBaseUrl: () => string;
+  resolveProcessEnv: () => NodeJS.ProcessEnv;
   resolveEnvironmentMode: () => ReturnType<typeof resolveBidviaEnvironmentModeFromEnv>;
+  readLocalOnboardingState: () => Promise<BidviaLocalOnboardingState | null>;
+  readLocalOnboardingStateWithDiagnostics?: () => Promise<{
+    state: BidviaLocalOnboardingState | null;
+    warnings: BidviaLocalOnboardingStateWarning[];
+  }>;
+  probeReachability: (baseUrl: string) => Promise<BidviaReachabilityProbeResult>;
+  runDoctorReadinessCheck: (
+    context: BidviaDoctorReadinessContext,
+    baseUrl: string,
+  ) => Promise<unknown>;
   now: () => string;
   printJson: (value: unknown) => void;
   printLine: (value: string) => void;
@@ -894,18 +1693,28 @@ const defaultExecutionCommands: Record<BidviaRegisteredAgentExecutionCommand, Bi
 function createDefaultCliDependencies(): BidviaCliDependencies {
   return {
     createClient,
-    resolveExecutionContext: () => ({
-      tenantId: process.env.BIDVIA_TENANT_ID ?? 'tenant-a',
-      principalId: process.env.BIDVIA_PRINCIPAL_ID,
-      principalType: process.env.BIDVIA_PRINCIPAL_TYPE,
-      authorizedRole: process.env.BIDVIA_AUTHORIZED_ROLE,
-      registrationId: process.env.BIDVIA_REGISTRATION_ID,
-      sessionId: process.env.BIDVIA_SESSION_ID,
-      adminSessionId: process.env.BIDVIA_ADMIN_SESSION_ID,
-      companyId: process.env.BIDVIA_COMPANY_ID,
-    }),
+    cliVersion: packageJson.version,
+    resolveExecutionContext: () => {
+      const env = process.env;
+
+      return {
+        tenantId: env.BIDVIA_TENANT_ID,
+        principalId: env.BIDVIA_PRINCIPAL_ID,
+        principalType: env.BIDVIA_PRINCIPAL_TYPE,
+        authorizedRole: env.BIDVIA_AUTHORIZED_ROLE,
+        registrationId: env.BIDVIA_REGISTRATION_ID,
+        sessionId: env.BIDVIA_SESSION_ID,
+        adminSessionId: env.BIDVIA_ADMIN_SESSION_ID,
+        companyId: env.BIDVIA_COMPANY_ID,
+      };
+    },
     resolveBaseUrl: resolveBidviaBaseUrlFromEnv,
+    resolveProcessEnv: () => process.env,
     resolveEnvironmentMode: resolveBidviaEnvironmentModeFromEnv,
+    readLocalOnboardingState: () => readLocalOnboardingState(),
+    readLocalOnboardingStateWithDiagnostics: () => readLocalOnboardingStateWithDiagnostics(),
+    probeReachability: probeBidviaBaseUrlReachability,
+    runDoctorReadinessCheck: runDefaultDoctorReadinessCheck,
     now: () => new Date().toISOString(),
     printJson,
     printLine: (value) => {
@@ -923,26 +1732,37 @@ function printHelp(printLine: (value: string) => void): void {
   printLine('bidvia');
   printLine('OpenClaw primary path: export stdio MCP config first, then add the companion bundle when you want bundle/bootstrap packaging.');
   printLine('OpenClaw scope for this version: local-first, Core-truth-consuming, stdio MCP primary.');
-  printLine('Visibility commands:');
-  printLine('  environment-mode');
-  printLine('  runtime-capabilities');
-  printLine('  launch-topology-smoke');
-  printLine('  server-capabilities');
-  printLine('  operator-discovery');
+  printLine('Getting Started (Learn):');
+  printLine('  onboard');
+  printLine('  context show');
+  printLine('  whoami');
+  printLine('  doctor');
   printLine('  onboarding-readiness');
-  printLine('  openclaw-mcp-config');
-    printLine('  openclaw-bundle-export --output ...');
   printLine('  route-context-matrix');
-  for (const line of truthFetchVisibilityHelpLines) {
-    printLine(line);
-  }
-  printLine('Execution commands:');
+  printLine('  openclaw-mcp-config');
+  printLine('  openclaw-bundle-export --output ...');
+  printLine('Agent Onboarding (Public Provisional -> Claim):');
+  printLine('  create-provisional-agent --provisional-agent-ref ...');
+  printLine('  query-provisional-agent --provisional-agent-ref ...');
+  printLine('  claim-provisional-agent --provisional-agent-ref ... --claim-token ...');
+  printLine('Agent Runtime (Run):');
+  printLine('  registration-lifecycle-plan');
+  printLine('  registered-agent-operations-plan');
   printLine('  mcp-server');
   printLine('  heartbeat [--dry-run]');
   printLine('  sync-upload [--dry-run]');
   printLine('  evidence [--dry-run]');
   printLine('  proposal [--dry-run]');
-  printLine('Review-safe commands:');
+  printLine('Diagnostics:');
+  printLine('  environment-mode');
+  printLine('  runtime-capabilities');
+  printLine('  launch-topology-smoke');
+  printLine('  server-capabilities');
+  printLine('  operator-discovery');
+  printLine('Advanced Governance / Internal Review:');
+  for (const line of truthFetchVisibilityHelpLines) {
+    printLine(line);
+  }
   printLine('  industry-universe-plan');
   printLine('  industry-universe-review-packet-preview');
   printLine('  industry-universe-review-packet-export');
@@ -952,9 +1772,6 @@ function printHelp(printLine: (value: string) => void): void {
   printLine('  opportunity-package-handoff-plan');
   printLine('  opportunity-package-handoff-review-packet-preview');
   printLine('  opportunity-package-handoff-review-packet-export');
-  printLine('  registration-lifecycle-plan');
-  printLine('  registered-agent-operations-plan');
-  printLine('Verification commands:');
   printLine('  multi-business-chain-verification-wave-preview');
   printLine('  commercial-action-verification-wave-preview');
   printLine('  verification-bundle-preview [--input registration-lifecycle|registered-agent-operations]');
@@ -994,6 +1811,44 @@ export async function runCli(
       ...(overrides.executionCommands ?? {}),
     },
   } satisfies BidviaCliDependencies;
+  if (!overrides.createClient) {
+    dependencies.createClient = (env?: NodeJS.ProcessEnv, contextOverride?: Partial<BidviaClientContext>) => createClient(
+      env ?? dependencies.resolveProcessEnv(),
+      contextOverride,
+    );
+  }
+  if (!overrides.resolveExecutionContext) {
+    dependencies.resolveExecutionContext = () => {
+      const env = dependencies.resolveProcessEnv();
+
+      return {
+        tenantId: env.BIDVIA_TENANT_ID,
+        principalId: env.BIDVIA_PRINCIPAL_ID,
+        principalType: env.BIDVIA_PRINCIPAL_TYPE,
+        authorizedRole: env.BIDVIA_AUTHORIZED_ROLE,
+        registrationId: env.BIDVIA_REGISTRATION_ID,
+        sessionId: env.BIDVIA_SESSION_ID,
+        adminSessionId: env.BIDVIA_ADMIN_SESSION_ID,
+        companyId: env.BIDVIA_COMPANY_ID,
+      };
+    };
+  }
+  if (!overrides.resolveBaseUrl) {
+    dependencies.resolveBaseUrl = () => resolveBidviaBaseUrlFromEnv(dependencies.resolveProcessEnv());
+  }
+  if (!overrides.resolveEnvironmentMode) {
+    dependencies.resolveEnvironmentMode = () => resolveBidviaEnvironmentModeFromEnv(dependencies.resolveProcessEnv());
+  }
+  if (!overrides.readLocalOnboardingStateWithDiagnostics) {
+    dependencies.readLocalOnboardingStateWithDiagnostics = overrides.readLocalOnboardingState
+      ? async () => ({
+        state: await overrides.readLocalOnboardingState!(),
+        warnings: [],
+      })
+      : () => readLocalOnboardingStateWithDiagnostics({
+        env: dependencies.resolveProcessEnv(),
+      });
+  }
   const parsedArgs = parseCliArgs(argv);
   const command = parsedArgs.command;
   const supportedValueFlags = getSupportedValueFlagsForCommand(command);
@@ -1097,6 +1952,27 @@ export async function runCli(
     }
   }
 
+  const requiredOnboardingActionFlags = onboardingActionSupportedFlagsByCommand[
+    command as BidviaCliOnboardingActionCommand
+  ];
+  if (requiredOnboardingActionFlags) {
+    for (const requiredOnboardingActionFlag of requiredOnboardingActionFlags) {
+      if (!parsedArgs.flagValues[requiredOnboardingActionFlag]) {
+        return printStructuredFailure(
+          dependencies,
+          buildStructuredFailure(
+            command,
+            'invalid-input',
+            `Missing required ${requiredOnboardingActionFlag} for ${command}.`,
+            {
+              details: [requiredOnboardingActionFlag],
+            },
+          ),
+        );
+      }
+    }
+  }
+
   if (command === 'environment-mode') {
     dependencies.printJson({
       baseUrl: dependencies.resolveBaseUrl(),
@@ -1141,6 +2017,35 @@ export async function runCli(
       command,
       ...buildOnboardingReadiness(),
     });
+    return 0;
+  }
+
+  if (command === 'context show') {
+    dependencies.printJson(await buildContextShowSnapshot(
+      dependencies.resolveProcessEnv(),
+      dependencies,
+    ));
+    return 0;
+  }
+
+  if (command === 'whoami') {
+    dependencies.printJson(await buildWhoamiSnapshot(
+      dependencies.resolveProcessEnv(),
+      dependencies,
+    ));
+    return 0;
+  }
+
+  if (command === 'doctor') {
+    dependencies.printJson(await buildDoctorSnapshot(dependencies));
+    return 0;
+  }
+
+  if (command === 'onboard') {
+    dependencies.printJson(await buildOnboardSnapshot(
+      dependencies.resolveProcessEnv(),
+      dependencies,
+    ));
     return 0;
   }
 
@@ -1200,6 +2105,105 @@ export async function runCli(
       command,
       ...buildRouteContextMatrix(),
     });
+    return 0;
+  }
+
+  const onboardingActionCommand = onboardingActionCommandDefinitions[
+    command as BidviaCliOnboardingActionCommand
+  ];
+  if (onboardingActionCommand) {
+    const env = dependencies.resolveProcessEnv();
+    const localOnboardingStateIoOptions = buildLocalOnboardingStateIoOptions(env);
+    const localStateResult = await readCliLocalOnboardingState(dependencies);
+    const localState = localStateResult.state;
+    const effectiveContext = buildEffectiveContextSnapshot(env, localState);
+    const now = dependencies.now();
+    const executionContext = buildOnboardingActionExecutionContext(
+      command as BidviaCliOnboardingActionCommand,
+      env,
+      effectiveContext,
+    );
+    const requiredContext = onboardingActionRequiredContextByCommand[
+      command as BidviaCliOnboardingActionCommand
+    ];
+    const missingContext = requiredContext.filter((contextKey) => {
+      if (contextKey === 'tenantId') {
+        return effectiveContext.tenantId.value === null;
+      }
+
+      return effectiveContext.sessionId.present === false;
+    });
+
+    if (missingContext.length > 0) {
+      return printStructuredFailure(
+        dependencies,
+        buildStructuredFailure(
+          command,
+          'missing-context',
+          buildCliMissingContextMessage(command, missingContext),
+          {
+            details: [...missingContext],
+          },
+        ),
+      );
+    }
+
+    let result: unknown;
+
+    try {
+      const client = dependencies.createClient(env, executionContext);
+      result = await onboardingActionCommand.run(
+        client,
+        parsedArgs,
+        now,
+      );
+    } catch (error) {
+      const normalizedFailure = normalizeOnboardingActionTransportFailure(error);
+      return printStructuredFailure(
+        dependencies,
+        buildStructuredFailure(
+          command,
+          'transport-error',
+          normalizedFailure.message,
+          {
+            details: [normalizedFailure.transport.name],
+            transport: normalizedFailure.transport,
+          },
+        ),
+      );
+    }
+
+    try {
+      await writeLocalOnboardingState(
+        buildPersistedOnboardingActionState(
+          command as BidviaCliOnboardingActionCommand,
+          result,
+          localState,
+          effectiveContext,
+          executionContext,
+          now,
+        ),
+        localOnboardingStateIoOptions,
+      );
+    } catch (error) {
+      return printStructuredFailure(
+        dependencies,
+        buildLocalOnboardingStateWriteFailure(
+          command,
+          resolveLocalOnboardingStatePath(localOnboardingStateIoOptions),
+          error,
+        ),
+      );
+    }
+
+    dependencies.printJson(
+      localStateResult.warnings.length === 0
+        ? result
+        : {
+          ...((typeof result === 'object' && result !== null) ? result as Record<string, unknown> : { result }),
+          localStateWarnings: localStateResult.warnings,
+        },
+    );
     return 0;
   }
 
