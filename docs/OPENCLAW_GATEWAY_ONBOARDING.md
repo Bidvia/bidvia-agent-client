@@ -12,7 +12,7 @@ It is intentionally bounded to the current shipped model:
 
 It does **not** assume any hosted Bidvia runtime, hosted MCP service, or remote registry behavior.
 
-The current SDK and CLI already expose the widened frozen downstream read surface for agent registrations, authority profiles, capability profiles, the singular per-registration capability profile, and the shipped participation-state/task-dispatch family. The OpenClaw path now uses that same local-first foundation more directly: stdio MCP is the primary OpenClaw runtime path, and the companion bundle is additive packaging around that same local server.
+The current SDK and CLI already expose the widened frozen downstream read surface for agent registrations, authority profiles, capability profiles, the singular per-registration capability profile, and the shipped participation-state/task-dispatch family. Stage 1 of the client-side runtime architecture upgrade is now complete in this repo, so the OpenClaw path uses that same local-first foundation more directly: stdio MCP is the primary OpenClaw runtime path, the companion bundle is additive packaging around that same local server, and execution writes local accumulation through the shared runtime core without changing operator-facing outputs.
 
 The public first-access website work for the same release remains spec-only in `docs/WEBSITE_FIRST_ACCESS_HANDOFF.md`. It does not add website code to this repo and it does not change the OpenClaw runtime order described here.
 
@@ -278,7 +278,7 @@ For repo-local development/build use, the direct fallback remains:
 node dist/mcp-server.js
 ```
 
-This entrypoint is intentionally bounded to the local stdio loop only. It is not a hosted MCP service, not a remote registry participant, and not a broader runtime platform.
+This entrypoint is intentionally bounded to the local stdio loop only. Its execution tools now run through the same Stage 1 runtime core and local accumulation layer used by the CLI, but it is not a hosted MCP service, not a remote registry participant, and not a broader runtime platform.
 
 In practical terms, the OpenClaw side should treat it as:
 

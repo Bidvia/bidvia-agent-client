@@ -18,6 +18,7 @@ test('public release docs no longer depend on transitional publication wording i
   const onboardingGuide = readText('docs/ONBOARDING.md');
   const contractBoundary = readText('docs/CONTRACT_BOUNDARY.md');
   const roadmap = readText('docs/ROADMAP.md');
+  const corePlaneGaps = readText('docs/CORE_AGENT_CLIENT_PLANE_CONTRACT_GAPS.md');
   const onboardingDoc = readText('docs/OPENCLAW_GATEWAY_ONBOARDING.md');
   const smokeDoc = readText('docs/OPENCLAW_GATEWAY_SMOKE.md');
   const websiteHandoff = readText('docs/WEBSITE_FIRST_ACCESS_HANDOFF.md');
@@ -54,10 +55,27 @@ test('public release docs no longer depend on transitional publication wording i
   assert.doesNotMatch(readme, /bidvia-agent-client openclaw-mcp-config/);
   assert.doesNotMatch(smokeDoc, /bidvia-agent-client openclaw-mcp-config/);
 
-  for (const document of [readme, onboardingGuide, contractBoundary, roadmap]) {
+  assert.match(corePlaneGaps, /Stage 1 is complete on the client side/i);
+  assert.match(corePlaneGaps, /Identity \/ session plane \| partial/);
+  assert.match(corePlaneGaps, /Task plane \| partial/);
+  assert.match(corePlaneGaps, /Capability plane \| partial/);
+  assert.match(corePlaneGaps, /Workflow \/ stage plane \| missing/);
+  assert.match(corePlaneGaps, /Event \/ notification plane \| missing/);
+  assert.match(corePlaneGaps, /Enterprise integration plane \| partial/);
+  assert.match(corePlaneGaps, /Local runtime \/ execution session plane \| frozen/);
+  assert.match(corePlaneGaps, /Local accumulation \/ memory plane \| frozen/);
+  assert.match(corePlaneGaps, /CLI and MCP execution now write local accumulation through the runtime core/i);
+  assert.doesNotMatch(corePlaneGaps, /hosted runtime behavior is shipped/i);
+
+  for (const document of [readme, onboardingGuide, contractBoundary]) {
     assert.match(document, /\.sisyphus\/plans\/agent-client-core-vnext-alignment-and-joint-debug\.md/);
     assert.doesNotMatch(document, /agent-client-next-version-productization/);
   }
+
+  assert.match(roadmap, /This file remains the single roadmap for `bidvia-agent-client`\./);
+  assert.match(roadmap, /Individual `\.sisyphus\/plans\/\*\.md` files are execution slices/);
+  assert.doesNotMatch(roadmap, /agent-client-core-vnext-alignment-and-joint-debug/);
+  assert.doesNotMatch(roadmap, /agent-client-next-version-productization/);
 
   for (const document of [readme, onboardingGuide, contractBoundary, releaseChecklist, releaseNotes]) {
     assert.match(document, /tenantId/);

@@ -19,6 +19,7 @@ test('cli help shows stdio MCP as the primary OpenClaw path and bundle export as
   assert.match(result.stdout, /openclaw-bundle-export/);
   assert.match(result.stdout, /mcp-server/);
   assert.match(result.stdout, /OpenClaw primary path: export stdio MCP config first, then add the companion bundle when you want bundle\/bootstrap packaging\./);
+  assert.match(result.stdout, /Stage 1 client runtime is complete locally: CLI and MCP execution share one runtime core and local accumulation layer\./);
   assert.doesNotMatch(result.stdout, /HTTP MCP/i);
   assert.doesNotMatch(result.stdout, /hosted runtime/i);
   assert.doesNotMatch(result.stdout, /native plugin-first/i);

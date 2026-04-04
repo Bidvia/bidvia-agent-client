@@ -29,6 +29,11 @@ import {
 import type { BidviaLocalMcpProductizationSnapshot } from './discovery-catalog.js';
 import type { BidviaOpportunityPackageHandoffPlanInput } from './handoffs.js';
 import type { BidviaIndustryUniverseScenarioPlanInput } from './universe.js';
+import type { BidviaClientContext } from './contracts.js';
+import {
+  buildBidviaSurfaceRuntimeIdentityContext,
+  runBidviaSurfaceCapability,
+} from './runtime/surface-runtime.js';
 
 function cloneMcpToolCatalog(catalog: ReadonlyArray<BidviaMcpToolDescriptor>): BidviaMcpToolDescriptor[] {
   return structuredClone([...catalog]);
@@ -58,7 +63,41 @@ type BidviaMcpDispatchResult = {
 
 type BidviaMcpDispatchDependencies = {
   createExecutionClient?: () => BidviaClient;
+  localAccumulationPath?: string;
+  now?: () => string;
 };
+
+function extractExecutionClientContext(client: unknown): Partial<BidviaClientContext> | undefined {
+  return typeof client === 'object'
+    && client !== null
+    && 'options' in client
+    && typeof client.options === 'object'
+    && client.options !== null
+    && 'context' in client.options
+    && typeof client.options.context === 'object'
+    && client.options.context !== null
+    ? client.options.context as Partial<BidviaClientContext>
+    : undefined;
+}
+
+function buildRuntimeExecutionIdentity(
+  preflight: ReturnType<typeof buildMcpExecutionPreflight>,
+  client: unknown,
+): Partial<BidviaClientContext> {
+  const clientContext = extractExecutionClientContext(client);
+
+  if (clientContext) {
+    return clientContext;
+  }
+
+  const fallbackIdentity: Partial<BidviaClientContext> = {};
+
+  for (const contextKey of preflight?.requiredContext ?? []) {
+    fallbackIdentity[contextKey] = 'available-via-local-client-seam';
+  }
+
+  return fallbackIdentity;
+}
 
 type BidviaGenericExecutionDispatch = (client: BidviaClient, input: unknown) => Promise<unknown>;
 
@@ -457,9 +496,23 @@ async function dispatchRegisteredAgentExecutionTool(
     throw new Error(`unsupported MCP helper dispatch: ${descriptor.helperRef.helperKey}`);
   }
 
-  const executionResult = adapter
-    ? await adapter.run(client, input)
-    : await directDispatcher!(client, input);
+  const helperKey = descriptor.helperRef.capabilityKey ?? descriptor.helperRef.helperKey;
+  const executionContext = buildRuntimeExecutionIdentity(preflight, client);
+  const executionResult = await runBidviaSurfaceCapability({
+    transport: 'mcp',
+    helperKey,
+    capabilityKey: helperKey,
+    identity: buildBidviaSurfaceRuntimeIdentityContext(executionContext),
+    input,
+    createClient: () => client,
+    execute: async (runtimeClient) => adapter
+      ? adapter.run(runtimeClient, input)
+      : directDispatcher!(runtimeClient, input),
+    now: dependencies.now ?? (() => new Date().toISOString()),
+    accumulation: dependencies.localAccumulationPath
+      ? { path: dependencies.localAccumulationPath }
+      : undefined,
+  });
 
   return {
     toolName: descriptor.toolName,

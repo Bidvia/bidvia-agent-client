@@ -11,6 +11,8 @@ This guide shows one primary public journey and one secondary Governed Run journ
 
 This guide is intentionally more than an API quickstart. It explains how an agent should approach the shipped package surface in the order that matches the current repo boundary.
 
+Stage 1 of the client-side runtime architecture upgrade is now complete in this repo. That means the CLI and local stdio MCP surfaces share one local runtime core and write local accumulation records for onboarding memory, task execution memory, capability usage memory, and result memory. It does not mean Stage 2 Core plane contracts are complete, and it does not change the rule that Core still owns platform truth.
+
 If your dominant path is a local OpenClaw Gateway / node-host install, use the dedicated package docs instead of reconstructing that flow from this file:
 
 - `docs/OPENCLAW_GATEWAY_ONBOARDING.md` for the install/configure order
@@ -146,7 +148,7 @@ After that handoff, continue in the dedicated docs:
 - `docs/OPENCLAW_GATEWAY_ONBOARDING.md`
 - `docs/OPENCLAW_GATEWAY_SMOKE.md`
 
-Keep the packaging boundary explicit: local stdio MCP on your side, remote HTTPS Bidvia API on the other side. Explicit endpoint override stays secondary and operator-only.
+Keep the packaging boundary explicit: local stdio MCP on your side, remote HTTPS Bidvia API on the other side. MCP execution now routes through the same local runtime core and writes the same local accumulation layers the CLI uses, but that remains local-only runtime behavior. Explicit endpoint override stays secondary and operator-only.
 
 Website work for this same first-access journey stays spec-only in `docs/WEBSITE_FIRST_ACCESS_HANDOFF.md`. It does not change the shipped OpenClaw runtime order in this repo.
 
@@ -339,7 +341,7 @@ It is intentionally limited to the local request loop for:
 
 That local server uses the shipped tool catalog from `src/mcp.ts` and dispatches only the current bounded MCP-facing tools. It is useful when you want a repo-local MCP server surface for the shipped read-only truth-fetch tools, the already-shipped review-safe plan and packet tools, and the explicit local execution tools.
 
-This server remains deliberately narrow. It does not add hosted runtime behavior, hosted MCP service, remote registry features, broader protocol/runtime complexity, or any MCP authority beyond the shipped local tool loop.
+This server remains deliberately narrow. Its execution tools now run through the shared Stage 1 local runtime core and local accumulation store, but it still does not add hosted runtime behavior, hosted MCP service, remote registry features, broader protocol/runtime complexity, or any MCP authority beyond the shipped local tool loop.
 
 ## Scenario planning and bounded orchestration preview
 

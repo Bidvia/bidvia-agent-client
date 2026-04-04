@@ -81,6 +81,10 @@ import {
   writeLocalOnboardingState,
 } from './local-onboarding-state.js';
 import { runLocalMcpServerMain } from './mcp-server.js';
+import {
+  buildBidviaSurfaceRuntimeIdentityContext,
+  runBidviaSurfaceCapability,
+} from './runtime/surface-runtime.js';
 
 function printJson(value: unknown): void {
   console.log(JSON.stringify(value, null, 2));
@@ -157,6 +161,8 @@ function createClient(
 }
 
 type BidviaCliExecutionCommandDefinition = {
+  helperKey?: string;
+  capabilityKey?: string;
   buildInput: (now: string) => unknown;
   run: (client: BidviaClient, now: string) => Promise<unknown>;
 };
@@ -166,12 +172,32 @@ function createExecutionCommandDefinition<Input>(
   buildInput: (now: string) => Input,
 ): BidviaCliExecutionCommandDefinition {
   return {
+    helperKey: adapter.capabilityKey,
+    capabilityKey: adapter.capabilityKey,
     buildInput(now) {
       return buildInput(now);
     },
     run(client, now) {
       return adapter.run(client, buildInput(now));
     },
+  };
+}
+
+function resolveExecutionCommandRuntimeKeys(
+  command: BidviaRegisteredAgentExecutionCommand,
+  executionCommand: BidviaCliExecutionCommandDefinition,
+): { helperKey: string; capabilityKey: string } {
+  const defaultCommand = defaultExecutionCommands[command];
+  const helperKey = executionCommand.helperKey ?? defaultCommand?.helperKey;
+  const capabilityKey = executionCommand.capabilityKey ?? defaultCommand?.capabilityKey ?? helperKey;
+
+  if (!helperKey || !capabilityKey) {
+    throw new Error(`Missing runtime helper metadata for execution command ${command}`);
+  }
+
+  return {
+    helperKey,
+    capabilityKey,
   };
 }
 
@@ -1131,17 +1157,20 @@ async function buildOnboardSnapshot(
 
 const onboardingActionCommandDefinitions = {
   'create-provisional-agent': {
+    helperKey: 'createProvisionalAgent',
     run: (client, parsedArgs, now) => client.createProvisionalAgent({
       provisionalAgentRef: parsedArgs.flagValues['--provisional-agent-ref']!,
       now,
     }),
   },
   'query-provisional-agent': {
+    helperKey: 'queryProvisionalAgent',
     run: (client, parsedArgs) => client.queryProvisionalAgent({
       provisionalAgentRef: parsedArgs.flagValues['--provisional-agent-ref']!,
     }),
   },
   'claim-provisional-agent': {
+    helperKey: 'claimProvisionalAgent',
     run: (client, parsedArgs, now) => client.claimProvisionalAgent({
         provisionalAgentRef: parsedArgs.flagValues['--provisional-agent-ref']!,
         claimToken: parsedArgs.flagValues['--claim-token']!,
@@ -1151,6 +1180,7 @@ const onboardingActionCommandDefinitions = {
 } as const satisfies Record<
   BidviaCliOnboardingActionCommand,
   {
+    helperKey: string;
     run: (
       client: BidviaClient,
       parsedArgs: BidviaCliParsedArgs,
@@ -1758,6 +1788,7 @@ function printHelp(printLine: (value: string) => void): void {
   printLine('bidvia');
   printLine('OpenClaw primary path: export stdio MCP config first, then add the companion bundle when you want bundle/bootstrap packaging.');
   printLine('OpenClaw scope for this version: local-first, Core-truth-consuming, stdio MCP primary.');
+  printLine('Stage 1 client runtime is complete locally: CLI and MCP execution share one runtime core and local accumulation layer.');
   printLine('Getting Started (Learn):');
   printLine('  onboard');
   printLine('  context show');
@@ -2177,12 +2208,17 @@ export async function runCli(
     let result: unknown;
 
     try {
-      const client = dependencies.createClient(env, executionContext);
-      result = await onboardingActionCommand.run(
-        client,
-        parsedArgs,
-        now,
-      );
+      result = await runBidviaSurfaceCapability({
+        transport: 'cli',
+        helperKey: onboardingActionCommand.helperKey,
+        capabilityKey: onboardingActionCommand.helperKey,
+        identity: buildBidviaSurfaceRuntimeIdentityContext(executionContext),
+        input: parsedArgs.flagValues,
+        createClient: () => dependencies.createClient(env, executionContext),
+        execute: async (client) => onboardingActionCommand.run(client, parsedArgs, now),
+        now: dependencies.now,
+        accumulation: { env },
+      });
     } catch (error) {
       const normalizedFailure = normalizeOnboardingActionTransportFailure(error);
       return printStructuredFailure(
@@ -2243,6 +2279,10 @@ export async function runCli(
 
   const executionCommand = dependencies.executionCommands[command as BidviaRegisteredAgentExecutionCommand];
   if (executionCommand) {
+    const runtimeKeys = resolveExecutionCommandRuntimeKeys(
+      command as BidviaRegisteredAgentExecutionCommand,
+      executionCommand,
+    );
     const preflight = buildCliExecutionPreflight(
       command,
       dependencies.resolveExecutionContext(),
@@ -2287,9 +2327,19 @@ export async function runCli(
       );
     }
 
-    const client = dependencies.createClient();
+    const env = dependencies.resolveProcessEnv();
     const now = dependencies.now();
-    const result = await executionCommand.run(client, now);
+    const result = await runBidviaSurfaceCapability({
+      transport: 'cli',
+      helperKey: runtimeKeys.helperKey,
+      capabilityKey: runtimeKeys.capabilityKey,
+      identity: buildBidviaSurfaceRuntimeIdentityContext(dependencies.resolveExecutionContext()),
+      input: executionCommand.buildInput(now),
+      createClient: () => dependencies.createClient(),
+      execute: async (client) => executionCommand.run(client, now),
+      now: dependencies.now,
+      accumulation: { env },
+    });
     dependencies.printJson(result);
     return 0;
   }

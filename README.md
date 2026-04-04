@@ -4,7 +4,7 @@
 
 The active execution plan for the current documentation and productization wave is `.sisyphus/plans/agent-client-core-vnext-alignment-and-joint-debug.md`. This README stays focused on the shipped local-first package surface and should be read alongside that plan, not as a competing roadmap.
 
-Today, this package ships a usable current mainline client surface for the frozen Bidvia Commercial Universe V1 / Core V12 handoff boundary. It includes typed SDK helpers, a widened read-only truth-fetch layer, stronger local operator discovery surfaces, richer review-safe readback, bounded scenario and verification helpers, local CLI commands, and a local stdio MCP seam. Recent transport and auth-provider hardening support that local-only foundation, but they do not mean login is shipped. It does not claim hosted runtime behavior, remote registry behavior, integrated Core truth beyond frozen inputs, or client-owned authority.
+Today, this package ships a usable current mainline client surface for the frozen Bidvia Commercial Universe V1 / Core V12 handoff boundary. It includes typed SDK helpers, a widened read-only truth-fetch layer, stronger local operator discovery surfaces, richer review-safe readback, bounded scenario and verification helpers, local CLI commands, and a local stdio MCP seam. Stage 1 of the client-side runtime architecture upgrade is now complete in this repo: CLI and MCP execution flow through a shared local runtime core and write local accumulation records while preserving operator-facing outputs. Recent transport and auth-provider hardening support that local-only foundation, but they do not mean login is shipped. It does not claim hosted runtime behavior, remote registry behavior, integrated Core truth beyond frozen inputs, or client-owned authority.
 
 ## What ships today
 
@@ -18,6 +18,8 @@ The same package also ships an SDK for Bidvia agent access routes, onboarding fl
 The widened frozen read surface now visible in the SDK and CLI includes the canonical families behind `GET /runtime/agents/registrations`, `GET /runtime/agents/:registrationId`, `GET /runtime/authority-profiles`, `GET /runtime/capability-profiles`, `GET /runtime/agents/:registrationId/capability-profile`, plus the shipped participation-state and task-dispatch read/write wrappers where the client already exposes them. The local stdio MCP surface is now wider too, covering the approved OpenClaw-facing read, review-safe, and explicit execution families that already ship in this repo. It still stays local-first and bounded to the approved stdio runtime.
 
 The current mainline remains explicitly bounded to the frozen Bidvia Commercial Universe V1 / Core V12 framing. This repo can improve client ergonomics, but it must not invent platform truth or widen governance authority on its own.
+
+For the current plane-by-plane gap view between the now-complete Stage 1 client runtime and the still-partial Core-facing contracts, use `docs/CORE_AGENT_CLIENT_PLANE_CONTRACT_GAPS.md`.
 
 ## Installation
 
@@ -300,7 +302,7 @@ node dist/cli.js evidence --dry-run
 node dist/cli.js proposal --dry-run
 ```
 
-The CLI is intentionally local and operator-facing. It helps you inspect environment resolution, local capability views, dry-run payloads, and bounded reviewable flows. It does not turn this package into a hosted runtime, and it does not mean user login is already part of the executable package surface.
+The CLI is intentionally local and operator-facing. It helps you inspect environment resolution, local capability views, dry-run payloads, and bounded reviewable flows. Its execution commands now run through the Stage 1 local runtime core and write local accumulation records without changing the operator-facing response shape. That does not turn this package into a hosted runtime, and it does not mean user login is already part of the executable package surface.
 
 ### Advanced CLI endpoint override
 
@@ -381,7 +383,7 @@ These are implemented in code today and available to users now. They include:
 - OpenClaw Gateway operator documentation for the local path
 - transport/auth-provider hardening for local execution paths
 
-The shipped MCP slice stays local stdio only and sourced from the SDK helpers already in this repo. It is not a hosted runtime, not HTTP MCP, not a native-plugin-first package, not a new auth layer, and not a new source of platform truth.
+The shipped MCP slice stays local stdio only and sourced from the SDK helpers already in this repo. Its execution tools now use the same Stage 1 local runtime core and local accumulation layer as CLI execution, while keeping the tool results operator-facing and non-authoritative. It is not a hosted runtime, not HTTP MCP, not a native-plugin-first package, not a new auth layer, and not a new source of platform truth.
 
 In plain terms, phase order matters here. The widened governance deep-read family ships through the SDK and CLI, while MCP now covers the approved governance, business-truth, review-safe, and explicit execution families that already ship in this repo. If canonical-semantic taxonomy or lineage aliases are mentioned at all, treat them as transitional or non-final only. None of that widens the MCP layer beyond a local stdio wrapper over already-shipped SDK helpers, and none of it turns the client into a hosted or control-plane-owning product.
 

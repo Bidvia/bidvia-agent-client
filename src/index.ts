@@ -31,6 +31,7 @@ export * from './remote-capability-refresh.js';
 export * from './registration-lifecycle.js';
 export * from './registered-agent-operations.js';
 export * from './runtime-capabilities.js';
+export * from './runtime/index.js';
 export * from './server-capabilities.js';
 export * from './task-participation.js';
 export * from './onboarding-readiness.js';

@@ -1400,20 +1400,23 @@ test('dispatchMcpToolCall routes widened Task 2 execution helpers through the sh
     ),
   ]);
 
-  assert.deepEqual(calls, [
-    {
-      helper: 'createProvisionalAgent',
-      input: {
-        displayName: 'Operator Seed Agent',
+  assert.deepEqual(
+    [...calls].sort((left, right) => left.helper.localeCompare(right.helper)),
+    [
+      {
+        helper: 'createCommercialAction',
+        input: {
+          commercialActionId: 'commercial-action-1',
+        },
       },
-    },
-    {
-      helper: 'createCommercialAction',
-      input: {
-        commercialActionId: 'commercial-action-1',
+      {
+        helper: 'createProvisionalAgent',
+        input: {
+          displayName: 'Operator Seed Agent',
+        },
       },
-    },
-  ]);
+    ],
+  );
   assert.deepEqual(results.map((result) => result.result), [
     {
       executionResult: {

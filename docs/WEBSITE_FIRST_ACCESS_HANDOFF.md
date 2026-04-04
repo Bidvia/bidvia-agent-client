@@ -6,6 +6,8 @@ This document is the handoff contract for the website team. It captures the ship
 
 This repo does not implement website code in this phase. The website team owns website execution separately.
 
+Stage 1 is complete on the client side, but website wording must keep that statement narrow: the package now has a real local runtime core and local accumulation layer behind CLI and MCP execution, while Core still owns platform truth and the website remains spec-only in this repo.
+
 ## Release boundary
 
 The website copy must stay inside the current shipped boundary:
@@ -18,6 +20,7 @@ The website copy must stay inside the current shipped boundary:
 - no HTTP MCP claims
 - no native-plugin-first claims
 - no login, browser auth, or client-owned auth ownership claims
+- no claim that the website owns or replaces the local runtime flow
 
 ## Public journey vocabulary
 
@@ -67,6 +70,7 @@ Meaning:
 - the website should not collapse this stage to Create/Claim when query is part of the official chain
 - users can rerun these steps safely
 - claim is session-bound and is the bridge from public provisional onboarding into governed runtime
+- Stage 1 completion means the runtime path behind these commands is now local-runtime-backed, not that the website or the client owns Core identity truth
 
 ### Governed Run
 
@@ -83,6 +87,7 @@ Meaning:
 - `route-context-matrix` is the bridge from Public Provisional into Governed Run
 - `registration-lifecycle-plan` is the first bounded success path
 - `registered-agent-operations-plan` is the next visible post-registration step
+- CLI and MCP execution now write local accumulation through the runtime core while preserving operator-facing outputs
 
 Keep `doctor`, `route-context-matrix`, and `registration-lifecycle-plan` on the Governed Run side of the story. They should not be presented as if they are part of the official public provisional create -> query -> claim chain.
 
@@ -114,6 +119,7 @@ Do not describe this package as:
 - a remote registry participant
 - a source of Core authority
 - a website-driven onboarding flow that replaces the CLI
+- proof that Stage 2 or Stage 3 are already complete
 
 ## Suggested website page shape
 

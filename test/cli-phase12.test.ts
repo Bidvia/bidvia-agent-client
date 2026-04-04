@@ -28,6 +28,7 @@ test('runCli prints grouped help output for the learn, create-claim, run, diagno
     'bidvia',
     'OpenClaw primary path: export stdio MCP config first, then add the companion bundle when you want bundle/bootstrap packaging.',
     'OpenClaw scope for this version: local-first, Core-truth-consuming, stdio MCP primary.',
+    'Stage 1 client runtime is complete locally: CLI and MCP execution share one runtime core and local accumulation layer.',
     'Getting Started (Learn):',
     '  onboard',
     '  context show',
