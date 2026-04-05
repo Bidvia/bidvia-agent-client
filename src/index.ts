@@ -11,6 +11,7 @@ export {
 export * from './coordinator.js';
 export * from './connection.js';
 export * from './contracts.js';
+export type * from './runtime/contracts.js';
 export * from './heartbeat.js';
 export * from './handoffs.js';
 export * from './local-onboarding-state.js';

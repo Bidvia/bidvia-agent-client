@@ -21,6 +21,21 @@ import {
 } from '../src/mcp.ts';
 import type { BidviaIndustryUniverseScenarioPlan } from '../src/universe.ts';
 
+function withRuntimeResultCommit<T>(client: T): T & {
+  commitRuntimeResult: () => Promise<{ outcomeRef: string }>;
+} {
+  return {
+    ...(client as object),
+    async commitRuntimeResult() {
+      return {
+        outcomeRef: 'outcome://test/runtime-commit',
+      };
+    },
+  } as T & {
+    commitRuntimeResult: () => Promise<{ outcomeRef: string }>;
+  };
+}
+
 type BidviaMcpDescriptorWithContext = BidviaMcpToolDescriptor & {
   accessContextFamily: string;
   contextSemantic?: string;
@@ -1311,14 +1326,19 @@ test('dispatchMcpToolCall routes local execution tools through the explicit runt
       },
     },
     {
-      createExecutionClient: () => ({
-        async postHeartbeat(input: { expiresAt: string }) {
-          return {
-            ok: true,
+        createExecutionClient: () => ({
+          async postHeartbeat(input: { expiresAt: string }) {
+            return {
+              ok: true,
             route: 'heartbeat',
             expiresAt: input.expiresAt,
           };
         },
+          async commitRuntimeResult() {
+            return {
+              outcomeRef: 'outcome://test/runtime-commit',
+            };
+          },
       }) as never,
     },
   );
@@ -1364,6 +1384,11 @@ test('dispatchMcpToolCall routes widened Task 2 execution helpers through the sh
               commercialActionId: 'commercial-action-1',
             };
           },
+          async commitRuntimeResult() {
+            return {
+              outcomeRef: 'outcome://test/runtime-commit',
+            };
+          },
         }) as never,
       },
     ),
@@ -1393,6 +1418,11 @@ test('dispatchMcpToolCall routes widened Task 2 execution helpers through the sh
             calls.push({ helper: 'createCommercialAction', input });
             return {
               commercialActionId: 'commercial-action-1',
+            };
+          },
+          async commitRuntimeResult() {
+            return {
+              outcomeRef: 'outcome://test/runtime-commit',
             };
           },
         }) as never,
@@ -1441,7 +1471,7 @@ test('dispatchMcpToolCall gives widened MCP execution tools precise missing-cont
         },
       },
       {
-        createExecutionClient: () => ({
+        createExecutionClient: () => withRuntimeResultCommit({
           options: {
             context: {
               tenantId: 'tenant-a',

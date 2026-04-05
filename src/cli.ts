@@ -50,8 +50,6 @@ import {
 import { buildRegistrationLifecycleScenarioPlan } from './registration-lifecycle.js';
 import { buildRegisteredAgentOperationsScenarioPlan } from './registered-agent-operations.js';
 import {
-  buildCliExecutionPreflight,
-  buildCliMissingContextMessage,
   type BidviaExecutionOperatorPreflight,
 } from './operator-ergonomics.js';
 import {
@@ -77,14 +75,15 @@ import {
   type BidviaLocalOnboardingState,
   readLocalOnboardingState,
   readLocalOnboardingStateWithDiagnostics,
-  resolveLocalOnboardingStatePath,
-  writeLocalOnboardingState,
 } from './local-onboarding-state.js';
 import { runLocalMcpServerMain } from './mcp-server.js';
 import {
-  buildBidviaSurfaceRuntimeIdentityContext,
-  runBidviaSurfaceCapability,
-} from './runtime/surface-runtime.js';
+  buildCliEffectiveContextSnapshot as buildEffectiveContextSnapshot,
+} from './cli-runtime-context.js';
+import {
+  runCliRuntimeExecutionCommand,
+  runCliRuntimeOnboardingAction,
+} from './cli-runtime-dispatch.js';
 
 function printJson(value: unknown): void {
   console.log(JSON.stringify(value, null, 2));
@@ -234,8 +233,6 @@ type BidviaCliStructuredFailure = {
     };
   };
 };
-
-type BidviaContextValueSource = 'env' | 'local-state' | 'missing';
 
 interface BidviaReachabilityProbeResult {
   reachable: boolean;
@@ -525,125 +522,6 @@ const onboardingActionSupportedFlagsByCommand = {
   'claim-provisional-agent': ['--provisional-agent-ref', '--claim-token'],
 } as const satisfies Record<BidviaCliOnboardingActionCommand, readonly BidviaCliSupportedValueFlag[]>;
 
-const onboardingActionRequiredContextByCommand = {
-  'create-provisional-agent': ['tenantId'],
-  'query-provisional-agent': ['tenantId'],
-  'claim-provisional-agent': ['tenantId', 'sessionId'],
-} as const satisfies Record<
-  BidviaCliOnboardingActionCommand,
-  readonly ('tenantId' | 'sessionId')[]
->;
-
-function readOnboardingResultString(
-  value: unknown,
-  camelKey: 'tenantId' | 'principalId' | 'companyId' | 'registrationId',
-  snakeKey: 'tenant_id' | 'principal_id' | 'company_id' | 'registration_id',
-): string | undefined {
-  if (!value || typeof value !== 'object') {
-    return undefined;
-  }
-
-  const record = value as Record<string, unknown>;
-  const candidate = record[camelKey] ?? record[snakeKey];
-
-  return typeof candidate === 'string' ? candidate : undefined;
-}
-
-function readOnboardingRegistrationResultString(
-  value: unknown,
-  camelKey: 'principalId' | 'companyId' | 'registrationId',
-  snakeKeys: readonly string[],
-): string | undefined {
-  if (!value || typeof value !== 'object') {
-    return undefined;
-  }
-
-  const registration = (value as Record<string, unknown>).registration;
-
-  if (!registration || typeof registration !== 'object') {
-    return undefined;
-  }
-
-  const record = registration as Record<string, unknown>;
-  const candidate = record[camelKey] ?? snakeKeys
-    .map((key) => record[key])
-    .find((nestedValue) => typeof nestedValue === 'string');
-
-  return typeof candidate === 'string' ? candidate : undefined;
-}
-
-function readNonEmptyEnvValue(
-  env: NodeJS.ProcessEnv,
-  key: 'BIDVIA_TENANT_ID' | 'BIDVIA_PRINCIPAL_ID' | 'BIDVIA_COMPANY_ID' | 'BIDVIA_REGISTRATION_ID' | 'BIDVIA_SESSION_ID' | 'BIDVIA_ADMIN_SESSION_ID',
-): string | undefined {
-  const candidate = env[key];
-
-  if (typeof candidate !== 'string' || candidate.length === 0) {
-    return undefined;
-  }
-
-  return candidate;
-}
-
-function buildContextValueWithSource(
-  envValue: string | undefined,
-  localStateValue: string | undefined,
-): {
-  value: string | null;
-  source: BidviaContextValueSource;
-} {
-  if (envValue !== undefined) {
-    return {
-      value: envValue,
-      source: 'env',
-    };
-  }
-
-  if (localStateValue !== undefined) {
-    return {
-      value: localStateValue,
-      source: 'local-state',
-    };
-  }
-
-  return {
-    value: null,
-    source: 'missing',
-  };
-}
-
-function buildSecretPresenceWithSource(envValue: string | undefined): {
-  present: boolean;
-  source: BidviaContextValueSource;
-} {
-  if (envValue !== undefined) {
-    return {
-      present: true,
-      source: 'env',
-    };
-  }
-
-  return {
-    present: false,
-    source: 'missing',
-  };
-}
-
-function buildEffectiveContextSnapshot(
-  env: NodeJS.ProcessEnv,
-  localState: BidviaLocalOnboardingState | null,
-) {
-  return {
-    tenantId: buildContextValueWithSource(readNonEmptyEnvValue(env, 'BIDVIA_TENANT_ID'), localState?.tenantId),
-    principalId: buildContextValueWithSource(readNonEmptyEnvValue(env, 'BIDVIA_PRINCIPAL_ID'), localState?.principalId),
-    companyId: buildContextValueWithSource(readNonEmptyEnvValue(env, 'BIDVIA_COMPANY_ID'), localState?.companyId),
-    registrationId: buildContextValueWithSource(readNonEmptyEnvValue(env, 'BIDVIA_REGISTRATION_ID'), localState?.registrationId),
-    lastCompletedStep: buildContextValueWithSource(undefined, localState?.lastCompletedStep),
-    sessionId: buildSecretPresenceWithSource(readNonEmptyEnvValue(env, 'BIDVIA_SESSION_ID')),
-    adminSessionId: buildSecretPresenceWithSource(readNonEmptyEnvValue(env, 'BIDVIA_ADMIN_SESSION_ID')),
-  };
-}
-
 function buildDoctorReadinessEligibility(effectiveContext: ReturnType<typeof buildEffectiveContextSnapshot>) {
   const missingContext = [
     effectiveContext.tenantId.value === null ? 'tenantId' : null,
@@ -718,39 +596,6 @@ function buildJourneyBoundarySnapshot(
 
 function buildStaticFirstAccessCommandHint(command: string, rationale: string) {
   return { command, rationale };
-}
-
-function buildLocalOnboardingStateIoOptions(env: NodeJS.ProcessEnv) {
-  return {
-    env,
-  };
-}
-
-function buildLocalOnboardingStateWriteFailure(
-  command: string,
-  path: string,
-  error: unknown,
-) {
-  const normalizedError = error instanceof Error
-    ? error
-    : new Error(String(error));
-  const errorCode = (error as NodeJS.ErrnoException | undefined)?.code;
-
-  return buildStructuredFailure(
-    command,
-    'local-onboarding-state-error',
-    `Failed to persist local onboarding state at ${path}.`,
-    {
-      details: ['local-onboarding-state'],
-      localState: {
-        path,
-        operation: 'write',
-        name: normalizedError.name,
-        message: normalizedError.message,
-        ...(errorCode === undefined ? {} : { code: errorCode }),
-      },
-    },
-  );
 }
 
 async function readCliLocalOnboardingState(
@@ -970,36 +815,6 @@ function normalizeDoctorReadinessFailure(error: unknown): BidviaDoctorReadinessF
   };
 }
 
-function normalizeOnboardingActionTransportFailure(error: unknown) {
-  if (error instanceof BidviaClientTransportError) {
-    return {
-      message: error.message,
-      transport: {
-        name: error.name,
-        code: error.kind,
-        ...(error.status === undefined ? {} : { status: error.status }),
-        ...(error.responseBody === undefined ? {} : { responseBody: error.responseBody }),
-      },
-    };
-  }
-
-  if (error instanceof Error) {
-    return {
-      message: error.message,
-      transport: {
-        name: error.name,
-      },
-    };
-  }
-
-  return {
-    message: String(error),
-    transport: {
-      name: 'UnknownError',
-    },
-  };
-}
-
 async function buildDoctorSnapshot(
   dependencies: Pick<
     BidviaCliDependencies,
@@ -1152,111 +967,6 @@ async function buildOnboardSnapshot(
     },
     effectiveContext,
     onboarding: buildFirstAccessOnboardingSnapshot(effectiveContext, 'onboard'),
-  };
-}
-
-const onboardingActionCommandDefinitions = {
-  'create-provisional-agent': {
-    helperKey: 'createProvisionalAgent',
-    run: (client, parsedArgs, now) => client.createProvisionalAgent({
-      provisionalAgentRef: parsedArgs.flagValues['--provisional-agent-ref']!,
-      now,
-    }),
-  },
-  'query-provisional-agent': {
-    helperKey: 'queryProvisionalAgent',
-    run: (client, parsedArgs) => client.queryProvisionalAgent({
-      provisionalAgentRef: parsedArgs.flagValues['--provisional-agent-ref']!,
-    }),
-  },
-  'claim-provisional-agent': {
-    helperKey: 'claimProvisionalAgent',
-    run: (client, parsedArgs, now) => client.claimProvisionalAgent({
-        provisionalAgentRef: parsedArgs.flagValues['--provisional-agent-ref']!,
-        claimToken: parsedArgs.flagValues['--claim-token']!,
-        now,
-      }),
-  },
-} as const satisfies Record<
-  BidviaCliOnboardingActionCommand,
-  {
-    helperKey: string;
-    run: (
-      client: BidviaClient,
-      parsedArgs: BidviaCliParsedArgs,
-      now: string,
-    ) => Promise<unknown>;
-  }
->;
-
-function buildOnboardingActionExecutionContext(
-  command: BidviaCliOnboardingActionCommand,
-  env: NodeJS.ProcessEnv,
-  effectiveContext: ReturnType<typeof buildEffectiveContextSnapshot>,
-) {
-  if (command === 'create-provisional-agent' || command === 'query-provisional-agent') {
-    return {
-      tenantId: effectiveContext.tenantId.value ?? undefined,
-      principalId: undefined,
-      companyId: undefined,
-      registrationId: undefined,
-      sessionId: undefined,
-    };
-  }
-
-  return {
-    tenantId: effectiveContext.tenantId.value ?? undefined,
-    principalId: effectiveContext.principalId.value ?? undefined,
-    companyId: effectiveContext.companyId.value ?? undefined,
-    registrationId: effectiveContext.registrationId.value ?? undefined,
-    sessionId: effectiveContext.sessionId.present
-      ? readNonEmptyEnvValue(env, 'BIDVIA_SESSION_ID')
-      : undefined,
-  };
-}
-
-function buildPersistedOnboardingActionState(
-  command: BidviaCliOnboardingActionCommand,
-  result: unknown,
-  existingState: BidviaLocalOnboardingState | null,
-  effectiveContext: ReturnType<typeof buildEffectiveContextSnapshot>,
-  executionContext: ReturnType<typeof buildOnboardingActionExecutionContext>,
-  now: string,
-) {
-  if (command === 'create-provisional-agent' || command === 'query-provisional-agent') {
-    return {
-      tenantId: readOnboardingResultString(result, 'tenantId', 'tenant_id')
-        ?? executionContext.tenantId
-        ?? existingState?.tenantId,
-      ...(existingState?.principalId === undefined ? {} : { principalId: existingState.principalId }),
-      ...(existingState?.companyId === undefined ? {} : { companyId: existingState.companyId }),
-      ...(existingState?.registrationId === undefined ? {} : { registrationId: existingState.registrationId }),
-      lastCompletedStep: command,
-      createdAt: existingState?.createdAt ?? now,
-      updatedAt: now,
-    };
-  }
-
-  const claimedPrincipalId = readOnboardingResultString(result, 'principalId', 'principal_id')
-    ?? readOnboardingRegistrationResultString(result, 'principalId', ['principal_id'])
-    ?? (effectiveContext.principalId.source === 'env' ? effectiveContext.principalId.value ?? undefined : undefined);
-  const claimedCompanyId = readOnboardingResultString(result, 'companyId', 'company_id')
-    ?? readOnboardingRegistrationResultString(result, 'companyId', ['company_id', 'tenant_id'])
-    ?? (effectiveContext.companyId.source === 'env' ? effectiveContext.companyId.value ?? undefined : undefined);
-  const claimedRegistrationId = readOnboardingResultString(result, 'registrationId', 'registration_id')
-    ?? readOnboardingRegistrationResultString(result, 'registrationId', ['agent_registration_id', 'registration_id'])
-    ?? (effectiveContext.registrationId.source === 'env' ? effectiveContext.registrationId.value ?? undefined : undefined);
-
-  return {
-    tenantId: readOnboardingResultString(result, 'tenantId', 'tenant_id')
-      ?? executionContext.tenantId
-      ?? existingState?.tenantId,
-    ...(claimedPrincipalId === undefined ? {} : { principalId: claimedPrincipalId }),
-    ...(claimedCompanyId === undefined ? {} : { companyId: claimedCompanyId }),
-    ...(claimedRegistrationId === undefined ? {} : { registrationId: claimedRegistrationId }),
-    lastCompletedStep: command,
-    createdAt: existingState?.createdAt ?? now,
-    updatedAt: now,
   };
 }
 
@@ -2113,6 +1823,7 @@ export async function runCli(
       config: exportOpenClawConfig(buildOpenClawConfig()),
       operatorNotes: {
         transportBoundary: 'Local stdio MCP on your side, remote HTTPS Bidvia API on the other side.',
+        runtimeTruth: 'CLI and MCP are the direct runtime consumers of the shared local runtime core. OpenClaw config points to that same local stdio MCP path.',
         endpointOverride: 'Advanced/operator-only: set BIDVIA_BASE_URL only when you need a non-default deployment endpoint.',
       },
     });
@@ -2143,8 +1854,8 @@ export async function runCli(
       outputPath: writeResult.outputPath,
       writtenFiles: writeResult.writtenFiles,
       operatorNotes: {
-        primaryPath: 'Primary OpenClaw path: export stdio MCP config first, then add the companion bundle when you want bundle/bootstrap packaging around the same local server.',
-        executionBoundary: 'Bundle/bootstrap only: Bidvia execution still runs through the local stdio MCP server at `bidvia mcp-server`.',
+        primaryPath: 'Primary OpenClaw path: export stdio MCP config first, then add the companion bundle when you want packaging around that same local stdio MCP runtime path.',
+        executionBoundary: 'Bundle/bootstrap only: OpenClaw stays config and packaging around the local stdio MCP server at `bidvia mcp-server`, where Bidvia execution actually runs.',
         developmentNote: 'Repo-local fallbacks such as `node dist/mcp-server.js` stay development-only and are not the primary bundle handoff.',
         deferredNativePlugin: 'Native-plugin-first and HTTP MCP paths stay out of scope for this version.',
       },
@@ -2165,108 +1876,18 @@ export async function runCli(
     return 0;
   }
 
-  const onboardingActionCommand = onboardingActionCommandDefinitions[
-    command as BidviaCliOnboardingActionCommand
-  ];
-  if (onboardingActionCommand) {
-    const env = dependencies.resolveProcessEnv();
-    const localOnboardingStateIoOptions = buildLocalOnboardingStateIoOptions(env);
-    const localStateResult = await readCliLocalOnboardingState(dependencies);
-    const localState = localStateResult.state;
-    const effectiveContext = buildEffectiveContextSnapshot(env, localState);
-    const now = dependencies.now();
-    const executionContext = buildOnboardingActionExecutionContext(
-      command as BidviaCliOnboardingActionCommand,
-      env,
-      effectiveContext,
-    );
-    const requiredContext = onboardingActionRequiredContextByCommand[
-      command as BidviaCliOnboardingActionCommand
-    ];
-    const missingContext = requiredContext.filter((contextKey) => {
-      if (contextKey === 'tenantId') {
-        return effectiveContext.tenantId.value === null;
-      }
-
-      return effectiveContext.sessionId.present === false;
-    });
-
-    if (missingContext.length > 0) {
-      return printStructuredFailure(
-        dependencies,
-        buildStructuredFailure(
-          command,
-          'missing-context',
-          buildCliMissingContextMessage(command, missingContext),
-          {
-            details: [...missingContext],
-          },
-        ),
-      );
-    }
-
-    let result: unknown;
-
-    try {
-      result = await runBidviaSurfaceCapability({
-        transport: 'cli',
-        helperKey: onboardingActionCommand.helperKey,
-        capabilityKey: onboardingActionCommand.helperKey,
-        identity: buildBidviaSurfaceRuntimeIdentityContext(executionContext),
-        input: parsedArgs.flagValues,
-        createClient: () => dependencies.createClient(env, executionContext),
-        execute: async (client) => onboardingActionCommand.run(client, parsedArgs, now),
-        now: dependencies.now,
-        accumulation: { env },
-      });
-    } catch (error) {
-      const normalizedFailure = normalizeOnboardingActionTransportFailure(error);
-      return printStructuredFailure(
-        dependencies,
-        buildStructuredFailure(
-          command,
-          'transport-error',
-          normalizedFailure.message,
-          {
-            details: [normalizedFailure.transport.name],
-            transport: normalizedFailure.transport,
-          },
-        ),
-      );
-    }
-
-    try {
-      await writeLocalOnboardingState(
-        buildPersistedOnboardingActionState(
-          command as BidviaCliOnboardingActionCommand,
-          result,
-          localState,
-          effectiveContext,
-          executionContext,
-          now,
-        ),
-        localOnboardingStateIoOptions,
-      );
-    } catch (error) {
-      return printStructuredFailure(
-        dependencies,
-        buildLocalOnboardingStateWriteFailure(
-          command,
-          resolveLocalOnboardingStatePath(localOnboardingStateIoOptions),
-          error,
-        ),
-      );
-    }
-
-    dependencies.printJson(
-      localStateResult.warnings.length === 0
-        ? result
-        : {
-          ...((typeof result === 'object' && result !== null) ? result as Record<string, unknown> : { result }),
-          localStateWarnings: localStateResult.warnings,
-        },
-    );
-    return 0;
+  const onboardingActionExitCode = await runCliRuntimeOnboardingAction(
+    command,
+    parsedArgs as BidviaCliParsedArgs & { flagValues: Record<string, string | undefined> },
+    dependencies,
+    {
+      buildStructuredFailure,
+      printStructuredFailure: (failure) => printStructuredFailure(dependencies, failure as BidviaCliStructuredFailure),
+      resolveExecutionCommandRuntimeKeys,
+    },
+  );
+  if (onboardingActionExitCode !== null) {
+    return onboardingActionExitCode;
   }
 
   const truthFetchCommand = truthFetchCommandDefinitions[command as BidviaCliTruthFetchCommand];
@@ -2277,71 +1898,18 @@ export async function runCli(
     return 0;
   }
 
-  const executionCommand = dependencies.executionCommands[command as BidviaRegisteredAgentExecutionCommand];
-  if (executionCommand) {
-    const runtimeKeys = resolveExecutionCommandRuntimeKeys(
-      command as BidviaRegisteredAgentExecutionCommand,
-      executionCommand,
-    );
-    const preflight = buildCliExecutionPreflight(
-      command,
-      dependencies.resolveExecutionContext(),
-      parsedArgs.dryRun,
-    );
-
-    if (parsedArgs.input) {
-      return printStructuredFailure(
-        dependencies,
-        buildStructuredFailure(
-          command,
-          'invalid-input',
-          `The ${command} command does not accept --input. Use --dry-run to inspect the local-only payload preview.`,
-        ),
-      );
-    }
-
-    if (parsedArgs.dryRun) {
-      const now = dependencies.now();
-      dependencies.printJson({
-        command,
-        mode: 'dry-run',
-        scope: 'local-only',
-        preflight,
-        input: executionCommand.buildInput(now),
-      });
-      return 0;
-    }
-
-    if (preflight && preflight.missingContext.length > 0) {
-      return printStructuredFailure(
-        dependencies,
-        buildStructuredFailure(
-          command,
-          'missing-context',
-          buildCliMissingContextMessage(command, preflight.missingContext),
-          {
-            details: [...preflight.missingContext],
-            preflight,
-          },
-        ),
-      );
-    }
-
-    const env = dependencies.resolveProcessEnv();
-    const now = dependencies.now();
-    const result = await runBidviaSurfaceCapability({
-      transport: 'cli',
-      helperKey: runtimeKeys.helperKey,
-      capabilityKey: runtimeKeys.capabilityKey,
-      identity: buildBidviaSurfaceRuntimeIdentityContext(dependencies.resolveExecutionContext()),
-      input: executionCommand.buildInput(now),
-      createClient: () => dependencies.createClient(),
-      execute: async (client) => executionCommand.run(client, now),
-      now: dependencies.now,
-      accumulation: { env },
-    });
-    dependencies.printJson(result);
-    return 0;
+  const executionExitCode = await runCliRuntimeExecutionCommand(
+    command,
+    parsedArgs as BidviaCliParsedArgs & { flagValues: Record<string, string | undefined> },
+    dependencies,
+    {
+      buildStructuredFailure,
+      printStructuredFailure: (failure) => printStructuredFailure(dependencies, failure as BidviaCliStructuredFailure),
+      resolveExecutionCommandRuntimeKeys,
+    },
+  );
+  if (executionExitCode !== null) {
+    return executionExitCode;
   }
 
   const now = dependencies.now();

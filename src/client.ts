@@ -41,6 +41,7 @@ import type {
   BidviaTaskDispatchWriteInput,
   BidviaVerificationBundle,
 } from './contracts.js';
+import type { BidviaTaskRuntimeClientPort } from './runtime/contracts.js';
 import { exportLegacyVerificationBundle } from './verification.js';
 
 export interface BidviaClientOptions {
@@ -81,7 +82,7 @@ interface BidviaRequestTransport {
   didAbort: () => boolean;
 }
 
-export class BidviaClient {
+export class BidviaClient implements BidviaTaskRuntimeClientPort {
   private readonly fetchImpl: typeof fetch;
 
   constructor(private readonly options: BidviaClientOptions) {

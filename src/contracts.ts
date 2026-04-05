@@ -1578,3 +1578,5 @@ export interface BidviaGovernedProposalReviewUsePlan {
   reviewAssessment: BidviaGovernedProposalReviewAssessment;
   authorizedUse: BidviaGovernedAuthorizedUseReceipt;
 }
+
+export type * from './runtime/contracts.js';

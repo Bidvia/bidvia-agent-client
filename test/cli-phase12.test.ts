@@ -366,11 +366,12 @@ test('runCli prints an OpenClaw MCP config export that stays local stdio first a
       },
       firstSuccessNextStep: {
         command: 'route-context-matrix',
-        rationale: 'Confirm the required context family for each guided route before enabling local OpenClaw operator execution.',
+        rationale: 'Confirm the required context family for each guided route before wiring OpenClaw config around the shared local stdio MCP runtime path.',
       },
     },
     operatorNotes: {
       transportBoundary: 'Local stdio MCP on your side, remote HTTPS Bidvia API on the other side.',
+      runtimeTruth: 'CLI and MCP are the direct runtime consumers of the shared local runtime core. OpenClaw config points to that same local stdio MCP path.',
       endpointOverride: 'Advanced/operator-only: set BIDVIA_BASE_URL only when you need a non-default deployment endpoint.',
     },
   }]);

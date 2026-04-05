@@ -105,16 +105,21 @@ test('writeLocalTaskJournal persists non-authoritative task attempt state, progr
           recordedAt: '2026-04-04T10:06:00.000Z',
         },
       ],
-      recovery: {
-        checkpointRef: 'checkpoint-1',
-        resumeFromMarker: 'result-staged',
-        lastCheckpointAt: '2026-04-04T10:07:00.000Z',
-      },
-      createdAt: '2026-04-04T10:00:00.000Z',
-      updatedAt: '2026-04-04T10:07:00.000Z',
-      sessionId: 'secret-session-id',
-      accessToken: 'secret-token',
-    });
+       recovery: {
+         checkpointRef: 'checkpoint-1',
+         resumeFromMarker: 'result-staged',
+         lastCheckpointAt: '2026-04-04T10:07:00.000Z',
+       },
+       protocolState: {
+         claimId: 'claim-1',
+         ackId: 'ack-1',
+         leaseId: 'lease-1',
+       },
+       createdAt: '2026-04-04T10:00:00.000Z',
+       updatedAt: '2026-04-04T10:07:00.000Z',
+       sessionId: 'secret-session-id',
+       accessToken: 'secret-token',
+     });
 
     assert.equal(result.path, journalPath);
     assert.deepEqual(result.journal, {
@@ -147,14 +152,19 @@ test('writeLocalTaskJournal persists non-authoritative task attempt state, progr
           recordedAt: '2026-04-04T10:06:00.000Z',
         },
       ],
-      recovery: {
-        checkpointRef: 'checkpoint-1',
-        resumeFromMarker: 'result-staged',
-        lastCheckpointAt: '2026-04-04T10:07:00.000Z',
-      },
-      createdAt: '2026-04-04T10:00:00.000Z',
-      updatedAt: '2026-04-04T10:07:00.000Z',
-    });
+       recovery: {
+         checkpointRef: 'checkpoint-1',
+         resumeFromMarker: 'result-staged',
+         lastCheckpointAt: '2026-04-04T10:07:00.000Z',
+       },
+       protocolState: {
+         claimId: 'claim-1',
+         ackId: 'ack-1',
+         leaseId: 'lease-1',
+       },
+       createdAt: '2026-04-04T10:00:00.000Z',
+       updatedAt: '2026-04-04T10:07:00.000Z',
+     });
 
     assert.deepEqual(JSON.parse(readFileSync(journalPath, 'utf8')), result.journal);
 

@@ -31,7 +31,7 @@ export interface BidviaOpenClawConfig {
   };
   firstSuccessNextStep: {
     command: 'route-context-matrix';
-    rationale: 'Confirm the required context family for each guided route before enabling local OpenClaw operator execution.';
+    rationale: 'Confirm the required context family for each guided route before wiring OpenClaw config around the shared local stdio MCP runtime path.';
   };
 }
 
@@ -79,7 +79,7 @@ export function buildOpenClawConfig(): BidviaOpenClawConfig {
     },
     firstSuccessNextStep: {
       command: 'route-context-matrix',
-      rationale: 'Confirm the required context family for each guided route before enabling local OpenClaw operator execution.',
+      rationale: 'Confirm the required context family for each guided route before wiring OpenClaw config around the shared local stdio MCP runtime path.',
     },
   };
 }

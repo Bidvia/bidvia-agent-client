@@ -40,6 +40,66 @@ function buildExecutionSession(exports: Record<string, unknown>, createClient: (
   });
 }
 
+test('commitRuntimeOwnedResult fails closed when the runtime client exposes no result commit path', async () => {
+  const exports = publicSurface as Record<string, unknown>;
+
+  assert.equal(typeof exports.buildBidviaRuntimeClientPort, 'function');
+  assert.equal(typeof exports.commitRuntimeOwnedResult, 'function');
+
+  const port = (exports.buildBidviaRuntimeClientPort as (client: unknown) => unknown)({});
+
+  await assert.rejects(
+    () => (exports.commitRuntimeOwnedResult as (input: Record<string, unknown>) => Promise<unknown>)({
+      transport: 'cli',
+      helperKey: 'postHeartbeat',
+      taskDispatchId: 'dispatch-1',
+      resultRef: 'local-result://dispatch-1',
+      kind: 'execution-result',
+      terminalState: 'complete',
+      port,
+    }),
+    /runtime-owned result commit path is unavailable/,
+  );
+});
+
+test('commitRuntimeOwnedResult delegates to the runtime-owned result commit path when one is exposed', async () => {
+  const exports = publicSurface as Record<string, unknown>;
+
+  const calls: unknown[] = [];
+  const port = (exports.buildBidviaRuntimeClientPort as (client: unknown) => unknown)({
+    async commitRuntimeResult(input: unknown) {
+      calls.push(input);
+      return {
+        outcomeRef: 'outcome://dispatch-1/committed',
+      };
+    },
+  });
+
+  const response = await (exports.commitRuntimeOwnedResult as (input: Record<string, unknown>) => Promise<Record<string, unknown>>)({
+    transport: 'mcp',
+    helperKey: 'createProvisionalAgent',
+    taskDispatchId: 'dispatch-1',
+    resultRef: 'local-result://dispatch-1',
+    kind: 'execution-result',
+    terminalState: 'complete',
+    detail: '{"created":true}',
+    port,
+  });
+
+  assert.deepEqual(response, {
+    outcomeRef: 'outcome://dispatch-1/committed',
+  });
+  assert.deepEqual(calls, [{
+    transport: 'mcp',
+    helperKey: 'createProvisionalAgent',
+    taskDispatchId: 'dispatch-1',
+    resultRef: 'local-result://dispatch-1',
+    kind: 'execution-result',
+    terminalState: 'complete',
+    detail: '{"created":true}',
+  }]);
+});
+
 test('BidviaTaskRuntime keeps local completion separate from remote result commit and from final remote task completion', async () => {
   const exports = publicSurface as Record<string, unknown>;
 

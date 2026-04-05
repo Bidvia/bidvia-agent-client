@@ -1,85 +1,8 @@
-import type { BidviaClient } from '../client.js';
-import type { BidviaClientContext, BidviaMaybePromise } from '../contracts.js';
-import type {
-  BidviaLocalTaskParticipationObservation,
-  BidviaTaskRetryAwarenessShell,
-} from '../task-participation.js';
 import {
   createExecutionHookRegistry,
   createRuntimeHookAudit,
 } from './hooks.js';
-import type {
-  BidviaExecutionHookRegistry,
-  BidviaRuntimeHookAudit,
-} from './hooks.js';
-
-export interface BidviaExecutionIdentityContext
-  extends Pick<
-    BidviaClientContext,
-    'tenantId' | 'principalId' | 'principalType' | 'authorizedRole' | 'registrationId' | 'sessionId' | 'adminSessionId' | 'companyId'
-  > {}
-
-export interface BidviaExecutionRuntimeDependencies {
-  createClient: () => BidviaMaybePromise<BidviaClient>;
-  now: () => string;
-}
-
-export interface BidviaExecutionRuntimeContext {
-  sessionRef: string;
-  transport: 'sdk-client' | 'cli' | 'mcp' | 'custom';
-  dependencies: BidviaExecutionRuntimeDependencies;
-}
-
-export type BidviaTaskHandleStatus =
-  | 'idle'
-  | 'offered'
-  | 'claimed'
-  | 'leased'
-  | 'executing'
-  | 'suspended'
-  | 'completed'
-  | 'failed';
-
-export interface BidviaTaskHandle {
-  localTaskRef: string;
-  taskId?: string;
-  status: BidviaTaskHandleStatus;
-  participation?: BidviaLocalTaskParticipationObservation | BidviaTaskRetryAwarenessShell;
-}
-
-export interface BidviaCapabilityMemoryHandle {
-  scope: 'local-capability-memory';
-  capabilityKey: string;
-  memoryRef: string;
-  revision?: string;
-}
-
-export interface BidviaExecutionSessionHookEvent {
-  sessionId: string;
-  taskId?: string;
-  capabilityKey?: string;
-}
-
-export interface BuildExecutionSessionInput {
-  sessionId: string;
-  identity: BidviaExecutionIdentityContext;
-  runtime: BidviaExecutionRuntimeContext;
-  task: BidviaTaskHandle;
-  capabilityMemory: BidviaCapabilityMemoryHandle;
-  hooks: BidviaExecutionHookRegistry;
-  hookAudit?: BidviaRuntimeHookAudit;
-}
-
-export interface BidviaExecutionSession {
-  scope: 'local-execution-session';
-  sessionId: string;
-  identity: BidviaExecutionIdentityContext;
-  runtime: BidviaExecutionRuntimeContext;
-  task: BidviaTaskHandle;
-  capabilityMemory: BidviaCapabilityMemoryHandle;
-  hooks: BidviaExecutionHookRegistry;
-  hookAudit: BidviaRuntimeHookAudit;
-}
+import type { BuildExecutionSessionInput, BidviaExecutionSession } from './contracts.js';
 
 function requireNonEmptyString(value: unknown, fieldName: string): void {
   if (typeof value !== 'string' || value.length === 0) {
@@ -135,3 +58,4 @@ export function buildExecutionSession(input: BuildExecutionSessionInput): Bidvia
 }
 
 export { createExecutionHookRegistry };
+export type * from './contracts.js';

@@ -5,6 +5,15 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import * as publicSurface from '../src/index.ts';
+import type {
+  BidviaExecutionIdentityContext,
+  BidviaExecutionSession,
+  BidviaRuntimeOwnedResultCommitInput,
+  BidviaRuntimeOwnedResultCommitResponse,
+  BidviaTaskRuntimeState,
+  BuildExecutionSessionInput,
+  CreateBidviaTaskRuntimeInput,
+} from '../src/contracts.ts';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const workspaceRoot = path.resolve(__dirname, '..');
@@ -42,6 +51,8 @@ test('public release docs no longer depend on transitional publication wording i
 
   assert.match(readme, /bidvia openclaw-mcp-config/);
   assert.match(readme, /bidvia onboard/);
+  assert.match(readme, /CLI and MCP are the direct runtime consumers of the shared local runtime core/i);
+  assert.match(readme, /OpenClaw stays a config and bundle handoff around that same local stdio MCP path/i);
   assert.match(onboardingGuide, /bidvia onboard/);
   assert.match(onboardingDoc, /bidvia openclaw-mcp-config/);
   assert.match(smokeDoc, /bidvia openclaw-mcp-config/);
@@ -56,6 +67,8 @@ test('public release docs no longer depend on transitional publication wording i
   assert.doesNotMatch(smokeDoc, /bidvia-agent-client openclaw-mcp-config/);
 
   assert.match(corePlaneGaps, /Stage 1 is complete on the client side/i);
+  assert.match(corePlaneGaps, /that completion is proven for the shipped CLI and MCP execution paths/i);
+  assert.match(corePlaneGaps, /OpenClaw currently rides that same local stdio MCP path through config and bundle surfaces, rather than as a separately proven direct runtime consumer/i);
   assert.match(corePlaneGaps, /Identity \/ session plane \| partial/);
   assert.match(corePlaneGaps, /Task plane \| partial/);
   assert.match(corePlaneGaps, /Capability plane \| partial/);
@@ -100,4 +113,126 @@ test('public release surface exports the OpenClaw config and companion bundle he
   assert.equal(typeof exports.exportOpenClawConfig, 'function');
   assert.equal(typeof exports.buildOpenClawCompanionBundle, 'function');
   assert.equal(typeof exports.exportOpenClawCompanionBundle, 'function');
+});
+
+test('public release surface does not expose internal cli runtime extraction helpers from the main package entrypoint', () => {
+  const exports = publicSurface as Record<string, unknown>;
+
+  assert.equal('buildCliOnboardingActionExecutionContext' in exports, false);
+  assert.equal('runCliRuntimeOnboardingAction' in exports, false);
+  assert.equal('runCliRuntimeExecutionCommand' in exports, false);
+});
+
+test('public release contracts preserve compatibility re-exports for runtime-owned session and task types', () => {
+  const identity: BidviaExecutionIdentityContext = {
+    tenantId: 'tenant-a',
+    registrationId: 'areg-1',
+    sessionId: 'session-a',
+  };
+  const buildInput: BuildExecutionSessionInput = {
+    sessionId: 'session-envelope-1',
+    identity,
+    runtime: {
+      sessionRef: 'local-session-1',
+      transport: 'sdk-client',
+      dependencies: {
+        createClient: async () => ({
+          async createClaim() {
+            return { claimId: 'claim-1' };
+          },
+          async acceptClaim() {
+            return { ackId: 'ack-1' };
+          },
+          async createLease() {
+            return { leaseId: 'lease-1' };
+          },
+          async suspendTaskDispatch() {
+            return { suspended: true };
+          },
+          async resumeTaskDispatch() {
+            return { resumed: true };
+          },
+          async completeTaskDispatch() {
+            return { completed: true };
+          },
+          async failTaskDispatch() {
+            return { failed: true };
+          },
+        }),
+        now: () => '2026-04-04T10:00:00.000Z',
+      },
+    },
+    task: {
+      localTaskRef: 'local-task-1',
+      status: 'idle',
+    },
+    capabilityMemory: {
+      scope: 'local-capability-memory',
+      capabilityKey: 'proposal.write',
+      memoryRef: 'memory-1',
+    },
+    hooks: {
+      onSessionOpened: [],
+      onTaskAttached: [],
+      onCapabilityMemoryAccessed: [],
+      onTaskDetached: [],
+      onSessionClosed: [],
+      onTaskReceived: [],
+      onTaskClaimed: [],
+      onCapabilityCalled: [],
+      onResultStaged: [],
+      onResultCommitted: [],
+      onTaskFailed: [],
+      onTaskTimedOut: [],
+      onTaskResumed: [],
+    },
+  };
+  const session: BidviaExecutionSession = {
+    ...buildInput,
+    scope: 'local-execution-session',
+    hookAudit: {
+      failures: [],
+    },
+  };
+  const runtimeState: BidviaTaskRuntimeState = {
+    scope: 'local-task-runtime',
+    sessionRef: 'local-session-1',
+    localTaskRef: 'local-task-1',
+    taskDispatchId: 'dispatch-1',
+    status: 'idle',
+    attempt: 1,
+  };
+  const taskRuntimeInput: CreateBidviaTaskRuntimeInput = {
+    session,
+    taskDispatchId: 'dispatch-1',
+  };
+  const commitInput: BidviaRuntimeOwnedResultCommitInput = {
+    transport: 'cli',
+    helperKey: 'proposal.write',
+    taskDispatchId: 'dispatch-1',
+    resultRef: 'result-1',
+    kind: 'proposal',
+    terminalState: 'complete',
+  };
+  const commitResponse: BidviaRuntimeOwnedResultCommitResponse = {
+    outcomeRef: 'outcome-1',
+  };
+
+  assert.equal(taskRuntimeInput.session.sessionId, 'session-envelope-1');
+  assert.equal(runtimeState.scope, 'local-task-runtime');
+  assert.equal(commitInput.terminalState, 'complete');
+  assert.equal(commitResponse.outcomeRef, 'outcome-1');
+});
+
+test('public release keeps runtime-owned contracts behind compatibility re-exports', () => {
+  const runtimeContracts = readText('src/runtime/contracts.ts');
+  const contracts = readText('src/contracts.ts');
+  const runtimeIndex = readText('src/runtime/index.ts');
+
+  assert.match(runtimeContracts, /export interface BidviaExecutionIdentityContext/);
+  assert.match(runtimeContracts, /export interface BidviaExecutionSession/);
+  assert.match(runtimeContracts, /export interface BidviaTaskRuntimeState/);
+  assert.match(runtimeContracts, /export interface BidviaRuntimeOwnedResultCommitInput/);
+  assert.match(contracts, /export type \* from '\.\/runtime\/contracts\.js';/);
+  assert.match(runtimeIndex, /export \* from '\.\/contracts\.js';/);
 });

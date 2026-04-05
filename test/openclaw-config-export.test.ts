@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 
 import * as publicSurface from '../src/index.ts';
 
-test('buildOpenClawConfig and exportOpenClawConfig produce an OpenClaw-consumption fragment for the local stdio MCP server without assuming a live package release', () => {
+test('buildOpenClawConfig and exportOpenClawConfig produce OpenClaw handoff config for the shared local stdio MCP runtime path without presenting OpenClaw as a separate runtime surface', () => {
   const exports = publicSurface as Record<string, unknown>;
 
   assert.equal(typeof exports.buildOpenClawConfig, 'function');
@@ -42,7 +42,7 @@ test('buildOpenClawConfig and exportOpenClawConfig produce an OpenClaw-consumpti
     },
     firstSuccessNextStep: {
       command: 'route-context-matrix',
-      rationale: 'Confirm the required context family for each guided route before enabling local OpenClaw operator execution.',
+      rationale: 'Confirm the required context family for each guided route before wiring OpenClaw config around the shared local stdio MCP runtime path.',
     },
   });
 

@@ -1,7 +1,14 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import * as publicSurface from '../src/index.ts';
+import { buildBidviaRuntimeClientPort } from '../src/index.ts';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const workspaceRoot = path.resolve(__dirname, '..');
 
 test('buildExecutionSession composes identity, runtime, task, memory, and hooks as explicit separate local concerns', () => {
   const exports = publicSurface as Record<string, unknown>;
@@ -129,4 +136,40 @@ test('buildExecutionSession requires explicit runtime dependencies instead of re
       hooks: createExecutionHookRegistry(),
     });
   }, /runtime\.dependencies\.createClient is required/);
+});
+
+test('buildBidviaRuntimeClientPort accepts a runtime-owned result commit seam without requiring the full client surface', async () => {
+  const port = buildBidviaRuntimeClientPort({
+    async commitRuntimeResult(input) {
+      return {
+        outcomeRef: `${input.transport}:${input.helperKey}:${input.resultRef}`,
+      };
+    },
+  });
+
+  assert.equal(typeof port.commitRuntimeResult, 'function');
+  assert.deepEqual(
+    await port.commitRuntimeResult?.({
+      transport: 'cli',
+      helperKey: 'proposal.write',
+      taskDispatchId: 'dispatch-1',
+      resultRef: 'result-1',
+      kind: 'proposal',
+      terminalState: 'complete',
+      detail: 'staged locally first',
+    }),
+    {
+      outcomeRef: 'cli:proposal.write:result-1',
+    },
+  );
+});
+
+test('runtime client port is typed against the runtime seam instead of importing BidviaClient directly', () => {
+  const source = readFileSync(
+    path.join(workspaceRoot, 'src/runtime/runtime-client-port.ts'),
+    'utf8',
+  );
+
+  assert.doesNotMatch(source, /from '\.\.\/client\.js'/);
+  assert.match(source, /export interface BidviaRuntimeClientPort/);
 });

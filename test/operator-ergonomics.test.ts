@@ -7,6 +7,21 @@ import { runCli } from '../src/cli.ts';
 import { dispatchMcpToolCall } from '../src/mcp.ts';
 import { buildMcpMissingContextMessage } from '../src/operator-ergonomics.ts';
 
+function withRuntimeResultCommit<T>(client: T): T & {
+  commitRuntimeResult: () => Promise<{ outcomeRef: string }>;
+} {
+  return {
+    ...(client as object),
+    async commitRuntimeResult() {
+      return {
+        outcomeRef: 'outcome://test/runtime-commit',
+      };
+    },
+  } as T & {
+    commitRuntimeResult: () => Promise<{ outcomeRef: string }>;
+  };
+}
+
 const dispatchMcpToolCallWithExecution = dispatchMcpToolCall as unknown as (
   request: {
     toolName: string;
@@ -140,15 +155,15 @@ test('dispatchMcpToolCall adds execution preflight metadata and rejects missing 
       },
     },
     {
-      createExecutionClient: () => ({
-        async postHeartbeat(input: { expiresAt: string }) {
-          return {
-            ok: true,
+        createExecutionClient: () => withRuntimeResultCommit({
+          async postHeartbeat(input: { expiresAt: string }) {
+            return {
+              ok: true,
             route: 'heartbeat',
             expiresAt: input.expiresAt,
           };
-        },
-      }),
+          },
+        }),
     },
   ) as BidviaMcpToolCallResponse & { preflight: ExecutionPreflight };
 

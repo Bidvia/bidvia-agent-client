@@ -4,7 +4,7 @@
 
 The active execution plan for the current documentation and productization wave is `.sisyphus/plans/agent-client-core-vnext-alignment-and-joint-debug.md`. This README stays focused on the shipped local-first package surface and should be read alongside that plan, not as a competing roadmap.
 
-Today, this package ships a usable current mainline client surface for the frozen Bidvia Commercial Universe V1 / Core V12 handoff boundary. It includes typed SDK helpers, a widened read-only truth-fetch layer, stronger local operator discovery surfaces, richer review-safe readback, bounded scenario and verification helpers, local CLI commands, and a local stdio MCP seam. Stage 1 of the client-side runtime architecture upgrade is now complete in this repo: CLI and MCP execution flow through a shared local runtime core and write local accumulation records while preserving operator-facing outputs. Recent transport and auth-provider hardening support that local-only foundation, but they do not mean login is shipped. It does not claim hosted runtime behavior, remote registry behavior, integrated Core truth beyond frozen inputs, or client-owned authority.
+Today, this package ships a usable current mainline client surface for the frozen Bidvia Commercial Universe V1 / Core V12 handoff boundary. It includes typed SDK helpers, a widened read-only truth-fetch layer, stronger local operator discovery surfaces, richer review-safe readback, bounded scenario and verification helpers, local CLI commands, and a local stdio MCP seam. Stage 1 of the client-side runtime architecture upgrade is now complete in this repo for the shipped CLI and MCP execution paths. CLI and MCP are the direct runtime consumers of the shared local runtime core, and they write local accumulation records while preserving operator-facing outputs. OpenClaw stays a config and bundle handoff around that same local stdio MCP path, not a separately proven direct runtime surface. Recent transport and auth-provider hardening support that local-only foundation, but they do not mean login is shipped. It does not claim hosted runtime behavior, remote registry behavior, integrated Core truth beyond frozen inputs, or client-owned authority.
 
 ## What ships today
 
@@ -126,7 +126,7 @@ node dist/cli.js openclaw-bundle-export --output ./bidvia-openclaw-bundle
 node dist/cli.js route-context-matrix
 ```
 
-Use `openclaw-mcp-config` first to export the OpenClaw-compatible `command` / `args` / `env` fragment for the primary stdio MCP path. Use `openclaw-bundle-export --output ./bidvia-openclaw-bundle` when you want companion bundle/bootstrap packaging around that same local server written to disk. The installed execution story is still `bidvia mcp-server`, and the repo-local development fallback remains `node dist/mcp-server.js`. Then use `route-context-matrix` to confirm which context family the guided Governed Run route needs before enabling execution.
+Use `openclaw-mcp-config` first to export the OpenClaw-compatible `command` / `args` / `env` fragment for the primary stdio MCP path. Use `openclaw-bundle-export --output ./bidvia-openclaw-bundle` when you want companion bundle/bootstrap packaging around that same local server written to disk. In other words, OpenClaw is still config and bundle handoff around `bidvia mcp-server`, while the direct runtime consumers remain the shipped CLI and MCP execution paths. The installed execution story is still `bidvia mcp-server`, and the repo-local development fallback remains `node dist/mcp-server.js`. Then use `route-context-matrix` to confirm which context family the guided Governed Run route needs before enabling execution.
 
 Continue with:
 
@@ -248,7 +248,7 @@ node dist/cli.js openclaw-bundle-export
 node dist/cli.js route-context-matrix
 ```
 
-`openclaw-mcp-config` is the primary OpenClaw handoff because it points directly at `bidvia mcp-server`. `openclaw-bundle-export` is additive packaging for operators and agents that want bundle/bootstrap guidance around that same local runtime. `node dist/mcp-server.js` remains the repo-local fallback. Those steps support the same Governed Run journey rather than defining a separate OpenClaw-owned onboarding path.
+`openclaw-mcp-config` is the primary OpenClaw handoff because it points directly at `bidvia mcp-server`. `openclaw-bundle-export` is additive packaging for operators and agents that want bundle/bootstrap guidance around that same local runtime path, not a separate OpenClaw runtime surface. `node dist/mcp-server.js` remains the repo-local fallback. Those steps support the same Governed Run journey rather than defining a separate OpenClaw-owned onboarding path.
 
 Start with grouped help when you want the current local-only command surface:
 
@@ -302,7 +302,7 @@ node dist/cli.js evidence --dry-run
 node dist/cli.js proposal --dry-run
 ```
 
-The CLI is intentionally local and operator-facing. It helps you inspect environment resolution, local capability views, dry-run payloads, and bounded reviewable flows. Its execution commands now run through the Stage 1 local runtime core and write local accumulation records without changing the operator-facing response shape. That does not turn this package into a hosted runtime, and it does not mean user login is already part of the executable package surface.
+The CLI is intentionally local and operator-facing. It helps you inspect environment resolution, local capability views, dry-run payloads, and bounded reviewable flows. Its execution commands are one of the two direct Stage 1 runtime consumers, alongside the local MCP server, and they write local accumulation records without changing the operator-facing response shape. That does not turn this package into a hosted runtime, and it does not mean user login is already part of the executable package surface.
 
 ### Advanced CLI endpoint override
 
@@ -383,7 +383,7 @@ These are implemented in code today and available to users now. They include:
 - OpenClaw Gateway operator documentation for the local path
 - transport/auth-provider hardening for local execution paths
 
-The shipped MCP slice stays local stdio only and sourced from the SDK helpers already in this repo. Its execution tools now use the same Stage 1 local runtime core and local accumulation layer as CLI execution, while keeping the tool results operator-facing and non-authoritative. It is not a hosted runtime, not HTTP MCP, not a native-plugin-first package, not a new auth layer, and not a new source of platform truth.
+The shipped MCP slice stays local stdio only and sourced from the SDK helpers already in this repo. Its execution tools are the other direct Stage 1 runtime consumer beside the CLI, and they use the same local runtime core and local accumulation layer while keeping the tool results operator-facing and non-authoritative. OpenClaw-compatible config and bundle exports stay packaging around that same stdio path, not a separately proven runtime surface. It is not a hosted runtime, not HTTP MCP, not a native-plugin-first package, not a new auth layer, and not a new source of platform truth.
 
 In plain terms, phase order matters here. The widened governance deep-read family ships through the SDK and CLI, while MCP now covers the approved governance, business-truth, review-safe, and explicit execution families that already ship in this repo. If canonical-semantic taxonomy or lineage aliases are mentioned at all, treat them as transitional or non-final only. None of that widens the MCP layer beyond a local stdio wrapper over already-shipped SDK helpers, and none of it turns the client into a hosted or control-plane-owning product.
 

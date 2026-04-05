@@ -7,6 +7,21 @@ import path from 'node:path';
 import { BidviaClientTransportError } from '../src/client.ts';
 import { runCli } from '../src/cli.ts';
 
+function withRuntimeResultCommit<T>(client: T): T & {
+  commitRuntimeResult: () => Promise<{ outcomeRef: string }>;
+} {
+  return {
+    ...(client as object),
+    async commitRuntimeResult() {
+      return {
+        outcomeRef: 'outcome://test/runtime-commit',
+      };
+    },
+  } as T & {
+    commitRuntimeResult: () => Promise<{ outcomeRef: string }>;
+  };
+}
+
 function setEnvVar(name: string, value: string | undefined) {
   const previousValue = process.env[name];
 
@@ -31,7 +46,7 @@ test('runCli routes create-provisional-agent through the existing client helper 
   const createCalls: Array<{ provisionalAgentRef: string; now: string }> = [];
 
   const exitCode = await runCli(['create-provisional-agent', '--provisional-agent-ref', 'prov-agent-1'], {
-    createClient: () => ({
+    createClient: () => withRuntimeResultCommit({
       createProvisionalAgent: async (input: { provisionalAgentRef: string; now: string }) => {
         createCalls.push(input);
         return {
@@ -71,12 +86,12 @@ test('runCli create-provisional-agent executes with tenant context sourced from 
   const exitCode = await runCli(['create-provisional-agent', '--provisional-agent-ref', 'prov-agent-local-state'], {
     createClient: ((_env?: unknown, contextOverride?: unknown) => {
       createClientContexts.push(contextOverride);
-      return {
+      return withRuntimeResultCommit({
         createProvisionalAgent: async () => ({
           provisionalAgentRef: 'prov-agent-local-state',
           created: true,
         }),
-      } as never;
+      }) as never;
     }) as never,
     resolveProcessEnv: () => ({}),
     readLocalOnboardingState: async () => ({
@@ -112,6 +127,7 @@ test('runCli create-provisional-agent executes with tenant context sourced from 
 test('runCli default onboarding-action client wiring honors injected env baseUrl and local-state execution context together', async () => {
   const printed: unknown[] = [];
   const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
+  const createClientCalls: Array<{ env: NodeJS.ProcessEnv; contextOverride: unknown }> = [];
   const restoreEnv = [
     setEnvVar('BIDVIA_BASE_URL', 'http://127.0.0.1:9999'),
     setEnvVar('BIDVIA_TENANT_ID', undefined),
@@ -132,6 +148,35 @@ test('runCli default onboarding-action client wiring honors injected env baseUrl
 
   try {
     const exitCode = await runCli(['create-provisional-agent', '--provisional-agent-ref', 'prov-agent-default-wiring'], {
+      createClient: ((env: NodeJS.ProcessEnv, contextOverride?: unknown) => {
+        createClientCalls.push({ env, contextOverride });
+        return {
+          async createProvisionalAgent(input: { provisionalAgentRef: string }) {
+            const baseUrl = env.BIDVIA_BASE_URL;
+
+            if (!baseUrl) {
+              throw new Error('expected injected BIDVIA_BASE_URL');
+            }
+
+            const response = await globalThis.fetch(`${baseUrl}/runtime/agents/provisional`, {
+              method: 'POST',
+              headers: {
+                'content-type': 'application/json',
+              },
+              body: JSON.stringify({
+                provisional_agent_ref: input.provisionalAgentRef,
+              }),
+            });
+
+            return response.json();
+          },
+          async commitRuntimeResult() {
+            return {
+              outcomeRef: 'outcome://test/runtime-commit',
+            };
+          },
+        } as never;
+      }) as never,
       resolveProcessEnv: () => ({
         BIDVIA_BASE_URL: 'http://127.0.0.1:8787',
       }),
@@ -155,6 +200,18 @@ test('runCli default onboarding-action client wiring honors injected env baseUrl
     }
   }
 
+  assert.deepEqual(createClientCalls, [{
+    env: {
+      BIDVIA_BASE_URL: 'http://127.0.0.1:8787',
+    },
+    contextOverride: {
+      tenantId: 'tenant-local-default-wiring',
+      principalId: undefined,
+      companyId: undefined,
+      registrationId: undefined,
+      sessionId: undefined,
+    },
+  }]);
   assert.equal(calls.length, 1);
   assert.equal(String(calls[0]?.input), 'http://127.0.0.1:8787/runtime/agents/provisional');
   assert.deepEqual(printed, [{
@@ -169,12 +226,12 @@ test('runCli create/query strip stale claimed principal/company/registration con
   const createExitCode = await runCli(['create-provisional-agent', '--provisional-agent-ref', 'prov-agent-strip-create'], {
     createClient: ((_env?: unknown, contextOverride?: unknown) => {
       createClientContexts.push(contextOverride);
-      return {
+      return withRuntimeResultCommit({
         createProvisionalAgent: async () => ({
           provisionalAgentRef: 'prov-agent-strip-create',
           created: true,
         }),
-      } as never;
+      }) as never;
     }) as never,
     resolveProcessEnv: () => ({
       BIDVIA_TENANT_ID: 'tenant-strip',
@@ -196,12 +253,12 @@ test('runCli create/query strip stale claimed principal/company/registration con
   const queryExitCode = await runCli(['query-provisional-agent', '--provisional-agent-ref', 'prov-agent-strip-query'], {
     createClient: ((_env?: unknown, contextOverride?: unknown) => {
       createClientContexts.push(contextOverride);
-      return {
+      return withRuntimeResultCommit({
         queryProvisionalAgent: async () => ({
           provisionalAgentRef: 'prov-agent-strip-query',
           status: 'pending-claim',
         }),
-      } as never;
+      }) as never;
     }) as never,
     resolveProcessEnv: () => ({
       BIDVIA_TENANT_ID: 'tenant-strip',
@@ -242,7 +299,7 @@ test('runCli routes query-provisional-agent through the existing client helper w
   const queryCalls: Array<{ provisionalAgentRef: string }> = [];
 
   const exitCode = await runCli(['query-provisional-agent', '--provisional-agent-ref', 'prov-agent-2'], {
-    createClient: () => ({
+    createClient: () => withRuntimeResultCommit({
       queryProvisionalAgent: async (input: { provisionalAgentRef: string }) => {
         queryCalls.push(input);
         return {
@@ -288,7 +345,7 @@ test('runCli writes only non-secret local onboarding state after a successful cl
       '--claim-token',
       'claim-token-3',
     ], {
-      createClient: () => ({
+      createClient: () => withRuntimeResultCommit({
         claimProvisionalAgent: async (input: {
           provisionalAgentRef: string;
           claimToken: string;
@@ -365,7 +422,7 @@ test('runCli claim-provisional-agent persists nested registration identity field
     '--claim-token',
     'claim-token-nested',
   ], {
-    createClient: () => ({
+    createClient: () => withRuntimeResultCommit({
       claimProvisionalAgent: async () => ({
         provisionalAgentRef: 'prov-agent-claim-nested',
         registration: {
@@ -426,7 +483,7 @@ test('runCli claim-provisional-agent does not persist stale claimed identity fie
     '--claim-token',
     'claim-token-fresh',
   ], {
-    createClient: () => ({
+    createClient: () => withRuntimeResultCommit({
       claimProvisionalAgent: async () => ({
         provisionalAgentRef: 'prov-agent-claim-fresh',
         sessionId: 'session-secret-should-not-persist',
@@ -468,7 +525,7 @@ test('runCli writes provisional create/query progress into local onboarding stat
       '--provisional-agent-ref',
       'prov-agent-progress',
     ], {
-      createClient: () => ({
+      createClient: () => withRuntimeResultCommit({
         createProvisionalAgent: async () => ({
           provisionalAgentRef: 'prov-agent-progress',
           created: true,
@@ -500,7 +557,7 @@ test('runCli writes provisional create/query progress into local onboarding stat
       '--provisional-agent-ref',
       'prov-agent-progress',
     ], {
-      createClient: () => ({
+      createClient: () => withRuntimeResultCommit({
         queryProvisionalAgent: async () => ({
           provisionalAgentRef: 'prov-agent-progress',
           status: 'pending-claim',
@@ -543,7 +600,7 @@ test('runCli onboarding action writes honor injected BIDVIA_STATE_PATH instead o
       '--provisional-agent-ref',
       'prov-agent-injected-path',
     ], {
-      createClient: () => ({
+      createClient: () => withRuntimeResultCommit({
         createProvisionalAgent: async () => ({
           provisionalAgentRef: 'prov-agent-injected-path',
           created: true,
@@ -586,7 +643,7 @@ test('runCli reports local onboarding state write failures separately from trans
       '--provisional-agent-ref',
       'prov-agent-write-failure',
     ], {
-      createClient: () => ({
+      createClient: () => withRuntimeResultCommit({
         createProvisionalAgent: async () => ({
           provisionalAgentRef: 'prov-agent-write-failure',
           created: true,
@@ -654,7 +711,7 @@ test('runCli create/query rerun after a prior claim preserves governed-run ident
       '--provisional-agent-ref',
       'prov-agent-reset',
     ], {
-      createClient: () => ({
+      createClient: () => withRuntimeResultCommit({
         createProvisionalAgent: async () => ({
           provisionalAgentRef: 'prov-agent-reset',
           created: true,
@@ -980,7 +1037,7 @@ test('runCli prints effective context with env precedence and local onboarding s
       '--claim-token',
       'claim-token-context-show',
     ], {
-      createClient: () => ({
+      createClient: () => withRuntimeResultCommit({
         claimProvisionalAgent: async () => ({
           registrationId: 'areg-local',
           principalId: 'principal-local',
@@ -1087,7 +1144,7 @@ test('runCli prints a local-only whoami summary with env precedence, local-state
       '--claim-token',
       'claim-token-whoami',
     ], {
-      createClient: () => ({
+      createClient: () => withRuntimeResultCommit({
         claimProvisionalAgent: async () => ({
           registrationId: 'areg-local',
           principalId: 'principal-local',

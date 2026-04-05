@@ -8,6 +8,7 @@ The framing is strict:
 
 - Stage 1 is complete on the client side
 - that completion means the local runtime/session architecture now exists in this repo
+- that completion is proven for the shipped CLI and MCP execution paths
 - it does not mean Stage 2 or Stage 3 are complete
 - it does not mean the client owns hosted runtime behavior, control-plane behavior, or Core truth
 
@@ -29,7 +30,7 @@ Each plane is classified from the client-consumption perspective only:
 | Workflow / stage plane | missing | The client can label local journey stages and bounded runtime steps, but workflow/stage truth is still a local interpretation layer, not a Core contract. | Stage 2 should replace local stage inference with explicit Core workflow and stage truth where those contracts are frozen. |
 | Event / notification plane | missing | The client has local journals, hooks, and operator-facing outputs, but no frozen Core notification/event plane to consume. | Stage 2 should add explicit event/notification payloads and delivery semantics, or keep this plane fail-closed. |
 | Enterprise integration plane | partial | The client ships bounded commercial and document/media/evidence helper slices, but enterprise integration truth is still route-family specific rather than one stable plane contract. | Stage 2 should define the minimum enterprise integration truth needed for the public V1 commercial-universe release. |
-| Local runtime / execution session plane | frozen | Stage 1 now gives the client a first-class local execution session and runtime core that CLI and MCP surfaces can consume. | Stage 2 should keep this local plane stable while hardening adapters that consume Core truth through explicit plane seams. |
+| Local runtime / execution session plane | frozen | Stage 1 now gives the client a first-class local execution session and runtime core that CLI and MCP surfaces consume directly. OpenClaw currently rides that same local stdio MCP path through config and bundle surfaces, rather than as a separately proven direct runtime consumer. | Stage 2 should keep this local plane stable while hardening adapters that consume Core truth through explicit plane seams. |
 | Local accumulation / memory plane | frozen | Stage 1 now gives the client explicit local accumulation for onboarding memory, task execution memory, capability usage memory, and result memory. | Stage 2 should preserve this plane as local-only accumulation and avoid turning it into hosted memory or synthetic Core truth. |
 
 ## Plane details
@@ -187,7 +188,9 @@ What Stage 2 should do next:
 
 ## Stage 1 completion statement
 
-Stage 1 is complete on the client side because the repo now has both local planes in place and the runtime-facing surfaces already consume them.
+Stage 1 is complete on the client side because the repo now has both local planes in place and the shipped CLI and MCP execution paths already consume them directly.
+
+OpenClaw wording must stay narrower than that completion claim. In the current repo, OpenClaw rides the same local stdio MCP path through exported config and companion-bundle packaging, rather than as a separately proven direct runtime consumer.
 
 That statement must stay bounded:
 
