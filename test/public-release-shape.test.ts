@@ -50,12 +50,17 @@ test('public release docs no longer depend on transitional publication wording i
   }
 
   assert.match(readme, /bidvia openclaw-mcp-config/);
+  assert.match(readme, /bidvia openclaw-bundle-export --output \.\/bidvia-openclaw-bundle/);
+  assert.match(readme, /node dist\/cli\.js openclaw-bundle-export --output \.\/bidvia-openclaw-bundle/);
   assert.match(readme, /bidvia onboard/);
   assert.match(readme, /CLI and MCP are the direct runtime consumers of the shared local runtime core/i);
   assert.match(readme, /OpenClaw stays a config and bundle handoff around that same local stdio MCP path/i);
   assert.match(onboardingGuide, /bidvia onboard/);
+  assert.match(onboardingGuide, /read, review-safe, and explicit execution tooling/i);
   assert.match(onboardingDoc, /bidvia openclaw-mcp-config/);
+  assert.match(onboardingDoc, /bidvia openclaw-bundle-export --output \.\/bidvia-openclaw-bundle/);
   assert.match(smokeDoc, /bidvia openclaw-mcp-config/);
+  assert.match(smokeDoc, /bidvia openclaw-bundle-export --output \.\/bidvia-openclaw-bundle/);
   assert.match(smokeDoc, /bidvia mcp-server/);
   assert.match(websiteHandoff, /Learn/);
   assert.match(websiteHandoff, /Public Provisional create -> query -> claim/);

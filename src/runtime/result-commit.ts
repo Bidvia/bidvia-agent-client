@@ -25,7 +25,7 @@ export async function commitRuntimeOwnedResult(
 ): Promise<BidviaRuntimeOwnedResultCommitResponse> {
   if (typeof input.port.commitRuntimeResult !== 'function') {
     throw new BidviaRuntimeResultCommitUnavailableError(
-      `runtime-owned result commit path is unavailable for ${input.transport} ${input.helperKey}; local result remains staged for recovery`,
+      `runtime-owned result commit path is unavailable for ${input.transport} ${input.helperKey}; local result remains staged, and rerunning may reuse the same track and replay the helper`,
     );
   }
 

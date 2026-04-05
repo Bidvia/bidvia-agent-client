@@ -111,7 +111,7 @@ After that guided path is clear, use the supporting diagnostics and review-safe 
 
 `onboarding-readiness` still exists as a supporting read-only explainer. It is no longer the primary public first-run entry point.
 
-In this phase, truth-fetch ships through the SDK and CLI as the widened frozen downstream read surface, with a bounded local stdio MCP seam exposing the currently approved read-only subset. That MCP rollout is phased on purpose: governance-first truth-fetch tools ship first, then business-truth collection and detail tools ship second. In both phases, MCP stays read-only, local stdio only, and a thin wrapper over the shipped SDK helpers.
+In this phase, truth-fetch ships through the SDK and CLI as the widened frozen downstream read surface, with a bounded local stdio MCP seam exposing the currently approved read, review-safe, and explicit execution tooling that already ships in this repo. That MCP rollout is phased on purpose: governance-first truth-fetch tools ship first, then business-truth collection and detail tools ship second, while the local stdio surface also includes the shipped review-safe and explicit execution families. In every phase, MCP stays local stdio only and a thin wrapper over the shipped SDK helpers and runtime core.
 
 The honest phase split is:
 
@@ -230,7 +230,7 @@ The same approved reads now also have a phased MCP surface on the local stdio se
 - the SDK and CLI expose the widened governance deep-read family plus the broader business truth-fetch families listed above
 - the MCP seam keeps the currently approved governance-first tools for `account-*`, `agent-presence`, and `agent-authority`
 - the MCP seam also exposes the shipped business-truth collection and detail tools for canonical semantics, pricing, document, media, evidence, and attachment reads
-- the MCP layer stays read-only and forwards to the SDK helpers already shipped in this repo
+- the MCP layer stays local stdio only and forwards the shipped read, review-safe, and explicit execution families through the SDK helpers and runtime core already present in this repo
 
 Runnable repo-local example:
 
@@ -253,7 +253,7 @@ node dist/cli.js pricing-bases
 node dist/cli.js media-asset --media-asset-id media-1
 ```
 
-This truth-fetch layer stays read-only. The MCP portion stays local stdio only and does not add hosted runtime behavior, hosted MCP, remote registry or remote discovery, login, OAuth, auth implementation, integrated Core capability-truth refresh, full governed notification semantics, broader multi-agent coordination authority, or live negotiation.
+This truth-fetch layer stays read-only. The MCP portion stays local stdio only, adds shipped review-safe and explicit execution tooling on that same local seam, and does not add hosted runtime behavior, hosted MCP, remote registry or remote discovery, login, OAuth, auth implementation, integrated Core capability-truth refresh, full governed notification semantics, broader multi-agent coordination authority, or live negotiation.
 
 Keep the deferred boundary explicit when you explain this surface to operators or SDK users:
 

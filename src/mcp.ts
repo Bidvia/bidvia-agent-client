@@ -81,12 +81,19 @@ function extractExecutionClientContext(client: unknown): Partial<BidviaClientCon
 }
 
 function buildRuntimeExecutionIdentity(
+  descriptor: BidviaMcpToolDescriptor,
   preflight: ReturnType<typeof buildMcpExecutionPreflight>,
   client: unknown,
 ): Partial<BidviaClientContext> {
   const clientContext = extractExecutionClientContext(client);
 
   if (clientContext) {
+    if (descriptor.contextSemantic === 'public-provisional') {
+      return {
+        tenantId: clientContext.tenantId,
+      };
+    }
+
     return clientContext;
   }
 
@@ -497,7 +504,7 @@ async function dispatchRegisteredAgentExecutionTool(
   }
 
   const helperKey = descriptor.helperRef.capabilityKey ?? descriptor.helperRef.helperKey;
-  const executionContext = buildRuntimeExecutionIdentity(preflight, client);
+  const executionContext = buildRuntimeExecutionIdentity(descriptor, preflight, client);
   const executionResult = await runBidviaSurfaceCapability({
     transport: 'mcp',
     helperKey,

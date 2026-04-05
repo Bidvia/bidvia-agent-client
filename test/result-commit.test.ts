@@ -58,7 +58,9 @@ test('commitRuntimeOwnedResult fails closed when the runtime client exposes no r
       terminalState: 'complete',
       port,
     }),
-    /runtime-owned result commit path is unavailable/,
+    {
+      message: 'runtime-owned result commit path is unavailable for cli postHeartbeat; local result remains staged, and rerunning may reuse the same track and replay the helper',
+    },
   );
 });
 

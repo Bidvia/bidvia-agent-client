@@ -54,7 +54,7 @@ Follow this order:
 
 1. install the package
 2. run `bidvia openclaw-mcp-config`
-3. optionally run `bidvia openclaw-bundle-export`
+3. optionally run `bidvia openclaw-bundle-export --output ./bidvia-openclaw-bundle`
 4. run `bidvia route-context-matrix`
 5. set the minimum Bidvia context environment variables
 6. run the topology, capability, and local MCP smoke commands

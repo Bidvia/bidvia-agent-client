@@ -131,6 +131,51 @@ test('dispatchMcpToolCall create-provisional-agent-execution returns helper succ
   assert.equal(accumulation.resultMemory.results[0]?.outcomeRef, undefined);
 });
 
+test('dispatchMcpToolCall keeps public provisional execution isolated from stale claimed identity fields', async () => {
+  const accumulationPath = buildLocalAccumulationPath('bidvia-mcp-runtime-provisional-context-');
+
+  await dispatchMcpToolCallWithRuntime(
+    {
+      toolName: 'create-provisional-agent-execution',
+      arguments: {
+        provisionalAgentRef: 'prov-runtime-mcp-context-1',
+      },
+    },
+    {
+      createExecutionClient: () => ({
+        options: {
+          context: {
+            tenantId: 'tenant-runtime',
+            principalId: 'principal-stale',
+            companyId: 'company-stale',
+            registrationId: 'areg-stale',
+            sessionId: 'session-stale',
+          },
+        },
+        async createProvisionalAgent() {
+          return {
+            provisionalAgentRef: 'prov-runtime-mcp-context-1',
+            created: true,
+          };
+        },
+      }) as never,
+      localAccumulationPath: accumulationPath,
+      now: () => '2026-04-04T13:12:00.000Z',
+    },
+  );
+
+  const accumulation = await readLocalAccumulation({
+    path: accumulationPath,
+  });
+
+  assert.ok(accumulation);
+  assert.deepEqual(accumulation.onboardingMemory.facts, [{
+    key: 'tenantId',
+    value: 'tenant-runtime',
+    recordedAt: '2026-04-04T13:12:00.000Z',
+  }]);
+});
+
 test('dispatchMcpToolCall does not persist synthetic local-client-seam placeholders into onboarding memory facts when helper success falls back to staged local result state', async () => {
   const accumulationPath = buildLocalAccumulationPath('bidvia-mcp-runtime-placeholder-');
 

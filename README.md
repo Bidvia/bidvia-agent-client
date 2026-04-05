@@ -244,11 +244,11 @@ Governed Run packaging/integration handoff, developer fallback path:
 
 ```bash
 node dist/cli.js openclaw-mcp-config
-node dist/cli.js openclaw-bundle-export
+node dist/cli.js openclaw-bundle-export --output ./bidvia-openclaw-bundle
 node dist/cli.js route-context-matrix
 ```
 
-`openclaw-mcp-config` is the primary OpenClaw handoff because it points directly at `bidvia mcp-server`. `openclaw-bundle-export` is additive packaging for operators and agents that want bundle/bootstrap guidance around that same local runtime path, not a separate OpenClaw runtime surface. `node dist/mcp-server.js` remains the repo-local fallback. Those steps support the same Governed Run journey rather than defining a separate OpenClaw-owned onboarding path.
+`openclaw-mcp-config` is the primary OpenClaw handoff because it points directly at `bidvia mcp-server`. `openclaw-bundle-export --output ./bidvia-openclaw-bundle` is additive packaging for operators and agents that want bundle/bootstrap guidance around that same local runtime path, not a separate OpenClaw runtime surface. `node dist/mcp-server.js` remains the repo-local fallback. Those steps support the same Governed Run journey rather than defining a separate OpenClaw-owned onboarding path.
 
 Start with grouped help when you want the current local-only command surface:
 
@@ -339,7 +339,7 @@ Start here if that is your path:
 
 ```bash
 bidvia openclaw-mcp-config
-bidvia openclaw-bundle-export
+bidvia openclaw-bundle-export --output ./bidvia-openclaw-bundle
 bidvia route-context-matrix
 ```
 
@@ -347,7 +347,7 @@ Developer fallback path:
 
 ```bash
 node dist/cli.js openclaw-mcp-config
-node dist/cli.js openclaw-bundle-export
+node dist/cli.js openclaw-bundle-export --output ./bidvia-openclaw-bundle
 node dist/cli.js route-context-matrix
 ```
 
@@ -356,7 +356,7 @@ Then continue with:
 - `docs/OPENCLAW_GATEWAY_ONBOARDING.md` for install and configuration order
 - `docs/OPENCLAW_GATEWAY_SMOKE.md` for the detailed smoke sequence
 
-For Gateway users on the public path, the safest order is still: install locally, export the operator config from `openclaw-mcp-config`, optionally export the companion bundle from `openclaw-bundle-export`, confirm route context with `route-context-matrix`, run the smoke commands against the default public API, then wire the local stdio MCP server only if the Gateway side is ready. The website handoff stays spec-only in `docs/WEBSITE_FIRST_ACCESS_HANDOFF.md` and does not change this OpenClaw runtime order.
+For Gateway users on the public path, the safest order is still: install locally, export the operator config from `openclaw-mcp-config`, optionally export the companion bundle from `openclaw-bundle-export --output ./bidvia-openclaw-bundle`, confirm route context with `route-context-matrix`, run the smoke commands against the default public API, then wire the local stdio MCP server only if the Gateway side is ready. The website handoff stays spec-only in `docs/WEBSITE_FIRST_ACCESS_HANDOFF.md` and does not change this OpenClaw runtime order.
 
 If your Gateway deployment needs an operator-selected endpoint instead, set `BIDVIA_BASE_URL` explicitly before the smoke flow. Keep the boundary the same: local stdio MCP on your side, remote HTTPS Bidvia API on the other side.
 
