@@ -19,7 +19,7 @@ test('buildOpenClawConfig and exportOpenClawConfig produce an OpenClaw-consumpti
         command: 'bidvia',
         args: ['mcp-server'],
         env: {
-          BIDVIA_BASE_URL: 'https://api.bidvia.ai',
+          BIDVIA_BASE_URL: 'https://api.bidvia.cn',
           BIDVIA_TENANT_ID: '<required>',
           BIDVIA_SESSION_ID: '<optional>',
           BIDVIA_ADMIN_SESSION_ID: '<optional>',

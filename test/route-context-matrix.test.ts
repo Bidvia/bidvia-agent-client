@@ -22,7 +22,7 @@ test('buildRouteContextMatrix separates public provisional onboarding from gover
   };
 
   assert.deepEqual(typedMatrix.defaults, {
-    baseUrl: 'https://api.bidvia.ai',
+    baseUrl: 'https://api.bidvia.cn',
     environmentMode: 'production',
     environmentSelectionRequired: false,
   });

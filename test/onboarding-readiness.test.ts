@@ -12,7 +12,7 @@ test('buildOnboardingReadiness keeps official onboarding focused on public provi
 
   assert.deepEqual(readiness, {
     defaults: {
-      baseUrl: 'https://api.bidvia.ai',
+      baseUrl: 'https://api.bidvia.cn',
       environmentMode: 'production',
       environmentSelectionRequired: false,
     },

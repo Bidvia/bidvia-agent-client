@@ -15,10 +15,10 @@ function withDefaultContextSemantic<T extends { accessContextFamily: string }>(v
   };
 }
 
-test('buildLocalRuntimeCapabilitySnapshot defaults to the public global API while keeping its capability view derived from shipped facts only', () => {
+test('buildLocalRuntimeCapabilitySnapshot defaults to the public china API while keeping its capability view derived from shipped facts only', () => {
   const snapshot = buildLocalRuntimeCapabilitySnapshot();
 
-  assert.equal(snapshot.baseUrl, 'https://api.bidvia.ai');
+  assert.equal(snapshot.baseUrl, 'https://api.bidvia.cn');
   assert.equal(snapshot.environmentMode, 'production');
   assert.equal(snapshot.routeCapabilities.source, 'local-static');
   assert.equal(snapshot.routeCapabilities.items.length > 0, true);

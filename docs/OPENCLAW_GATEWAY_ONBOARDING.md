@@ -102,7 +102,7 @@ Use the exported fragment as the primary handoff. If the operator or agent wants
 
 ## Step 3 — use the default public endpoint first
 
-For the normal public operator path, `bidvia` now defaults to the canonical public API at `https://api.bidvia.ai`.
+For the normal public operator path, `bidvia` now defaults to the canonical public API at `https://api.bidvia.cn`.
 
 That means the simplest public onboarding flow does not need an initial `BIDVIA_BASE_URL` export. Build the package first, set the minimum context, then use the read-only CLI commands to confirm what the package resolves locally.
 
@@ -164,7 +164,7 @@ Use this to confirm:
 
 - resolved `baseUrl`
 - resolved `environmentMode`
-- default public resolution to `https://api.bidvia.ai` when no override is set
+- default public resolution to `https://api.bidvia.cn` when no override is set
 - canonical `api.*` domains
 - compatibility profile mappings
 
@@ -235,7 +235,8 @@ export BIDVIA_BASE_URL="https://api.bidvia.cn"
 
 The active public resolution behavior remains:
 
-- default or `global` profile -> `https://api.bidvia.ai`
+- default profile -> `https://api.bidvia.cn`
+- `global` profile -> `https://api.bidvia.ai`
 - `china` profile -> `https://api.bidvia.cn`
 
 During the compatibility window, the older root-domain mappings may still appear in topology smoke output as informational context:

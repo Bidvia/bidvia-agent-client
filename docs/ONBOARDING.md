@@ -47,7 +47,7 @@ npm run example
 
 ## Primary public CLI-first journey
 
-For the normal public package path, start with the package defaults. The CLI and SDK resolve against `https://api.bidvia.ai`, so public onboarding should not begin with `BIDVIA_BASE_URL` or with manual environment switching.
+For the normal public package path, start with the package defaults. The CLI and SDK resolve against `https://api.bidvia.cn`, so public onboarding should not begin with `BIDVIA_BASE_URL` or with manual environment switching.
 
 Use this order:
 
@@ -170,7 +170,7 @@ node dist/cli.js environment-mode
 
 This layer does not change request payloads, enforce execution policy, or add environment-specific runtime controls. It only surfaces classification from the current base URL/profile inputs.
 
-For the normal public package path, start with the package defaults. The SDK and CLI resolve against the canonical public API at `https://api.bidvia.ai`, so public onboarding should not begin with a manual `BIDVIA_BASE_URL` export.
+For the normal public package path, start with the package defaults. The SDK and CLI resolve against the canonical public API at `https://api.bidvia.cn`, so public onboarding should not begin with a manual `BIDVIA_BASE_URL` export.
 
 When you need an explicit operator-selected endpoint instead, use the canonical API domains below:
 
@@ -189,7 +189,8 @@ That command prints local JSON only: resolved `baseUrl`, resolved `environmentMo
 
 The active profile/default resolution behavior is now:
 
-- default or `global` profile -> `https://api.bidvia.ai`
+- default profile -> `https://api.bidvia.cn`
+- `global` profile -> `https://api.bidvia.ai`
 - `china` profile -> `https://api.bidvia.cn`
 
 During the compatibility window, `launch-topology-smoke` may still show the older root domains as informational compatibility mappings:
@@ -501,7 +502,8 @@ Recommended domain profile defaults for current rollout:
 
 Active profile resolution:
 
-- default or `global` profile -> `https://api.bidvia.ai`
+- default profile -> `https://api.bidvia.cn`
+- `global` profile -> `https://api.bidvia.ai`
 - `china` profile -> `https://api.bidvia.cn`
 
 Compatibility mapping still shown as informational launch-window context:

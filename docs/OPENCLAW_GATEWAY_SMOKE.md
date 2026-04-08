@@ -180,7 +180,7 @@ bidvia launch-topology-smoke
 
 - the resolved `baseUrl` is what the current environment actually produces
 - the resolved `environmentMode` is visible locally
-- the default public path resolves to `https://api.bidvia.ai` when no override is set
+- the default public path resolves to `https://api.bidvia.cn` when no override is set
 - the canonical production API domains are visible as:
   - `https://api.bidvia.ai`
   - `https://api.bidvia.cn`

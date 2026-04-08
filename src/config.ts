@@ -32,7 +32,7 @@ export function resolveBidviaBaseUrl(options: ResolveBidviaBaseUrlOptions = {}):
     case 'china':
       return PUBLIC_CHINA_BASE_URL;
     default:
-      return PUBLIC_GLOBAL_BASE_URL;
+      return PUBLIC_CHINA_BASE_URL;
   }
 }
 

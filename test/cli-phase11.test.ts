@@ -55,7 +55,7 @@ test('launch-topology-smoke prints read-only launch topology json', () => {
 
   assert.equal(result.status, 0, result.stderr || result.stdout);
   const output = JSON.parse(result.stdout);
-  assert.equal(output.baseUrl, 'https://api.bidvia.ai');
+  assert.equal(output.baseUrl, 'https://api.bidvia.cn');
   assert.equal(output.environmentMode, 'production');
   assert.equal(output.canonicalGlobalApiDomain, 'https://api.bidvia.ai');
   assert.equal(output.canonicalChinaApiDomain, 'https://api.bidvia.cn');

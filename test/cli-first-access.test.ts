@@ -110,7 +110,7 @@ test('runCli doctor fresh machine reports local blockers, reachability, and skip
       throw new Error('doctor should not create a generic client');
     },
     resolveProcessEnv: () => ({}),
-    resolveBaseUrl: () => 'https://api.bidvia.ai',
+    resolveBaseUrl: () => 'https://api.bidvia.cn',
     resolveEnvironmentMode: () => 'production',
     readLocalOnboardingState: async () => null,
     probeReachability: async () => ({
@@ -133,7 +133,7 @@ test('runCli doctor fresh machine reports local blockers, reachability, and skip
   const snapshot = getSinglePrintedSnapshot<FirstAccessSnapshot>(printed);
   assert.equal(snapshot.command, 'doctor');
   assert.equal(snapshot.scope, 'local-first-read-only');
-  assert.equal(snapshot.localChecks?.baseUrl, 'https://api.bidvia.ai');
+  assert.equal(snapshot.localChecks?.baseUrl, 'https://api.bidvia.cn');
   assert.equal(snapshot.localChecks?.environmentMode, 'production');
   assert.equal(snapshot.localChecks?.localOnboardingState.present, false);
   assert.deepEqual(snapshot.localChecks?.completeness, {

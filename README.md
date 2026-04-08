@@ -59,7 +59,7 @@ npm run validate
 
 ### Primary public CLI-first journey
 
-For the normal public package path, start with the package defaults. The CLI resolves against `https://api.bidvia.ai`, so the baseline public journey does not start with `BIDVIA_BASE_URL`.
+For the normal public package path, start with the package defaults. The CLI resolves against `https://api.bidvia.cn`, so the baseline public journey does not start with `BIDVIA_BASE_URL`.
 
 Current installed path:
 
@@ -135,13 +135,13 @@ Continue with:
 
 ## Quick SDK use
 
-For the normal public package path, the guided public journey stays CLI-first. If you need the direct SDK equivalent, point it at the canonical public API at `https://api.bidvia.ai`.
+For the normal public package path, the guided public journey stays CLI-first. If you need the direct SDK equivalent, point it at the canonical public API at `https://api.bidvia.cn`.
 
 ```ts
 import { BidviaClient, buildHeartbeatInput } from '@bidvia/client';
 
 const client = new BidviaClient({
-  baseUrl: 'https://api.bidvia.ai',
+  baseUrl: 'https://api.bidvia.cn',
   context: {
     tenantId: 'tenant-a',
     principalId: 'agent-1',
@@ -208,7 +208,7 @@ Developer fallback path:
 node dist/cli.js --help
 ```
 
-For the normal public package path, CLI commands resolve against `https://api.bidvia.ai`. Start with `bidvia onboard` before you reach for explicit overrides.
+For the normal public package path, CLI commands resolve against `https://api.bidvia.cn`. Start with `bidvia onboard` before you reach for explicit overrides.
 
 Guided public journey, current installed path:
 

@@ -19,7 +19,7 @@ function createFetchStub(label: string): typeof fetch {
 
 async function main() {
   const client = new BidviaClient({
-    baseUrl: 'https://api.bidvia.ai',
+    baseUrl: 'https://api.bidvia.cn',
     context: {
       tenantId: 'tenant-a',
       principalId: 'actor-internal-1',

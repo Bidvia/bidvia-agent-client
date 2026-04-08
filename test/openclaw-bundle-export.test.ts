@@ -59,7 +59,7 @@ test('buildOpenClawCompanionBundle exports a local Codex-style OpenClaw companio
         command: 'bidvia',
         args: ['mcp-server'],
         env: {
-          BIDVIA_BASE_URL: 'https://api.bidvia.ai',
+          BIDVIA_BASE_URL: 'https://api.bidvia.cn',
           BIDVIA_TENANT_ID: '<required>',
           BIDVIA_SESSION_ID: '<optional>',
           BIDVIA_ADMIN_SESSION_ID: '<optional>',
@@ -127,7 +127,7 @@ test('writeOpenClawCompanionBundle materializes the official Codex bundle layout
         command: 'bidvia',
         args: ['mcp-server'],
         env: {
-          BIDVIA_BASE_URL: 'https://api.bidvia.ai',
+          BIDVIA_BASE_URL: 'https://api.bidvia.cn',
           BIDVIA_TENANT_ID: '<required>',
           BIDVIA_SESSION_ID: '<optional>',
           BIDVIA_ADMIN_SESSION_ID: '<optional>',

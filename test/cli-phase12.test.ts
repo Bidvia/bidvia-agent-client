@@ -264,7 +264,7 @@ test('runCli prints public-first onboarding readiness without requiring environm
   assert.deepEqual(printed, [{
     command: 'onboarding-readiness',
     defaults: {
-      baseUrl: 'https://api.bidvia.ai',
+      baseUrl: 'https://api.bidvia.cn',
       environmentMode: 'production',
       environmentSelectionRequired: false,
     },
@@ -343,7 +343,7 @@ test('runCli prints an OpenClaw MCP config export that stays local stdio first a
           command: 'bidvia',
           args: ['mcp-server'],
       env: {
-        BIDVIA_BASE_URL: 'https://api.bidvia.ai',
+        BIDVIA_BASE_URL: 'https://api.bidvia.cn',
         BIDVIA_TENANT_ID: '<required>',
         BIDVIA_SESSION_ID: '<optional>',
         BIDVIA_ADMIN_SESSION_ID: '<optional>',
@@ -411,7 +411,7 @@ test('runCli prints a route-context matrix that keeps public-first rows ahead of
   assert.deepEqual(printed, [{
     command: 'route-context-matrix',
     defaults: {
-      baseUrl: 'https://api.bidvia.ai',
+      baseUrl: 'https://api.bidvia.cn',
       environmentMode: 'production',
       environmentSelectionRequired: false,
     },
@@ -542,7 +542,7 @@ test('runCli prints the public-default environment visibility output instead of 
 
   assert.equal(exitCode, 0);
   assert.deepEqual(printed, [{
-    baseUrl: 'https://api.bidvia.ai',
+    baseUrl: 'https://api.bidvia.cn',
     environmentMode: 'production',
   }]);
 });
@@ -561,7 +561,7 @@ test('runCli prints launch topology smoke output with canonical api domains and 
 
   assert.equal(exitCode, 0);
   assert.deepEqual(printed, [{
-    baseUrl: 'https://api.bidvia.ai',
+    baseUrl: 'https://api.bidvia.cn',
     environmentMode: 'production',
     canonicalGlobalApiDomain: 'https://api.bidvia.ai',
     canonicalChinaApiDomain: 'https://api.bidvia.cn',
@@ -615,7 +615,7 @@ test('runCli prints runtime capability snapshots for the public default and pres
   const localSnapshot = localPrinted[0] as { baseUrl: string; environmentMode: string };
   const simSnapshot = simPrinted[0] as { baseUrl: string; environmentMode: string };
 
-  assert.equal(defaultSnapshot.baseUrl, 'https://api.bidvia.ai');
+  assert.equal(defaultSnapshot.baseUrl, 'https://api.bidvia.cn');
   assert.equal(defaultSnapshot.environmentMode, 'production');
   assert.equal(localSnapshot.baseUrl, 'http://127.0.0.1:8787');
   assert.equal(localSnapshot.environmentMode, 'local');

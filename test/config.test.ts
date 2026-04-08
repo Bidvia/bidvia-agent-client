@@ -8,16 +8,16 @@ import {
   resolveBidviaEnvironmentModeFromEnv,
 } from '../src/config.ts';
 
-test('resolveBidviaBaseUrl defaults to the public global API and still supports public profiles plus explicit override priority', () => {
-  assert.equal(resolveBidviaBaseUrl(), 'https://api.bidvia.ai');
+test('resolveBidviaBaseUrl defaults to the public china API and still supports public profiles plus explicit override priority', () => {
+  assert.equal(resolveBidviaBaseUrl(), 'https://api.bidvia.cn');
   assert.equal(resolveBidviaBaseUrl({ profile: 'global' }), 'https://api.bidvia.ai');
   assert.equal(resolveBidviaBaseUrl({ profile: 'china' }), 'https://api.bidvia.cn');
   assert.equal(resolveBidviaBaseUrl({ explicitBaseUrl: 'http://127.0.0.1:8787' }), 'http://127.0.0.1:8787');
   assert.equal(resolveBidviaBaseUrl({ profile: 'china', explicitBaseUrl: 'https://api.bidvia.cn' }), 'https://api.bidvia.cn');
 });
 
-test('resolveBidviaBaseUrlFromEnv defaults to the public global API unless an explicit override or public profile is selected', () => {
-  assert.equal(resolveBidviaBaseUrlFromEnv({}), 'https://api.bidvia.ai');
+test('resolveBidviaBaseUrlFromEnv defaults to the public china API unless an explicit override or public profile is selected', () => {
+  assert.equal(resolveBidviaBaseUrlFromEnv({}), 'https://api.bidvia.cn');
   assert.equal(resolveBidviaBaseUrlFromEnv({ BIDVIA_BASE_URL_PROFILE: 'global' }), 'https://api.bidvia.ai');
   assert.equal(resolveBidviaBaseUrlFromEnv({ BIDVIA_BASE_URL_PROFILE: 'china' }), 'https://api.bidvia.cn');
   assert.equal(resolveBidviaBaseUrlFromEnv({ BIDVIA_BASE_URL: 'http://127.0.0.1:8787' }), 'http://127.0.0.1:8787');
