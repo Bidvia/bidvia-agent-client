@@ -2,7 +2,7 @@
   "name": "@bidvia/client",
   "version": "0.3.0",
   "private": false,
-  "description": "Open-source-ready Bidvia agent access client toolkit scaffold.",
+  "description": "Customer-facing V1 Bidvia SDK, CLI, and local MCP entrypoint for governed agent onboarding and operations.",
   "license": "MIT",
   "type": "module",
   "repository": {
