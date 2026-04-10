@@ -1,6 +1,6 @@
 # Onboarding Guide
 
-This guide supports the current local-first package surface. For current execution sequencing and scope, use `.sisyphus/plans/agent-client-stage-2-stage-3-frozen-plane-execution.md` as the active plan. That current wave rebases the repo onto the frozen six-plane Core contract model without reopening Core truth closure.
+This guide supports the current local-first package surface. For current execution sequencing and scope, use `.sisyphus/plans/agent-client-v1-payload-contract-release.md` as the active plan. That current wave rebases the repo onto the latest payload-level Core contract truth and the agent-first-but-login-capable V1 release boundary.
 
 ## Goal
 
@@ -291,7 +291,7 @@ Keep the deferred boundary explicit when you explain this surface to operators o
 
 - hosted runtime and hosted MCP stay deferred
 - remote registry and remote discovery stay deferred
-- login, OAuth, and auth implementation stay deferred
+- OAuth and broader auth/platform-auth implementation stay deferred beyond the bounded shipped login/session prerequisite path
 - integrated Core capability-truth refresh and live negotiation stay deferred
 - notification truth and broader multi-agent coordination truth beyond the shipped frozen participation/task wrappers stay deferred
 - approval -> opportunity closure stays deferred beyond the explicit current handoff seam

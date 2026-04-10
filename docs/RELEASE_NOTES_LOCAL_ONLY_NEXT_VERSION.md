@@ -14,9 +14,9 @@ The current V1 boundary is agent-first but login-capable. Bounded account/sessio
 
 The SDK transport layer is more dependable for local operator and integrator use. This version tightens timeout handling, abort behavior, and normalized transport errors so local request flows are easier to inspect and troubleshoot without changing the governed wire contracts.
 
-### Auth and context provider seams, not login
+### Auth and context provider seams plus bounded V1 login/session support
 
-This version adds clearer local auth and request-context provider seams so callers can supply headers and context in a more controlled way. That is packaging and transport hardening for local use, not shipped login, not hosted auth, and not Core-owned identity behavior.
+This version adds clearer local auth and request-context provider seams so callers can supply headers and context in a more controlled way. It also now ships bounded V1 sign-up/sign-in/account-me/select-org/session-refresh/session-revoke support so external users can establish context before the governed agent path continues. That remains prerequisite support only: it is not hosted auth and it is not Core-owned identity behavior implemented by this client.
 
 ### Bounded V1 account/session prerequisite support
 
@@ -92,7 +92,7 @@ Some seams are now better prepared on the client side, but they still depend on 
 
 This release does not claim any of the following:
 
-- login or broader Core-owned auth
+- broader Core-owned auth beyond the bounded shipped sign-up/sign-in/account/session prerequisite path
 - platform-auth ownership
 - hosted runtime behavior
 - hosted MCP service behavior

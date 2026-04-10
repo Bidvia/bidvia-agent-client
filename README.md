@@ -1,6 +1,6 @@
 # Bidvia Agent Client
 
-The active execution plan for the current Stage 2 / Stage 3 wave is `.sisyphus/plans/agent-client-stage-2-stage-3-frozen-plane-execution.md`. This README is the customer-facing V1 entrypoint for the package surface that ships today.
+This README is the customer-facing V1 entrypoint for the package surface that ships today.
 
 ## What is Bidvia?
 

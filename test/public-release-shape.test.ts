@@ -74,10 +74,12 @@ test('public release docs no longer depend on transitional publication wording i
   assert.match(corePlaneGaps, /workflow-stage remains the only broadly blocked Core-facing plane/i);
   assert.doesNotMatch(corePlaneGaps, /hosted runtime behavior is shipped/i);
 
-  for (const document of [readme, onboardingGuide, contractBoundary]) {
-    assert.match(document, /\.sisyphus\/plans\/agent-client-stage-2-stage-3-frozen-plane-execution\.md/);
+  for (const document of [onboardingGuide, contractBoundary]) {
+    assert.match(document, /\.sisyphus\/plans\/agent-client-v1-payload-contract-release\.md/);
     assert.doesNotMatch(document, /agent-client-next-version-productization/);
   }
+
+  assert.doesNotMatch(readme, /\.sisyphus\/plans\//);
 
   for (const document of [readme, onboardingGuide, releaseChecklist, releaseNotes]) {
     assert.match(document, /downstream-contract-center/i);
