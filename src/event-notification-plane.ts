@@ -3,16 +3,16 @@ import type {
   BidviaEventNotificationPlaneCapabilityMode,
   BidviaEventNotificationPlaneView,
 } from './contracts.js';
-import { getCorePlaneExecutionSummary } from './plane-execution-gate.js';
+import { listCorePlaneAdoptionStatuses } from './core-plane-adoption.js';
 
-const eventNotificationPlaneAdoptionStatus: BidviaCorePlaneAdoptionStatus = {
-  plane: 'event-notification',
-  frozenInCore: true,
-  payloadPacketStatus: 'blocked-pending-packet',
-  ...getCorePlaneExecutionSummary('event-notification'),
-  blockedBy: 'core-plane-payload-packet-not-yet-frozen',
-  notes: ['Expose frozen notification payload truth directly from the authoritative Core payload contract matrix.'],
-};
+function requireEventNotificationPlaneAdoptionStatus(): BidviaCorePlaneAdoptionStatus {
+  const adoptionStatus = listCorePlaneAdoptionStatuses().find((status) => status.plane === 'event-notification');
+  if (!adoptionStatus) {
+    throw new Error('Missing core plane adoption status for event notification');
+  }
+
+  return adoptionStatus;
+}
 
 const eventNotificationVisibilityOnlyHelperKeys = ['getNotification'] as const;
 
@@ -57,10 +57,12 @@ const eventNotificationCapabilityModeByHelperKey = new Map<string, BidviaEventNo
 ]);
 
 export function buildEventNotificationPlaneView(): BidviaEventNotificationPlaneView {
+  const adoptionStatus = requireEventNotificationPlaneAdoptionStatus();
+
   return {
     adoptionStatus: {
-      ...eventNotificationPlaneAdoptionStatus,
-      notes: [...eventNotificationPlaneAdoptionStatus.notes],
+      ...adoptionStatus,
+      notes: [...adoptionStatus.notes],
     },
     capabilityModes: {
       visibilityOnlyHelperKeys: [...eventNotificationVisibilityOnlyHelperKeys],

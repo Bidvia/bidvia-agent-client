@@ -21,15 +21,15 @@ function createFetchStub() {
   return { calls, fetchStub };
 }
 
-test('event notification plane exposes frozen read visibility and blocks packet-incomplete execution semantics', () => {
+test('event notification plane exposes frozen read visibility and packet-grounded execution semantics', () => {
   const plane = buildEventNotificationPlaneView();
 
   assert.equal(plane.adoptionStatus.plane, 'event-notification');
   assert.equal(plane.adoptionStatus.frozenInCore, true);
-  assert.equal(plane.adoptionStatus.payloadPacketStatus, 'blocked-pending-packet');
+  assert.equal(plane.adoptionStatus.payloadPacketStatus, 'packet-grounded');
   assert.equal(plane.notificationReadTruth.payloadPacketStatus, 'packet-grounded');
-  assert.equal(plane.executionTruth.payloadPacketStatus, 'blocked-pending-packet');
-  assert.equal(plane.executionTruth.remotePayloadSupported, false);
+  assert.equal(plane.executionTruth.payloadPacketStatus, 'packet-grounded');
+  assert.equal(plane.executionTruth.remotePayloadSupported, true);
   assert.deepEqual(plane.capabilityModes.visibilityOnlyHelperKeys, ['getNotification']);
   assert.deepEqual(plane.capabilityModes.blockedExecutionHelperKeys, [
     'createNotificationDelivery',
@@ -44,14 +44,14 @@ test('event notification plane exposes frozen read visibility and blocks packet-
     '/runtime/notifications/:notification_id/expire',
   ]);
   assert.equal(getEventNotificationPlaneCapabilityMode('getNotification'), 'visibility-only');
-  assert.equal(getEventNotificationPlaneCapabilityMode('acknowledgeNotification'), 'blocked-pending-packet');
+  assert.equal(getEventNotificationPlaneCapabilityMode('acknowledgeNotification'), 'packet-grounded-execution');
 });
 
 test('route context matrix surfaces the event notification plane without reopening local runtime semantics', () => {
   const matrix = buildRouteContextMatrix();
 
   assert.equal(matrix.eventNotificationPlane.adoptionStatus.plane, 'event-notification');
-  assert.equal(matrix.eventNotificationPlane.executionTruth.blockedBy, 'core-plane-payload-packet-not-yet-frozen');
+  assert.equal(matrix.eventNotificationPlane.executionTruth.blockedBy, null);
 });
 
 test('BidviaClient uses governed read headers for canonical notification visibility reads only', async () => {
