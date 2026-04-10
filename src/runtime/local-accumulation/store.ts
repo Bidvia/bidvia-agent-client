@@ -55,6 +55,7 @@ export interface BidviaLocalCapabilityBlockedAttempt {
   recordedAt: string;
   executionKind: string;
   missingContext: string[];
+  blockedByPlaneGate?: string | null;
   detail?: string;
 }
 
@@ -202,6 +203,7 @@ function isCapabilityBlockedAttempt(value: unknown): value is BidviaLocalCapabil
     && isString(candidate.recordedAt)
     && isString(candidate.executionKind)
     && isStringArray(candidate.missingContext)
+    && (candidate.blockedByPlaneGate === undefined || candidate.blockedByPlaneGate === null || isString(candidate.blockedByPlaneGate))
     && isOptionalString(candidate.detail);
 }
 
@@ -363,6 +365,7 @@ function buildPersistedCapabilityUsageMemory(memory: BidviaLocalCapabilityUsageM
         recordedAt: attempt.recordedAt,
         executionKind: attempt.executionKind,
         missingContext: [...attempt.missingContext],
+        ...(attempt.blockedByPlaneGate === undefined ? {} : { blockedByPlaneGate: attempt.blockedByPlaneGate }),
         ...(attempt.detail === undefined ? {} : { detail: attempt.detail }),
       })),
     })),

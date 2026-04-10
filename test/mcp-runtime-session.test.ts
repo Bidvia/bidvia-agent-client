@@ -27,52 +27,62 @@ const dispatchMcpToolCallWithRuntime = dispatchMcpToolCall as unknown as (
   };
 }>;
 
-test('dispatchMcpToolCall heartbeat-execution preserves the MCP response while recording task execution memory with the real postHeartbeat helper key', async () => {
+test('dispatchMcpToolCall heartbeat-execution records a plane-gated blocked attempt instead of executing when context is present', async () => {
   const accumulationPath = buildLocalAccumulationPath('bidvia-mcp-runtime-heartbeat-');
+  let called = false;
 
-  const response = await dispatchMcpToolCallWithRuntime(
-    {
-      toolName: 'heartbeat-execution',
-      arguments: {
-        now: '2026-04-04T13:00:00.000Z',
-        expiresAt: '2026-04-04T13:05:00.000Z',
+  await assert.rejects(
+    () => dispatchMcpToolCallWithRuntime(
+      {
+        toolName: 'heartbeat-execution',
+        arguments: {
+          now: '2026-04-04T13:00:00.000Z',
+          expiresAt: '2026-04-04T13:05:00.000Z',
+        },
       },
-    },
-    {
-      createExecutionClient: () => ({
-        options: {
-          context: {
-            tenantId: 'tenant-runtime',
-            principalId: 'principal-runtime',
-            registrationId: 'areg-runtime',
+      {
+        createExecutionClient: () => ({
+          options: {
+            context: {
+              tenantId: 'tenant-runtime',
+              principalId: 'principal-runtime',
+              registrationId: 'areg-runtime',
+            },
           },
-        },
-        async postHeartbeat() {
-          return {
-            ok: true,
-            helperKey: 'postHeartbeat',
-          };
-        },
-      }) as never,
-      localAccumulationPath: accumulationPath,
-      now: () => '2026-04-04T13:00:00.000Z',
-    },
+          async postHeartbeat() {
+            called = true;
+            return {
+              ok: true,
+              helperKey: 'postHeartbeat',
+            };
+          },
+        }) as never,
+        localAccumulationPath: accumulationPath,
+        now: () => '2026-04-04T13:00:00.000Z',
+      },
+    ),
+    /MCP tool heartbeat-execution is blocked by the shared plane execution gate: core-plane-payload-packet-not-yet-frozen\./,
   );
 
-  assert.deepEqual(response.result.executionResult, {
-    ok: true,
-    helperKey: 'postHeartbeat',
-  });
+  assert.equal(called, false);
 
   const accumulation = await readLocalAccumulation({
     path: accumulationPath,
   });
 
   assert.ok(accumulation);
-  assert.equal(accumulation.taskExecutionMemory.progressMarkers[0]?.marker, 'execution-started');
+  const markers = accumulation.taskExecutionMemory.progressMarkers.map((marker) => marker.marker);
+  assert.equal(markers[0], 'execution-started');
+  assert.equal(markers.includes('capability-blocked'), true);
   assert.equal(accumulation.capabilityUsageMemory.capabilities[0]?.capabilityKey, 'postHeartbeat');
-  assert.equal(accumulation.capabilityUsageMemory.capabilities[0]?.usage[0]?.helperKey, 'postHeartbeat');
-  assert.equal(accumulation.resultMemory.results[0]?.kind, 'execution-result');
+  assert.deepEqual(accumulation.capabilityUsageMemory.capabilities[0]?.usage, []);
+  assert.deepEqual(accumulation.capabilityUsageMemory.capabilities[0]?.blockedAttempts, [{
+    helperKey: 'postHeartbeat',
+    recordedAt: '2026-04-04T13:00:00.000Z',
+    executionKind: 'runtime-write',
+    missingContext: [],
+    blockedByPlaneGate: 'core-plane-payload-packet-not-yet-frozen',
+  }]);
 });
 
 test('dispatchMcpToolCall create-provisional-agent-execution preserves the public provisional response while recording onboarding memory and helper-keyed capability usage', async () => {
@@ -130,15 +140,15 @@ test('dispatchMcpToolCall does not persist synthetic local-client-seam placehold
 
   const response = await dispatchMcpToolCallWithRuntime(
     {
-      toolName: 'heartbeat-execution',
+      toolName: 'create-provisional-agent-execution',
       arguments: {
+        provisionalAgentRef: 'prov-runtime-placeholder-1',
         now: '2026-04-04T13:15:00.000Z',
-        expiresAt: '2026-04-04T13:20:00.000Z',
       },
     },
     {
       createExecutionClient: () => ({
-        async postHeartbeat() {
+        async createProvisionalAgent() {
           return {
             ok: true,
           };
@@ -167,10 +177,10 @@ test('dispatchMcpToolCall records non-blocked execution failures through the run
   await assert.rejects(
     () => dispatchMcpToolCallWithRuntime(
       {
-        toolName: 'heartbeat-execution',
+        toolName: 'create-provisional-agent-execution',
         arguments: {
+          provisionalAgentRef: 'prov-runtime-failure-1',
           now: '2026-04-04T13:20:00.000Z',
-          expiresAt: '2026-04-04T13:25:00.000Z',
         },
       },
       {
@@ -178,19 +188,17 @@ test('dispatchMcpToolCall records non-blocked execution failures through the run
           options: {
             context: {
               tenantId: 'tenant-runtime',
-              principalId: 'principal-runtime',
-              registrationId: 'areg-runtime',
             },
           },
-          async postHeartbeat() {
-            throw new Error('heartbeat failed');
+          async createProvisionalAgent() {
+            throw new Error('provisional create failed');
           },
         }) as never,
         localAccumulationPath: accumulationPath,
         now: () => '2026-04-04T13:20:00.000Z',
       },
     ),
-    /heartbeat failed/,
+    /provisional create failed/,
   );
 
   const accumulation = await readLocalAccumulation({

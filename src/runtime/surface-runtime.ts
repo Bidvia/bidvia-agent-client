@@ -153,6 +153,7 @@ function buildAccumulationFromRuntime(input: {
             recordedAt: input.recordedAt,
             executionKind: input.blocked.executionKind,
             missingContext: [...input.blocked.missingContext],
+            blockedByPlaneGate: input.blocked.blockedByPlaneGate,
           }]
           : [],
       }],
