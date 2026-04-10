@@ -78,8 +78,8 @@ test('OpportunityPackageHandoff plan builds an explicit package handoff route', 
     localStageLabel: 'governed-run-execution',
     localStageSemantics: 'local-only',
     coreStageIdentifier: null,
-    coreStageSemantics: 'blocked-pending-packet',
-    blockedBy: 'core-plane-payload-packet-not-yet-frozen',
+    coreStageSemantics: 'packet-grounded-read',
+    blockedBy: null,
     transitionRule: null,
   });
 });

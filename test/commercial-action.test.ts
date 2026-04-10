@@ -70,8 +70,8 @@ test('buildCommercialActionScenarioPlan builds the exact commercial-action conti
     localStageLabel: 'governed-run-execution',
     localStageSemantics: 'local-only',
     coreStageIdentifier: null,
-    coreStageSemantics: 'blocked-pending-packet',
-    blockedBy: 'core-plane-payload-packet-not-yet-frozen',
+    coreStageSemantics: 'packet-grounded-read',
+    blockedBy: null,
     transitionRule: null,
   });
 });
@@ -130,8 +130,8 @@ test('commercial action helpers expose the enterprise integration boundary for b
   ]);
   assert.equal(boundary.broaderEnterpriseAuthorityClaimed, false);
   assert.equal(boundary.broaderSystemAuthorityClaimed, false);
-  assert.equal(boundary.payloadPacketStatus, 'blocked-pending-packet');
-  assert.equal(boundary.blockedBy, 'core-plane-payload-packet-not-yet-frozen');
+  assert.equal(boundary.payloadPacketStatus, 'packet-grounded');
+  assert.equal(boundary.blockedBy, null);
 });
 
 test('buildCommercialActionScenarioPlan rejects missing required ids in continuation inputs', () => {

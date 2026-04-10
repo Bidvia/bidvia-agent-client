@@ -879,7 +879,10 @@ test('enterprise integration plane keeps review-safe and discovery visibility bo
   assert.equal(plane.visibilityBoundary.boundedCommercialUniverseOnly, true);
   assert.equal(plane.visibilityBoundary.broaderEnterpriseAuthorityClaimed, false);
   assert.equal(plane.visibilityBoundary.broaderSystemAuthorityClaimed, false);
-  assert.deepEqual(plane.packetTruthBoundary.packetCompleteFieldFamilies, []);
+  assert.deepEqual(plane.packetTruthBoundary.packetCompleteFieldFamilies, [
+    'identity-mapping-fields',
+    'attachment-document-media-evidence-visibility',
+  ]);
   assert.equal(plane.packetTruthBoundary.inventedPacketFieldsBlocked, true);
   assert.deepEqual(plane.helperGroups.find((group) => group.groupKey === 'evidence-submission')?.cliCommands, [
     'evidence',

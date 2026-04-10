@@ -317,7 +317,7 @@ test('agent-state helpers keep identity cache snapshots separate from authority 
   assert.equal('freshness' in authority, false);
 });
 
-test('agent-state helpers keep local participation separate from task-plane authority and blocked timeout truth', async () => {
+test('agent-state helpers keep local participation separate from task-plane authority and packet-grounded timeout truth', async () => {
   const agentStateModule = await import('../src/index.ts');
 
   const participation = agentStateModule.buildLocalParticipationState({
@@ -334,7 +334,7 @@ test('agent-state helpers keep local participation separate from task-plane auth
     taskId: 'task-9',
   });
   assert.equal(taskPlane.localShellBoundary.schedulerAuthorityClaim, false);
-  assert.equal(taskPlane.timeoutTruth.payloadPacketStatus, 'blocked-pending-packet');
+  assert.equal(taskPlane.timeoutTruth.payloadPacketStatus, 'packet-grounded');
   assert.equal(taskPlane.timeoutTruth.localOnly, true);
   assert.equal('outcomeRef' in participation, false);
   assert.equal('schedulerAuthority' in participation, false);

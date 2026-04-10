@@ -181,6 +181,6 @@ test('asset helpers expose their enterprise integration boundary without claimin
   assert.deepEqual(boundary.helperKeys, ['consumeAssetObjectFamily', 'explainAssetConsumption']);
   assert.equal(boundary.broaderEnterpriseAuthorityClaimed, false);
   assert.equal(boundary.broaderSystemAuthorityClaimed, false);
-  assert.equal(boundary.payloadPacketStatus, 'blocked-pending-packet');
-  assert.equal(boundary.blockedBy, 'core-plane-payload-packet-not-yet-frozen');
+  assert.equal(boundary.payloadPacketStatus, 'packet-grounded');
+  assert.equal(boundary.blockedBy, null);
 });
