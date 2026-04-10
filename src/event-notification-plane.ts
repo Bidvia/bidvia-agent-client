@@ -122,31 +122,36 @@ export function getEventNotificationPlaneCapabilityMode(
 
 export function buildNotificationDeliveryBody(input: BidviaNotificationDeliveryWriteInput) {
   return {
-    notification_id: input.notificationId,
-    channel: input.channel,
-    destination: input.destination,
-    delivery_ref: input.deliveryRef,
+    registration_id: input.registrationId,
+    task_kind: input.taskKind,
+    task_ref: input.taskRef,
     now: input.now,
+    reason: input.reason,
   };
 }
 
 export function buildNotificationAcknowledgementBody(input: BidviaNotificationAcknowledgementWriteInput) {
   return {
-    acknowledged_by: input.acknowledgedBy,
+    registration_id: input.registrationId,
+    decision: input.decision,
     now: input.now,
+    reason: input.reason,
   };
 }
 
 export function buildNotificationRetryBody(input: BidviaNotificationRetryWriteInput) {
   return {
-    retry_reason: input.retryReason,
+    registration_id: input.registrationId,
     now: input.now,
+    next_attempt_at: input.nextAttemptAt,
+    reason: input.reason,
   };
 }
 
 export function buildNotificationExpirationBody(input: BidviaNotificationExpirationWriteInput) {
   return {
-    expiration_reason: input.expirationReason,
+    registration_id: input.registrationId,
     now: input.now,
+    reason: input.reason,
   };
 }

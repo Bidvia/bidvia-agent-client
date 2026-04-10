@@ -143,26 +143,31 @@ export interface BidviaNotificationIdentifierInput {
 }
 
 export interface BidviaNotificationDeliveryWriteInput {
-  notificationId: string;
-  channel: string;
-  destination: string;
-  deliveryRef: string;
+  registrationId: string;
+  taskKind: string;
+  taskRef: string;
   now: string;
+  reason: string;
 }
 
 export interface BidviaNotificationAcknowledgementWriteInput {
-  acknowledgedBy: string;
+  registrationId: string;
+  decision: string;
   now: string;
+  reason: string;
 }
 
 export interface BidviaNotificationRetryWriteInput {
-  retryReason: string;
+  registrationId: string;
   now: string;
+  nextAttemptAt: string;
+  reason: string;
 }
 
 export interface BidviaNotificationExpirationWriteInput {
-  expirationReason: string;
+  registrationId: string;
   now: string;
+  reason: string;
 }
 
 export interface BidviaRegistrationLifecycleScenarioPlanInput {

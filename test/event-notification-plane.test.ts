@@ -105,23 +105,28 @@ test('BidviaClient uses operator action headers and frozen payloads for notifica
   });
 
   await client.createNotificationDelivery({
-    notificationId: 'notification-1',
-    channel: 'email',
-    destination: 'ops@example.com',
-    deliveryRef: 'delivery://1',
+    registrationId: 'areg-1',
+    taskKind: 'notification-review',
+    taskRef: 'task://notification/1',
     now: '2026-04-10T00:00:00.000Z',
+    reason: 'notification delivery work opened',
   });
   await client.acknowledgeNotification('notification-1', {
-    acknowledgedBy: 'operator-1',
+    registrationId: 'areg-1',
+    decision: 'acknowledged',
     now: '2026-04-10T00:01:00.000Z',
+    reason: 'worker accepted the notification task',
   });
   await client.retryNotification('notification-1', {
-    retryReason: 'transient-failure',
+    registrationId: 'areg-1',
     now: '2026-04-10T00:02:00.000Z',
+    nextAttemptAt: '2026-04-10T00:12:00.000Z',
+    reason: 'upstream dependency asked for retry',
   });
   await client.expireNotification('notification-1', {
-    expirationReason: 'superseded',
+    registrationId: 'areg-1',
     now: '2026-04-10T00:03:00.000Z',
+    reason: 'notification became obsolete',
   });
 
   assert.equal(calls.length, 4);
@@ -131,22 +136,27 @@ test('BidviaClient uses operator action headers and frozen payloads for notifica
   assert.equal(String(calls[3]?.input), 'http://127.0.0.1:8787/runtime/notifications/notification-1/expire?tenant_id=tenant-a');
   assert.equal((calls[0]?.init?.headers as Record<string, string>)['x-authorized-company-id'], 'company-a');
   assert.deepEqual(JSON.parse(String(calls[0]?.init?.body)), {
-    notification_id: 'notification-1',
-    channel: 'email',
-    destination: 'ops@example.com',
-    delivery_ref: 'delivery://1',
+    registration_id: 'areg-1',
+    task_kind: 'notification-review',
+    task_ref: 'task://notification/1',
     now: '2026-04-10T00:00:00.000Z',
+    reason: 'notification delivery work opened',
   });
   assert.deepEqual(JSON.parse(String(calls[1]?.init?.body)), {
-    acknowledged_by: 'operator-1',
+    registration_id: 'areg-1',
+    decision: 'acknowledged',
     now: '2026-04-10T00:01:00.000Z',
+    reason: 'worker accepted the notification task',
   });
   assert.deepEqual(JSON.parse(String(calls[2]?.init?.body)), {
-    retry_reason: 'transient-failure',
+    registration_id: 'areg-1',
     now: '2026-04-10T00:02:00.000Z',
+    next_attempt_at: '2026-04-10T00:12:00.000Z',
+    reason: 'upstream dependency asked for retry',
   });
   assert.deepEqual(JSON.parse(String(calls[3]?.init?.body)), {
-    expiration_reason: 'superseded',
+    registration_id: 'areg-1',
     now: '2026-04-10T00:03:00.000Z',
+    reason: 'notification became obsolete',
   });
 });
