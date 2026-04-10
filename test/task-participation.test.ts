@@ -44,6 +44,19 @@ test('task-plane adapter groups governed task semantics while keeping local shel
   assert.equal(taskParticipationModule.getTaskPlaneCapabilityMode('missingTaskHelper'), undefined);
 });
 
+test('task-plane executable helper coverage derives from the shared plane execution gate', async () => {
+  const taskParticipationModule = await import('../src/index.ts');
+
+  const taskPlane = taskParticipationModule.buildTaskPlaneView();
+  const sharedTaskExecutionHelperKeys = taskParticipationModule
+    .listPlaneExecutionGates()
+    .filter((gate) => gate.plane === 'task')
+    .map((gate) => gate.helperKey);
+
+  assert.deepEqual(taskPlane.capabilityModes.executableHelperKeys, sharedTaskExecutionHelperKeys);
+  assert.equal(taskParticipationModule.getTaskPlaneCapabilityMode('postHeartbeat'), 'executable');
+});
+
 test('task-participation helpers keep task offers and retry awareness local and descriptive', async () => {
   const taskParticipationModule = await import('../src/index.ts');
 

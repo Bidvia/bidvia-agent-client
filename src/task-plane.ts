@@ -14,7 +14,10 @@ import type {
   BidviaTaskPlaneCapabilityMode,
   BidviaTaskPlaneView,
 } from './contracts.js';
-import { getCorePlaneExecutionSummary } from './plane-execution-gate.js';
+import {
+  getCorePlaneExecutionSummary,
+  listPlaneExecutableHelperKeys,
+} from './plane-execution-gate.js';
 
 const taskPlaneAdoptionStatus: BidviaCorePlaneAdoptionStatus = {
   plane: 'task',
@@ -32,19 +35,7 @@ const taskPlaneVisibilityOnlyHelperKeys = [
   'getTaskDispatch',
 ] as const;
 
-const taskPlaneExecutableHelperKeys = [
-  'createParticipationState',
-  'createLease',
-  'createTaskDispatch',
-  'assignTaskDispatch',
-  'suspendTaskDispatch',
-  'resumeTaskDispatch',
-  'completeTaskDispatch',
-  'failTaskDispatch',
-  'createClaim',
-  'acceptClaim',
-  'rejectClaim',
-] as const;
+const taskPlaneExecutableHelperKeys = listPlaneExecutableHelperKeys('task');
 
 const taskPlaneCapabilityModeByHelperKey = new Map<string, BidviaTaskPlaneCapabilityMode>(
   [
