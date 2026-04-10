@@ -60,3 +60,96 @@ test('shared plane execution gate distinguishes runnable helper exceptions from 
     },
   );
 });
+
+test('shared plane execution gate covers bounded task and enterprise helper surfaces that remain packet-gated', () => {
+  const exports = publicSurface as Record<string, unknown>;
+
+  assert.equal(typeof exports.listPlaneExecutionGates, 'function');
+
+  const gateByHelperKey = new Map(
+    (exports.listPlaneExecutionGates as () => Array<{
+      plane: string;
+      helperKey: string;
+      executionTruth: string;
+      blockedBy: string | null;
+    }>)().map((gate) => [gate.helperKey, gate]),
+  );
+
+  assert.deepEqual(
+    [
+      'createParticipationState',
+      'createLease',
+      'createTaskDispatch',
+      'assignTaskDispatch',
+      'suspendTaskDispatch',
+      'resumeTaskDispatch',
+      'completeTaskDispatch',
+      'failTaskDispatch',
+      'createClaim',
+      'acceptClaim',
+      'rejectClaim',
+    ].map((helperKey) => {
+      const gate = gateByHelperKey.get(helperKey);
+      return gate && {
+        plane: gate.plane,
+        helperKey: gate.helperKey,
+        executionTruth: gate.executionTruth,
+        blockedBy: gate.blockedBy,
+      };
+    }),
+    [
+      'createParticipationState',
+      'createLease',
+      'createTaskDispatch',
+      'assignTaskDispatch',
+      'suspendTaskDispatch',
+      'resumeTaskDispatch',
+      'completeTaskDispatch',
+      'failTaskDispatch',
+      'createClaim',
+      'acceptClaim',
+      'rejectClaim',
+    ].map((helperKey) => ({
+      plane: 'task',
+      helperKey,
+      executionTruth: 'blocked-pending-packet',
+      blockedBy: 'core-plane-payload-packet-not-yet-frozen',
+    })),
+  );
+
+  assert.deepEqual(
+    [
+      'buildEvidenceSubmissionInput',
+      'buildCommercialActionScenarioPlan',
+      'runCommercialActionScenario',
+      'readCommercialActionScenarioReview',
+      'buildGovernedProposalReviewUsePlan',
+      'buildGovernedProposalReviewUseResult',
+      'buildOpportunityPackageHandoffPlan',
+      'runOpportunityPackageHandoff',
+    ].map((helperKey) => {
+      const gate = gateByHelperKey.get(helperKey);
+      return gate && {
+        plane: gate.plane,
+        helperKey: gate.helperKey,
+        executionTruth: gate.executionTruth,
+        blockedBy: gate.blockedBy,
+      };
+    }),
+    [
+      'buildEvidenceSubmissionInput',
+      'buildCommercialActionScenarioPlan',
+      'runCommercialActionScenario',
+      'readCommercialActionScenarioReview',
+      'buildGovernedProposalReviewUsePlan',
+      'buildGovernedProposalReviewUseResult',
+      'buildOpportunityPackageHandoffPlan',
+      'runOpportunityPackageHandoff',
+    ].map((helperKey) => ({
+      plane: 'enterprise-integration',
+      helperKey,
+      executionTruth: 'blocked-pending-packet',
+      blockedBy: 'core-plane-payload-packet-not-yet-frozen',
+    })),
+  );
+});

@@ -72,6 +72,27 @@ const planeExecutionGates: readonly BidviaPlaneExecutionGate[] = [
     blockedBy: blockedByPendingPacket,
     notes: ['Registration runtime writes stay blocked until the task-plane packet is frozen end to end.'],
   },
+  ...[
+    'createParticipationState',
+    'createLease',
+    'createTaskDispatch',
+    'assignTaskDispatch',
+    'suspendTaskDispatch',
+    'resumeTaskDispatch',
+    'completeTaskDispatch',
+    'failTaskDispatch',
+    'createClaim',
+    'acceptClaim',
+    'rejectClaim',
+  ].map(
+    (helperKey): BidviaPlaneExecutionGate => ({
+      plane: 'task',
+      helperKey,
+      executionTruth: 'blocked-pending-packet',
+      blockedBy: blockedByPendingPacket,
+      notes: ['Task-plane write helpers stay blocked until the frozen task payload packet is complete end to end.'],
+    }),
+  ),
   {
     plane: 'enterprise-integration',
     helperKey: 'createCommercialAction',
@@ -79,6 +100,24 @@ const planeExecutionGates: readonly BidviaPlaneExecutionGate[] = [
     blockedBy: blockedByPendingPacket,
     notes: ['Commercial-action execution stays blocked until enterprise-integration packet truth is frozen.'],
   },
+  ...[
+    'buildEvidenceSubmissionInput',
+    'buildCommercialActionScenarioPlan',
+    'runCommercialActionScenario',
+    'readCommercialActionScenarioReview',
+    'buildGovernedProposalReviewUsePlan',
+    'buildGovernedProposalReviewUseResult',
+    'buildOpportunityPackageHandoffPlan',
+    'runOpportunityPackageHandoff',
+  ].map(
+    (helperKey): BidviaPlaneExecutionGate => ({
+      plane: 'enterprise-integration',
+      helperKey,
+      executionTruth: 'blocked-pending-packet',
+      blockedBy: blockedByPendingPacket,
+      notes: ['Bounded enterprise-integration execution helpers stay blocked until Core freezes the packet-grounded handoff truth.'],
+    }),
+  ),
   {
     plane: 'event-notification',
     helperKey: 'getNotification',
@@ -133,6 +172,12 @@ export function listPlaneExecutionGates(): BidviaPlaneExecutionGate[] {
     ...gate,
     notes: [...gate.notes],
   }));
+}
+
+export function listPlaneExecutableHelperKeys(plane: BidviaCorePlaneName): string[] {
+  return planeExecutionGates
+    .filter((gate) => gate.plane === plane && gate.executionTruth !== 'discoverable-only')
+    .map((gate) => gate.helperKey);
 }
 
 export function getPlaneExecutionGate(helperKey: string): BidviaPlaneExecutionGate | undefined {
