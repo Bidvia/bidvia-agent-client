@@ -26,6 +26,9 @@ import type {
   BidviaExportOpportunityPackageInput,
   BidviaGenerateMatchCandidatesInput,
   BidviaHeartbeatInput,
+  BidviaHaisiWmsInboundInput,
+  BidviaHaisiWmsLoginInput,
+  BidviaIntegrationOnboardingContractInput,
   BidviaLeaseWriteInput,
   BidviaNotificationAcknowledgementWriteInput,
   BidviaNotificationDeliveryWriteInput,
@@ -122,6 +125,89 @@ export class BidviaClient {
 
   getEnterpriseIntegrationPlaneView(): BidviaEnterpriseIntegrationPlaneView {
     return buildEnterpriseIntegrationPlaneView();
+  }
+
+  async submitIntegrationOnboardingContract(
+    integrationCode: string,
+    input: BidviaIntegrationOnboardingContractInput,
+    requestPolicy?: BidviaClientRequestPolicy,
+  ) {
+    const context = this.resolveRequestContext(requestPolicy);
+    return this.request(
+      `/runtime/integrations/${encodeURIComponent(integrationCode)}/onboarding-contract?tenant_id=${encodeURIComponent(this.requireTenantId(context))}`,
+      {
+        context,
+        method: 'POST',
+        headers: this.requireGovernedReadHeaders(context),
+        body: {
+          agent_registration_id: input.agentRegistrationId,
+          identity_mapping: {
+            source: {
+              principal_id: input.identityMapping.source.principalId,
+              scope_id: input.identityMapping.source.scopeId,
+              capability_codes: input.identityMapping.source.capabilityCodes,
+            },
+            target: {
+              wms_subject_id: input.identityMapping.target.wmsSubjectId,
+              capability_map: input.identityMapping.target.capabilityMap,
+            },
+            metadata: {
+              mapping_version: input.identityMapping.metadata.mappingVersion,
+              mapping_status: input.identityMapping.metadata.mappingStatus,
+            },
+          },
+          now: input.now,
+        },
+        requestPolicy,
+      },
+    );
+  }
+
+  async logInHaisiWms(
+    input: BidviaHaisiWmsLoginInput = {},
+    requestPolicy?: BidviaClientRequestPolicy,
+  ) {
+    const context = this.resolveRequestContext(requestPolicy);
+    return this.request(
+      `/runtime/integrations/haisi-wms/login?tenant_id=${encodeURIComponent(this.requireTenantId(context))}`,
+      {
+        context,
+        method: 'POST',
+        headers: this.requireGovernedReadHeaders(context),
+        body: input,
+        requestPolicy,
+      },
+    );
+  }
+
+  async listHaisiWmsWarehouses(requestPolicy?: BidviaClientRequestPolicy) {
+    const context = this.resolveRequestContext(requestPolicy);
+    return this.request(
+      `/runtime/integrations/haisi-wms/warehouses?tenant_id=${encodeURIComponent(this.requireTenantId(context))}`,
+      {
+        context,
+        method: 'GET',
+        headers: this.requireGovernedReadHeaders(context),
+        requestPolicy,
+      },
+    );
+  }
+
+  async createHaisiWmsInbound(
+    input: BidviaHaisiWmsInboundInput,
+    requestPolicy?: BidviaClientRequestPolicy,
+  ) {
+    const context = this.resolveRequestContext(requestPolicy);
+    return this.request(
+      `/runtime/integrations/haisi-wms/inbound?tenant_id=${encodeURIComponent(this.requireTenantId(context))}`,
+      {
+        context,
+        method: 'POST',
+        headers: this.requireGovernedReadHeaders(context),
+        body: input,
+        requestPolicy,
+      },
+    );
   }
 
   async signUpPersonalAccount(

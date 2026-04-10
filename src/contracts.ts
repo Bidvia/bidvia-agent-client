@@ -134,6 +134,44 @@ export interface BidviaSignInInput {
   now: string;
 }
 
+export interface BidviaIntegrationIdentityMappingSourceInput {
+  principalId: string;
+  scopeId: string;
+  capabilityCodes: string[];
+}
+
+export interface BidviaIntegrationIdentityMappingTargetInput {
+  wmsSubjectId: string;
+  capabilityMap: Record<string, string>;
+}
+
+export interface BidviaIntegrationIdentityMappingMetadataInput {
+  mappingVersion: string;
+  mappingStatus: string;
+}
+
+export interface BidviaIntegrationIdentityMappingInput {
+  source: BidviaIntegrationIdentityMappingSourceInput;
+  target: BidviaIntegrationIdentityMappingTargetInput;
+  metadata: BidviaIntegrationIdentityMappingMetadataInput;
+}
+
+export interface BidviaIntegrationOnboardingContractInput {
+  agentRegistrationId: string;
+  identityMapping: BidviaIntegrationIdentityMappingInput;
+  now: string;
+}
+
+export interface BidviaHaisiWmsLoginInput {
+  [key: string]: unknown;
+}
+
+export interface BidviaHaisiWmsInboundInput {
+  warehouseId: number;
+  date: string;
+  details: unknown[];
+}
+
 export interface BidviaSelectOrgInput {
   orgId: string;
 }
@@ -1892,6 +1930,7 @@ export interface BidviaCapabilityPlaneView {
 }
 
 export const bidviaEnterpriseIntegrationPlaneHelperGroupKeys = [
+  'core-integration-routes',
   'asset-evidence-family',
   'evidence-submission',
   'commercial-action',
