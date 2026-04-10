@@ -67,6 +67,7 @@ test('normalizeServerCapabilityPayload maps server-provided capability payloads 
   assert.equal(snapshot.mcpTools.source, 'server-derived');
   assert.equal(snapshot.mcpTools.items[0]?.toolName, 'industry-universe-plan-preview');
   assert.equal(snapshot.mcpTools.items[0]?.contextSemantic, 'scenario');
+  assert.equal(snapshot.mcpTools.items[0]?.capabilityPlaneCapabilityMode, undefined);
   assert.equal(snapshot.mcpTools.schemaVersion, '2026-03-27');
   assert.equal(snapshot.mcpTools.version, 'server-capability-payload');
   assert.equal(snapshot.mcpTools.etag, null);
@@ -281,4 +282,37 @@ test('normalizeServerCapabilityPayload classifies widened truth-fetch reads from
       localCapabilityRiskTier: 'observe-only',
     },
   ]);
+});
+
+test('normalizeServerCapabilityPayload propagates capability-plane helper mode to server-derived MCP descriptors when available', () => {
+  const snapshot = normalizeServerCapabilityPayload({
+    route_capabilities: [],
+    mcp_tools: [
+      {
+        tool_name: 'agent-readiness-read',
+        description: 'Reads the current governed agent readiness through the shipped SDK helper.',
+        input_schema_ref: {
+          schema_key: 'BidviaAgentRegistrationIdentifierInput',
+        },
+        output_mode: 'truth-fetch-result',
+        helper_ref: {
+          helper_key: 'getAgentReadiness',
+          capability_key: 'getAgentReadiness',
+        },
+        context_semantic: 'principal-governed-read',
+      },
+    ],
+    mcp_server: {
+      available: true,
+      transport: 'stdio',
+      supported_methods: ['initialize', 'tools/list', 'tools/call'],
+    },
+  } as Parameters<typeof normalizeServerCapabilityPayload>[0] & {
+    mcp_tools: Array<Parameters<typeof normalizeServerCapabilityPayload>[0]['mcp_tools'][number] & {
+      context_semantic: 'principal-governed-read';
+    }>;
+  });
+
+  assert.equal(snapshot.mcpTools.items[0]?.toolName, 'agent-readiness-read');
+  assert.equal(snapshot.mcpTools.items[0]?.capabilityPlaneCapabilityMode, 'packet-grounded-read');
 });

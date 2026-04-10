@@ -333,6 +333,9 @@ export function buildCapabilityPlaneServerSnapshot(
             helperKey: mcpTool.helper_ref.helper_key,
             capabilityKey: mcpTool.helper_ref.capability_key,
           },
+          ...(getCapabilityPlaneCapabilityMode(mcpTool.helper_ref.helper_key) === undefined
+            ? {}
+            : { capabilityPlaneCapabilityMode: getCapabilityPlaneCapabilityMode(mcpTool.helper_ref.helper_key) }),
           ...classification,
           ...(mcpTool.context_semantic ? { contextSemantic: mcpTool.context_semantic } : {}),
         };

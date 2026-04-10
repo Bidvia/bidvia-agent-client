@@ -161,6 +161,7 @@ test('refreshRemoteCapabilityTruth consumes provided frozen core payloads and me
       helperKey: 'refreshRemoteCapabilityTruth',
       capabilityKey: 'refreshRemoteCapabilityTruth',
     },
+    capabilityPlaneCapabilityMode: 'compatibility-only',
     localCapabilityTier: 'L1-review-safe',
     localCapabilityRiskTier: 'review-safe',
     accessContextFamily: 'scenario',
