@@ -14,19 +14,17 @@ import type {
   BidviaTaskPlaneCapabilityMode,
   BidviaTaskPlaneView,
 } from './contracts.js';
-import {
-  getCorePlaneExecutionSummary,
-  listPlaneExecutionGates,
-} from './plane-execution-gate.js';
+import { listCorePlaneAdoptionStatuses } from './core-plane-adoption.js';
+import { listPlaneExecutionGates } from './plane-execution-gate.js';
 
-const taskPlaneAdoptionStatus: BidviaCorePlaneAdoptionStatus = {
-  plane: 'task',
-  frozenInCore: true,
-  payloadPacketStatus: 'blocked-pending-packet',
-  ...getCorePlaneExecutionSummary('task'),
-  blockedBy: 'core-plane-payload-packet-not-yet-frozen',
-  notes: ['Keep local task shells descriptive-only and block packet-incomplete task semantics.'],
-};
+function requireTaskPlaneAdoptionStatus(): BidviaCorePlaneAdoptionStatus {
+  const adoptionStatus = listCorePlaneAdoptionStatuses().find((status) => status.plane === 'task');
+  if (!adoptionStatus) {
+    throw new Error('Missing core plane adoption status for task');
+  }
+
+  return adoptionStatus;
+}
 
 const taskPlaneVisibilityOnlyHelperKeys = [
   'listParticipationStates',
@@ -60,10 +58,12 @@ const taskPlaneCapabilityModeByHelperKey = new Map<string, BidviaTaskPlaneCapabi
 );
 
 export function buildTaskPlaneView(): BidviaTaskPlaneView {
+  const adoptionStatus = requireTaskPlaneAdoptionStatus();
+
   return {
     adoptionStatus: {
-      ...taskPlaneAdoptionStatus,
-      notes: [...taskPlaneAdoptionStatus.notes],
+      ...adoptionStatus,
+      notes: [...adoptionStatus.notes],
     },
     localShellBoundary: {
       descriptiveOnly: true,

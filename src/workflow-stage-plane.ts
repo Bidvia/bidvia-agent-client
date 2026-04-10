@@ -4,17 +4,17 @@ import type {
   BidviaWorkflowStagePlaneView,
   BidviaWorkflowStageReference,
 } from './contracts.js';
+import { listCorePlaneAdoptionStatuses } from './core-plane-adoption.js';
 import { buildWorkflowStageCoreStageSemantics } from './core-payload-contract-matrix.js';
-import { getCorePlaneExecutionSummary } from './plane-execution-gate.js';
 
-const workflowStagePlaneAdoptionStatus: BidviaCorePlaneAdoptionStatus = {
-  plane: 'workflow-stage',
-  frozenInCore: true,
-  payloadPacketStatus: 'blocked-pending-packet',
-  ...getCorePlaneExecutionSummary('workflow-stage'),
-  blockedBy: 'core-plane-payload-packet-not-yet-frozen',
-  notes: ['Keep local journey labels and transport workflow identifiers separate from blocked Core stage semantics.'],
-};
+function requireWorkflowStagePlaneAdoptionStatus(): BidviaCorePlaneAdoptionStatus {
+  const adoptionStatus = listCorePlaneAdoptionStatuses().find((status) => status.plane === 'workflow-stage');
+  if (!adoptionStatus) {
+    throw new Error('Missing core plane adoption status for workflow stage');
+  }
+
+  return adoptionStatus;
+}
 
 const localJourneyStageLabels: BidviaLocalJourneyStageLabel[] = [
   'public-provisional',
@@ -23,12 +23,13 @@ const localJourneyStageLabels: BidviaLocalJourneyStageLabel[] = [
 ];
 
 export function buildWorkflowStagePlaneView(): BidviaWorkflowStagePlaneView {
+  const adoptionStatus = requireWorkflowStagePlaneAdoptionStatus();
   const coreStageSemantics = buildWorkflowStageCoreStageSemantics();
 
   return {
     adoptionStatus: {
-      ...workflowStagePlaneAdoptionStatus,
-      notes: [...workflowStagePlaneAdoptionStatus.notes],
+      ...adoptionStatus,
+      notes: [...adoptionStatus.notes],
     },
     localJourneyStages: {
       descriptiveOnly: true,

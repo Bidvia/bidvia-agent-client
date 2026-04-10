@@ -13,6 +13,7 @@ test('workflow-stage plane adapter keeps local journey labels separate from bloc
       plane: string;
       payloadPacketStatus: string;
       blockedBy: string | null;
+      notes: string[];
     };
     localJourneyStages: {
       descriptiveOnly: boolean;
@@ -31,10 +32,14 @@ test('workflow-stage plane adapter keeps local journey labels separate from bloc
       inventedIdentifiersBlocked: boolean;
     };
   })();
+  const sharedAdoptionStatus = (exports.listCorePlaneAdoptionStatuses as () => Array<{
+    plane: string;
+    payloadPacketStatus: string;
+    blockedBy: string | null;
+    notes: string[];
+  }>)().find((status) => status.plane === 'workflow-stage');
 
-  assert.equal(plane.adoptionStatus.plane, 'workflow-stage');
-  assert.equal(plane.adoptionStatus.payloadPacketStatus, 'blocked-pending-packet');
-  assert.equal(plane.adoptionStatus.blockedBy, 'core-plane-payload-packet-not-yet-frozen');
+  assert.deepEqual(plane.adoptionStatus, sharedAdoptionStatus);
   assert.equal(plane.localJourneyStages.descriptiveOnly, true);
   assert.deepEqual(plane.localJourneyStages.labels, [
     'public-provisional',
@@ -42,9 +47,19 @@ test('workflow-stage plane adapter keeps local journey labels separate from bloc
     'governed-run-execution',
   ]);
   assert.equal(plane.workflowIdentifiers.transportableScenarioMetadata, true);
-  assert.equal(plane.coreStageSemantics.payloadPacketStatus, 'blocked-pending-packet');
-  assert.equal(plane.coreStageSemantics.blockedBy, 'core-plane-payload-packet-not-yet-frozen');
-  assert.deepEqual(plane.coreStageSemantics.packetGroundedStageIdentifiers, []);
-  assert.deepEqual(plane.coreStageSemantics.transitionRules, []);
+  assert.equal(plane.coreStageSemantics.payloadPacketStatus, 'packet-grounded');
+  assert.equal(plane.coreStageSemantics.blockedBy, null);
+  assert.deepEqual(plane.coreStageSemantics.packetGroundedStageIdentifiers, [
+    'notification.notification_state',
+    'task.task_state',
+    'latest_participation_state.context_handoff_state',
+  ]);
+  assert.deepEqual(plane.coreStageSemantics.transitionRules, [
+    'transitions[].transition_kind',
+    'transitions[].from_notification_state',
+    'transitions[].to_notification_state',
+    'transitions[].from_task_state',
+    'transitions[].to_task_state',
+  ]);
   assert.equal(plane.coreStageSemantics.inventedIdentifiersBlocked, true);
 });

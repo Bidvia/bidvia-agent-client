@@ -234,9 +234,9 @@ test('MCP tool catalog lookup returns descriptive bounded slice metadata', () =>
     localCapabilityRiskTier: 'runtime-execution',
     accessContextFamily: 'registration',
     requiredContext: ['tenantId', 'registrationId', 'principalId'],
-    runnable: false,
-    blockedBy: 'core-plane-payload-packet-not-yet-frozen',
-    taskPlaneCapabilityMode: 'blocked-pending-packet',
+    runnable: true,
+    blockedBy: null,
+    taskPlaneCapabilityMode: 'packet-grounded-execution',
   });
 
   assert.equal(getMcpToolDescriptor('missing-tool'), undefined);
@@ -352,16 +352,17 @@ test('dispatchMcpToolCall missing-context wording keeps public provisional creat
   );
 });
 
-test('dispatchMcpToolCall blocks plane-gated execution helpers even when required context is present', async () => {
+test('dispatchMcpToolCall blocks compatibility-only execution helpers even when required context is present', async () => {
   let called = false;
 
   await assert.rejects(
     () => dispatchMcpToolCallWithExecution(
       {
-        toolName: 'heartbeat-execution',
+        toolName: 'suspend-task-dispatch-execution',
         arguments: {
+          agentRegistrationId: 'areg-runtime',
+          taskDispatchId: 'dispatch-1',
           now: '2026-04-04T13:00:00.000Z',
-          expiresAt: '2026-04-04T13:05:00.000Z',
         },
       },
       {
@@ -371,9 +372,10 @@ test('dispatchMcpToolCall blocks plane-gated execution helpers even when require
               tenantId: 'tenant-runtime',
               principalId: 'principal-runtime',
               registrationId: 'areg-runtime',
+              companyId: 'company-runtime',
             },
           },
-          async postHeartbeat() {
+          async suspendTaskDispatch() {
             called = true;
             return {
               ok: true,
@@ -383,7 +385,7 @@ test('dispatchMcpToolCall blocks plane-gated execution helpers even when require
       },
     ),
     {
-      message: 'MCP tool heartbeat-execution is blocked by the shared plane execution gate: core-plane-payload-packet-not-yet-frozen. Use bidvia route-context-matrix to confirm the current plane adoption status before retrying this local stdio MCP tool.',
+      message: 'suspendTaskDispatch is blocked by plane execution gate null until the shared packet-grounded execution truth is frozen.',
     },
   );
 
@@ -864,7 +866,7 @@ test('dispatchMcpToolCall exposes widened Task 1 governance read descriptors in 
   assert.equal(getMcpToolDescriptor('notification-read')?.toolName, 'notification-read');
   assert.equal((getMcpToolDescriptor('task-dispatch-read') as { taskPlaneCapabilityMode?: string }).taskPlaneCapabilityMode, 'visibility-only');
   assert.equal((getMcpToolDescriptor('notification-read') as { eventNotificationPlaneCapabilityMode?: string }).eventNotificationPlaneCapabilityMode, 'visibility-only');
-  assert.equal((getMcpToolDescriptor('suspend-task-dispatch-execution') as { taskPlaneCapabilityMode?: string }).taskPlaneCapabilityMode, 'blocked-pending-packet');
+  assert.equal((getMcpToolDescriptor('suspend-task-dispatch-execution') as { taskPlaneCapabilityMode?: string }).taskPlaneCapabilityMode, 'compatibility-only');
   assert.equal(getMcpToolDescriptor('acknowledge-notification-execution'), undefined);
 });
 

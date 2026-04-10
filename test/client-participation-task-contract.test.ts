@@ -196,9 +196,9 @@ test('BidviaClient task wrappers stay aligned with the task-plane adapter and do
   const taskPlane = buildTaskPlaneView();
 
   assert.equal(taskPlane.outcomeTruth.payloadPacketStatus, 'packet-grounded');
-  assert.equal(taskPlane.timeoutTruth.payloadPacketStatus, 'blocked-pending-packet');
+  assert.equal(taskPlane.timeoutTruth.payloadPacketStatus, 'packet-grounded');
   assert.equal(taskPlane.timeoutTruth.localOnly, true);
-  assert.equal(taskPlane.timeoutTruth.remotePayloadSupported, false);
-  assert.equal(getTaskPlaneCapabilityMode('completeTaskDispatch'), 'executable');
-  assert.equal(getTaskPlaneCapabilityMode('failTaskDispatch'), 'executable');
+  assert.equal(taskPlane.timeoutTruth.remotePayloadSupported, true);
+  assert.equal(getTaskPlaneCapabilityMode('completeTaskDispatch'), 'compatibility-only');
+  assert.equal(getTaskPlaneCapabilityMode('failTaskDispatch'), 'compatibility-only');
 });

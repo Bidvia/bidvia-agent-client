@@ -1,9 +1,12 @@
 import type {
   BidviaCorePlaneAdoptionStatus,
   BidviaEventNotificationPlaneCapabilityMode,
+  BidviaEventNotificationPlaneBlockedExecutionRoute,
   BidviaEventNotificationPlaneView,
 } from './contracts.js';
+import { getCorePayloadContractMatrixEntry } from './core-payload-contract-matrix.js';
 import { listCorePlaneAdoptionStatuses } from './core-plane-adoption.js';
+import { listPlaneExecutionGates } from './plane-execution-gate.js';
 
 function requireEventNotificationPlaneAdoptionStatus(): BidviaCorePlaneAdoptionStatus {
   const adoptionStatus = listCorePlaneAdoptionStatuses().find((status) => status.plane === 'event-notification');
@@ -16,36 +19,38 @@ function requireEventNotificationPlaneAdoptionStatus(): BidviaCorePlaneAdoptionS
 
 const eventNotificationVisibilityOnlyHelperKeys = ['getNotification'] as const;
 
-const eventNotificationBlockedExecutionRoutes: BidviaEventNotificationPlaneView['blockedExecutionRoutes'] = [
-  {
-    helperKey: 'createNotificationDelivery',
-    routePathTemplate: '/runtime/notifications/deliveries',
+const eventNotificationExecutionGates = listPlaneExecutionGates().filter(
+  (gate) => gate.plane === 'event-notification' && gate.executionTruth === 'packet-grounded-execution',
+);
+
+function buildEventNotificationBlockedExecutionRoute(
+  helperKey: BidviaEventNotificationPlaneBlockedExecutionRoute['helperKey'],
+): BidviaEventNotificationPlaneBlockedExecutionRoute {
+  const executionGate = eventNotificationExecutionGates.find((gate) => gate.helperKey === helperKey);
+  if (!executionGate) {
+    throw new Error(`Missing event notification execution gate for ${helperKey}`);
+  }
+
+  const matrixEntry = getCorePayloadContractMatrixEntry(helperKey);
+  if (!matrixEntry?.routePathTemplate) {
+    throw new Error(`Missing event notification route path for ${helperKey}`);
+  }
+
+  return {
+    helperKey,
+    routePathTemplate: matrixEntry.routePathTemplate as BidviaEventNotificationPlaneBlockedExecutionRoute['routePathTemplate'],
     httpMethod: 'POST',
     blockedBy: null,
-    notes: ['Notification delivery now derives from the frozen Core notification action payload contract.'],
-  },
-  {
-    helperKey: 'acknowledgeNotification',
-    routePathTemplate: '/runtime/notifications/:notification_id/acknowledgements',
-    httpMethod: 'POST',
-    blockedBy: null,
-    notes: ['Notification acknowledgement now derives from the frozen Core notification action payload contract.'],
-  },
-  {
-    helperKey: 'retryNotification',
-    routePathTemplate: '/runtime/notifications/:notification_id/retry',
-    httpMethod: 'POST',
-    blockedBy: null,
-    notes: ['Notification retry now derives from the frozen Core notification action payload contract.'],
-  },
-  {
-    helperKey: 'expireNotification',
-    routePathTemplate: '/runtime/notifications/:notification_id/expire',
-    httpMethod: 'POST',
-    blockedBy: null,
-    notes: ['Notification expiry now derives from the frozen Core notification action payload contract.'],
-  },
-];
+    notes: [...executionGate.notes],
+  };
+}
+
+const eventNotificationBlockedExecutionRoutes: BidviaEventNotificationPlaneView['blockedExecutionRoutes'] =
+  eventNotificationExecutionGates.map((gate) => (
+    buildEventNotificationBlockedExecutionRoute(
+      gate.helperKey as BidviaEventNotificationPlaneBlockedExecutionRoute['helperKey'],
+    )
+  ));
 
 const eventNotificationCapabilityModeByHelperKey = new Map<string, BidviaEventNotificationPlaneCapabilityMode>([
   ...eventNotificationVisibilityOnlyHelperKeys.map(

@@ -24,6 +24,8 @@ test('task-plane adapter groups governed task semantics while keeping local shel
   const taskParticipationModule = await import('../src/index.ts');
 
   const taskPlane = taskParticipationModule.buildTaskPlaneView();
+  const sharedAdoptionStatus = taskParticipationModule.listCorePlaneAdoptionStatuses()
+    .find((status: { plane: string }) => status.plane === 'task');
 
   assert.deepEqual(taskPlane.localShellBoundary, {
     descriptiveOnly: true,
@@ -34,13 +36,14 @@ test('task-plane adapter groups governed task semantics while keeping local shel
       'Do not invent remote timeout payload fields from local timeout observations.',
     ],
   });
-  assert.equal(taskPlane.timeoutTruth.payloadPacketStatus, 'blocked-pending-packet');
+  assert.deepEqual(taskPlane.adoptionStatus, sharedAdoptionStatus);
+  assert.equal(taskPlane.timeoutTruth.payloadPacketStatus, 'packet-grounded');
   assert.equal(taskPlane.timeoutTruth.localOnly, true);
-  assert.equal(taskPlane.timeoutTruth.remotePayloadSupported, false);
-  assert.equal(taskPlane.timeoutTruth.blockedBy, 'core-plane-payload-packet-not-yet-frozen');
+  assert.equal(taskPlane.timeoutTruth.remotePayloadSupported, true);
+  assert.equal(taskPlane.timeoutTruth.blockedBy, null);
   assert.equal(taskParticipationModule.getTaskPlaneCapabilityMode('listTaskDispatches'), 'visibility-only');
-  assert.equal(taskParticipationModule.getTaskPlaneCapabilityMode('createTaskDispatch'), 'blocked-pending-packet');
-  assert.equal(taskParticipationModule.getTaskPlaneCapabilityMode('suspendTaskDispatch'), 'blocked-pending-packet');
+  assert.equal(taskParticipationModule.getTaskPlaneCapabilityMode('createTaskDispatch'), 'compatibility-only');
+  assert.equal(taskParticipationModule.getTaskPlaneCapabilityMode('suspendTaskDispatch'), 'compatibility-only');
   assert.equal(taskParticipationModule.getTaskPlaneCapabilityMode('missingTaskHelper'), undefined);
 });
 
@@ -48,8 +51,14 @@ test('task-plane executable helper coverage derives from the shared plane execut
   const taskParticipationModule = await import('../src/index.ts');
 
   const taskPlane = taskParticipationModule.buildTaskPlaneView();
-  assert.deepEqual(taskPlane.capabilityModes.executableHelperKeys, []);
-  assert.equal(taskParticipationModule.getTaskPlaneCapabilityMode('postHeartbeat'), 'blocked-pending-packet');
+  const executableHelperKeys = taskParticipationModule.listPlaneExecutionGates()
+    .filter((gate: { plane: string; executionTruth: string }) => (
+      gate.plane === 'task' && gate.executionTruth === 'packet-grounded-execution'
+    ))
+    .map((gate: { helperKey: string }) => gate.helperKey);
+
+  assert.deepEqual(taskPlane.capabilityModes.executableHelperKeys, executableHelperKeys);
+  assert.equal(taskParticipationModule.getTaskPlaneCapabilityMode('postHeartbeat'), 'packet-grounded-execution');
 });
 
 test('task-participation helpers keep task offers and retry awareness local and descriptive', async () => {

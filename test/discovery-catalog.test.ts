@@ -248,8 +248,8 @@ test('buildLocalDiscoveryCatalog returns operator-readable local mappings withou
     localOnly: true,
     remoteDiscovery: false,
     runnable: false,
-    blockedBy: 'core-plane-payload-packet-not-yet-frozen',
-    taskPlaneCapabilityMode: 'blocked-pending-packet',
+    blockedBy: null,
+    taskPlaneCapabilityMode: 'compatibility-only',
     cliCommands: [],
     mcpTools: [
       {
@@ -305,7 +305,7 @@ test('buildLocalDiscoveryCatalog returns operator-readable local mappings withou
     localOnly: true,
     remoteDiscovery: false,
     runnable: false,
-    blockedBy: 'core-plane-payload-packet-not-yet-frozen',
+    blockedBy: null,
     cliCommands: [],
     mcpTools: [
       {
@@ -338,9 +338,9 @@ test('buildLocalMcpToolCatalog derives MCP descriptors from the shared local dis
     localCapabilityRiskTier: 'runtime-execution',
     accessContextFamily: 'registration',
     requiredContext: ['tenantId', 'registrationId', 'principalId'],
-    runnable: false,
-    blockedBy: 'core-plane-payload-packet-not-yet-frozen',
-    taskPlaneCapabilityMode: 'blocked-pending-packet',
+    runnable: true,
+    blockedBy: null,
+    taskPlaneCapabilityMode: 'packet-grounded-execution',
   });
 
   assert.deepEqual(mcpTools.find((tool) => tool.toolName === 'agent-presence-read'), {

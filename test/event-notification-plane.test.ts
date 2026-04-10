@@ -6,6 +6,7 @@ import {
   buildEventNotificationPlaneView,
   buildRouteContextMatrix,
   getEventNotificationPlaneCapabilityMode,
+  listPlaneExecutionGates,
 } from '../src/index.ts';
 
 function createFetchStub() {
@@ -23,6 +24,10 @@ function createFetchStub() {
 
 test('event notification plane exposes frozen read visibility and packet-grounded execution semantics', () => {
   const plane = buildEventNotificationPlaneView();
+  const executionGates = listPlaneExecutionGates().filter((gate) => gate.plane === 'event-notification');
+  const executionHelperKeys = executionGates
+    .filter((gate) => gate.executionTruth === 'packet-grounded-execution')
+    .map((gate) => gate.helperKey);
 
   assert.equal(plane.adoptionStatus.plane, 'event-notification');
   assert.equal(plane.adoptionStatus.frozenInCore, true);
@@ -31,12 +36,7 @@ test('event notification plane exposes frozen read visibility and packet-grounde
   assert.equal(plane.executionTruth.payloadPacketStatus, 'packet-grounded');
   assert.equal(plane.executionTruth.remotePayloadSupported, true);
   assert.deepEqual(plane.capabilityModes.visibilityOnlyHelperKeys, ['getNotification']);
-  assert.deepEqual(plane.capabilityModes.blockedExecutionHelperKeys, [
-    'createNotificationDelivery',
-    'acknowledgeNotification',
-    'retryNotification',
-    'expireNotification',
-  ]);
+  assert.deepEqual(plane.capabilityModes.blockedExecutionHelperKeys, executionHelperKeys);
   assert.deepEqual(plane.blockedExecutionRoutes.map((route) => route.routePathTemplate), [
     '/runtime/notifications/deliveries',
     '/runtime/notifications/:notification_id/acknowledgements',
@@ -45,6 +45,20 @@ test('event notification plane exposes frozen read visibility and packet-grounde
   ]);
   assert.equal(getEventNotificationPlaneCapabilityMode('getNotification'), 'visibility-only');
   assert.equal(getEventNotificationPlaneCapabilityMode('acknowledgeNotification'), 'packet-grounded-execution');
+  assert.deepEqual(
+    plane.blockedExecutionRoutes.map((route) => ({
+      helperKey: route.helperKey,
+      blockedBy: route.blockedBy,
+      notes: route.notes,
+    })),
+    executionGates
+      .filter((gate) => gate.executionTruth === 'packet-grounded-execution')
+      .map((gate) => ({
+        helperKey: gate.helperKey,
+        blockedBy: gate.blockedBy,
+        notes: gate.notes,
+      })),
+  );
 });
 
 test('route context matrix surfaces the event notification plane without reopening local runtime semantics', () => {
