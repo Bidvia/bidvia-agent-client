@@ -27,7 +27,11 @@ import type {
   BidviaGenerateMatchCandidatesInput,
   BidviaHeartbeatInput,
   BidviaLeaseWriteInput,
+  BidviaNotificationAcknowledgementWriteInput,
+  BidviaNotificationDeliveryWriteInput,
+  BidviaNotificationExpirationWriteInput,
   BidviaNotificationIdentifierInput,
+  BidviaNotificationRetryWriteInput,
   BidviaParticipationStateWriteInput,
   BidviaPersonalAccountSignUpInput,
   BidviaProposalSubmissionInput,
@@ -63,6 +67,12 @@ import {
   buildTaskPlaneTaskOutcomeBody,
   buildTaskPlaneTaskStatusBody,
 } from './task-plane.js';
+import {
+  buildNotificationAcknowledgementBody,
+  buildNotificationDeliveryBody,
+  buildNotificationExpirationBody,
+  buildNotificationRetryBody,
+} from './event-notification-plane.js';
 import { buildEnterpriseIntegrationPlaneView } from './enterprise-integration-plane.js';
 
 export interface BidviaClientOptions {
@@ -723,6 +733,81 @@ export class BidviaClient {
         context,
         method: 'GET',
         headers: this.requireGovernedReadHeaders(context),
+        requestPolicy,
+      },
+    );
+  }
+
+  async createNotificationDelivery(
+    input: BidviaNotificationDeliveryWriteInput,
+    requestPolicy?: BidviaClientRequestPolicy,
+  ) {
+    const context = this.resolveRequestContext(requestPolicy);
+
+    return this.request(
+      `/runtime/notifications/deliveries?tenant_id=${encodeURIComponent(this.requireTenantId(context))}`,
+      {
+        context,
+        method: 'POST',
+        headers: this.requireOperatorActionHeaders(context),
+        body: buildNotificationDeliveryBody(input),
+        requestPolicy,
+      },
+    );
+  }
+
+  async acknowledgeNotification(
+    notificationId: string,
+    input: BidviaNotificationAcknowledgementWriteInput,
+    requestPolicy?: BidviaClientRequestPolicy,
+  ) {
+    const context = this.resolveRequestContext(requestPolicy);
+
+    return this.request(
+      `/runtime/notifications/${encodeURIComponent(notificationId)}/acknowledgements?tenant_id=${encodeURIComponent(this.requireTenantId(context))}`,
+      {
+        context,
+        method: 'POST',
+        headers: this.requireOperatorActionHeaders(context),
+        body: buildNotificationAcknowledgementBody(input),
+        requestPolicy,
+      },
+    );
+  }
+
+  async retryNotification(
+    notificationId: string,
+    input: BidviaNotificationRetryWriteInput,
+    requestPolicy?: BidviaClientRequestPolicy,
+  ) {
+    const context = this.resolveRequestContext(requestPolicy);
+
+    return this.request(
+      `/runtime/notifications/${encodeURIComponent(notificationId)}/retry?tenant_id=${encodeURIComponent(this.requireTenantId(context))}`,
+      {
+        context,
+        method: 'POST',
+        headers: this.requireOperatorActionHeaders(context),
+        body: buildNotificationRetryBody(input),
+        requestPolicy,
+      },
+    );
+  }
+
+  async expireNotification(
+    notificationId: string,
+    input: BidviaNotificationExpirationWriteInput,
+    requestPolicy?: BidviaClientRequestPolicy,
+  ) {
+    const context = this.resolveRequestContext(requestPolicy);
+
+    return this.request(
+      `/runtime/notifications/${encodeURIComponent(notificationId)}/expire?tenant_id=${encodeURIComponent(this.requireTenantId(context))}`,
+      {
+        context,
+        method: 'POST',
+        headers: this.requireOperatorActionHeaders(context),
+        body: buildNotificationExpirationBody(input),
         requestPolicy,
       },
     );
