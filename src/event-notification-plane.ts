@@ -1,7 +1,11 @@
 import type {
   BidviaCorePlaneAdoptionStatus,
   BidviaEventNotificationPlaneCapabilityMode,
-  BidviaEventNotificationPlaneBlockedExecutionRoute,
+  BidviaEventNotificationPlaneExecutionRoute,
+  BidviaNotificationAcknowledgementWriteInput,
+  BidviaNotificationDeliveryWriteInput,
+  BidviaNotificationExpirationWriteInput,
+  BidviaNotificationRetryWriteInput,
   BidviaEventNotificationPlaneView,
 } from './contracts.js';
 import { getCorePayloadContractMatrixEntry } from './core-payload-contract-matrix.js';
@@ -27,9 +31,9 @@ const eventNotificationExecutionGates = eventNotificationPlaneExecutionGates.fil
   (gate) => gate.executionTruth === 'packet-grounded-execution',
 );
 
-function buildEventNotificationBlockedExecutionRoute(
-  helperKey: BidviaEventNotificationPlaneBlockedExecutionRoute['helperKey'],
-): BidviaEventNotificationPlaneBlockedExecutionRoute {
+function buildEventNotificationExecutionRoute(
+  helperKey: BidviaEventNotificationPlaneExecutionRoute['helperKey'],
+): BidviaEventNotificationPlaneExecutionRoute {
   const executionGate = eventNotificationExecutionGates.find((gate) => gate.helperKey === helperKey);
   if (!executionGate) {
     throw new Error(`Missing event notification execution gate for ${helperKey}`);
@@ -42,17 +46,17 @@ function buildEventNotificationBlockedExecutionRoute(
 
   return {
     helperKey,
-    routePathTemplate: matrixEntry.routePathTemplate as BidviaEventNotificationPlaneBlockedExecutionRoute['routePathTemplate'],
+    routePathTemplate: matrixEntry.routePathTemplate as BidviaEventNotificationPlaneExecutionRoute['routePathTemplate'],
     httpMethod: 'POST',
     blockedBy: null,
     notes: [...executionGate.notes],
   };
 }
 
-const eventNotificationBlockedExecutionRoutes: BidviaEventNotificationPlaneView['blockedExecutionRoutes'] =
+const eventNotificationExecutionRoutes: BidviaEventNotificationPlaneView['executionRoutes'] =
   eventNotificationExecutionGates.map((gate) => (
-    buildEventNotificationBlockedExecutionRoute(
-      gate.helperKey as BidviaEventNotificationPlaneBlockedExecutionRoute['helperKey'],
+    buildEventNotificationExecutionRoute(
+      gate.helperKey as BidviaEventNotificationPlaneExecutionRoute['helperKey'],
     )
   ));
 
@@ -60,7 +64,7 @@ const eventNotificationCapabilityModeByHelperKey = new Map<string, BidviaEventNo
   ...eventNotificationVisibilityOnlyHelperKeys.map(
     (helperKey): readonly [string, BidviaEventNotificationPlaneCapabilityMode] => [helperKey, 'visibility-only'],
   ),
-  ...eventNotificationBlockedExecutionRoutes.map(
+  ...eventNotificationExecutionRoutes.map(
     (route): readonly [string, BidviaEventNotificationPlaneCapabilityMode] => [route.helperKey, 'packet-grounded-execution'],
   ),
 ]);
@@ -79,7 +83,7 @@ export function buildEventNotificationPlaneView(): BidviaEventNotificationPlaneV
     },
     capabilityModes: {
       visibilityOnlyHelperKeys: [...eventNotificationVisibilityOnlyHelperKeys],
-      blockedExecutionHelperKeys: eventNotificationBlockedExecutionRoutes.map((route) => route.helperKey),
+      executionHelperKeys: eventNotificationExecutionRoutes.map((route) => route.helperKey),
     },
     readRoute: {
       helperKey: 'getNotification',
@@ -93,7 +97,7 @@ export function buildEventNotificationPlaneView(): BidviaEventNotificationPlaneV
       remotePayloadSupported: true,
       notes: ['Notification detail visibility is frozen and can be surfaced as a governed read without inventing execution payloads.'],
     },
-    blockedExecutionRoutes: eventNotificationBlockedExecutionRoutes.map((route) => ({
+    executionRoutes: eventNotificationExecutionRoutes.map((route) => ({
       ...route,
       notes: [...route.notes],
     })),
@@ -114,4 +118,35 @@ export function getEventNotificationPlaneCapabilityMode(
   helperKey: string,
 ): BidviaEventNotificationPlaneCapabilityMode | undefined {
   return eventNotificationCapabilityModeByHelperKey.get(helperKey);
+}
+
+export function buildNotificationDeliveryBody(input: BidviaNotificationDeliveryWriteInput) {
+  return {
+    notification_id: input.notificationId,
+    channel: input.channel,
+    destination: input.destination,
+    delivery_ref: input.deliveryRef,
+    now: input.now,
+  };
+}
+
+export function buildNotificationAcknowledgementBody(input: BidviaNotificationAcknowledgementWriteInput) {
+  return {
+    acknowledged_by: input.acknowledgedBy,
+    now: input.now,
+  };
+}
+
+export function buildNotificationRetryBody(input: BidviaNotificationRetryWriteInput) {
+  return {
+    retry_reason: input.retryReason,
+    now: input.now,
+  };
+}
+
+export function buildNotificationExpirationBody(input: BidviaNotificationExpirationWriteInput) {
+  return {
+    expiration_reason: input.expirationReason,
+    now: input.now,
+  };
 }

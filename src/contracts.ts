@@ -142,6 +142,29 @@ export interface BidviaNotificationIdentifierInput {
   notificationId: string;
 }
 
+export interface BidviaNotificationDeliveryWriteInput {
+  notificationId: string;
+  channel: string;
+  destination: string;
+  deliveryRef: string;
+  now: string;
+}
+
+export interface BidviaNotificationAcknowledgementWriteInput {
+  acknowledgedBy: string;
+  now: string;
+}
+
+export interface BidviaNotificationRetryWriteInput {
+  retryReason: string;
+  now: string;
+}
+
+export interface BidviaNotificationExpirationWriteInput {
+  expirationReason: string;
+  now: string;
+}
+
 export interface BidviaRegistrationLifecycleScenarioPlanInput {
   scenarioId: string;
   scenarioLabel: string;
@@ -393,6 +416,21 @@ export interface BidviaClaimRejectInput {
 export interface BidviaClaimRejectExecutionInput
   extends BidviaClaimIdentifierInput,
     BidviaClaimRejectInput {}
+
+export interface BidviaNotificationDeliveryExecutionInput
+  extends BidviaNotificationDeliveryWriteInput {}
+
+export interface BidviaNotificationAcknowledgementExecutionInput
+  extends BidviaNotificationIdentifierInput,
+    BidviaNotificationAcknowledgementWriteInput {}
+
+export interface BidviaNotificationRetryExecutionInput
+  extends BidviaNotificationIdentifierInput,
+    BidviaNotificationRetryWriteInput {}
+
+export interface BidviaNotificationExpirationExecutionInput
+  extends BidviaNotificationIdentifierInput,
+    BidviaNotificationExpirationWriteInput {}
 
 export interface BidviaCommercialActionScenarioPlanInput {
   scenarioId: string;
@@ -1930,7 +1968,7 @@ export interface BidviaEventNotificationPlaneReadRoute {
   requiredContext: ['tenantId', 'principalId'];
 }
 
-export interface BidviaEventNotificationPlaneBlockedExecutionRoute {
+export interface BidviaEventNotificationPlaneExecutionRoute {
   helperKey:
     | 'createNotificationDelivery'
     | 'acknowledgeNotification'
@@ -1950,10 +1988,10 @@ export interface BidviaEventNotificationPlaneView {
   adoptionStatus: BidviaCorePlaneAdoptionStatus;
   capabilityModes: {
     visibilityOnlyHelperKeys: Array<BidviaEventNotificationPlaneReadRoute['helperKey']>;
-    blockedExecutionHelperKeys: Array<BidviaEventNotificationPlaneBlockedExecutionRoute['helperKey']>;
+    executionHelperKeys: Array<BidviaEventNotificationPlaneExecutionRoute['helperKey']>;
   };
   readRoute: BidviaEventNotificationPlaneReadRoute;
   notificationReadTruth: BidviaTaskPlaneGroundedTruth;
-  blockedExecutionRoutes: BidviaEventNotificationPlaneBlockedExecutionRoute[];
+  executionRoutes: BidviaEventNotificationPlaneExecutionRoute[];
   executionTruth: BidviaTaskPlaneBlockedTruth;
 }
