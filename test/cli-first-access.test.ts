@@ -104,7 +104,7 @@ test('runCli help lists doctor alongside other first-access visibility commands'
   assert(lines.includes('  doctor'));
 });
 
-test('runCli doctor fresh machine reports local blockers, reachability, and skips readiness live check', async () => {
+test('runCli doctor fresh machine reports local blockers, reachability, and the ordered session-to-agent journey', async () => {
   const printed: unknown[] = [];
 
   const exitCode = await runCli(['doctor'], {
@@ -161,7 +161,13 @@ test('runCli doctor fresh machine reports local blockers, reachability, and skip
   });
   assert.equal(snapshot.onboarding.currentStage.key, 'missing-tenant-context');
   assert.deepEqual(snapshot.onboarding.nextCommands.map((entry) => entry.command), [
+    'bidvia sign-up-personal --input ...',
+    'bidvia sign-up-enterprise --input ...',
+    'bidvia sign-in --input ...',
+    'bidvia onboard',
+    'bidvia whoami',
     'bidvia context show',
+    'bidvia doctor',
     'bidvia create-provisional-agent --provisional-agent-ref ...',
     'bidvia query-provisional-agent --provisional-agent-ref ...',
     'bidvia claim-provisional-agent --provisional-agent-ref ... --claim-token ...',
@@ -399,7 +405,7 @@ test('runCli doctor captures readiness live-check transport failures inside stru
   assertFirstSuccessNextStep(snapshot);
 });
 
-test('runCli onboard fresh machine reports the first ordered create-claim-run commands', async () => {
+test('runCli onboard fresh machine reports the ordered session-first external journey before agent onboarding', async () => {
   const printed: unknown[] = [];
 
   const exitCode = await runCli(['onboard'], {
@@ -425,7 +431,12 @@ test('runCli onboard fresh machine reports the first ordered create-claim-run co
   assert.deepEqual(snapshot.effectiveContext?.registrationId, { value: null, source: 'missing' });
   assert.equal(snapshot.onboarding.currentStage.key, 'missing-tenant-context');
   assert.deepEqual(snapshot.onboarding.nextCommands.map((entry) => entry.command), [
+    'bidvia sign-up-personal --input ...',
+    'bidvia sign-up-enterprise --input ...',
+    'bidvia sign-in --input ...',
+    'bidvia whoami',
     'bidvia context show',
+    'bidvia doctor',
     'bidvia create-provisional-agent --provisional-agent-ref ...',
     'bidvia query-provisional-agent --provisional-agent-ref ...',
     'bidvia claim-provisional-agent --provisional-agent-ref ... --claim-token ...',

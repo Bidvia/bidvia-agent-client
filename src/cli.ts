@@ -341,6 +341,15 @@ type BidviaCliOnboardingActionCommand =
   | 'query-provisional-agent'
   | 'claim-provisional-agent';
 
+type BidviaCliIdentitySessionCommand =
+  | 'sign-up-personal'
+  | 'sign-up-enterprise'
+  | 'sign-in'
+  | 'account-me'
+  | 'select-org'
+  | 'session-refresh'
+  | 'session-revoke';
+
 type BidviaCliSupportedValueFlag =
   | '--input'
   | '--provisional-agent-ref'
@@ -545,12 +554,35 @@ const onboardingActionSupportedFlagsByCommand = {
   'claim-provisional-agent': ['--provisional-agent-ref', '--claim-token'],
 } as const satisfies Record<BidviaCliOnboardingActionCommand, readonly BidviaCliSupportedValueFlag[]>;
 
+const identitySessionSupportedFlagsByCommand = {
+  'sign-up-personal': ['--input'],
+  'sign-up-enterprise': ['--input'],
+  'sign-in': ['--input'],
+  'account-me': [],
+  'select-org': ['--input'],
+  'session-refresh': [],
+  'session-revoke': [],
+} as const satisfies Record<BidviaCliIdentitySessionCommand, readonly BidviaCliSupportedValueFlag[]>;
+
 const onboardingActionRequiredContextByCommand = {
   'create-provisional-agent': ['tenantId'],
   'query-provisional-agent': ['tenantId'],
   'claim-provisional-agent': ['tenantId', 'sessionId'],
 } as const satisfies Record<
   BidviaCliOnboardingActionCommand,
+  readonly ('tenantId' | 'sessionId')[]
+>;
+
+const identitySessionRequiredContextByCommand = {
+  'sign-up-personal': [],
+  'sign-up-enterprise': [],
+  'sign-in': [],
+  'account-me': ['tenantId', 'sessionId'],
+  'select-org': ['tenantId', 'sessionId'],
+  'session-refresh': ['tenantId', 'sessionId'],
+  'session-revoke': ['tenantId', 'sessionId'],
+} as const satisfies Record<
+  BidviaCliIdentitySessionCommand,
   readonly ('tenantId' | 'sessionId')[]
 >;
 
@@ -770,6 +802,53 @@ function buildOnboardingActionCommandHints(
   }));
 }
 
+function buildIdentitySessionCommandHints(command: 'doctor' | 'onboard') {
+  const hints = [
+    buildStaticFirstAccessCommandHint(
+      'bidvia sign-up-personal --input ...',
+      'Create a bounded personal account first when the external user needs a new login before any agent onboarding steps.',
+    ),
+    buildStaticFirstAccessCommandHint(
+      'bidvia sign-up-enterprise --input ...',
+      'Use the bounded enterprise sign-up path when the external user starts from an organization-first setup.',
+    ),
+    buildStaticFirstAccessCommandHint(
+      'bidvia sign-in --input ...',
+      'Establish the bounded V1 session before any session-bound claim or account-me/select-org continuation work.',
+    ),
+  ];
+
+  if (command === 'doctor') {
+    hints.push(buildStaticFirstAccessCommandHint(
+      'bidvia onboard',
+      'Start or rerun the agent-first onboarding guide after account/session establishment is available.',
+    ));
+  }
+
+  return hints;
+}
+
+function buildVisibilityCommandHints(command: 'doctor' | 'onboard') {
+  const hints = [
+    buildStaticFirstAccessCommandHint(
+      'bidvia whoami',
+      'Summarize the current effective local identity without claiming authoritative platform login state.',
+    ),
+    buildStaticFirstAccessCommandHint(
+      'bidvia context show',
+      'Inspect which effective local context fields are available before deterministic CLI calls.',
+    ),
+    buildStaticFirstAccessCommandHint(
+      'bidvia doctor',
+      command === 'doctor'
+        ? 'Re-run doctor after local context changes so the session-to-agent handoff stays explicit.'
+        : 'Use doctor after onboard when you want the local diagnostics and readiness view before the provisional chain.',
+    ),
+  ];
+
+  return hints;
+}
+
 function buildFirstAccessOnboardingSnapshot(
   effectiveContext: ReturnType<typeof buildEffectiveContextSnapshot>,
   command: 'doctor' | 'onboard',
@@ -789,10 +868,8 @@ function buildFirstAccessOnboardingSnapshot(
         lastCompletedStep: onboardingProgress.lastCompletedStep,
       },
       nextCommands: [
-        buildStaticFirstAccessCommandHint(
-          'bidvia context show',
-          'Inspect which effective local context fields are missing before this local CLI can run public provisional commands deterministically.',
-        ),
+        ...buildIdentitySessionCommandHints(command),
+        ...buildVisibilityCommandHints(command),
         ...buildOnboardingActionCommandHints(),
       ],
       firstSuccessNextStep: journey.firstSuccessNextStep,
@@ -1149,6 +1226,36 @@ async function buildOnboardSnapshot(
   };
 }
 
+function parseCliJsonInput(command: string, input: string | undefined): Record<string, unknown> {
+  if (!input) {
+    throw new Error(`Missing required --input for ${command}.`);
+  }
+
+  let parsed: unknown;
+
+  try {
+    parsed = JSON.parse(input);
+  } catch {
+    throw new Error(`Invalid JSON supplied to --input for ${command}.`);
+  }
+
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    throw new Error(`The --input value for ${command} must be a JSON object.`);
+  }
+
+  return parsed as Record<string, unknown>;
+}
+
+function readRequiredStringInput(command: string, input: Record<string, unknown>, key: string): string {
+  const value = input[key];
+
+  if (typeof value !== 'string' || value.length === 0) {
+    throw new Error(`Missing required ${key} in --input for ${command}.`);
+  }
+
+  return value;
+}
+
 const onboardingActionCommandDefinitions = {
   'create-provisional-agent': {
     helperKey: 'createProvisionalAgent',
@@ -1183,6 +1290,74 @@ const onboardingActionCommandDefinitions = {
   }
 >;
 
+const identitySessionCommandDefinitions = {
+  'sign-up-personal': {
+    helperKey: 'signUpPersonalAccount',
+    run: (client, parsedArgs) => {
+      const input = parseCliJsonInput('sign-up-personal', parsedArgs.input);
+      return client.signUpPersonalAccount({
+        email: readRequiredStringInput('sign-up-personal', input, 'email'),
+        password: readRequiredStringInput('sign-up-personal', input, 'password'),
+        displayName: readRequiredStringInput('sign-up-personal', input, 'displayName'),
+        now: readRequiredStringInput('sign-up-personal', input, 'now'),
+      });
+    },
+  },
+  'sign-up-enterprise': {
+    helperKey: 'signUpEnterpriseAccount',
+    run: (client, parsedArgs) => {
+      const input = parseCliJsonInput('sign-up-enterprise', parsedArgs.input);
+      return client.signUpEnterpriseAccount({
+        email: readRequiredStringInput('sign-up-enterprise', input, 'email'),
+        password: readRequiredStringInput('sign-up-enterprise', input, 'password'),
+        companyName: readRequiredStringInput('sign-up-enterprise', input, 'companyName'),
+        now: readRequiredStringInput('sign-up-enterprise', input, 'now'),
+      });
+    },
+  },
+  'sign-in': {
+    helperKey: 'signIn',
+    run: (client, parsedArgs) => {
+      const input = parseCliJsonInput('sign-in', parsedArgs.input);
+      return client.signIn({
+        email: readRequiredStringInput('sign-in', input, 'email'),
+        password: readRequiredStringInput('sign-in', input, 'password'),
+        now: readRequiredStringInput('sign-in', input, 'now'),
+      });
+    },
+  },
+  'account-me': {
+    helperKey: 'getAccountMe',
+    run: (client) => client.getAccountMe(),
+  },
+  'select-org': {
+    helperKey: 'selectOrg',
+    run: (client, parsedArgs) => {
+      const input = parseCliJsonInput('select-org', parsedArgs.input);
+      return client.selectOrg({
+        orgId: readRequiredStringInput('select-org', input, 'orgId'),
+      });
+    },
+  },
+  'session-refresh': {
+    helperKey: 'refreshSession',
+    run: (client) => client.refreshSession(),
+  },
+  'session-revoke': {
+    helperKey: 'revokeSession',
+    run: (client) => client.revokeSession(),
+  },
+} as const satisfies Record<
+  BidviaCliIdentitySessionCommand,
+  {
+    helperKey: string;
+    run: (
+      client: BidviaClient,
+      parsedArgs: BidviaCliParsedArgs,
+    ) => Promise<unknown>;
+  }
+>;
+
 function buildOnboardingActionExecutionContext(
   command: BidviaCliOnboardingActionCommand,
   env: NodeJS.ProcessEnv,
@@ -1203,6 +1378,21 @@ function buildOnboardingActionExecutionContext(
     principalId: effectiveContext.principalId.value ?? undefined,
     companyId: effectiveContext.companyId.value ?? undefined,
     registrationId: effectiveContext.registrationId.value ?? undefined,
+    sessionId: effectiveContext.sessionId.present
+      ? readNonEmptyEnvValue(env, 'BIDVIA_SESSION_ID')
+      : undefined,
+  };
+}
+
+function buildIdentitySessionExecutionContext(
+  env: NodeJS.ProcessEnv,
+  effectiveContext: ReturnType<typeof buildEffectiveContextSnapshot>,
+) {
+  return {
+    tenantId: effectiveContext.tenantId.value ?? undefined,
+    principalId: undefined,
+    companyId: undefined,
+    registrationId: undefined,
     sessionId: effectiveContext.sessionId.present
       ? readNonEmptyEnvValue(env, 'BIDVIA_SESSION_ID')
       : undefined,
@@ -1447,6 +1637,13 @@ function getSupportedValueFlagsForCommand(command: string): readonly BidviaCliSu
 
   if (command === 'verification-bundle-preview' || command === 'verification-bundle-export') {
     return ['--input'];
+  }
+
+  const identitySessionSupportedFlags = identitySessionSupportedFlagsByCommand[
+    command as BidviaCliIdentitySessionCommand
+  ];
+  if (identitySessionSupportedFlags) {
+    return identitySessionSupportedFlags;
   }
 
   const supportedFlags = truthFetchSupportedFlagsByCommand[command as keyof typeof truthFetchSupportedFlagsByCommand];
@@ -1780,10 +1977,18 @@ function printHelp(printLine: (value: string) => void): void {
   printLine('OpenClaw primary path: export stdio MCP config first, then add the companion bundle when you want bundle/bootstrap packaging.');
   printLine('OpenClaw scope for this version: local-first, Core-truth-consuming, stdio MCP primary.');
   printLine('Stage 1 client runtime is complete locally: CLI and MCP execution share one runtime core and local accumulation layer.');
-  printLine('Getting Started (Learn):');
+  printLine('Account / Session Establishment:');
+  printLine('  sign-up-personal --input ...');
+  printLine('  sign-up-enterprise --input ...');
+  printLine('  sign-in --input ...');
+  printLine('  account-me');
+  printLine('  select-org --input ...');
+  printLine('  session-refresh');
+  printLine('  session-revoke');
+  printLine('Getting Started (Agent-first Learn):');
   printLine('  onboard');
-  printLine('  context show');
   printLine('  whoami');
+  printLine('  context show');
   printLine('  doctor');
   printLine('  onboarding-readiness');
   printLine('  route-context-matrix');
@@ -2170,6 +2375,81 @@ export async function runCli(
       ...buildRouteContextMatrix(),
     });
     return 0;
+  }
+
+  const identitySessionCommand = identitySessionCommandDefinitions[
+    command as BidviaCliIdentitySessionCommand
+  ];
+  if (identitySessionCommand) {
+    const env = dependencies.resolveProcessEnv();
+    const localStateResult = await readCliLocalOnboardingState(dependencies);
+    const effectiveContext = buildEffectiveContextSnapshot(env, localStateResult.state);
+    const requiredContext = identitySessionRequiredContextByCommand[
+      command as BidviaCliIdentitySessionCommand
+    ];
+    const missingContext = requiredContext.filter((contextKey) => {
+      if (contextKey === 'tenantId') {
+        return effectiveContext.tenantId.value === null;
+      }
+
+      return effectiveContext.sessionId.present === false;
+    });
+
+    if (missingContext.length > 0) {
+      return printStructuredFailure(
+        dependencies,
+        buildStructuredFailure(
+          command,
+          'missing-context',
+          buildCliMissingContextMessage(command, missingContext),
+          {
+            details: [...missingContext],
+          },
+        ),
+      );
+    }
+
+    const executionContext = buildIdentitySessionExecutionContext(env, effectiveContext);
+
+    try {
+      const client = dependencies.createClient(env, executionContext);
+      const result = await identitySessionCommand.run(client, parsedArgs);
+
+      dependencies.printJson(
+        localStateResult.warnings.length === 0
+          ? result
+          : {
+            ...((typeof result === 'object' && result !== null) ? result as Record<string, unknown> : { result }),
+            localStateWarnings: localStateResult.warnings,
+          },
+      );
+      return 0;
+    } catch (error) {
+      if (error instanceof Error && !(error instanceof BidviaClientTransportError)) {
+        return printStructuredFailure(
+          dependencies,
+          buildStructuredFailure(
+            command,
+            'invalid-input',
+            error.message,
+          ),
+        );
+      }
+
+      const normalizedFailure = normalizeOnboardingActionTransportFailure(error);
+      return printStructuredFailure(
+        dependencies,
+        buildStructuredFailure(
+          command,
+          'transport-error',
+          normalizedFailure.message,
+          {
+            details: [normalizedFailure.transport.name],
+            transport: normalizedFailure.transport,
+          },
+        ),
+      );
+    }
   }
 
   const onboardingActionCommand = onboardingActionCommandDefinitions[
