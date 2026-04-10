@@ -63,6 +63,18 @@ The V1 boundary is agent-first but login-capable. Bounded account/session prereq
 
 ## Current frozen route families
 
+The current V1 enterprise support family is intentionally mixed:
+
+- enterprise visibility and readback remain the primary packet-grounded enterprise truth already exposed elsewhere in the repo
+- the canonical integration support family below is also frozen and shipped, but it remains bounded support for governed integration entry and does not make the whole enterprise plane a general write-first surface
+
+- `POST /runtime/accounts/personal/sign-up`
+- `POST /runtime/accounts/enterprise/sign-up`
+- `POST /runtime/sessions/sign-in`
+- `POST /runtime/sessions/refresh`
+- `POST /runtime/sessions/revoke`
+- `GET /runtime/account/me`
+- `POST /runtime/account/select-org`
 - `POST /runtime/agents/provisional`
 - `GET /runtime/agents/provisional?provisional_agent_ref=<...>`
 - `POST /runtime/agents/provisional/claim`
@@ -83,6 +95,10 @@ The V1 boundary is agent-first but login-capable. Bounded account/session prereq
 - `GET /runtime/agents/:registration_id/task-dispatches`
 - `GET /runtime/agents/:registration_id/task-dispatches/:task_dispatch_id`
 - `POST /runtime/agents/:registration_id/task-dispatches`
+- `POST /runtime/integrations/:integrationCode/onboarding-contract`
+- `POST /runtime/integrations/haisi-wms/login`
+- `GET /runtime/integrations/haisi-wms/warehouses`
+- `POST /runtime/integrations/haisi-wms/inbound`
 
 ## Governed read posture
 
