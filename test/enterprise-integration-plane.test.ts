@@ -41,14 +41,17 @@ test('enterprise integration plane adapter groups bounded enterprise helper fami
   })();
 
   assert.equal(plane.adoptionStatus.plane, 'enterprise-integration');
-  assert.equal(plane.adoptionStatus.payloadPacketStatus, 'blocked-pending-packet');
-  assert.equal(plane.adoptionStatus.blockedBy, 'core-plane-payload-packet-not-yet-frozen');
+  assert.equal(plane.adoptionStatus.payloadPacketStatus, 'packet-grounded');
+  assert.equal(plane.adoptionStatus.blockedBy, null);
   assert.equal(plane.visibilityBoundary.boundedCommercialUniverseOnly, true);
   assert.equal(plane.visibilityBoundary.broaderEnterpriseAuthorityClaimed, false);
   assert.equal(plane.visibilityBoundary.broaderSystemAuthorityClaimed, false);
-  assert.equal(plane.packetTruthBoundary.payloadPacketStatus, 'blocked-pending-packet');
-  assert.equal(plane.packetTruthBoundary.blockedBy, 'core-plane-payload-packet-not-yet-frozen');
-  assert.deepEqual(plane.packetTruthBoundary.packetCompleteFieldFamilies, []);
+  assert.equal(plane.packetTruthBoundary.payloadPacketStatus, 'packet-grounded');
+  assert.equal(plane.packetTruthBoundary.blockedBy, null);
+  assert.deepEqual(plane.packetTruthBoundary.packetCompleteFieldFamilies, [
+    'identity-mapping-fields',
+    'attachment-document-media-evidence-visibility',
+  ]);
   assert.equal(plane.packetTruthBoundary.inventedPacketFieldsBlocked, true);
   assert.deepEqual(plane.helperGroups.map((group) => group.groupKey), [
     'asset-evidence-family',
@@ -102,8 +105,41 @@ test('enterprise integration plane adapter groups bounded enterprise helper fami
     ],
     broaderEnterpriseAuthorityClaimed: false,
     broaderSystemAuthorityClaimed: false,
-    payloadPacketStatus: 'blocked-pending-packet',
-    blockedBy: 'core-plane-payload-packet-not-yet-frozen',
+    payloadPacketStatus: 'packet-grounded',
+    blockedBy: null,
     notes: ['Descriptive asset/document/media/evidence consumption stays bounded to the commercial-universe integration surface.'],
+  });
+  assert.deepEqual(plane.helperGroups.find((group) => group.groupKey === 'commercial-action'), {
+    groupKey: 'commercial-action',
+    label: 'Bounded commercial action continuation',
+    helperKeys: [
+      'buildCommercialActionScenarioPlan',
+      'runCommercialActionScenario',
+      'readCommercialActionScenarioReview',
+    ],
+    clientMethods: [
+      'createCommercialAction',
+      'getCommercialActionStatus',
+      'policyCheckCommercialAction',
+      'requestCommercialActionApproval',
+      'executeCommercialAction',
+      'getCommercialActionReceipt',
+      'getCommercialActionAudit',
+    ],
+    cliCommands: ['commercial-action-verification-wave-preview'],
+    discoveryHelperKeys: [
+      'createCommercialAction',
+      'getCommercialActionStatus',
+      'policyCheckCommercialAction',
+      'requestCommercialActionApproval',
+      'executeCommercialAction',
+      'getCommercialActionReceipt',
+      'getCommercialActionAudit',
+    ],
+    broaderEnterpriseAuthorityClaimed: false,
+    broaderSystemAuthorityClaimed: false,
+    payloadPacketStatus: 'packet-grounded',
+    blockedBy: null,
+    notes: ['Commercial-action helpers stay bounded to the shipped governed continuation slice.'],
   });
 });

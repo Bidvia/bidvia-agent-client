@@ -138,7 +138,12 @@ const enterpriseIntegrationPlaneHelperGroups: readonly BidviaEnterpriseIntegrati
 function cloneHelperGroup(
   helperGroup: BidviaEnterpriseIntegrationPlaneHelperGroup,
 ): BidviaEnterpriseIntegrationPlaneHelperGroup {
-  const groupEntries = helperGroup.helperKeys
+  const matrixBackedHelperKeys = [...new Set([
+    ...helperGroup.helperKeys,
+    ...helperGroup.clientMethods,
+    ...helperGroup.discoveryHelperKeys,
+  ])];
+  const groupEntries = matrixBackedHelperKeys
     .map((helperKey) => getCorePayloadContractMatrixEntry(helperKey))
     .filter((entry): entry is NonNullable<typeof entry> => entry !== undefined);
 
