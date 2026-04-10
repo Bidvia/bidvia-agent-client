@@ -12,7 +12,8 @@ test('core-plane adoption exports one frozen Core entry per Stage 2 plane and ke
     plane: string;
     frozenInCore: boolean;
     payloadPacketStatus: string;
-    canExecuteNow: boolean;
+    descriptiveVisibility: string;
+    executableHelperEligibility: string;
     blockedBy: string | null;
     notes: string[];
   }>)();
@@ -27,7 +28,18 @@ test('core-plane adoption exports one frozen Core entry per Stage 2 plane and ke
   ]);
   assert.equal(statuses.every((status) => status.frozenInCore), true);
   assert.equal(statuses.every((status) => status.payloadPacketStatus === 'blocked-pending-packet'), true);
-  assert.equal(statuses.every((status) => status.canExecuteNow), true);
+  assert.equal(statuses.every((status) => status.descriptiveVisibility === 'descriptive-plane-visible'), true);
+  assert.deepEqual(
+    Object.fromEntries(statuses.map((status) => [status.plane, status.executableHelperEligibility])),
+    {
+      'identity-session': 'packet-grounded-execution',
+      task: 'discoverable-only',
+      capability: 'discoverable-only',
+      'workflow-stage': 'discoverable-only',
+      'event-notification': 'discoverable-only',
+      'enterprise-integration': 'discoverable-only',
+    },
+  );
   assert.equal(statuses.every((status) => status.blockedBy === 'core-plane-payload-packet-not-yet-frozen'), true);
   assert.equal(statuses.some((status) => status.plane === 'local-runtime-execution-session'), false);
   assert.equal(statuses.some((status) => status.plane === 'local-accumulation-memory'), false);
@@ -44,7 +56,8 @@ test('core-plane adoption snapshot stays scoped to frozen Core-facing truth and 
     statuses: Array<{
       plane: string;
       payloadPacketStatus: string;
-      canExecuteNow: boolean;
+      descriptiveVisibility: string;
+      executableHelperEligibility: string;
     }>;
   })();
 
@@ -58,5 +71,16 @@ test('core-plane adoption snapshot stays scoped to frozen Core-facing truth and 
     'enterprise-integration',
   ]);
   assert.equal(snapshot.statuses.every((status) => status.payloadPacketStatus === 'blocked-pending-packet'), true);
-  assert.equal(snapshot.statuses.every((status) => status.canExecuteNow), true);
+  assert.equal(snapshot.statuses.every((status) => status.descriptiveVisibility === 'descriptive-plane-visible'), true);
+  assert.deepEqual(
+    snapshot.statuses.map((status) => [status.plane, status.executableHelperEligibility]),
+    [
+      ['identity-session', 'packet-grounded-execution'],
+      ['task', 'discoverable-only'],
+      ['capability', 'discoverable-only'],
+      ['workflow-stage', 'discoverable-only'],
+      ['event-notification', 'discoverable-only'],
+      ['enterprise-integration', 'discoverable-only'],
+    ],
+  );
 });

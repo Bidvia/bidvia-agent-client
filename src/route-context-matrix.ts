@@ -13,6 +13,7 @@ import type {
   BidviaEventNotificationPlaneView,
   BidviaIdentitySessionPlaneView,
   BidviaMcpToolOutputMode,
+  BidviaPlaneExecutionTruth,
   BidviaRouteCapability,
   BidviaScenarioContextKey,
   BidviaTaskPlaneView,
@@ -23,6 +24,7 @@ import { buildStage3ReleaseGate } from './core-plane-adoption.js';
 import { buildLocalDiscoveryCatalog } from './discovery-catalog.js';
 import { buildEventNotificationPlaneView } from './event-notification-plane.js';
 import { buildIdentitySessionPlaneView } from './identity-session-plane.js';
+import { requirePlaneExecutionGate } from './plane-execution-gate.js';
 import { buildLocalRuntimeCapabilitySnapshot } from './runtime-capabilities.js';
 import { buildTaskPlaneView } from './task-plane.js';
 import { buildWorkflowStagePlaneView } from './workflow-stage-plane.js';
@@ -57,6 +59,8 @@ export interface BidviaRouteContextMatrixRow {
   contextSemantic: BidviaRouteCapability['contextSemantic'];
   requiredContext: BidviaScenarioContextKey[];
   operationKind: BidviaRouteContextOperationKind;
+  executionTruth: BidviaPlaneExecutionTruth;
+  executionBlockedBy: string | null;
   localCapabilityRiskTier: BidviaRouteCapability['localCapabilityRiskTier'];
   relevance: BidviaRouteContextRelevance;
   presentationTier: BidviaRouteContextPresentationTier;
@@ -177,6 +181,7 @@ function buildMatrixRow(
 ): BidviaRouteContextMatrixRow {
   const capability = requireRouteCapability(helperKey);
   const discoveryEntry = discoveryCatalogMap.get(helperKey);
+  const executionGate = requirePlaneExecutionGate(helperKey);
 
   return {
     journeyKey: journey.journeyKey,
@@ -189,6 +194,8 @@ function buildMatrixRow(
     contextSemantic: capability.contextSemantic,
     requiredContext: [...capability.requiredContext],
     operationKind: buildOperationKind(capability),
+    executionTruth: executionGate.executionTruth,
+    executionBlockedBy: executionGate.blockedBy,
     localCapabilityRiskTier: capability.localCapabilityRiskTier,
     relevance: journey.relevance,
     presentationTier: journey.presentationTier,

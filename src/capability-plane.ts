@@ -25,6 +25,7 @@ import {
   buildStage3ReleaseGate,
   listCorePlaneAdoptionStatuses,
 } from './core-plane-adoption.js';
+import { getCorePlaneExecutionSummary } from './plane-execution-gate.js';
 
 const runtimeCapabilitySnapshotSchemaVersion = '2026-03-27';
 const localRuntimeCapabilitySnapshotVersion = 'local-runtime-capability-snapshot';
@@ -38,7 +39,7 @@ const capabilityPlaneAdoptionStatus: BidviaCorePlaneAdoptionStatus = {
   plane: 'capability',
   frozenInCore: true,
   payloadPacketStatus: 'blocked-pending-packet',
-  canExecuteNow: true,
+  ...getCorePlaneExecutionSummary('capability'),
   blockedBy: 'core-plane-payload-packet-not-yet-frozen',
   notes: ['Route remote capability refresh through one fail-closed capability-plane adapter.'],
 };

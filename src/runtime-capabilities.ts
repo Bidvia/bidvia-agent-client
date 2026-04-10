@@ -17,10 +17,12 @@ export function buildLocalRuntimeCapabilitySnapshot(
     buildRouteCapabilityCatalog: buildLocalRouteCapabilityCatalog,
     buildMcpToolCatalog: buildLocalMcpToolCatalog,
   });
+  const planeAdoption = listCorePlaneAdoptionStatuses();
+  const stage3ReleaseGate = buildStage3ReleaseGate();
 
   return {
     ...snapshot,
-    planeAdoption: listCorePlaneAdoptionStatuses(),
-    stage3ReleaseGate: buildStage3ReleaseGate(),
+    planeAdoption,
+    stage3ReleaseGate,
   };
 }

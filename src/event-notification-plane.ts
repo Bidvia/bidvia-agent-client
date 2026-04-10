@@ -3,12 +3,13 @@ import type {
   BidviaEventNotificationPlaneCapabilityMode,
   BidviaEventNotificationPlaneView,
 } from './contracts.js';
+import { getCorePlaneExecutionSummary } from './plane-execution-gate.js';
 
 const eventNotificationPlaneAdoptionStatus: BidviaCorePlaneAdoptionStatus = {
   plane: 'event-notification',
   frozenInCore: true,
   payloadPacketStatus: 'blocked-pending-packet',
-  canExecuteNow: true,
+  ...getCorePlaneExecutionSummary('event-notification'),
   blockedBy: 'core-plane-payload-packet-not-yet-frozen',
   notes: ['Expose frozen notification visibility now and fail closed on packet-incomplete execution semantics.'],
 };

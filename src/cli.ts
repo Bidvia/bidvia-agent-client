@@ -28,7 +28,6 @@ import {
 import {
   buildEnterpriseIntegrationDiscoverySnapshot,
   buildLocalDiscoveryCatalog,
-  buildLocalMcpToolCatalog,
   buildLocalRouteCapabilityCatalog,
   buildLocalMcpProductizationSnapshot,
   getLocalMcpToolDescriptor,
@@ -79,6 +78,7 @@ import {
   buildRouteContextMatrix,
   buildRouteContextMatrixNextStepHints,
 } from './route-context-matrix.js';
+import { listPlaneExecutionGates } from './plane-execution-gate.js';
 import {
   listOnboardingJourneyCommandHints,
 } from './onboarding-journey.js';
@@ -1842,6 +1842,7 @@ function buildOperatorDiscoverySnapshot() {
         ...status,
         notes: [...status.notes],
       })),
+      planeExecutionGates: listPlaneExecutionGates(),
       releaseGate: buildStage3ReleaseGate(),
       enterpriseIntegrationPlane,
       enterpriseIntegrationDiscovery,

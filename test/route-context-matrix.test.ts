@@ -69,6 +69,8 @@ test('buildRouteContextMatrix separates public provisional onboarding from gover
       contextSemantic: 'public-provisional',
       requiredContext: ['tenantId'],
       operationKind: 'execute',
+      executionTruth: 'packet-grounded-execution',
+      executionBlockedBy: null,
       localCapabilityRiskTier: 'runtime-execution',
       relevance: 'public-first-common',
       presentationTier: 'primary',
@@ -85,6 +87,8 @@ test('buildRouteContextMatrix separates public provisional onboarding from gover
       contextSemantic: 'public-provisional',
       requiredContext: ['tenantId'],
       operationKind: 'read-only',
+      executionTruth: 'packet-grounded-execution',
+      executionBlockedBy: null,
       localCapabilityRiskTier: 'observe-only',
       relevance: 'public-first-common',
       presentationTier: 'primary',
@@ -101,6 +105,8 @@ test('buildRouteContextMatrix separates public provisional onboarding from gover
       contextSemantic: 'session',
       requiredContext: ['tenantId', 'sessionId'],
       operationKind: 'execute',
+      executionTruth: 'packet-grounded-execution',
+      executionBlockedBy: null,
       localCapabilityRiskTier: 'runtime-execution',
       relevance: 'public-first-common',
       presentationTier: 'primary',
@@ -117,6 +123,8 @@ test('buildRouteContextMatrix separates public provisional onboarding from gover
       contextSemantic: 'principal-governed-read',
       requiredContext: ['tenantId', 'principalId'],
       operationKind: 'read-only',
+      executionTruth: 'packet-grounded-execution',
+      executionBlockedBy: null,
       localCapabilityRiskTier: 'observe-only',
       relevance: 'governed-run-secondary',
       presentationTier: 'secondary',
@@ -133,6 +141,8 @@ test('buildRouteContextMatrix separates public provisional onboarding from gover
       contextSemantic: 'registration',
       requiredContext: ['tenantId', 'registrationId', 'principalId'],
       operationKind: 'execute',
+      executionTruth: 'blocked-pending-packet',
+      executionBlockedBy: 'core-plane-payload-packet-not-yet-frozen',
       localCapabilityRiskTier: 'runtime-execution',
       relevance: 'governed-run-secondary',
       presentationTier: 'secondary',
@@ -149,6 +159,8 @@ test('buildRouteContextMatrix separates public provisional onboarding from gover
       contextSemantic: 'operator-company',
       requiredContext: ['tenantId', 'principalId', 'companyId'],
       operationKind: 'execute',
+      executionTruth: 'blocked-pending-packet',
+      executionBlockedBy: 'core-plane-payload-packet-not-yet-frozen',
       localCapabilityRiskTier: 'governed-commercial',
       relevance: 'governed-run-secondary',
       presentationTier: 'secondary',
@@ -227,4 +239,16 @@ test('buildRouteContextMatrix separates public provisional onboarding from gover
 
   assert.equal((typedMatrix.taskPlane as { timeoutTruth: { payloadPacketStatus: string } }).timeoutTruth.payloadPacketStatus, 'blocked-pending-packet');
   assert.equal((typedMatrix.taskPlane as { localShellBoundary: { descriptiveOnly: boolean } }).localShellBoundary.descriptiveOnly, true);
+  assert.equal(
+    (
+      typedMatrix.rows.find((row) => row.helperKey === 'postHeartbeat') as { executionTruth: string }
+    ).executionTruth,
+    'blocked-pending-packet',
+  );
+  assert.equal(
+    (
+      typedMatrix.rows.find((row) => row.helperKey === 'getAgentReadiness') as { executionTruth: string }
+    ).executionTruth,
+    'packet-grounded-execution',
+  );
 });

@@ -247,3 +247,48 @@ test('buildLocalRuntimeCapabilitySnapshot includes shipped widened read helpers 
     }),
   );
 });
+
+test('buildLocalRuntimeCapabilitySnapshot carries shared execution truth without widening release blockers', () => {
+  const snapshot = buildLocalRuntimeCapabilitySnapshot();
+
+  assert.deepEqual(
+    snapshot.planeAdoption.map((status) => ({
+      plane: status.plane,
+      descriptiveVisibility: status.descriptiveVisibility,
+      executableHelperEligibility: status.executableHelperEligibility,
+    })),
+    [
+      {
+        plane: 'identity-session',
+        descriptiveVisibility: 'descriptive-plane-visible',
+        executableHelperEligibility: 'packet-grounded-execution',
+      },
+      {
+        plane: 'task',
+        descriptiveVisibility: 'descriptive-plane-visible',
+        executableHelperEligibility: 'discoverable-only',
+      },
+      {
+        plane: 'capability',
+        descriptiveVisibility: 'descriptive-plane-visible',
+        executableHelperEligibility: 'discoverable-only',
+      },
+      {
+        plane: 'workflow-stage',
+        descriptiveVisibility: 'descriptive-plane-visible',
+        executableHelperEligibility: 'discoverable-only',
+      },
+      {
+        plane: 'event-notification',
+        descriptiveVisibility: 'descriptive-plane-visible',
+        executableHelperEligibility: 'discoverable-only',
+      },
+      {
+        plane: 'enterprise-integration',
+        descriptiveVisibility: 'descriptive-plane-visible',
+        executableHelperEligibility: 'discoverable-only',
+      },
+    ],
+  );
+  assert.deepEqual(snapshot.stage3ReleaseGate.blockedBy, ['plane-adoption-incomplete']);
+});

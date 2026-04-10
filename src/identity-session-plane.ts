@@ -6,6 +6,7 @@ import type {
   BidviaIdentitySessionPlaneView,
   BidviaScenarioContextKey,
 } from './contracts.js';
+import { getCorePlaneExecutionSummary } from './plane-execution-gate.js';
 import { getWorkflowStageLocalSemantics } from './workflow-stage-plane.js';
 
 type BidviaIdentitySessionPlaneProgressInput = {
@@ -19,7 +20,7 @@ const identitySessionPlaneAdoptionStatus: BidviaCorePlaneAdoptionStatus = {
   plane: 'identity-session',
   frozenInCore: true,
   payloadPacketStatus: 'blocked-pending-packet',
-  canExecuteNow: true,
+  ...getCorePlaneExecutionSummary('identity-session'),
   blockedBy: 'core-plane-payload-packet-not-yet-frozen',
   notes: ['Adopt canonical onboarding and governed-read posture without inventing broader session semantics.'],
 };

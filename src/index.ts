@@ -44,4 +44,5 @@ export * from './task-participation.js';
 export * from './onboarding-readiness.js';
 export * from './openclaw-bundle-export.js';
 export * from './openclaw-config-export.js';
+export * from './plane-execution-gate.js';
 export * from './route-context-matrix.js';

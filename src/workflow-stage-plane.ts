@@ -4,12 +4,13 @@ import type {
   BidviaWorkflowStagePlaneView,
   BidviaWorkflowStageReference,
 } from './contracts.js';
+import { getCorePlaneExecutionSummary } from './plane-execution-gate.js';
 
 const workflowStagePlaneAdoptionStatus: BidviaCorePlaneAdoptionStatus = {
   plane: 'workflow-stage',
   frozenInCore: true,
   payloadPacketStatus: 'blocked-pending-packet',
-  canExecuteNow: true,
+  ...getCorePlaneExecutionSummary('workflow-stage'),
   blockedBy: 'core-plane-payload-packet-not-yet-frozen',
   notes: ['Keep local journey labels and transport workflow identifiers separate from blocked Core stage semantics.'],
 };

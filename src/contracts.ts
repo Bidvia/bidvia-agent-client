@@ -1609,11 +1609,28 @@ export const bidviaCorePlanePayloadPacketStatuses = [
 export type BidviaCorePlanePayloadPacketStatus =
   (typeof bidviaCorePlanePayloadPacketStatuses)[number];
 
+export const bidviaPlaneExecutionTruths = [
+  'discoverable-only',
+  'blocked-pending-packet',
+  'packet-grounded-execution',
+] as const;
+
+export type BidviaPlaneExecutionTruth = (typeof bidviaPlaneExecutionTruths)[number];
+
+export interface BidviaPlaneExecutionGate {
+  plane: BidviaCorePlaneName;
+  helperKey: string;
+  executionTruth: BidviaPlaneExecutionTruth;
+  blockedBy: string | null;
+  notes: string[];
+}
+
 export interface BidviaCorePlaneAdoptionStatus {
   plane: BidviaCorePlaneName;
   frozenInCore: true;
   payloadPacketStatus: BidviaCorePlanePayloadPacketStatus;
-  canExecuteNow: boolean;
+  descriptiveVisibility: 'descriptive-plane-visible';
+  executableHelperEligibility: BidviaPlaneExecutionTruth;
   blockedBy: string | null;
   notes: string[];
 }

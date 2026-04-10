@@ -14,12 +14,13 @@ import type {
   BidviaTaskPlaneCapabilityMode,
   BidviaTaskPlaneView,
 } from './contracts.js';
+import { getCorePlaneExecutionSummary } from './plane-execution-gate.js';
 
 const taskPlaneAdoptionStatus: BidviaCorePlaneAdoptionStatus = {
   plane: 'task',
   frozenInCore: true,
   payloadPacketStatus: 'blocked-pending-packet',
-  canExecuteNow: true,
+  ...getCorePlaneExecutionSummary('task'),
   blockedBy: 'core-plane-payload-packet-not-yet-frozen',
   notes: ['Keep local task shells descriptive-only and block packet-incomplete task semantics.'],
 };
