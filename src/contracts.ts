@@ -756,6 +756,8 @@ export interface BidviaMcpToolDescriptor {
   accessContextFamily: BidviaRouteCapabilityAccessContextFamily;
   contextSemantic?: BidviaRouteCapabilityContextSemantic;
   requiredContext: BidviaScenarioContextKey[];
+  runnable?: boolean;
+  blockedBy?: string | null;
   taskPlaneCapabilityMode?: BidviaTaskPlaneCapabilityMode;
   eventNotificationPlaneCapabilityMode?: BidviaEventNotificationPlaneCapabilityMode;
 }
@@ -1817,6 +1819,7 @@ export interface BidviaEnterpriseIntegrationPlaneView {
 
 export const bidviaTaskPlaneCapabilityModes = [
   'visibility-only',
+  'blocked-pending-packet',
   'executable',
 ] as const;
 

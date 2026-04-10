@@ -16,7 +16,7 @@ import type {
 } from './contracts.js';
 import {
   getCorePlaneExecutionSummary,
-  listPlaneExecutableHelperKeys,
+  listPlaneExecutionGates,
 } from './plane-execution-gate.js';
 
 const taskPlaneAdoptionStatus: BidviaCorePlaneAdoptionStatus = {
@@ -35,12 +35,23 @@ const taskPlaneVisibilityOnlyHelperKeys = [
   'getTaskDispatch',
 ] as const;
 
-const taskPlaneExecutableHelperKeys = listPlaneExecutableHelperKeys('task');
+const taskPlaneExecutionGates = listPlaneExecutionGates().filter((gate) => gate.plane === 'task');
+
+const taskPlaneExecutableHelperKeys = taskPlaneExecutionGates
+  .filter((gate) => gate.executionTruth === 'packet-grounded-execution')
+  .map((gate) => gate.helperKey);
+
+const taskPlaneBlockedHelperKeys = taskPlaneExecutionGates
+  .filter((gate) => gate.executionTruth === 'blocked-pending-packet')
+  .map((gate) => gate.helperKey);
 
 const taskPlaneCapabilityModeByHelperKey = new Map<string, BidviaTaskPlaneCapabilityMode>(
   [
     ...taskPlaneVisibilityOnlyHelperKeys.map(
       (helperKey): readonly [string, BidviaTaskPlaneCapabilityMode] => [helperKey, 'visibility-only'],
+    ),
+    ...taskPlaneBlockedHelperKeys.map(
+      (helperKey): readonly [string, BidviaTaskPlaneCapabilityMode] => [helperKey, 'blocked-pending-packet'],
     ),
     ...taskPlaneExecutableHelperKeys.map(
       (helperKey): readonly [string, BidviaTaskPlaneCapabilityMode] => [helperKey, 'executable'],

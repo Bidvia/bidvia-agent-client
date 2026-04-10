@@ -234,6 +234,9 @@ test('MCP tool catalog lookup returns descriptive bounded slice metadata', () =>
     localCapabilityRiskTier: 'runtime-execution',
     accessContextFamily: 'registration',
     requiredContext: ['tenantId', 'registrationId', 'principalId'],
+    runnable: false,
+    blockedBy: 'core-plane-payload-packet-not-yet-frozen',
+    taskPlaneCapabilityMode: 'blocked-pending-packet',
   });
 
   assert.equal(getMcpToolDescriptor('missing-tool'), undefined);
@@ -274,6 +277,8 @@ test('MCP provisional descriptors keep public create query semantics distinct fr
     accessContextFamily: 'tenant',
     contextSemantic: 'public-provisional',
     requiredContext: ['tenantId'],
+    runnable: true,
+    blockedBy: null,
   });
 
   assert.deepEqual(getMcpToolDescriptor('claim-provisional-agent-execution') as BidviaMcpDescriptorWithContext, {
@@ -291,6 +296,8 @@ test('MCP provisional descriptors keep public create query semantics distinct fr
     localCapabilityRiskTier: 'runtime-execution',
     accessContextFamily: 'session',
     requiredContext: ['tenantId', 'sessionId'],
+    runnable: true,
+    blockedBy: null,
   });
 });
 
@@ -819,7 +826,7 @@ test('dispatchMcpToolCall exposes widened Task 1 governance read descriptors in 
   assert.equal(getMcpToolDescriptor('notification-read')?.toolName, 'notification-read');
   assert.equal((getMcpToolDescriptor('task-dispatch-read') as { taskPlaneCapabilityMode?: string }).taskPlaneCapabilityMode, 'visibility-only');
   assert.equal((getMcpToolDescriptor('notification-read') as { eventNotificationPlaneCapabilityMode?: string }).eventNotificationPlaneCapabilityMode, 'visibility-only');
-  assert.equal((getMcpToolDescriptor('suspend-task-dispatch-execution') as { taskPlaneCapabilityMode?: string }).taskPlaneCapabilityMode, 'executable');
+  assert.equal((getMcpToolDescriptor('suspend-task-dispatch-execution') as { taskPlaneCapabilityMode?: string }).taskPlaneCapabilityMode, 'blocked-pending-packet');
   assert.equal(getMcpToolDescriptor('acknowledge-notification-execution'), undefined);
 });
 

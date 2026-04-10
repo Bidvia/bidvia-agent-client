@@ -4,13 +4,6 @@ import assert from 'node:assert/strict';
 import type { BidviaHeartbeatInput } from '../src/contracts.ts';
 import { runCli } from '../src/cli.ts';
 
-function withDefaultContextSemantic<T extends { accessContextFamily: string }>(value: T): T & { contextSemantic: string } {
-  return {
-    ...value,
-    contextSemantic: value.accessContextFamily,
-  };
-}
-
 test('runCli prints grouped help output for the learn, create-claim, run, diagnostics, and advanced review journey', async () => {
   const lines: string[] = [];
 
@@ -163,7 +156,14 @@ test('runCli prints operator discovery snapshots for CLI route metadata and loca
         reviewSafeLocalOnly: boolean;
         executionRequiresLocalExecutionClient: boolean;
       };
-      tools: Array<{ toolName: string; routePathTemplate: string; httpMethod: string; scope: string }>;
+      tools: Array<{
+        toolName: string;
+        routePathTemplate: string;
+        httpMethod: string;
+        scope: string;
+        runnable: boolean;
+        blockedBy: string | null;
+      }>;
     };
   };
   assert.equal(snapshot.command, 'operator-discovery');
@@ -173,7 +173,8 @@ test('runCli prints operator discovery snapshots for CLI route metadata and loca
       plane: 'identity-session',
       frozenInCore: true,
       payloadPacketStatus: 'blocked-pending-packet',
-      canExecuteNow: true,
+      descriptiveVisibility: 'descriptive-plane-visible',
+      executableHelperEligibility: 'packet-grounded-execution',
       blockedBy: 'core-plane-payload-packet-not-yet-frozen',
       notes: ['Adopt canonical onboarding and governed-read posture without inventing broader session semantics.'],
     },
@@ -181,7 +182,8 @@ test('runCli prints operator discovery snapshots for CLI route metadata and loca
       plane: 'task',
       frozenInCore: true,
       payloadPacketStatus: 'blocked-pending-packet',
-      canExecuteNow: true,
+      descriptiveVisibility: 'descriptive-plane-visible',
+      executableHelperEligibility: 'discoverable-only',
       blockedBy: 'core-plane-payload-packet-not-yet-frozen',
       notes: ['Keep local task shells descriptive-only and block packet-incomplete task semantics.'],
     },
@@ -189,7 +191,8 @@ test('runCli prints operator discovery snapshots for CLI route metadata and loca
       plane: 'capability',
       frozenInCore: true,
       payloadPacketStatus: 'blocked-pending-packet',
-      canExecuteNow: true,
+      descriptiveVisibility: 'descriptive-plane-visible',
+      executableHelperEligibility: 'discoverable-only',
       blockedBy: 'core-plane-payload-packet-not-yet-frozen',
       notes: ['Route remote capability refresh through one fail-closed capability-plane adapter.'],
     },
@@ -197,7 +200,8 @@ test('runCli prints operator discovery snapshots for CLI route metadata and loca
       plane: 'workflow-stage',
       frozenInCore: true,
       payloadPacketStatus: 'blocked-pending-packet',
-      canExecuteNow: true,
+      descriptiveVisibility: 'descriptive-plane-visible',
+      executableHelperEligibility: 'discoverable-only',
       blockedBy: 'core-plane-payload-packet-not-yet-frozen',
       notes: ['Keep local journey labels separate from Core workflow and stage truth until packet-grounded.'],
     },
@@ -205,7 +209,8 @@ test('runCli prints operator discovery snapshots for CLI route metadata and loca
       plane: 'event-notification',
       frozenInCore: true,
       payloadPacketStatus: 'blocked-pending-packet',
-      canExecuteNow: true,
+      descriptiveVisibility: 'descriptive-plane-visible',
+      executableHelperEligibility: 'discoverable-only',
       blockedBy: 'core-plane-payload-packet-not-yet-frozen',
       notes: ['Expose frozen notification visibility now and fail closed on packet-incomplete execution semantics.'],
     },
@@ -213,7 +218,8 @@ test('runCli prints operator discovery snapshots for CLI route metadata and loca
       plane: 'enterprise-integration',
       frozenInCore: true,
       payloadPacketStatus: 'blocked-pending-packet',
-      canExecuteNow: true,
+      descriptiveVisibility: 'descriptive-plane-visible',
+      executableHelperEligibility: 'discoverable-only',
       blockedBy: 'core-plane-payload-packet-not-yet-frozen',
       notes: ['Regroup bounded commercial, document, media, attachment, and evidence helpers behind one plane adapter.'],
     },
@@ -339,6 +345,29 @@ test('runCli prints operator discovery snapshots for CLI route metadata and loca
     requiredContext: ['tenantId', 'sessionId'],
     localCapabilityTier: 'L0-observe-only',
     localCapabilityRiskTier: 'observe-only',
+  });
+  assert.deepEqual(snapshot.mcp.tools.find((tool) => tool.toolName === 'heartbeat-execution'), {
+    toolName: 'heartbeat-execution',
+    description: 'Executes the real remote heartbeat over the local registration-bound client seam.',
+    inputSchemaRef: {
+      schemaKey: 'BidviaHeartbeatInput',
+    },
+    outputMode: 'execution-result',
+    helperRef: {
+      helperKey: 'heartbeat-execution',
+      capabilityKey: 'postHeartbeat',
+    },
+    routePathTemplate: '/runtime/agents/:registrationId/heartbeat',
+    httpMethod: 'POST',
+    scope: 'write',
+    level: 'atomic-route',
+    accessContextFamily: 'registration',
+    requiredContext: ['tenantId', 'registrationId', 'principalId'],
+    localCapabilityTier: 'L2-registration-runtime',
+    localCapabilityRiskTier: 'runtime-execution',
+    runnable: false,
+    blockedBy: 'core-plane-payload-packet-not-yet-frozen',
+          taskPlaneCapabilityMode: 'blocked-pending-packet',
   });
 });
 
@@ -639,6 +668,8 @@ test('runCli prints a route-context matrix that keeps public-first rows ahead of
       contextSemantic: 'public-provisional',
       requiredContext: ['tenantId'],
       operationKind: 'execute',
+      executionTruth: 'packet-grounded-execution',
+      executionBlockedBy: null,
       localCapabilityRiskTier: 'runtime-execution',
       relevance: 'public-first-common',
       presentationTier: 'primary',
@@ -655,6 +686,8 @@ test('runCli prints a route-context matrix that keeps public-first rows ahead of
       contextSemantic: 'public-provisional',
       requiredContext: ['tenantId'],
       operationKind: 'read-only',
+      executionTruth: 'packet-grounded-execution',
+      executionBlockedBy: null,
       localCapabilityRiskTier: 'observe-only',
       relevance: 'public-first-common',
       presentationTier: 'primary',
@@ -671,6 +704,8 @@ test('runCli prints a route-context matrix that keeps public-first rows ahead of
       contextSemantic: 'session',
       requiredContext: ['tenantId', 'sessionId'],
       operationKind: 'execute',
+      executionTruth: 'packet-grounded-execution',
+      executionBlockedBy: null,
       localCapabilityRiskTier: 'runtime-execution',
       relevance: 'public-first-common',
       presentationTier: 'primary',
@@ -687,6 +722,8 @@ test('runCli prints a route-context matrix that keeps public-first rows ahead of
       contextSemantic: 'principal-governed-read',
       requiredContext: ['tenantId', 'principalId'],
       operationKind: 'read-only',
+      executionTruth: 'packet-grounded-execution',
+      executionBlockedBy: null,
       localCapabilityRiskTier: 'observe-only',
       relevance: 'governed-run-secondary',
       presentationTier: 'secondary',
@@ -703,6 +740,8 @@ test('runCli prints a route-context matrix that keeps public-first rows ahead of
       contextSemantic: 'registration',
       requiredContext: ['tenantId', 'registrationId', 'principalId'],
       operationKind: 'execute',
+      executionTruth: 'blocked-pending-packet',
+      executionBlockedBy: 'core-plane-payload-packet-not-yet-frozen',
       localCapabilityRiskTier: 'runtime-execution',
       relevance: 'governed-run-secondary',
       presentationTier: 'secondary',
@@ -719,6 +758,8 @@ test('runCli prints a route-context matrix that keeps public-first rows ahead of
       contextSemantic: 'operator-company',
       requiredContext: ['tenantId', 'principalId', 'companyId'],
       operationKind: 'execute',
+      executionTruth: 'blocked-pending-packet',
+      executionBlockedBy: 'core-plane-payload-packet-not-yet-frozen',
       localCapabilityRiskTier: 'governed-commercial',
       relevance: 'governed-run-secondary',
       presentationTier: 'secondary',
@@ -927,8 +968,11 @@ test('runCli dry-runs execution commands with structured output instead of invok
       localCapabilityRiskTier: 'runtime-execution',
       requiredContext: ['tenantId', 'registrationId', 'principalId'],
       missingContext: ['tenantId', 'registrationId', 'principalId'],
+      runnable: false,
+      blockedBy: 'core-plane-payload-packet-not-yet-frozen',
       hints: [
         'Dry-run stays local and does not execute the remote registration-bound route.',
+        'Execution is currently blocked by plane policy until Core freezes the packet-complete payload truth.',
         'Set BIDVIA_TENANT_ID and BIDVIA_REGISTRATION_ID and BIDVIA_PRINCIPAL_ID before running the real execution command.',
         'Risk tier runtime-execution means the non-dry-run command writes to the remote runtime route.',
       ],

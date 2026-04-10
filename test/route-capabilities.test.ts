@@ -143,7 +143,8 @@ test('capability plane view keeps capability discovery descriptive-only until pa
     plane: 'capability',
     frozenInCore: true,
     payloadPacketStatus: 'blocked-pending-packet',
-    canExecuteNow: true,
+    descriptiveVisibility: 'descriptive-plane-visible',
+    executableHelperEligibility: 'discoverable-only',
     blockedBy: 'core-plane-payload-packet-not-yet-frozen',
     notes: ['Route remote capability refresh through one fail-closed capability-plane adapter.'],
   });
@@ -669,7 +670,7 @@ test('capability registry describes principal-governed reads and canonical parti
     level: 'atomic-route',
     localCapabilityTier: 'L3-governed-commercial',
     localCapabilityRiskTier: 'governed-commercial',
-    taskPlaneCapabilityMode: 'executable',
+    taskPlaneCapabilityMode: 'blocked-pending-packet',
   });
 
   assert.deepEqual(getRouteCapability('rejectClaim'), {
@@ -683,7 +684,7 @@ test('capability registry describes principal-governed reads and canonical parti
     level: 'atomic-route',
     localCapabilityTier: 'L3-governed-commercial',
     localCapabilityRiskTier: 'governed-commercial',
-    taskPlaneCapabilityMode: 'executable',
+    taskPlaneCapabilityMode: 'blocked-pending-packet',
   });
 });
 

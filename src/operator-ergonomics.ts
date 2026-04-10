@@ -1,9 +1,11 @@
 import type {
   BidviaClientContext,
   BidviaMcpToolDescriptor,
+  BidviaPlaneExecutionGate,
   BidviaScenarioContextKey,
 } from './contracts.js';
 import { buildLocalDiscoveryCatalog, getLocalMcpToolDescriptor } from './discovery-catalog.js';
+import { getPlaneExecutionGate } from './plane-execution-gate.js';
 
 export interface BidviaExecutionOperatorPreflight {
   target: string;
@@ -16,31 +18,37 @@ export interface BidviaExecutionOperatorPreflight {
   localCapabilityRiskTier: string;
   requiredContext: BidviaScenarioContextKey[];
   missingContext: BidviaScenarioContextKey[];
+  runnable: boolean;
+  blockedBy: string | null;
   hints: string[];
 }
 
 interface BidviaExecutionCatalogEntry {
+  helperKey: string;
   routePathTemplate: string;
   httpMethod: string;
   accessContextFamily: string;
   localCapabilityTier: string;
   localCapabilityRiskTier: string;
   requiredContext: BidviaScenarioContextKey[];
+  executionGate: BidviaPlaneExecutionGate | undefined;
 }
 
 function buildCliExecutionCatalogEntry(command: string): BidviaExecutionCatalogEntry | undefined {
   const entry = buildLocalDiscoveryCatalog().find((candidate) => candidate.cliCommands.includes(command));
-  if (!entry || entry.discoveryKind !== 'execute') {
+  if (!entry || entry.recommendedOutputMode !== 'execution-result') {
     return undefined;
   }
 
   return {
+    helperKey: entry.helperKey,
     routePathTemplate: entry.routePathTemplate,
     httpMethod: entry.httpMethod,
     accessContextFamily: entry.accessContextFamily,
     localCapabilityTier: entry.localCapabilityTier,
     localCapabilityRiskTier: entry.localCapabilityRiskTier,
     requiredContext: [...entry.requiredContext],
+    executionGate: getPlaneExecutionGate(entry.helperKey),
   };
 }
 
@@ -58,12 +66,14 @@ function buildMcpExecutionCatalogEntry(toolName: string): BidviaExecutionCatalog
   }
 
   return {
+    helperKey: descriptor.helperRef.capabilityKey ?? descriptor.helperRef.helperKey,
     routePathTemplate: discoveryEntry.routePathTemplate,
     httpMethod: discoveryEntry.httpMethod,
     accessContextFamily: descriptor.accessContextFamily,
     localCapabilityTier: descriptor.localCapabilityTier,
     localCapabilityRiskTier: descriptor.localCapabilityRiskTier,
     requiredContext: [...descriptor.requiredContext],
+    executionGate: getPlaneExecutionGate(descriptor.helperRef.capabilityKey ?? descriptor.helperRef.helperKey),
   };
 }
 
@@ -97,6 +107,7 @@ function toEnvKey(contextKey: BidviaScenarioContextKey): string {
 
 function buildHints(params: {
   surface: 'cli' | 'mcp';
+  executionGate: BidviaPlaneExecutionGate | undefined;
   localCapabilityRiskTier: string;
   missingContext: BidviaScenarioContextKey[];
   dryRun: boolean;
@@ -109,6 +120,10 @@ function buildHints(params: {
 
   if (params.surface === 'mcp') {
     hints.push('This MCP execution tool uses the existing local execution client seam.');
+  }
+
+  if (params.executionGate?.executionTruth === 'blocked-pending-packet') {
+    hints.push('Execution is currently blocked by plane policy until Core freezes the packet-complete payload truth.');
   }
 
   if (params.missingContext.length > 0) {
@@ -147,8 +162,11 @@ function buildPreflight(
     localCapabilityRiskTier: catalogEntry.localCapabilityRiskTier,
     requiredContext: [...catalogEntry.requiredContext],
     missingContext,
+    runnable: catalogEntry.executionGate?.executionTruth !== 'blocked-pending-packet',
+    blockedBy: catalogEntry.executionGate?.blockedBy ?? null,
     hints: buildHints({
       surface,
+      executionGate: catalogEntry.executionGate,
       localCapabilityRiskTier: catalogEntry.localCapabilityRiskTier,
       missingContext,
       dryRun,

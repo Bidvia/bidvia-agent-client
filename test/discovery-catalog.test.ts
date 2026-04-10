@@ -167,6 +167,8 @@ test('buildLocalDiscoveryCatalog returns operator-readable local mappings withou
     sourceOfTruth: 'local-sdk-helpers',
     localOnly: true,
     remoteDiscovery: false,
+    runnable: true,
+    blockedBy: null,
     cliCommands: [],
     mcpTools: [
       {
@@ -218,6 +220,8 @@ test('buildLocalDiscoveryCatalog returns operator-readable local mappings withou
     sourceOfTruth: 'local-sdk-helpers',
     localOnly: true,
     remoteDiscovery: false,
+    runnable: true,
+    blockedBy: null,
     cliCommands: [],
     mcpTools: [
       {
@@ -238,12 +242,14 @@ test('buildLocalDiscoveryCatalog returns operator-readable local mappings withou
     level: 'atomic-route',
     localCapabilityTier: 'L3-governed-commercial',
     localCapabilityRiskTier: 'governed-commercial',
-    discoveryKind: 'execute',
+    discoveryKind: 'blocked',
     recommendedOutputMode: 'execution-result',
     sourceOfTruth: 'local-sdk-helpers',
     localOnly: true,
     remoteDiscovery: false,
-    taskPlaneCapabilityMode: 'executable',
+    runnable: false,
+    blockedBy: 'core-plane-payload-packet-not-yet-frozen',
+    taskPlaneCapabilityMode: 'blocked-pending-packet',
     cliCommands: [],
     mcpTools: [
       {
@@ -269,6 +275,8 @@ test('buildLocalDiscoveryCatalog returns operator-readable local mappings withou
     sourceOfTruth: 'local-sdk-helpers',
     localOnly: true,
     remoteDiscovery: false,
+    runnable: true,
+    blockedBy: null,
     cliCommands: [],
     mcpTools: [
       {
@@ -291,11 +299,13 @@ test('buildLocalDiscoveryCatalog returns operator-readable local mappings withou
     level: 'atomic-route',
     localCapabilityTier: 'L3-governed-commercial',
     localCapabilityRiskTier: 'governed-commercial',
-    discoveryKind: 'execute',
+    discoveryKind: 'blocked',
     recommendedOutputMode: 'execution-result',
     sourceOfTruth: 'local-sdk-helpers',
     localOnly: true,
     remoteDiscovery: false,
+    runnable: false,
+    blockedBy: 'core-plane-payload-packet-not-yet-frozen',
     cliCommands: [],
     mcpTools: [
       {
@@ -328,6 +338,9 @@ test('buildLocalMcpToolCatalog derives MCP descriptors from the shared local dis
     localCapabilityRiskTier: 'runtime-execution',
     accessContextFamily: 'registration',
     requiredContext: ['tenantId', 'registrationId', 'principalId'],
+    runnable: false,
+    blockedBy: 'core-plane-payload-packet-not-yet-frozen',
+    taskPlaneCapabilityMode: 'blocked-pending-packet',
   });
 
   assert.deepEqual(mcpTools.find((tool) => tool.toolName === 'agent-presence-read'), {
@@ -415,6 +428,8 @@ test('buildLocalMcpToolCatalog derives MCP descriptors from the shared local dis
     localCapabilityRiskTier: 'governed-commercial',
     accessContextFamily: 'operator-company',
     requiredContext: ['tenantId', 'principalId', 'companyId'],
+    runnable: true,
+    blockedBy: null,
   });
 
   assert.deepEqual(mcpTools.find((tool) => tool.toolName === 'create-provisional-agent-execution'), {
@@ -433,6 +448,8 @@ test('buildLocalMcpToolCatalog derives MCP descriptors from the shared local dis
     accessContextFamily: 'tenant',
     contextSemantic: 'public-provisional',
     requiredContext: ['tenantId'],
+    runnable: true,
+    blockedBy: null,
   });
 
   assert.deepEqual(mcpTools.find((tool) => tool.toolName === 'claim-provisional-agent-execution'), {
@@ -450,6 +467,8 @@ test('buildLocalMcpToolCatalog derives MCP descriptors from the shared local dis
     localCapabilityRiskTier: 'runtime-execution',
     accessContextFamily: 'session',
     requiredContext: ['tenantId', 'sessionId'],
+    runnable: true,
+    blockedBy: null,
   });
 });
 

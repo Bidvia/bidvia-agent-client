@@ -2,13 +2,15 @@ import type {
   BidviaEnterpriseIntegrationPlaneHelperGroup,
   BidviaMcpToolDescriptor,
   BidviaMcpToolOutputMode,
+  BidviaPlaneExecutionGate,
   BidviaRouteCapability,
 } from './contracts.js';
 import { buildCapabilityPlaneDiscoveryBoundary } from './capability-plane.js';
 import { buildEnterpriseIntegrationPlaneView } from './enterprise-integration-plane.js';
 import { exportRouteCapabilityCatalog } from './capabilities.js';
+import { getPlaneExecutionGate } from './plane-execution-gate.js';
 
-type BidviaLocalDiscoveryKind = 'read' | 'review-safe' | 'execute';
+type BidviaLocalDiscoveryKind = 'read' | 'review-safe' | 'execute' | 'blocked';
 
 type BidviaLocalDiscoveryRecommendedOutputMode = BidviaMcpToolOutputMode;
 
@@ -47,6 +49,8 @@ export interface BidviaLocalDiscoveryCatalogEntry extends Pick<
   sourceOfTruth: 'local-sdk-helpers';
   localOnly: true;
   remoteDiscovery: false;
+  runnable?: boolean;
+  blockedBy?: string | null;
   cliCommands: string[];
   mcpTools: Array<{
     toolName: string;
@@ -665,7 +669,13 @@ function buildRouteCapabilityMap(): Map<string, BidviaRouteCapability> {
   return new Map(exportRouteCapabilityCatalog().map((capability) => [capability.helperKey, capability]));
 }
 
+function getExecutionGate(helperKey: string): BidviaPlaneExecutionGate | undefined {
+  return getPlaneExecutionGate(helperKey);
+}
+
 function getDiscoveryKind(capability: BidviaRouteCapability): BidviaLocalDiscoveryKind {
+  const executionGate = getExecutionGate(capability.helperKey);
+
   if (capability.scope === 'read') {
     return 'read';
   }
@@ -674,7 +684,29 @@ function getDiscoveryKind(capability: BidviaRouteCapability): BidviaLocalDiscove
     return 'review-safe';
   }
 
+  if (executionGate?.executionTruth === 'blocked-pending-packet') {
+    return 'blocked';
+  }
+
   return 'execute';
+}
+
+function buildExecutionDiscoverability(helperKey: string): {
+  runnable: boolean;
+  blockedBy: string | null;
+} {
+  const executionGate = getExecutionGate(helperKey);
+  if (!executionGate) {
+    return {
+      runnable: true,
+      blockedBy: null,
+    };
+  }
+
+  return {
+    runnable: executionGate.executionTruth !== 'blocked-pending-packet',
+    blockedBy: executionGate.blockedBy,
+  };
 }
 
 function buildRecommendedOutputMode(
@@ -713,6 +745,9 @@ function createLocalMcpToolDescriptor(binding: BidviaLocalDiscoveryMcpBinding): 
     accessContextFamily: capability.accessContextFamily,
     ...(contextSemantic ? { contextSemantic } : {}),
     requiredContext: [...capability.requiredContext],
+    ...(binding.outputMode !== 'execution-result'
+      ? {}
+      : buildExecutionDiscoverability(binding.capabilityKey ?? binding.helperKey)),
     ...(capability.taskPlaneCapabilityMode === undefined
       ? {}
       : { taskPlaneCapabilityMode: capability.taskPlaneCapabilityMode }),
@@ -750,6 +785,9 @@ export function buildLocalDiscoveryCatalog(): BidviaLocalDiscoveryCatalogEntry[]
     const contextSemantic = capability.contextSemantic !== capability.accessContextFamily
       ? capability.contextSemantic
       : undefined;
+    const executionDiscoverability = capability.scope === 'read' || capability.localCapabilityRiskTier === 'review-safe'
+      ? undefined
+      : buildExecutionDiscoverability(capability.helperKey);
 
     return {
       helperKey: capability.helperKey,
@@ -767,6 +805,7 @@ export function buildLocalDiscoveryCatalog(): BidviaLocalDiscoveryCatalogEntry[]
       sourceOfTruth: discoveryBoundary.sourceOfTruth,
       localOnly: discoveryBoundary.localOnly,
       remoteDiscovery: discoveryBoundary.remoteDiscovery,
+      ...(executionDiscoverability ?? {}),
       ...(capability.taskPlaneCapabilityMode === undefined
         ? {}
         : { taskPlaneCapabilityMode: capability.taskPlaneCapabilityMode }),

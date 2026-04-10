@@ -39,8 +39,8 @@ test('task-plane adapter groups governed task semantics while keeping local shel
   assert.equal(taskPlane.timeoutTruth.remotePayloadSupported, false);
   assert.equal(taskPlane.timeoutTruth.blockedBy, 'core-plane-payload-packet-not-yet-frozen');
   assert.equal(taskParticipationModule.getTaskPlaneCapabilityMode('listTaskDispatches'), 'visibility-only');
-  assert.equal(taskParticipationModule.getTaskPlaneCapabilityMode('createTaskDispatch'), 'executable');
-  assert.equal(taskParticipationModule.getTaskPlaneCapabilityMode('suspendTaskDispatch'), 'executable');
+  assert.equal(taskParticipationModule.getTaskPlaneCapabilityMode('createTaskDispatch'), 'blocked-pending-packet');
+  assert.equal(taskParticipationModule.getTaskPlaneCapabilityMode('suspendTaskDispatch'), 'blocked-pending-packet');
   assert.equal(taskParticipationModule.getTaskPlaneCapabilityMode('missingTaskHelper'), undefined);
 });
 
@@ -48,13 +48,8 @@ test('task-plane executable helper coverage derives from the shared plane execut
   const taskParticipationModule = await import('../src/index.ts');
 
   const taskPlane = taskParticipationModule.buildTaskPlaneView();
-  const sharedTaskExecutionHelperKeys = taskParticipationModule
-    .listPlaneExecutionGates()
-    .filter((gate) => gate.plane === 'task')
-    .map((gate) => gate.helperKey);
-
-  assert.deepEqual(taskPlane.capabilityModes.executableHelperKeys, sharedTaskExecutionHelperKeys);
-  assert.equal(taskParticipationModule.getTaskPlaneCapabilityMode('postHeartbeat'), 'executable');
+  assert.deepEqual(taskPlane.capabilityModes.executableHelperKeys, []);
+  assert.equal(taskParticipationModule.getTaskPlaneCapabilityMode('postHeartbeat'), 'blocked-pending-packet');
 });
 
 test('task-participation helpers keep task offers and retry awareness local and descriptive', async () => {

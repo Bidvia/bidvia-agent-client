@@ -28,6 +28,8 @@ type ExecutionPreflight = {
   localCapabilityRiskTier: string;
   requiredContext: string[];
   missingContext: string[];
+  runnable: boolean;
+  blockedBy: string | null;
   hints: string[];
 };
 
@@ -71,8 +73,11 @@ test('runCli heartbeat dry-run emits structured preflight context and risk hints
       localCapabilityRiskTier: 'runtime-execution',
       requiredContext: ['tenantId', 'registrationId', 'principalId'],
       missingContext: ['registrationId', 'principalId'],
+      runnable: false,
+      blockedBy: 'core-plane-payload-packet-not-yet-frozen',
       hints: [
         'Dry-run stays local and does not execute the remote registration-bound route.',
+        'Execution is currently blocked by plane policy until Core freezes the packet-complete payload truth.',
         'Set BIDVIA_REGISTRATION_ID and BIDVIA_PRINCIPAL_ID before running the real execution command.',
         'Risk tier runtime-execution means the non-dry-run command writes to the remote runtime route.',
       ],
@@ -120,7 +125,10 @@ test('runCli heartbeat fails fast with structured missing-context guidance befor
         localCapabilityRiskTier: 'runtime-execution',
         requiredContext: ['tenantId', 'registrationId', 'principalId'],
         missingContext: ['registrationId', 'principalId'],
+        runnable: false,
+        blockedBy: 'core-plane-payload-packet-not-yet-frozen',
         hints: [
+          'Execution is currently blocked by plane policy until Core freezes the packet-complete payload truth.',
           'Set BIDVIA_REGISTRATION_ID and BIDVIA_PRINCIPAL_ID before running the real execution command.',
           'Use --dry-run to inspect the local-only payload preview without remote execution.',
           'Risk tier runtime-execution means the non-dry-run command writes to the remote runtime route.',
@@ -163,8 +171,11 @@ test('dispatchMcpToolCall adds execution preflight metadata and rejects missing 
     localCapabilityRiskTier: 'runtime-execution',
     requiredContext: ['tenantId', 'registrationId', 'principalId'],
     missingContext: [],
+    runnable: false,
+    blockedBy: 'core-plane-payload-packet-not-yet-frozen',
     hints: [
       'This MCP execution tool uses the existing local execution client seam.',
+      'Execution is currently blocked by plane policy until Core freezes the packet-complete payload truth.',
       'Risk tier runtime-execution means the tool writes to the remote runtime route when context is present.',
     ],
   });
