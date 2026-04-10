@@ -89,25 +89,25 @@ const identitySessionOnboardingSupportSteps:
     {
       helperKey: 'refreshSession',
       routePathTemplate: '/runtime/sessions/refresh',
-      requiredContext: ['sessionId'],
+      requiredContext: ['tenantId', 'sessionId'],
       rationale: 'Preserve bounded session freshness support only after a session already exists.',
     },
     {
       helperKey: 'revokeSession',
       routePathTemplate: '/runtime/sessions/revoke',
-      requiredContext: ['sessionId'],
+      requiredContext: ['tenantId', 'sessionId'],
       rationale: 'Preserve bounded session invalidation support without widening local login semantics.',
     },
     {
       helperKey: 'getAccountMe',
       routePathTemplate: '/runtime/account/me',
-      requiredContext: ['sessionId'],
+      requiredContext: ['tenantId', 'sessionId'],
       rationale: 'Read the bounded account/session payload returned by Core without treating it as a client-owned account product.',
     },
     {
       helperKey: 'selectOrg',
       routePathTemplate: '/runtime/account/select-org',
-      requiredContext: ['sessionId'],
+      requiredContext: ['tenantId', 'sessionId'],
       rationale: 'Support bounded active-org selection when Core requires session-scoped organization resolution before claim or governed-run continuation.',
     },
   ];

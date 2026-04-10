@@ -65,6 +65,13 @@ test('BidviaClient uses the frozen provisional->query->claim onboarding contract
       'selectOrg',
     ],
   );
+  const supportStepsByHelperKey = new Map(
+    identitySessionPlane.onboardingSupport.helperSteps.map((step) => [step.helperKey, step]),
+  );
+  assert.deepEqual(supportStepsByHelperKey.get('refreshSession')?.requiredContext, ['tenantId', 'sessionId']);
+  assert.deepEqual(supportStepsByHelperKey.get('revokeSession')?.requiredContext, ['tenantId', 'sessionId']);
+  assert.deepEqual(supportStepsByHelperKey.get('getAccountMe')?.requiredContext, ['tenantId', 'sessionId']);
+  assert.deepEqual(supportStepsByHelperKey.get('selectOrg')?.requiredContext, ['tenantId', 'sessionId']);
   assert.equal(identitySessionPlane.sessionTruth.payloadPacketStatus, 'blocked-pending-packet');
   assert.equal(String(calls[0]?.input), 'http://127.0.0.1:8787/runtime/agents/provisional');
   assert.equal(String(calls[1]?.input), 'http://127.0.0.1:8787/runtime/agents/provisional?provisional_agent_ref=prov-agent-1');
