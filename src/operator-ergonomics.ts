@@ -249,3 +249,7 @@ export function buildMcpMissingContextMessage(
 
   return `MCP tool ${toolName} is missing required local execution context: ${missingContext.join(', ')}. Use bidvia route-context-matrix to confirm the next Bidvia context family, then set ${envKeys.join(' and ')} before retrying this local stdio MCP tool.`;
 }
+
+export function buildMcpPlaneBlockedMessage(toolName: string, blockedBy: string): string {
+  return `MCP tool ${toolName} is blocked by the shared plane execution gate: ${blockedBy}. Use bidvia route-context-matrix to confirm the current plane adoption status before retrying this local stdio MCP tool.`;
+}

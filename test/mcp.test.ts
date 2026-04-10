@@ -352,6 +352,44 @@ test('dispatchMcpToolCall missing-context wording keeps public provisional creat
   );
 });
 
+test('dispatchMcpToolCall blocks plane-gated execution helpers even when required context is present', async () => {
+  let called = false;
+
+  await assert.rejects(
+    () => dispatchMcpToolCallWithExecution(
+      {
+        toolName: 'heartbeat-execution',
+        arguments: {
+          now: '2026-04-04T13:00:00.000Z',
+          expiresAt: '2026-04-04T13:05:00.000Z',
+        },
+      },
+      {
+        createExecutionClient: () => ({
+          options: {
+            context: {
+              tenantId: 'tenant-runtime',
+              principalId: 'principal-runtime',
+              registrationId: 'areg-runtime',
+            },
+          },
+          async postHeartbeat() {
+            called = true;
+            return {
+              ok: true,
+            };
+          },
+        }) as never,
+      },
+    ),
+    {
+      message: 'MCP tool heartbeat-execution is blocked by the shared plane execution gate: core-plane-payload-packet-not-yet-frozen. Use bidvia route-context-matrix to confirm the current plane adoption status before retrying this local stdio MCP tool.',
+    },
+  );
+
+  assert.equal(called, false);
+});
+
 test('MCP tool catalog export returns stable machine-readable descriptor data', () => {
   const exportedCatalog = exportMcpToolCatalog();
 
@@ -1347,34 +1385,39 @@ test('dispatchMcpToolCall routes shipped preview/export tools through existing b
 });
 
 test('dispatchMcpToolCall routes local execution tools through the explicit runtime adapter seam', async () => {
-  const heartbeat = await dispatchMcpToolCallWithExecution(
+  const provisionalCreate = await dispatchMcpToolCallWithExecution(
     {
-      toolName: 'heartbeat-execution',
+      toolName: 'create-provisional-agent-execution',
       arguments: {
+        provisionalAgentRef: 'prov-explicit-runtime-1',
         now: '2026-03-29T10:00:00Z',
-        expiresAt: '2026-03-29T10:05:00Z',
       },
     },
     {
       createExecutionClient: () => ({
-        async postHeartbeat(input: { expiresAt: string }) {
+        options: {
+          context: {
+            tenantId: 'tenant-explicit-runtime',
+          },
+        },
+        async createProvisionalAgent(input: { provisionalAgentRef: string }) {
           return {
             ok: true,
-            route: 'heartbeat',
-            expiresAt: input.expiresAt,
+            route: 'create-provisional-agent',
+            provisionalAgentRef: input.provisionalAgentRef,
           };
         },
       }) as never,
     },
   );
 
-  assert.equal(heartbeat.toolName, 'heartbeat-execution');
-  assert.equal(heartbeat.outputMode, 'execution-result');
-  assert.deepEqual(heartbeat.result, {
+  assert.equal(provisionalCreate.toolName, 'create-provisional-agent-execution');
+  assert.equal(provisionalCreate.outputMode, 'execution-result');
+  assert.deepEqual(provisionalCreate.result, {
     executionResult: {
       ok: true,
-      route: 'heartbeat',
-      expiresAt: '2026-03-29T10:05:00Z',
+      route: 'create-provisional-agent',
+      provisionalAgentRef: 'prov-explicit-runtime-1',
     },
   });
 });
@@ -1414,9 +1457,11 @@ test('dispatchMcpToolCall routes widened Task 2 execution helpers through the sh
     ),
     dispatchMcpToolCallWithExecution(
       {
-        toolName: 'create-commercial-action-execution',
+        toolName: 'claim-provisional-agent-execution',
         arguments: {
-          commercialActionId: 'commercial-action-1',
+          provisionalAgentRef: 'prov-1',
+          claimToken: 'claim-token-1',
+          now: '2026-03-29T10:10:00Z',
         },
       },
       {
@@ -1424,8 +1469,7 @@ test('dispatchMcpToolCall routes widened Task 2 execution helpers through the sh
           options: {
             context: {
               tenantId: 'tenant-a',
-              principalId: 'principal-a',
-              companyId: 'company-a',
+              sessionId: 'session-a',
             },
           },
           async createProvisionalAgent(input: unknown) {
@@ -1434,10 +1478,10 @@ test('dispatchMcpToolCall routes widened Task 2 execution helpers through the sh
               provisionalAgentRef: 'prov-1',
             };
           },
-          async createCommercialAction(input: unknown) {
-            calls.push({ helper: 'createCommercialAction', input });
+          async claimProvisionalAgent(input: unknown) {
+            calls.push({ helper: 'claimProvisionalAgent', input });
             return {
-              commercialActionId: 'commercial-action-1',
+              claimStatus: 'claimed',
             };
           },
         }) as never,
@@ -1449,9 +1493,11 @@ test('dispatchMcpToolCall routes widened Task 2 execution helpers through the sh
     [...calls].sort((left, right) => left.helper.localeCompare(right.helper)),
     [
       {
-        helper: 'createCommercialAction',
+        helper: 'claimProvisionalAgent',
         input: {
-          commercialActionId: 'commercial-action-1',
+          provisionalAgentRef: 'prov-1',
+          claimToken: 'claim-token-1',
+          now: '2026-03-29T10:10:00Z',
         },
       },
       {
@@ -1470,7 +1516,7 @@ test('dispatchMcpToolCall routes widened Task 2 execution helpers through the sh
     },
     {
       executionResult: {
-        commercialActionId: 'commercial-action-1',
+        claimStatus: 'claimed',
       },
     },
   ]);

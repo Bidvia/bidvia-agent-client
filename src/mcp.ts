@@ -25,6 +25,7 @@ import {
 import {
   buildMcpExecutionPreflight,
   buildMcpMissingContextMessage,
+  buildMcpPlaneBlockedMessage,
 } from './operator-ergonomics.js';
 import type { BidviaLocalMcpProductizationSnapshot } from './discovery-catalog.js';
 import type { BidviaOpportunityPackageHandoffPlanInput } from './handoffs.js';
@@ -34,6 +35,7 @@ import {
   buildBidviaSurfaceRuntimeIdentityContext,
   runBidviaSurfaceCapability,
 } from './runtime/surface-runtime.js';
+import { isBlockedCapabilityExecutionError } from './runtime/capability-orchestration.js';
 
 function cloneMcpToolCatalog(catalog: ReadonlyArray<BidviaMcpToolDescriptor>): BidviaMcpToolDescriptor[] {
   return structuredClone([...catalog]);
@@ -498,21 +500,31 @@ async function dispatchRegisteredAgentExecutionTool(
 
   const helperKey = descriptor.helperRef.capabilityKey ?? descriptor.helperRef.helperKey;
   const executionContext = buildRuntimeExecutionIdentity(preflight, client);
-  const executionResult = await runBidviaSurfaceCapability({
-    transport: 'mcp',
-    helperKey,
-    capabilityKey: helperKey,
-    identity: buildBidviaSurfaceRuntimeIdentityContext(executionContext),
-    input,
-    createClient: () => client,
-    execute: async (runtimeClient) => adapter
-      ? adapter.run(runtimeClient, input)
-      : directDispatcher!(runtimeClient, input),
-    now: dependencies.now ?? (() => new Date().toISOString()),
-    accumulation: dependencies.localAccumulationPath
-      ? { path: dependencies.localAccumulationPath }
-      : undefined,
-  });
+  let executionResult: unknown;
+
+  try {
+    executionResult = await runBidviaSurfaceCapability({
+      transport: 'mcp',
+      helperKey,
+      capabilityKey: helperKey,
+      identity: buildBidviaSurfaceRuntimeIdentityContext(executionContext),
+      input,
+      createClient: () => client,
+      execute: async (runtimeClient) => adapter
+        ? adapter.run(runtimeClient, input)
+        : directDispatcher!(runtimeClient, input),
+      now: dependencies.now ?? (() => new Date().toISOString()),
+      accumulation: dependencies.localAccumulationPath
+        ? { path: dependencies.localAccumulationPath }
+        : undefined,
+    });
+  } catch (error) {
+    if (isBlockedCapabilityExecutionError(error) && error.blockedByPlaneGate) {
+      throw new Error(buildMcpPlaneBlockedMessage(descriptor.toolName, error.blockedByPlaneGate));
+    }
+
+    throw error;
+  }
 
   return {
     toolName: descriptor.toolName,
