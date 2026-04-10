@@ -20,6 +20,7 @@ import type {
   BidviaClientRequestDescriptor,
   BidviaClientTransportErrorKind,
   BidviaCreateConnectionRequestInput,
+  BidviaEnterpriseAccountSignUpInput,
   BidviaCreateListingInput,
   BidviaEvidenceSubmissionInput,
   BidviaExportOpportunityPackageInput,
@@ -28,10 +29,13 @@ import type {
   BidviaLeaseWriteInput,
   BidviaNotificationIdentifierInput,
   BidviaParticipationStateWriteInput,
+  BidviaPersonalAccountSignUpInput,
   BidviaProposalSubmissionInput,
   BidviaProvisionalAgentClaimInput,
   BidviaProvisionalAgentCreateInput,
   BidviaQueryProvisionalAgentInput,
+  BidviaSelectOrgInput,
+  BidviaSignInInput,
   BidviaSyncUploadInput,
   BidviaActivateListingInput,
   BidviaApproveConnectionRequestInput,
@@ -108,6 +112,99 @@ export class BidviaClient {
 
   getEnterpriseIntegrationPlaneView(): BidviaEnterpriseIntegrationPlaneView {
     return buildEnterpriseIntegrationPlaneView();
+  }
+
+  async signUpPersonalAccount(
+    input: BidviaPersonalAccountSignUpInput,
+    requestPolicy?: BidviaClientRequestPolicy,
+  ) {
+    const context = this.resolveRequestContext(requestPolicy);
+    return this.request('/runtime/accounts/personal/sign-up', {
+      context,
+      method: 'POST',
+      body: {
+        email: input.email,
+        password: input.password,
+        display_name: input.displayName,
+        now: input.now,
+      },
+      requestPolicy,
+    });
+  }
+
+  async signUpEnterpriseAccount(
+    input: BidviaEnterpriseAccountSignUpInput,
+    requestPolicy?: BidviaClientRequestPolicy,
+  ) {
+    const context = this.resolveRequestContext(requestPolicy);
+    return this.request('/runtime/accounts/enterprise/sign-up', {
+      context,
+      method: 'POST',
+      body: {
+        email: input.email,
+        password: input.password,
+        company_name: input.companyName,
+        now: input.now,
+      },
+      requestPolicy,
+    });
+  }
+
+  async signIn(input: BidviaSignInInput, requestPolicy?: BidviaClientRequestPolicy) {
+    const context = this.resolveRequestContext(requestPolicy);
+    return this.request('/runtime/sessions/sign-in', {
+      context,
+      method: 'POST',
+      body: {
+        email: input.email,
+        password: input.password,
+        now: input.now,
+      },
+      requestPolicy,
+    });
+  }
+
+  async refreshSession(requestPolicy?: BidviaClientRequestPolicy) {
+    const context = this.resolveRequestContext(requestPolicy);
+    return this.request('/runtime/sessions/refresh', {
+      context,
+      method: 'POST',
+      headers: this.requireSessionHeaders(context),
+      requestPolicy,
+    });
+  }
+
+  async revokeSession(requestPolicy?: BidviaClientRequestPolicy) {
+    const context = this.resolveRequestContext(requestPolicy);
+    return this.request('/runtime/sessions/revoke', {
+      context,
+      method: 'POST',
+      headers: this.requireSessionHeaders(context),
+      requestPolicy,
+    });
+  }
+
+  async getAccountMe(requestPolicy?: BidviaClientRequestPolicy) {
+    const context = this.resolveRequestContext(requestPolicy);
+    return this.request('/runtime/account/me', {
+      context,
+      method: 'GET',
+      headers: this.requireSessionHeaders(context),
+      requestPolicy,
+    });
+  }
+
+  async selectOrg(input: BidviaSelectOrgInput, requestPolicy?: BidviaClientRequestPolicy) {
+    const context = this.resolveRequestContext(requestPolicy);
+    return this.request('/runtime/account/select-org', {
+      context,
+      method: 'POST',
+      headers: this.requireSessionHeaders(context),
+      body: {
+        org_id: input.orgId,
+      },
+      requestPolicy,
+    });
   }
 
   async createProvisionalAgent(

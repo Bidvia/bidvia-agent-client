@@ -114,6 +114,30 @@ export interface BidviaQueryProvisionalAgentInput {
   provisionalAgentRef: string;
 }
 
+export interface BidviaPersonalAccountSignUpInput {
+  email: string;
+  password: string;
+  displayName: string;
+  now: string;
+}
+
+export interface BidviaEnterpriseAccountSignUpInput {
+  email: string;
+  password: string;
+  companyName: string;
+  now: string;
+}
+
+export interface BidviaSignInInput {
+  email: string;
+  password: string;
+  now: string;
+}
+
+export interface BidviaSelectOrgInput {
+  orgId: string;
+}
+
 export interface BidviaNotificationIdentifierInput {
   notificationId: string;
 }
