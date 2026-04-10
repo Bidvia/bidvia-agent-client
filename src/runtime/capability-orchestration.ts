@@ -1,4 +1,5 @@
 import { getRouteCapability } from '../capabilities.js';
+import { getPlaneExecutionGate } from '../plane-execution-gate.js';
 import type {
   BidviaLocalCapabilityRiskTier,
   BidviaRouteCapabilityAccessContextFamily,
@@ -36,14 +37,20 @@ export interface BidviaBlockedCapabilityExecutionResult {
   helperKey: string;
   executionKind: BidviaCapabilityExecutionKind;
   missingContext: BidviaScenarioContextKey[];
+  blockedByPlaneGate: string | null;
 }
 
 export class BidviaBlockedCapabilityExecutionError extends Error {
   constructor(
     readonly policy: BidviaCapabilityExecutionPolicy,
     readonly missingContext: BidviaScenarioContextKey[],
+    readonly blockedByPlaneGate: string | null,
   ) {
-    super(`${policy.helperKey} requires local execution context before it can run remotely. Missing: ${missingContext.join(', ')}.`);
+    super(
+      missingContext.length > 0
+        ? `${policy.helperKey} requires local execution context before it can run remotely. Missing: ${missingContext.join(', ')}.`
+        : `${policy.helperKey} is blocked by plane execution gate ${blockedByPlaneGate} until the shared packet-grounded execution truth is frozen.`,
+    );
     this.name = 'BidviaBlockedCapabilityExecutionError';
   }
 }
@@ -146,6 +153,7 @@ export function buildBlockedCapabilityExecutionResult(
     helperKey: error.policy.helperKey,
     executionKind: error.policy.executionKind,
     missingContext: [...error.missingContext],
+    blockedByPlaneGate: error.blockedByPlaneGate,
   };
 }
 
@@ -170,7 +178,13 @@ export class BidviaCapabilityOrchestrator {
     const missingContext = collectMissingContext(policy.requiredContext, this.identity);
 
     if (policy.guard === 'block-when-context-missing' && missingContext.length > 0) {
-      throw new BidviaBlockedCapabilityExecutionError(policy, missingContext);
+      throw new BidviaBlockedCapabilityExecutionError(policy, missingContext, null);
+    }
+
+    const executionGate = getPlaneExecutionGate(input.helperKey);
+
+    if (executionGate?.executionTruth === 'blocked-pending-packet') {
+      throw new BidviaBlockedCapabilityExecutionError(policy, [], executionGate.blockedBy);
     }
 
     if (policy.concurrency === 'concurrent') {

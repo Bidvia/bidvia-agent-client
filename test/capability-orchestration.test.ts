@@ -196,6 +196,75 @@ test('BidviaTaskRuntime blocks risky capability execution when required local co
     helperKey: 'createTaskDispatch',
     executionKind: 'governed-write',
     missingContext: ['companyId'],
+    blockedByPlaneGate: null,
+  });
+});
+
+test('BidviaTaskRuntime blocks plane-gated runtime writes separately from missing-context failures when required context is present', async () => {
+  const exports = publicSurface as Record<string, unknown>;
+
+  assert.equal(typeof exports.createBidviaTaskRuntime, 'function');
+
+  const hookEvents: Array<Record<string, unknown>> = [];
+  const session = buildExecutionSession(
+    exports,
+    {
+      tenantId: 'tenant-a',
+      principalId: 'principal-a',
+      registrationId: 'areg-1',
+    },
+    {
+      onCapabilityCalled: [
+        (event) => {
+          hookEvents.push(event as Record<string, unknown>);
+        },
+      ],
+    },
+  );
+  const createBidviaTaskRuntime = exports.createBidviaTaskRuntime as (input: Record<string, unknown>) => Promise<Record<string, unknown>>;
+  const runtime = await createBidviaTaskRuntime({
+    session,
+    taskDispatchId: 'dispatch-1',
+    journalPath: buildJournalPath('bidvia-capability-orchestration-plane-gated-'),
+  });
+
+  await (runtime.startExecution as () => Promise<unknown>)();
+
+  let executed = false;
+  await assert.rejects(
+    () => (runtime.callCapability as (input: Record<string, unknown>) => Promise<unknown>)({
+      helperKey: 'postHeartbeat',
+      capabilityKey: 'heartbeat.write',
+      input: {
+        now: '2026-04-04T13:00:00.000Z',
+        expiresAt: '2026-04-04T13:05:00.000Z',
+      },
+      call: async () => {
+        executed = true;
+        return { ok: true };
+      },
+    }),
+    /postHeartbeat is blocked by plane execution gate core-plane-payload-packet-not-yet-frozen until the shared packet-grounded execution truth is frozen\./,
+  );
+
+  assert.equal(executed, false);
+  assert.equal((runtime.getState as () => Record<string, unknown>)().status, 'executing');
+  assert.deepEqual((runtime.getState as () => Record<string, unknown>)().pendingResult, undefined);
+  assert.deepEqual((runtime.getJournal as () => { progressMarkers: Array<{ marker: string; detail?: string }> })().progressMarkers.map((marker) => marker.marker), [
+    'execution-started',
+    'capability-blocked',
+  ]);
+  assert.match(
+    (runtime.getJournal as () => { progressMarkers: Array<{ marker: string; detail?: string }> })().progressMarkers[1].detail ?? '',
+    /postHeartbeat is blocked by plane execution gate core-plane-payload-packet-not-yet-frozen until the shared packet-grounded execution truth is frozen\./,
+  );
+  assert.equal(hookEvents.length, 1);
+  assert.deepEqual(hookEvents[0].result, {
+    blocked: true,
+    helperKey: 'postHeartbeat',
+    executionKind: 'runtime-write',
+    missingContext: [],
+    blockedByPlaneGate: 'core-plane-payload-packet-not-yet-frozen',
   });
 });
 
@@ -241,8 +310,8 @@ test('BidviaTaskRuntime uses concurrent orchestration for governed reads and a s
   const singleWriterSteps: string[] = [];
   await Promise.all([
     (runtime.callCapability as (input: Record<string, unknown>) => Promise<unknown>)({
-      helperKey: 'postHeartbeat',
-      capabilityKey: 'heartbeat.write',
+      helperKey: 'claimProvisionalAgent',
+      capabilityKey: 'claim-provisional.write',
       call: async () => {
         singleWriterSteps.push('write-1:start');
         await Promise.resolve();
@@ -251,8 +320,8 @@ test('BidviaTaskRuntime uses concurrent orchestration for governed reads and a s
       },
     }),
     (runtime.callCapability as (input: Record<string, unknown>) => Promise<unknown>)({
-      helperKey: 'postHeartbeat',
-      capabilityKey: 'heartbeat.write',
+      helperKey: 'claimProvisionalAgent',
+      capabilityKey: 'claim-provisional.write',
       call: async () => {
         singleWriterSteps.push('write-2:start');
         await Promise.resolve();
