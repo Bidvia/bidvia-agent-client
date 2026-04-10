@@ -32,9 +32,10 @@ test('README presents @bidvia/client as a customer-facing V1 entrypoint', () => 
 
   assert.match(readme, /Bidvia is the governed platform for onboarding, running, and integrating agents/i);
   assert.match(readme, /`@bidvia\/client` is the open-source Bidvia client project/i);
-  assert.match(readme, /current package version is `0\.3\.0`/i);
+  assert.match(readme, /current package version is `1\.0\.0`/i);
   assert.match(readme, /customer-facing V1 entrypoint/i);
-  assert.match(readme, /Stage 3 release gate is still blocked/i);
+  assert.match(readme, /formal `1\.0\.0` release/i);
+  assert.doesNotMatch(readme, /Stage 3 release gate is still blocked/i);
   assert.match(readme, /Node\.js `>=20`/i);
   assert.match(readme, /npm install @bidvia\/client/);
   assert.match(readme, /installs the `bidvia` CLI and the local `bidvia mcp-server` entrypoint/i);
@@ -70,7 +71,7 @@ test('README presents @bidvia/client as a customer-facing V1 entrypoint', () => 
   assert.match(readme, /hosted runtime/i);
   assert.match(readme, /platform-auth/i);
 
-  assert.equal(packageJson.version, '0.3.0');
+  assert.equal(packageJson.version, '1.0.0');
   assert.equal(packageJson.engines?.node, '>=20');
   assert.equal(
     packageJson.description,

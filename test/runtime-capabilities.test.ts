@@ -318,9 +318,10 @@ test('buildLocalRuntimeCapabilitySnapshot carries shared execution truth without
       {
         plane: 'enterprise-integration',
         descriptiveVisibility: 'descriptive-plane-visible',
-        executableHelperEligibility: 'packet-grounded-read',
+        executableHelperEligibility: 'packet-grounded-execution',
       },
     ],
   );
-  assert.deepEqual(snapshot.stage3ReleaseGate.blockedBy, ['plane-adoption-incomplete']);
+  assert.equal(snapshot.stage3ReleaseGate.status, 'ready');
+  assert.deepEqual(snapshot.stage3ReleaseGate.blockedBy, []);
 });

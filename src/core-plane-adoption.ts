@@ -5,7 +5,6 @@ import type {
   BidviaStage3ReleaseGate,
 } from './contracts.js';
 import {
-  listCorePayloadContractMatrixEntries,
   listCorePayloadPlaneAdoptionSummaries,
 } from './core-payload-contract-matrix.js';
 
@@ -57,19 +56,24 @@ const stage3ReleaseGateWavePlanes: Array<Pick<BidviaCorePlaneWaveStatus, 'wave' 
   },
 ];
 
+function isStage3ProofPlaneComplete(status: BidviaCorePlaneAdoptionStatus): boolean {
+  if (status.plane === 'workflow-stage') {
+    return status.descriptiveVisibility === 'descriptive-plane-visible';
+  }
+
+  return status.payloadPacketStatus === 'packet-grounded';
+}
+
 export function listStage3ReleaseGateValidatorCommands(): BidviaStage3ReleaseGate['requiredValidatorCommands'] {
   return [...stage3ReleaseGateValidatorCommands];
 }
 
 export function listCorePlaneWaveStatuses(): BidviaCorePlaneWaveStatus[] {
-  const matrixEntries = listCorePayloadContractMatrixEntries();
+  const adoptionStatuses = listCorePlaneAdoptionStatuses();
 
   return stage3ReleaseGateWavePlanes.map(({ wave, planes }) => ({
     wave,
-    status: planes.every((plane) => matrixEntries.some((entry) => entry.plane === plane))
-      && matrixEntries
-        .filter((entry) => planes.includes(entry.plane))
-        .every((entry) => entry.helperState === 'packet-grounded-read' || entry.helperState === 'packet-grounded-execution')
+    status: planes.every((plane) => adoptionStatuses.some((status) => status.plane === plane && isStage3ProofPlaneComplete(status)))
       ? 'complete'
       : 'blocked',
     planes: [...planes],

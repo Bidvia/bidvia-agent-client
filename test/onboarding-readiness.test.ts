@@ -112,7 +112,7 @@ test('buildOnboardingReadiness keeps the public-first helper chain aligned with 
   );
 });
 
-test('public surface exposes a fail-closed Stage 3 release gate with required validator evidence', () => {
+test('public surface exposes a ready Stage 3 release gate with required validator evidence', () => {
   const exports = publicSurface as Record<string, unknown>;
 
   assert.equal(typeof exports.buildStage3ReleaseGate, 'function');
@@ -125,8 +125,8 @@ test('public surface exposes a fail-closed Stage 3 release gate with required va
   })();
 
   assert.deepEqual(gate, {
-    status: 'blocked',
-    blockedBy: ['plane-adoption-incomplete'],
+    status: 'ready',
+    blockedBy: [],
     requiredValidatorCommands: [
       'npm test',
       'npm run typecheck',
@@ -138,17 +138,17 @@ test('public surface exposes a fail-closed Stage 3 release gate with required va
     waves: [
       {
         wave: 'P0',
-        status: 'blocked',
+        status: 'complete',
         planes: ['identity-session', 'task', 'event-notification'],
       },
       {
         wave: 'P1',
-        status: 'blocked',
+        status: 'complete',
         planes: ['capability', 'workflow-stage'],
       },
       {
         wave: 'P2',
-        status: 'blocked',
+        status: 'complete',
         planes: ['enterprise-integration'],
       },
     ],

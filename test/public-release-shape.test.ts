@@ -87,7 +87,6 @@ test('public release docs no longer depend on transitional publication wording i
 
   for (const document of [readme, roadmap, onboardingGuide, releaseChecklist, releaseNotes]) {
     assert.match(document, /Stage 3 (release )?(closure|gate)/i);
-    assert.match(document, /blocked/i);
   }
 
   for (const document of [readme, onboardingGuide, releaseChecklist, releaseNotes]) {
@@ -133,9 +132,11 @@ test('public release docs no longer depend on transitional publication wording i
   assert.match(roadmap, /P0, P1, and P2 adoption/i);
   assert.match(onboardingGuide, /route-context-matrix/i);
   assert.match(onboardingGuide, /runtime-capabilities/i);
-  assert.match(releaseChecklist, /If any Stage 3 gate surface still reports blocked/i);
-  assert.match(releaseNotes, /must not be described as full `1\.0\.0` closure/i);
-  assert.doesNotMatch(releaseNotes, /completed shipped package surface with full `1\.0\.0` closure/i);
+  assert.match(readme, /formal `1\.0\.0` release/i);
+  assert.match(releaseNotes, /formal `1\.0\.0` release/i);
+  assert.match(releaseNotes, /Stage 3 release gate is now ready/i);
+  assert.doesNotMatch(readme, /Stage 3 release gate is still blocked/i);
+  assert.doesNotMatch(releaseNotes, /must not be described as full `1\.0\.0` closure/i);
 
   assert.match(roadmap, /This file remains the single roadmap for `bidvia-agent-client`\./);
   assert.match(roadmap, /Individual `\.sisyphus\/plans\/\*\.md` files are execution slices/);

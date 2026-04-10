@@ -22,13 +22,21 @@ test('runCli prints grouped help output for the learn, create-claim, run, diagno
     'OpenClaw primary path: export stdio MCP config first, then add the companion bundle when you want bundle/bootstrap packaging.',
     'OpenClaw scope for this version: local-first, Core-truth-consuming, stdio MCP primary.',
     'Stage 1 client runtime is complete locally: CLI and MCP execution share one runtime core and local accumulation layer.',
-    'Getting Started (Learn):',
+    'Getting Started (Agent-first Learn):',
     '  onboard',
-    '  context show',
     '  whoami',
+    '  context show',
     '  doctor',
     '  onboarding-readiness',
     '  route-context-matrix',
+    'Prerequisite Account / Session Support:',
+    '  sign-in --input ...',
+    '  sign-up-personal --input ...',
+    '  sign-up-enterprise --input ...',
+    '  account-me',
+    '  select-org --input ...',
+    '  session-refresh',
+    '  session-revoke',
     '  openclaw-mcp-config',
     '  openclaw-bundle-export --output ...',
     'Agent Onboarding (Public Provisional -> Claim):',
@@ -212,21 +220,21 @@ test('runCli prints operator discovery snapshots for CLI route metadata and loca
       descriptiveVisibility: 'descriptive-plane-visible',
       executableHelperEligibility: 'packet-grounded-execution',
       blockedBy: null,
-      notes: ['Expose frozen notification visibility now and fail closed on packet-incomplete execution semantics.'],
+      notes: ['Expose frozen notification visibility and packet-grounded delivery or acknowledgement semantics directly from Core-owned payload truth.'],
     },
     {
       plane: 'enterprise-integration',
       frozenInCore: true,
       payloadPacketStatus: 'packet-grounded',
       descriptiveVisibility: 'descriptive-plane-visible',
-      executableHelperEligibility: 'packet-grounded-read',
+      executableHelperEligibility: 'packet-grounded-execution',
       blockedBy: null,
       notes: ['Regroup bounded commercial, document, media, attachment, and evidence helpers behind one plane adapter.'],
     },
   ]);
   assert.deepEqual(snapshot.cli.releaseGate, {
-    status: 'blocked',
-    blockedBy: ['plane-adoption-incomplete'],
+    status: 'ready',
+    blockedBy: [],
     requiredValidatorCommands: [
       'npm test',
       'npm run typecheck',
@@ -238,17 +246,17 @@ test('runCli prints operator discovery snapshots for CLI route metadata and loca
     waves: [
       {
         wave: 'P0',
-        status: 'blocked',
+        status: 'complete',
         planes: ['identity-session', 'task', 'event-notification'],
       },
       {
         wave: 'P1',
-        status: 'blocked',
+        status: 'complete',
         planes: ['capability', 'workflow-stage'],
       },
       {
         wave: 'P2',
-        status: 'blocked',
+        status: 'complete',
         planes: ['enterprise-integration'],
       },
     ],
@@ -276,6 +284,7 @@ test('runCli prints operator discovery snapshots for CLI route metadata and loca
     localCapabilityTier: 'L0-observe-only',
     localCapabilityRiskTier: 'observe-only',
     contextSemantic: 'principal-governed-read',
+    capabilityPlaneCapabilityMode: 'packet-grounded-read',
   });
   assert.deepEqual(snapshot.cli.routeCapabilities.find((entry) => entry.helperKey === 'listCanonicalSemanticLabels'), {
     helperKey: 'listCanonicalSemanticLabels',
@@ -628,8 +637,8 @@ test('runCli prints a route-context matrix that keeps public-first rows ahead of
     operatorGuidance: 'On local docker host, authority and presence reads require principal-governed tenant context. Authority-ladder reads use the same principal-governed posture, while ladder writes remain operator-governed and separate from workspace admin-session routes.',
   });
   assert.deepEqual(snapshot.stage3ReleaseGate, {
-    status: 'blocked',
-    blockedBy: ['plane-adoption-incomplete'],
+    status: 'ready',
+    blockedBy: [],
     requiredValidatorCommands: [
       'npm test',
       'npm run typecheck',
@@ -641,17 +650,17 @@ test('runCli prints a route-context matrix that keeps public-first rows ahead of
     waves: [
       {
         wave: 'P0',
-        status: 'blocked',
+        status: 'complete',
         planes: ['identity-session', 'task', 'event-notification'],
       },
       {
         wave: 'P1',
-        status: 'blocked',
+        status: 'complete',
         planes: ['capability', 'workflow-stage'],
       },
       {
         wave: 'P2',
-        status: 'blocked',
+        status: 'complete',
         planes: ['enterprise-integration'],
       },
     ],
@@ -886,8 +895,8 @@ test('runCli prints runtime capability snapshots for the public default and pres
     };
   }>) {
     assert.deepEqual(snapshot.stage3ReleaseGate, {
-      status: 'blocked',
-    blockedBy: ['plane-adoption-incomplete'],
+      status: 'ready',
+      blockedBy: [],
       requiredValidatorCommands: [
         'npm test',
         'npm run typecheck',
@@ -899,17 +908,17 @@ test('runCli prints runtime capability snapshots for the public default and pres
       waves: [
         {
           wave: 'P0',
-          status: 'blocked',
+          status: 'complete',
           planes: ['identity-session', 'task', 'event-notification'],
         },
         {
           wave: 'P1',
-          status: 'blocked',
+          status: 'complete',
           planes: ['capability', 'workflow-stage'],
         },
         {
           wave: 'P2',
-          status: 'blocked',
+          status: 'complete',
           planes: ['enterprise-integration'],
         },
       ],

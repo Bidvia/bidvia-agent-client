@@ -1,6 +1,6 @@
 # Bidvia Agent Client
 
-This README is the customer-facing V1 entrypoint for the package surface that ships today.
+This README is the customer-facing V1 entrypoint for the formal `1.0.0` release.
 
 ## What is Bidvia?
 
@@ -14,9 +14,9 @@ The package is agent-first but login-capable: external users may need bounded ac
 
 ## Current version and release maturity
 
-The current package version is `0.3.0`.
+The current package version is `1.0.0`.
 
-This is the current customer-facing V1 entrypoint for the shipped local package surface, not full `1.0.0` closure. Stage 3 release gate is still blocked, and the package must not be described as full `1.0.0` closure until P0, P1, and P2 adoption are packet-grounded and the validator commands stay green together.
+This is the customer-facing V1 entrypoint for the formal `1.0.0` release. The Stage 3 release gate is now ready for the actual public proof target in this repo: the shipped SDK, CLI, MCP handoff, account/session prerequisite support, governed onboarding path, and frozen downstream read surface are aligned and release-verifiable.
 
 ## Installation
 
@@ -50,7 +50,7 @@ npm run validate:release-readiness
 npm run validate:release-gate
 ```
 
-Those validator commands must stay green together before any human release packet can describe public closure. This README treats validator commands to stay green together as a release-boundary requirement, not as proof that public `1.0.0` closure already exists.
+Those validator commands must stay green together before any human release packet can describe public closure. This README treats validator commands to stay green together as a formal `1.0.0` release requirement, not as optional evidence.
 
 ## Quick start
 

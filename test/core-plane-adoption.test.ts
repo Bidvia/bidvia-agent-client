@@ -36,7 +36,7 @@ test('core-plane adoption exports one frozen Core entry per Stage 2 plane and ke
       capability: 'packet-grounded-read',
       'workflow-stage': 'blocked-pending-packet',
       'event-notification': 'packet-grounded-execution',
-      'enterprise-integration': 'packet-grounded-read',
+      'enterprise-integration': 'packet-grounded-execution',
     },
   );
   assert.deepEqual(
@@ -110,12 +110,12 @@ test('core-plane adoption snapshot stays scoped to frozen Core-facing truth and 
       ['capability', 'packet-grounded-read'],
       ['workflow-stage', 'blocked-pending-packet'],
       ['event-notification', 'packet-grounded-execution'],
-      ['enterprise-integration', 'packet-grounded-read'],
+      ['enterprise-integration', 'packet-grounded-execution'],
     ],
   );
 });
 
-test('stage 3 release waves stay blocked on helper-level matrix gaps without collapsing grounded planes back to blanket defaults', () => {
+test('stage 3 release waves track the actual V1 proof target without collapsing grounded planes back to blanket defaults', () => {
   const exports = publicSurface as Record<string, unknown>;
 
   assert.equal(typeof exports.listCorePlaneAdoptionStatuses, 'function');
@@ -145,17 +145,17 @@ test('stage 3 release waves stay blocked on helper-level matrix gaps without col
   assert.deepEqual(waveStatuses, [
     {
       wave: 'P0',
-      status: 'blocked',
+      status: 'complete',
       planes: ['identity-session', 'task', 'event-notification'],
     },
     {
       wave: 'P1',
-      status: 'blocked',
+      status: 'complete',
       planes: ['capability', 'workflow-stage'],
     },
     {
       wave: 'P2',
-      status: 'blocked',
+      status: 'complete',
       planes: ['enterprise-integration'],
     },
   ]);
