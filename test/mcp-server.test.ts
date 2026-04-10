@@ -51,6 +51,7 @@ const expectedMcpServerToolNames = [
   'participation-state-read',
   'task-dispatches-read',
   'task-dispatch-read',
+  'notification-read',
   'create-provisional-agent-execution',
   'claim-provisional-agent-execution',
   'download-sync-execution',

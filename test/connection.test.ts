@@ -60,6 +60,15 @@ test('connection scenario contract expresses createConnectionRequest then approv
     plan.envelope.expectedRouteChain.map((step) => step.routeKey),
     ['createConnectionRequest', 'approveConnectionRequest'],
   );
+  assert.deepEqual(plan.envelope.workflowStage, {
+    workflowIds: ['wf-1'],
+    localStageLabel: 'governed-run-execution',
+    localStageSemantics: 'local-only',
+    coreStageIdentifier: null,
+    coreStageSemantics: 'blocked-pending-packet',
+    blockedBy: 'core-plane-payload-packet-not-yet-frozen',
+    transitionRule: null,
+  });
   assert.equal(plan.createConnectionRequestInput.sourceMatchId, 'match-1');
   assert.equal(plan.approveConnectionRequestInput.approvalRequestId, 'approval-1');
 });

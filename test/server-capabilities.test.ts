@@ -4,6 +4,11 @@ import assert from 'node:assert/strict';
 import {
   normalizeServerCapabilityPayload,
 } from '../src/server-capabilities.ts';
+import { buildCapabilityPlaneServerSnapshot } from '../src/capability-plane.ts';
+import {
+  getLocalMcpToolDescriptor,
+  getRouteCapabilityFromLocalCatalog,
+} from '../src/discovery-catalog.ts';
 import type {
   BidviaNormalizedServerCapabilitySnapshot,
 } from '../src/contracts.ts';
@@ -132,6 +137,26 @@ test('normalizeServerCapabilityPayload keeps local and deferred server knowledge
     serverProvidedCapabilitiesKnown: true,
   });
   assert.equal(snapshot.localMcpServer.available, false);
+});
+
+test('normalizeServerCapabilityPayload flows through the explicit capability-plane adapter without claiming live negotiation', () => {
+  const payload = {
+    route_capabilities: [],
+    mcp_tools: [],
+    mcp_server: {
+      available: false,
+      transport: 'stdio',
+      supported_methods: ['initialize', 'tools/list', 'tools/call'],
+    },
+  } satisfies Parameters<typeof normalizeServerCapabilityPayload>[0];
+
+  assert.deepEqual(
+    normalizeServerCapabilityPayload(payload),
+    buildCapabilityPlaneServerSnapshot(payload, {
+      getRouteCapabilityFromLocalCatalog,
+      getLocalMcpToolDescriptor,
+    }),
+  );
 });
 
 test('normalizeServerCapabilityPayload classifies widened truth-fetch reads from payload data without synthesizing extra support', () => {

@@ -3,6 +3,9 @@ import type {
   BidviaRouteCapabilityContextSemantic,
   BidviaRouteCapability,
 } from './contracts.js';
+import { buildCapabilityPlaneView } from './capability-plane.js';
+import { getEventNotificationPlaneCapabilityMode } from './event-notification-plane.js';
+import { getTaskPlaneCapabilityMode } from './task-plane.js';
 
 type BidviaRouteCapabilityWithOptionalContextSemantic = Omit<BidviaRouteCapability, 'contextSemantic'> & {
   contextSemantic?: BidviaRouteCapabilityContextSemantic;
@@ -11,9 +14,16 @@ type BidviaRouteCapabilityWithOptionalContextSemantic = Omit<BidviaRouteCapabili
 function applyRouteContextSemantic(
   capability: BidviaRouteCapabilityWithOptionalContextSemantic,
 ): BidviaRouteCapability {
+  const taskPlaneCapabilityMode = getTaskPlaneCapabilityMode(capability.helperKey);
+  const eventNotificationPlaneCapabilityMode = getEventNotificationPlaneCapabilityMode(capability.helperKey);
+
   return {
     ...capability,
     contextSemantic: capability.contextSemantic ?? capability.accessContextFamily,
+    ...(taskPlaneCapabilityMode === undefined ? {} : { taskPlaneCapabilityMode }),
+    ...(eventNotificationPlaneCapabilityMode === undefined
+      ? {}
+      : { eventNotificationPlaneCapabilityMode }),
   };
 }
 
@@ -696,6 +706,17 @@ const bidviaBaseRouteCapabilities: ReadonlyArray<BidviaRouteCapabilityWithOption
     localCapabilityRiskTier: 'observe-only',
   },
   {
+    helperKey: 'getNotification',
+    routePathTemplate: '/runtime/notifications/:notification_id',
+    httpMethod: 'GET',
+    accessContextFamily: 'principal-governed-read',
+    requiredContext: ['tenantId', 'principalId'],
+    scope: 'read',
+    level: 'atomic-route',
+    localCapabilityTier: 'L0-observe-only',
+    localCapabilityRiskTier: 'observe-only',
+  },
+  {
     helperKey: 'createTaskDispatch',
     routePathTemplate: '/runtime/agents/:agent_registration_id/task-dispatches',
     httpMethod: 'POST',
@@ -1057,6 +1078,12 @@ export function getRouteCapability(helperKey: string): BidviaRouteCapability | u
 }
 
 export function exportRouteCapabilityCatalog(): BidviaRouteCapability[] {
+  const capabilityPlane = buildCapabilityPlaneView();
+
+  if (!capabilityPlane.localSnapshots.descriptiveOnly) {
+    throw new Error('Capability discovery must remain descriptive-only until packet-complete Core truth exists.');
+  }
+
   return structuredClone([...bidviaRouteCapabilities]);
 }
 

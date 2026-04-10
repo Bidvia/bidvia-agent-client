@@ -1,0 +1,218 @@
+import { listCorePlaneAdoptionStatuses } from './core-plane-adoption.js';
+import type {
+  BidviaCorePlaneAdoptionStatus,
+  BidviaEnterpriseIntegrationPlaneHelperGroup,
+  BidviaEnterpriseIntegrationPlaneHelperGroupKey,
+  BidviaEnterpriseIntegrationPlaneView,
+} from './contracts.js';
+
+const enterpriseIntegrationPlaneHelperGroups: readonly BidviaEnterpriseIntegrationPlaneHelperGroup[] = [
+  {
+    groupKey: 'asset-evidence-family',
+    label: 'Assets, documents, media, evidence, and attachment bindings',
+    helperKeys: ['consumeAssetObjectFamily', 'explainAssetConsumption'],
+    clientMethods: [
+      'listDocumentArtifacts',
+      'getDocumentArtifact',
+      'listMediaAssets',
+      'getMediaAsset',
+      'listEvidenceAssets',
+      'getEvidenceAsset',
+      'listAttachmentBindings',
+      'getAttachmentBinding',
+      'listFileResources',
+      'getFileResource',
+      'listTargetAttachmentBindings',
+    ],
+    cliCommands: [
+      'document-artifacts',
+      'document-artifact',
+      'media-assets',
+      'media-asset',
+      'evidence-assets',
+      'evidence-asset',
+      'attachment-bindings',
+      'attachment-binding',
+      'file-resources',
+      'file-resource',
+      'target-attachment-bindings',
+    ],
+    discoveryHelperKeys: [
+      'listDocumentArtifacts',
+      'getDocumentArtifact',
+      'listMediaAssets',
+      'getMediaAsset',
+      'listEvidenceAssets',
+      'getEvidenceAsset',
+      'listAttachmentBindings',
+      'getAttachmentBinding',
+      'listFileResources',
+      'getFileResource',
+      'listTargetAttachmentBindings',
+    ],
+    broaderEnterpriseAuthorityClaimed: false,
+    broaderSystemAuthorityClaimed: false,
+    payloadPacketStatus: 'blocked-pending-packet',
+    blockedBy: 'core-plane-payload-packet-not-yet-frozen',
+    notes: ['Descriptive asset/document/media/evidence consumption stays bounded to the commercial-universe integration surface.'],
+  },
+  {
+    groupKey: 'evidence-submission',
+    label: 'Registration-bound evidence submission',
+    helperKeys: ['buildEvidenceSubmissionInput'],
+    clientMethods: ['submitEvidence'],
+    cliCommands: ['evidence'],
+    discoveryHelperKeys: ['submitEvidence'],
+    broaderEnterpriseAuthorityClaimed: false,
+    broaderSystemAuthorityClaimed: false,
+    payloadPacketStatus: 'blocked-pending-packet',
+    blockedBy: 'core-plane-payload-packet-not-yet-frozen',
+    notes: ['Evidence submission stays registration-bound and does not claim packet-complete enterprise adjudication semantics.'],
+  },
+  {
+    groupKey: 'commercial-action',
+    label: 'Bounded commercial action continuation',
+    helperKeys: [
+      'buildCommercialActionScenarioPlan',
+      'runCommercialActionScenario',
+      'readCommercialActionScenarioReview',
+    ],
+    clientMethods: [
+      'createCommercialAction',
+      'getCommercialActionStatus',
+      'policyCheckCommercialAction',
+      'requestCommercialActionApproval',
+      'executeCommercialAction',
+      'getCommercialActionReceipt',
+      'getCommercialActionAudit',
+    ],
+    cliCommands: ['commercial-action-verification-wave-preview'],
+    discoveryHelperKeys: [
+      'createCommercialAction',
+      'getCommercialActionStatus',
+      'policyCheckCommercialAction',
+      'requestCommercialActionApproval',
+      'executeCommercialAction',
+      'getCommercialActionReceipt',
+      'getCommercialActionAudit',
+    ],
+    broaderEnterpriseAuthorityClaimed: false,
+    broaderSystemAuthorityClaimed: false,
+    payloadPacketStatus: 'blocked-pending-packet',
+    blockedBy: 'core-plane-payload-packet-not-yet-frozen',
+    notes: ['Commercial-action helpers stay bounded to the shipped governed continuation slice.'],
+  },
+  {
+    groupKey: 'governed-proposals',
+    label: 'Governed proposal recommendation, assessment, and authorized use',
+    helperKeys: ['buildGovernedProposalReviewUsePlan', 'buildGovernedProposalReviewUseResult'],
+    clientMethods: ['submitProposal'],
+    cliCommands: ['proposal'],
+    discoveryHelperKeys: ['submitProposal'],
+    broaderEnterpriseAuthorityClaimed: false,
+    broaderSystemAuthorityClaimed: false,
+    payloadPacketStatus: 'blocked-pending-packet',
+    blockedBy: 'core-plane-payload-packet-not-yet-frozen',
+    notes: ['Governed proposal helpers remain bounded to recommendation, assessment, and authorized-use surfaces only.'],
+  },
+  {
+    groupKey: 'opportunity-handoffs',
+    label: 'Opportunity package handoff and export',
+    helperKeys: ['buildOpportunityPackageHandoffPlan', 'runOpportunityPackageHandoff'],
+    clientMethods: ['exportOpportunityPackage'],
+    cliCommands: [
+      'opportunity-package-handoff-plan',
+      'opportunity-package-handoff-review-packet-preview',
+      'opportunity-package-handoff-review-packet-export',
+    ],
+    discoveryHelperKeys: ['exportOpportunityPackage'],
+    broaderEnterpriseAuthorityClaimed: false,
+    broaderSystemAuthorityClaimed: false,
+    payloadPacketStatus: 'blocked-pending-packet',
+    blockedBy: 'core-plane-payload-packet-not-yet-frozen',
+    notes: ['Package handoff helpers stay bounded to explicit export and review-safe readback, not broader enterprise orchestration.'],
+  },
+];
+
+function cloneHelperGroup(
+  helperGroup: BidviaEnterpriseIntegrationPlaneHelperGroup,
+): BidviaEnterpriseIntegrationPlaneHelperGroup {
+  return {
+    ...helperGroup,
+    helperKeys: [...helperGroup.helperKeys],
+    clientMethods: [...helperGroup.clientMethods],
+    cliCommands: [...helperGroup.cliCommands],
+    discoveryHelperKeys: [...helperGroup.discoveryHelperKeys],
+    notes: [...helperGroup.notes],
+  };
+}
+
+function requireEnterpriseIntegrationAdoptionStatus(): BidviaCorePlaneAdoptionStatus {
+  const adoptionStatus = listCorePlaneAdoptionStatuses().find((status) => status.plane === 'enterprise-integration');
+  if (!adoptionStatus) {
+    throw new Error('Missing core plane adoption status for enterprise integration');
+  }
+
+  return adoptionStatus;
+}
+
+export function listEnterpriseIntegrationPlaneHelperGroups(): BidviaEnterpriseIntegrationPlaneHelperGroup[] {
+  return enterpriseIntegrationPlaneHelperGroups.map((helperGroup) => cloneHelperGroup(helperGroup));
+}
+
+export function getEnterpriseIntegrationPlaneHelperGroup(
+  groupKey: BidviaEnterpriseIntegrationPlaneHelperGroupKey,
+): BidviaEnterpriseIntegrationPlaneHelperGroup {
+  const helperGroup = enterpriseIntegrationPlaneHelperGroups.find((candidate) => candidate.groupKey === groupKey);
+  if (!helperGroup) {
+    throw new Error(`Unknown enterprise integration helper group: ${groupKey}`);
+  }
+
+  return cloneHelperGroup(helperGroup);
+}
+
+export function buildEnterpriseIntegrationPlaneView(): BidviaEnterpriseIntegrationPlaneView {
+  const adoptionStatus = requireEnterpriseIntegrationAdoptionStatus();
+
+  return {
+    adoptionStatus: {
+      ...adoptionStatus,
+      notes: [...adoptionStatus.notes],
+    },
+    visibilityBoundary: {
+      boundedCommercialUniverseOnly: true,
+      broaderEnterpriseAuthorityClaimed: false,
+      broaderSystemAuthorityClaimed: false,
+      notes: [
+        'This adapter groups only the shipped commercial-universe integration slices already present in this repo.',
+        'It does not claim broader enterprise or system authority.',
+      ],
+    },
+    packetTruthBoundary: {
+      payloadPacketStatus: 'blocked-pending-packet',
+      blockedBy: 'core-plane-payload-packet-not-yet-frozen',
+      packetCompleteFieldFamilies: [],
+      inventedPacketFieldsBlocked: true,
+      notes: [
+        'Packet-complete enterprise/system fields stay blocked until Core freezes them.',
+      ],
+    },
+    helperGroups: listEnterpriseIntegrationPlaneHelperGroups(),
+  };
+}
+
+export function buildEnterpriseIntegrationPlaneCliSnapshot() {
+  const plane = buildEnterpriseIntegrationPlaneView();
+
+  return {
+    adoptionStatus: plane.adoptionStatus,
+    visibilityBoundary: plane.visibilityBoundary,
+    packetTruthBoundary: plane.packetTruthBoundary,
+    helperGroups: plane.helperGroups.map((helperGroup) => ({
+      groupKey: helperGroup.groupKey,
+      label: helperGroup.label,
+      cliCommands: [...helperGroup.cliCommands],
+      discoveryHelperKeys: [...helperGroup.discoveryHelperKeys],
+    })),
+  };
+}

@@ -72,6 +72,7 @@ const expectedBidviaMcpToolNames = [
   'participation-state-read',
   'task-dispatches-read',
   'task-dispatch-read',
+  'notification-read',
   'create-provisional-agent-execution',
   'claim-provisional-agent-execution',
   'download-sync-execution',
@@ -815,6 +816,43 @@ test('dispatchMcpToolCall exposes widened Task 1 governance read descriptors in 
   assert.equal(getMcpToolDescriptor('agent-summary-read')?.toolName, 'agent-summary-read');
   assert.equal(getMcpToolDescriptor('agent-capability-profile-read')?.toolName, 'agent-capability-profile-read');
   assert.equal(getMcpToolDescriptor('task-dispatch-read')?.toolName, 'task-dispatch-read');
+  assert.equal(getMcpToolDescriptor('notification-read')?.toolName, 'notification-read');
+  assert.equal((getMcpToolDescriptor('task-dispatch-read') as { taskPlaneCapabilityMode?: string }).taskPlaneCapabilityMode, 'visibility-only');
+  assert.equal((getMcpToolDescriptor('notification-read') as { eventNotificationPlaneCapabilityMode?: string }).eventNotificationPlaneCapabilityMode, 'visibility-only');
+  assert.equal((getMcpToolDescriptor('suspend-task-dispatch-execution') as { taskPlaneCapabilityMode?: string }).taskPlaneCapabilityMode, 'executable');
+  assert.equal(getMcpToolDescriptor('acknowledge-notification-execution'), undefined);
+});
+
+test('dispatchMcpToolCall routes notification visibility reads through the shipped SDK helper only', async () => {
+  const calls: Array<{ helper: string; input?: unknown }> = [];
+  const client = {
+    async getNotification(input: string) {
+      calls.push({ helper: 'getNotification', input });
+      return {
+        notificationId: input,
+      };
+    },
+  };
+
+  const result = await dispatchMcpToolCallWithExecution(
+    {
+      toolName: 'notification-read',
+      arguments: {
+        notificationId: 'notification-1',
+        agentRegistrationId: 'areg-1',
+      },
+    },
+    {
+      createExecutionClient: () => client as never,
+    },
+  );
+
+  assert.deepEqual(calls, [{ helper: 'getNotification', input: 'notification-1' }]);
+  assert.deepEqual(result.result, {
+    truthFetchResult: {
+      notificationId: 'notification-1',
+    },
+  });
 });
 
 test('dispatchMcpToolCall routes widened Task 2 collection and onboarding read tools through shipped SDK helpers', async () => {

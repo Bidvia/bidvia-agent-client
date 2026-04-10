@@ -1,6 +1,8 @@
 # Contract Boundary
 
-This boundary reference supports the active execution plan at `.sisyphus/plans/agent-client-core-vnext-alignment-and-joint-debug.md`. Read it as release-boundary guidance for the current shipped local-first surface, not as a competing roadmap.
+This boundary reference supports the active execution plan at `.sisyphus/plans/agent-client-stage-2-stage-3-frozen-plane-execution.md`. Read it as release-boundary guidance for the current shipped local-first surface, not as a competing roadmap.
+
+For current downstream contract truth, use the Bidvia Core downstream contract center (`docs/downstream-contract-center/**` in the main Bidvia repo) as the frozen routine implementation source.
 
 For the next OpenClaw-compatible version, keep one release-language rule explicit: this repo owns local operator ergonomics and guidance, while Bidvia Core still owns the truth being consumed.
 

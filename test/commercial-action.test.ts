@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
+  buildCommercialActionEnterpriseBoundary,
   buildCommercialActionScenarioPlan,
   readCommercialActionScenarioReview,
   runCommercialActionScenario,
@@ -64,6 +65,15 @@ test('buildCommercialActionScenarioPlan builds the exact commercial-action conti
     approvals: ['apr-2'],
     receipts: ['receipt-1'],
   });
+  assert.deepEqual(plan.envelope.workflowStage, {
+    workflowIds: ['wf-3'],
+    localStageLabel: 'governed-run-execution',
+    localStageSemantics: 'local-only',
+    coreStageIdentifier: null,
+    coreStageSemantics: 'blocked-pending-packet',
+    blockedBy: 'core-plane-payload-packet-not-yet-frozen',
+    transitionRule: null,
+  });
 });
 
 test('buildCommercialActionScenarioPlan returns deterministic bounded plan inputs', () => {
@@ -107,6 +117,21 @@ test('buildCommercialActionScenarioPlan returns deterministic bounded plan input
   assert.equal(plan.policyCheckCommercialActionInput.commercialActionRequestId, 'commercial-action-1');
   assert.equal(plan.requestCommercialActionApprovalInput.approvalRequestId, 'apr-2');
   assert.equal(plan.executeCommercialActionInput.receiptId, 'receipt-1');
+});
+
+test('commercial action helpers expose the enterprise integration boundary for bounded governed action flows', () => {
+  const boundary = buildCommercialActionEnterpriseBoundary();
+
+  assert.equal(boundary.groupKey, 'commercial-action');
+  assert.deepEqual(boundary.helperKeys, [
+    'buildCommercialActionScenarioPlan',
+    'runCommercialActionScenario',
+    'readCommercialActionScenarioReview',
+  ]);
+  assert.equal(boundary.broaderEnterpriseAuthorityClaimed, false);
+  assert.equal(boundary.broaderSystemAuthorityClaimed, false);
+  assert.equal(boundary.payloadPacketStatus, 'blocked-pending-packet');
+  assert.equal(boundary.blockedBy, 'core-plane-payload-packet-not-yet-frozen');
 });
 
 test('buildCommercialActionScenarioPlan rejects missing required ids in continuation inputs', () => {

@@ -1,6 +1,6 @@
 # Onboarding Guide
 
-This guide supports the current local-first package surface. For current execution sequencing and scope, use `.sisyphus/plans/agent-client-core-vnext-alignment-and-joint-debug.md` as the active plan. That current wave stays inside grounded Track 1 client-owned productization and does not reopen Core truth closure.
+This guide supports the current local-first package surface. For current execution sequencing and scope, use `.sisyphus/plans/agent-client-stage-2-stage-3-frozen-plane-execution.md` as the active plan. That current wave rebases the repo onto the frozen six-plane Core contract model without reopening Core truth closure.
 
 ## Goal
 
@@ -12,6 +12,8 @@ This guide shows one primary public journey and one secondary Governed Run journ
 This guide is intentionally more than an API quickstart. It explains how an agent should approach the shipped package surface in the order that matches the current repo boundary.
 
 Stage 1 of the client-side runtime architecture upgrade is now complete in this repo. That means the CLI and local stdio MCP surfaces share one local runtime core and write local accumulation records for onboarding memory, task execution memory, capability usage memory, and result memory. It does not mean Stage 2 Core plane contracts are complete, and it does not change the rule that Core still owns platform truth.
+
+For current downstream contract truth, use the Bidvia Core downstream contract center (`docs/downstream-contract-center/**` in the main Bidvia repo) as the routine implementation source, then apply this repo's fail-closed adoption rules where packet-complete payload truth is still pending.
 
 If your dominant path is a local OpenClaw Gateway / node-host install, use the dedicated package docs instead of reconstructing that flow from this file:
 
@@ -42,6 +44,8 @@ npm test
 npm run validate
 npm run typecheck
 npm run build
+npm run validate:release-readiness
+npm run validate:release-gate
 npm run example
 ```
 
@@ -104,12 +108,14 @@ node dist/cli.js registered-agent-operations-plan
 After that guided path is clear, use the supporting diagnostics and review-safe commands when you need more visibility around the same journey:
 
 1. `environment-mode` when you need read-only confirmation of the current base URL classification
-2. `runtime-capabilities` when you need one local JSON view of repo-known runtime-facing facts
+2. `runtime-capabilities` when you need one local JSON view of repo-known runtime-facing facts, including the blocked-or-complete Stage 3 release gate
 3. truth-fetch CLI or SDK reads when you need approved frozen Core reads for account, richer governance deep-read, semantic, pricing, or asset facts
 4. `verification-bundle-preview` or `verification-bundle-export` when the bounded run should be reviewable later
 5. explicit local execution commands when you need payload preview for `heartbeat`, `sync-upload`, `evidence`, or `proposal`
 
 `onboarding-readiness` still exists as a supporting read-only explainer. It is no longer the primary public first-run entry point.
+
+Stage 3 release closure is still blocked in the current repo state. Use `route-context-matrix` and `runtime-capabilities` to inspect the fail-closed gate, and do not describe the package as full `1.0.0` closure until P0/P1/P2 plane adoption is packet-grounded. The validator suite is still required before release closure, but that evidence is tracked outside these repo-facing runtime snapshots.
 
 In this phase, truth-fetch ships through the SDK and CLI as the widened frozen downstream read surface, with a bounded local stdio MCP seam exposing the currently approved read-only subset. That MCP rollout is phased on purpose: governance-first truth-fetch tools ship first, then business-truth collection and detail tools ship second. In both phases, MCP stays read-only, local stdio only, and a thin wrapper over the shipped SDK helpers.
 

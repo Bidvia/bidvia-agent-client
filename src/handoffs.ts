@@ -1,9 +1,11 @@
 import { BidviaClient } from './client.js';
 import type {
+  BidviaEnterpriseIntegrationPlaneHelperGroup,
   BidviaExportOpportunityPackageInput,
   BidviaScenarioEnvelope,
   BidviaScenarioVerificationBundle,
 } from './contracts.js';
+import { getEnterpriseIntegrationPlaneHelperGroup } from './enterprise-integration-plane.js';
 
 import {
   buildScenarioEnvelope,
@@ -13,6 +15,7 @@ import {
   appendCompletedRouteStep,
   buildScenarioVerificationBundle,
 } from './verification.js';
+import { buildWorkflowStageReference } from './workflow-stage-plane.js';
 
 export interface BidviaOpportunityPackageHandoffPlanInput {
   scenarioId: string;
@@ -55,6 +58,7 @@ export function buildOpportunityPackageHandoffPlan(
       evidenceRefs: input.evidenceRefs,
       traceIds: input.traceIds,
       workflowIds: input.workflowIds,
+      workflowStage: buildWorkflowStageReference(input.workflowIds, 'governed-run-execution'),
       expectedRouteChain: [
         buildScenarioRouteStep('exportOpportunityPackage', ['tenantId', 'principalId', 'companyId']),
       ],
@@ -85,4 +89,8 @@ export async function runOpportunityPackageHandoff(
   );
 
   return verificationBundle;
+}
+
+export function buildOpportunityPackageHandoffEnterpriseBoundary(): BidviaEnterpriseIntegrationPlaneHelperGroup {
+  return getEnterpriseIntegrationPlaneHelperGroup('opportunity-handoffs');
 }

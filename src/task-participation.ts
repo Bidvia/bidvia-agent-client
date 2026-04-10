@@ -1,3 +1,8 @@
+export {
+  buildTaskPlaneView,
+  getTaskPlaneCapabilityMode,
+} from './task-plane.js';
+
 export interface BidviaLocalTaskParticipationObservation {
   scope: 'local-task-participation';
   localTaskRef: string;

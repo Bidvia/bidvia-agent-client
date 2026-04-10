@@ -7,8 +7,10 @@ test('buildOnboardingReadiness keeps official onboarding focused on public provi
   const exports = publicSurface as Record<string, unknown>;
 
   assert.equal(typeof exports.buildOnboardingReadiness, 'function');
+  assert.equal(typeof exports.buildIdentitySessionPlaneView, 'function');
 
   const readiness = (exports.buildOnboardingReadiness as () => unknown)();
+  const identitySessionPlane = (exports.buildIdentitySessionPlaneView as () => unknown)();
 
   assert.deepEqual(readiness, {
     defaults: {
@@ -16,11 +18,12 @@ test('buildOnboardingReadiness keeps official onboarding focused on public provi
       environmentMode: 'production',
       environmentSelectionRequired: false,
     },
+    identitySessionPlane,
     governedReadPosture: {
       accessContextFamily: 'principal-governed-read',
       requiredContext: ['tenantId', 'principalId'],
       adminSessionOptional: true,
-      operatorGuidance: 'On local docker host, authority and presence require a valid admin session plus operator context. Authority-ladder is an operator-governed write and not a workspace admin-session route.',
+      operatorGuidance: 'On local docker host, authority and presence reads require principal-governed tenant context. Authority-ladder reads use the same principal-governed posture, while ladder writes remain operator-governed and separate from workspace admin-session routes.',
     },
     journey: {
       journeyKey: 'public-first-onboarding',
@@ -52,6 +55,7 @@ test('buildOnboardingReadiness keeps official onboarding focused on public provi
         command: 'registration-lifecycle-plan',
         rationale: 'Use the lifecycle plan next so the first successful onboarding path stays aligned with the shipped provisional-to-registration chain.',
         journeyStage: 'governed-run-execution',
+        journeyStageSemantics: 'local-only',
       },
     },
     postClaimSupport: {
@@ -73,6 +77,11 @@ test('buildOnboardingReadiness keeps the public-first helper chain aligned with 
   const exports = publicSurface as Record<string, unknown>;
 
   const readiness = (exports.buildOnboardingReadiness as () => {
+    identitySessionPlane: {
+      canonicalOnboarding: {
+        helperSteps: Array<{ helperKey: string }>;
+      };
+    };
     journey: {
       journeyKey: string;
       steps: Array<{ helperKey: string }>;
@@ -89,6 +98,11 @@ test('buildOnboardingReadiness keeps the public-first helper chain aligned with 
     readiness.journey.steps.map((step) => step.helperKey),
   );
 
+  assert.deepEqual(
+    readiness.journey.steps.map((step) => step.helperKey),
+    readiness.identitySessionPlane.canonicalOnboarding.helperSteps.map((step) => step.helperKey),
+  );
+
   assert.equal(
     matrix.rows.some((row) => (
       row.journeyKey === readiness.journey.journeyKey
@@ -96,4 +110,47 @@ test('buildOnboardingReadiness keeps the public-first helper chain aligned with 
     )),
     false,
   );
+});
+
+test('public surface exposes a fail-closed Stage 3 release gate with required validator evidence', () => {
+  const exports = publicSurface as Record<string, unknown>;
+
+  assert.equal(typeof exports.buildStage3ReleaseGate, 'function');
+
+  const gate = (exports.buildStage3ReleaseGate as () => {
+    status: string;
+    blockedBy: string[];
+    requiredValidatorCommands: string[];
+    waves: Array<{ wave: string; status: string; planes: string[] }>;
+  })();
+
+  assert.deepEqual(gate, {
+    status: 'blocked',
+    blockedBy: ['plane-adoption-incomplete'],
+    requiredValidatorCommands: [
+      'npm test',
+      'npm run typecheck',
+      'npm run build',
+      'npm run validate',
+      'npm run validate:release-readiness',
+      'npm run validate:release-gate',
+    ],
+    waves: [
+      {
+        wave: 'P0',
+        status: 'blocked',
+        planes: ['identity-session', 'task', 'event-notification'],
+      },
+      {
+        wave: 'P1',
+        status: 'blocked',
+        planes: ['capability', 'workflow-stage'],
+      },
+      {
+        wave: 'P2',
+        status: 'blocked',
+        planes: ['enterprise-integration'],
+      },
+    ],
+  });
 });

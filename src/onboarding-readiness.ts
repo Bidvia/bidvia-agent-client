@@ -2,7 +2,7 @@ import { getRouteCapability } from './capabilities.js';
 import {
   requireOnboardingJourneyDefinition,
 } from './onboarding-journey.js';
-import { buildGovernedReadPosture } from './governed-read-posture.js';
+import { buildIdentitySessionPlaneView } from './identity-session-plane.js';
 import { buildLocalRuntimeCapabilitySnapshot } from './runtime-capabilities.js';
 import type {
   BidviaRouteCapability,
@@ -43,12 +43,14 @@ function buildPublicDefaults() {
 }
 
 export function buildOnboardingReadiness() {
+  const identitySessionPlane = buildIdentitySessionPlaneView();
   const journey = requireOnboardingJourneyDefinition('public-first-onboarding');
   const postClaimSupportSteps = [requireGuidedRouteStep('getAgentReadiness')];
 
   return {
     defaults: buildPublicDefaults(),
-    governedReadPosture: buildGovernedReadPosture(),
+    identitySessionPlane,
+    governedReadPosture: identitySessionPlane.governedReadPosture,
     journey: {
       journeyKey: journey.journeyKey,
       label: journey.label,

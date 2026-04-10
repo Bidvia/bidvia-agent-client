@@ -5,6 +5,7 @@ import {
   buildRegistrationLifecycleScenarioPlan,
   runRegistrationLifecycleScenario,
 } from '../src/registration-lifecycle.ts';
+import { buildIdentitySessionPlaneView } from '../src/index.ts';
 import type { BidviaClient } from '../src/client.ts';
 import type {
   BidviaRegistrationLifecycleScenarioPlan,
@@ -63,23 +64,28 @@ test('buildRegistrationLifecycleScenarioPlan builds the full onboarding and regi
     },
     registrationId: 'areg-1',
   });
+  const identitySessionPlane = buildIdentitySessionPlaneView();
 
   assert.equal(plan.envelope.scenarioFamily, 'registration-lifecycle');
   assert.deepEqual(
-    plan.envelope.expectedRouteChain.map((step) => step.routeKey),
-    [
-      'createProvisionalAgent',
-      'queryProvisionalAgent',
-      'claimProvisionalAgent',
-      'postHeartbeat',
-      'uploadSync',
-      'downloadSync',
-      'submitEvidence',
-      'submitProposal',
-    ],
+    plan.envelope.expectedRouteChain.slice(0, 3).map((step) => step.routeKey),
+    identitySessionPlane.canonicalOnboarding.helperSteps.map((step) => step.helperKey),
+  );
+  assert.deepEqual(
+    plan.envelope.expectedRouteChain.slice(3).map((step) => step.routeKey),
+    ['postHeartbeat', 'uploadSync', 'downloadSync', 'submitEvidence', 'submitProposal'],
   );
   assert.deepEqual(plan.envelope.recordIds, {
     registrations: ['areg-1'],
+  });
+  assert.deepEqual(plan.envelope.workflowStage, {
+    workflowIds: ['wf-registration-1'],
+    localStageLabel: 'public-provisional',
+    localStageSemantics: 'local-only',
+    coreStageIdentifier: null,
+    coreStageSemantics: 'blocked-pending-packet',
+    blockedBy: 'core-plane-payload-packet-not-yet-frozen',
+    transitionRule: null,
   });
   assert.equal(plan.queryProvisionalAgentRef, 'prov-agent-1');
 });
@@ -190,7 +196,7 @@ test('runRegistrationLifecycleScenario executes the exact onboarding and registr
       calls.push(`createProvisionalAgent:${input.provisionalAgentRef}`);
       return { ok: true };
     },
-    async queryProvisionalAgent(provisionalAgentRef) {
+    async queryProvisionalAgent(provisionalAgentRef: string) {
       calls.push(`queryProvisionalAgent:${provisionalAgentRef}`);
       return { ok: true };
     },

@@ -169,3 +169,18 @@ test('asset helpers consume asset families and explain binding context without f
   assert.equal('qualified' in explanation, false);
   assert.equal(explanation.explanationLines.at(-1)?.includes('does not finalize'), true);
 });
+
+test('asset helpers expose their enterprise integration boundary without claiming broader authority', async () => {
+  const assetsModule = await import('../src/index.ts');
+
+  assert.equal(typeof assetsModule.buildEnterpriseAssetIntegrationBoundary, 'function');
+
+  const boundary = assetsModule.buildEnterpriseAssetIntegrationBoundary();
+
+  assert.equal(boundary.groupKey, 'asset-evidence-family');
+  assert.deepEqual(boundary.helperKeys, ['consumeAssetObjectFamily', 'explainAssetConsumption']);
+  assert.equal(boundary.broaderEnterpriseAuthorityClaimed, false);
+  assert.equal(boundary.broaderSystemAuthorityClaimed, false);
+  assert.equal(boundary.payloadPacketStatus, 'blocked-pending-packet');
+  assert.equal(boundary.blockedBy, 'core-plane-payload-packet-not-yet-frozen');
+});

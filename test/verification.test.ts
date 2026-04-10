@@ -19,6 +19,7 @@ import {
   bidviaReviewPacketSectionKeys,
   bidviaReviewPacketStatuses,
 } from '../src/contracts.ts';
+import { buildEnterpriseIntegrationPlaneView } from '../src/index.ts';
 
 test('review packet contracts represent reviewer-ready summary and bounded status', () => {
   assert.deepEqual(bidviaReviewPacketStatuses, ['complete', 'partial', 'pending-review']);
@@ -870,6 +871,28 @@ test('buildReviewPacket stays explicitly local and derived without server-owned 
   assert.equal(packet.sections[4]?.entries.includes('adjudication-outcome-included:false'), true);
   assert.equal(packet.sections[4]?.entries.includes('local-derived-explanation:route-coverage-note:completed-prefix-only'), true);
   assert.equal(packet.sections[4]?.entries.includes('dependency-gated-seams:core-truth-closure:deferred'), true);
+});
+
+test('enterprise integration plane keeps review-safe and discovery visibility bounded to the shipped commercial-universe surface', () => {
+  const plane = buildEnterpriseIntegrationPlaneView();
+
+  assert.equal(plane.visibilityBoundary.boundedCommercialUniverseOnly, true);
+  assert.equal(plane.visibilityBoundary.broaderEnterpriseAuthorityClaimed, false);
+  assert.equal(plane.visibilityBoundary.broaderSystemAuthorityClaimed, false);
+  assert.deepEqual(plane.packetTruthBoundary.packetCompleteFieldFamilies, []);
+  assert.equal(plane.packetTruthBoundary.inventedPacketFieldsBlocked, true);
+  assert.deepEqual(plane.helperGroups.find((group) => group.groupKey === 'evidence-submission')?.cliCommands, [
+    'evidence',
+  ]);
+  assert.deepEqual(plane.helperGroups.find((group) => group.groupKey === 'commercial-action')?.discoveryHelperKeys, [
+    'createCommercialAction',
+    'getCommercialActionStatus',
+    'policyCheckCommercialAction',
+    'requestCommercialActionApproval',
+    'executeCommercialAction',
+    'getCommercialActionReceipt',
+    'getCommercialActionAudit',
+  ]);
 });
 
 test('exportReviewPacket returns a stable cloned packet export', () => {

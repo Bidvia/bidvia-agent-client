@@ -1,8 +1,8 @@
 # Core Agent Client Plane Contract Gaps
 
-This document is a Core-facing reference for the client-consumption gaps that remain after Stage 1 of the agent-client runtime architecture upgrade.
+This document is a Core-facing reference for what still remains between the completed Stage 1 client runtime architecture and the frozen six-plane Core contract model now maintained upstream.
 
-Read it together with `docs/ROADMAP.md` and `docs/CONTRACT_BOUNDARY.md`.
+Read it together with `docs/ROADMAP.md`, `docs/CONTRACT_BOUNDARY.md`, and the Bidvia Core downstream contract center (`docs/downstream-contract-center/**` in the main Bidvia repo).
 
 The framing is strict:
 
@@ -13,28 +13,28 @@ The framing is strict:
 
 ## Reading rule
 
-Each plane is classified from the client-consumption perspective only:
+Each plane is classified from the client-adoption perspective only:
 
-- `frozen`: the client can already consume a stable enough explicit contract for the currently shipped slice
-- `partial`: the client consumes some frozen route families or local seams, but the full plane is not yet an explicit Core-level contract
-- `missing`: the client must stay fail-closed because the required Core plane contract is still absent
+- `frozen-in-Core`: Core has frozen the downstream plane in the contract center
+- `blocked pending payload packet`: the client must not invent missing request/response or lifecycle fields; it should land a fail-closed adapter until packet-complete truth exists
+- `frozen`: the client plane is already local-first and stable inside this repo
 
 ## Plane summary
 
-| Plane | Status | Current client-consumption view | Next-stage expectation |
+| Plane | Status | Current client-adoption view | Next-stage expectation |
 | --- | --- | --- | --- |
-| Identity / session plane | partial | Public provisional create -> query -> claim and governed context requirements are real, but Core-level session truth is still route-scoped rather than one explicit plane contract. | Stage 2 should promote explicit identity/session payloads, freshness, and transition semantics so the client stops inferring them from helper families. |
-| Task plane | partial | The client now has a local task runtime and can consume shipped participation-state and task-dispatch wrappers, but full task lifecycle truth is still not one frozen Core plane. | Stage 2 should provide explicit task receive/claim/lease/execute/complete-or-fail semantics and outcome truth at plane level. |
-| Capability plane | partial | Core exposes frozen capability-profile reads and the client has a Stage 1 local orchestration layer, but there is still no full Core-owned capability manifest contract for execution policy or refresh. | Stage 2 should freeze plane-level capability manifests and freshness semantics so `refreshRemoteCapabilityTruth(...)` can consume real Core truth. |
-| Workflow / stage plane | missing | The client can label local journey stages and bounded runtime steps, but workflow/stage truth is still a local interpretation layer, not a Core contract. | Stage 2 should replace local stage inference with explicit Core workflow and stage truth where those contracts are frozen. |
-| Event / notification plane | missing | The client has local journals, hooks, and operator-facing outputs, but no frozen Core notification/event plane to consume. | Stage 2 should add explicit event/notification payloads and delivery semantics, or keep this plane fail-closed. |
-| Enterprise integration plane | partial | The client ships bounded commercial and document/media/evidence helper slices, but enterprise integration truth is still route-family specific rather than one stable plane contract. | Stage 2 should define the minimum enterprise integration truth needed for the public V1 commercial-universe release. |
+| Identity / session plane | frozen-in-Core | The client now centralizes onboarding and governed-read semantics behind an explicit identity/session adapter used by readiness, route-context, and CLI guidance. | Keep freshness/invalidation semantics blocked pending payload packet truth instead of widening into broader login/session claims. |
+| Task plane | frozen-in-Core | The client now groups task dispatch / claim / lease semantics behind an explicit task-plane adapter while keeping local task shells descriptive-only. | Keep timeout semantics local-only or blocked pending payload packet truth unless Core grounds them. |
+| Capability plane | frozen-in-Core | Capability-profile reads now flow through an explicit capability-plane adapter, and `refreshRemoteCapabilityTruth(...)` remains dependency-gated and fail-closed. | Keep remote refresh blocked until packet-complete capability payloads are provided. |
+| Workflow / stage plane | frozen-in-Core | The client now distinguishes local journey labels from Core stage semantics behind an explicit workflow/stage adapter. | Keep packet-grounded stage identifiers and transition rules blocked until Core provides them. |
+| Event / notification plane | frozen-in-Core | The client now exposes an explicit event/notification adapter for frozen route visibility while keeping execution semantics fail-closed. | Keep delivery, acknowledgement, retry, and replay semantics blocked until packet-complete truth exists. |
+| Enterprise integration plane | frozen-in-Core | The client now groups bounded asset, evidence, document, attachment, and commercial-action helper slices behind one enterprise integration adapter. | Keep any packet-incomplete enterprise/system detail fail-closed and avoid broader enterprise orchestration claims. |
 | Local runtime / execution session plane | frozen | Stage 1 now gives the client a first-class local execution session and runtime core that CLI and MCP surfaces can consume. | Stage 2 should keep this local plane stable while hardening adapters that consume Core truth through explicit plane seams. |
 | Local accumulation / memory plane | frozen | Stage 1 now gives the client explicit local accumulation for onboarding memory, task execution memory, capability usage memory, and result memory. | Stage 2 should preserve this plane as local-only accumulation and avoid turning it into hosted memory or synthetic Core truth. |
 
 ## Plane details
 
-### 1. Identity / session plane, partial
+### 1. Identity / session plane, frozen-in-Core
 
 What is already real for the client:
 
@@ -43,18 +43,17 @@ What is already real for the client:
 - governed reads already require real `tenantId` plus `principalId`
 - some routes accept `adminSessionId` as an optional companion
 
-Why this is not frozen yet:
+Current client adoption state:
 
-- the client still learns important session semantics from individual routes and help text
-- there is no single Core payload that closes session state, identity freshness, or transition truth for all consumers
+- one shared identity/session adapter now centralizes onboarding, route-context, and readiness guidance
+- session freshness and invalidation semantics remain explicitly blocked when packet-complete truth is still absent
 
-What Stage 2 should freeze:
+Current client rule:
 
-- identity/session plane payloads
-- explicit claim-to-governed-run transition semantics
-- session freshness and invalidation semantics
+- use the frozen Core onboarding path exactly
+- keep any broader session/login semantics blocked pending payload packet truth
 
-### 2. Task plane, partial
+### 2. Task plane, frozen-in-Core
 
 What is already real for the client:
 
@@ -62,18 +61,18 @@ What is already real for the client:
 - the shipped participation-state and task-dispatch families are already consumable
 - CLI and MCP execution now route through the same local runtime core before operator-facing results are returned
 
-Why this is not frozen yet:
+Current client adoption state:
 
-- the local runtime still fills gaps around task semantics that Core has not yet promoted into one plane contract
-- the client can operate on narrow shipped wrappers, but not on complete Core task-truth closure
+- one explicit task-plane adapter now groups task dispatch / claim / lease semantics
+- local descriptive task shells remain separate from frozen Core task truth
+- blocked pending payload packet handling remains in place for task lifecycle fields not yet packet-grounded in Core
 
-What Stage 2 should freeze:
+Current client rule:
 
-- task dispatch and claim semantics at plane level
-- lease, suspend, resume, timeout, and completion semantics at plane level
-- explicit outcome/result truth beyond helper-local inference
+- lease, suspend, resume, completion, and outcome semantics must come from packet-grounded Core truth when available
+- timeout semantics stay local-only or blocked pending payload packet truth unless Core grounds them explicitly
 
-### 3. Capability plane, partial
+### 3. Capability plane, frozen-in-Core
 
 What is already real for the client:
 
@@ -81,69 +80,60 @@ What is already real for the client:
 - the Stage 1 local runtime now classifies capability execution locally and fail-closes risky calls when context is missing
 - local accumulation records capability usage and blocked attempts without pretending either is Core truth
 
-Why this is not frozen yet:
+Current client adoption state:
 
-- local orchestration policy still depends on shipped route metadata, not a full Core-owned capability manifest
-- `refreshRemoteCapabilityTruth(...)` is still dependency-gated
+- one stable capability-plane adapter now fronts capability refresh and runtime snapshots
+- packet-grounded handling for capability manifest, freshness, and execution policy input stays fail-closed until Core provides it
+- `refreshRemoteCapabilityTruth(...)` remains dependency-gated until packet-complete truth exists
 
-What Stage 2 should freeze:
-
-- one stable capability manifest plane
-- versioning/freshness semantics for capability truth
-- explicit contract for capability execution policy input from Core
-
-### 4. Workflow / stage plane, missing
+### 4. Workflow / stage plane, frozen-in-Core
 
 What is already real for the client:
 
-- the repo now has honest local journey labels such as Learn, Public Provisional, and Governed Run
+- the repo has honest local journey labels such as Learn, Public Provisional, and Governed Run
 - the runtime can record local task progress markers and stage-adjacent lifecycle events
+- scenario envelopes already carry workflow identifiers
 
-Why this is still missing:
+Current client adoption state:
 
-- those labels are local guidance and local runtime structure, not Core-owned workflow truth
-- there is no frozen workflow/stage contract the client can consume directly
+- one explicit workflow/stage adapter now distinguishes local labels from Core stage semantics
+- blocked pending payload packet handling remains in place for Core stage identifiers and transition rules that are not yet packet-grounded
 
-What Stage 2 should freeze:
+Current client rule:
 
-- explicit workflow and stage payloads from Core
-- stage transition truth that removes route-by-route inference
-- workflow linkage needed for operator-visible execution truth
+- local journey labels are local guidance only
+- workflow identifiers may travel through scenarios and handoffs without being treated as complete Core stage truth
 
-### 5. Event / notification plane, missing
+### 5. Event / notification plane, frozen-in-Core
 
 What is already real for the client:
 
 - Stage 1 local hooks and journals provide local observability
 - operator-facing CLI and MCP outputs remain intact while internal wiring moved through the runtime core
+- Core now freezes the notification route family in the downstream contract center
 
-Why this is still missing:
+Current client adoption state:
 
-- there is no frozen Core event or notification plane for subscription, delivery, acknowledgement, or replay semantics
+- one explicit event/notification adapter now exposes frozen route visibility through the client surfaces
+- blocked pending payload packet handling remains in place for execution or replay semantics not yet packet-grounded
+
+Current client rule:
+
 - local hook audit is not a substitute for governed event truth
+- the client may surface frozen route visibility now, but must fail closed on packet-incomplete event execution semantics
 
-What Stage 2 should freeze:
-
-- event payload contracts
-- notification delivery and acknowledgement semantics
-- any replay or audit semantics that must come from Core rather than local journaling
-
-### 6. Enterprise integration plane, partial
+### 6. Enterprise integration plane, frozen-in-Core
 
 What is already real for the client:
 
-- shipped pricing, asset, evidence, document, attachment, and commercial-action helper slices already expose a bounded commercial-universe surface
+- shipped asset, evidence, document, attachment, and commercial-action helper slices already expose a bounded commercial-universe surface
 - review-safe and verification-safe packaging already exist around those bounded slices
 
-Why this is not frozen yet:
+Current client adoption state:
 
-- the client still consumes separate route families rather than one explicit enterprise integration plane
-- downstream business-chain truth remains bounded and incomplete by design
-
-What Stage 2 should freeze:
-
-- the minimum integration contracts needed for the initial public commercial-universe release
-- stable enterprise payload groupings so the client can scale without another version-scale rewrite
+- one explicit enterprise integration adapter now groups the bounded helper slices
+- stable payload groupings exist across those bounded helper slices
+- blocked handling remains in place for packet-incomplete enterprise/system fields
 
 ### 7. Local runtime / execution session plane, frozen
 
@@ -191,8 +181,8 @@ Stage 1 is complete on the client side because the repo now has both local plane
 
 That statement must stay bounded:
 
-- Stage 2 remains necessary because six Core-facing planes are still partial or missing from the client-consumption perspective
-- Stage 3 remains necessary because public `1.0.0` needs both the completed client runtime and the minimum frozen Core contracts
+- Stage 2 remains necessary because six Core-facing planes are now frozen in Core but still need explicit client adoption and gating work
+- Stage 3 remains necessary because public `1.0.0` still needs both the completed client runtime and the executable release gate over the minimum frozen Core contracts
 
 ## Core follow-up checklist
 
@@ -202,4 +192,4 @@ Use this list when deciding whether a future Core payload is ready for client ad
 2. does it let the client consume Core truth without inventing local authority?
 3. does it keep local runtime/session and local accumulation planes local-only?
 4. does it remove client-side semantic inference instead of shifting it around?
-5. can the plane stay fail-closed until all required semantics are frozen?
+5. can the plane stay fail-closed until all required semantics are packet-grounded?

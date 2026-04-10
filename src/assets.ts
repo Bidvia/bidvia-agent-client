@@ -3,10 +3,12 @@ import type {
   BidviaAssetExplanation,
   BidviaAttachmentBinding,
   BidviaDocumentArtifact,
+  BidviaEnterpriseIntegrationPlaneHelperGroup,
   BidviaEvidenceAsset,
   BidviaFileResource,
   BidviaMediaAsset,
 } from './contracts.js';
+import { getEnterpriseIntegrationPlaneHelperGroup } from './enterprise-integration-plane.js';
 
 function cloneFileResource(fileResource: BidviaFileResource): BidviaFileResource {
   return {
@@ -98,4 +100,8 @@ export function explainAssetConsumption(assetConsumption: BidviaAssetConsumption
       'binding context remains descriptive consumption data and does not finalize evidence qualification or attachment authority',
     ],
   });
+}
+
+export function buildEnterpriseAssetIntegrationBoundary(): BidviaEnterpriseIntegrationPlaneHelperGroup {
+  return getEnterpriseIntegrationPlaneHelperGroup('asset-evidence-family');
 }

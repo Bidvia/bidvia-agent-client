@@ -2,11 +2,83 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import * as bidvia from '../src/index.ts';
+import {
+  buildCapabilityPlaneRemoteTruthSnapshot,
+  buildCapabilityPlaneView,
+} from '../src/capability-plane.ts';
 import { buildLocalRuntimeCapabilitySnapshot } from '../src/runtime-capabilities.ts';
 import { refreshRemoteCapabilityTruth } from '../src/remote-capability-refresh.ts';
+import { normalizeServerCapabilityPayload } from '../src/server-capabilities.ts';
 
 test('main package barrel exports refreshRemoteCapabilityTruth', () => {
   assert.equal(bidvia.refreshRemoteCapabilityTruth, refreshRemoteCapabilityTruth);
+  assert.equal(bidvia.buildCapabilityPlaneView, buildCapabilityPlaneView);
+});
+
+test('refreshRemoteCapabilityTruth matches the explicit capability-plane adapter output', () => {
+  const localSnapshot = buildLocalRuntimeCapabilitySnapshot({
+    explicitBaseUrl: 'https://api.bidvia.ai',
+  });
+  const input = {
+    localSnapshot,
+    coreCapabilityPayload: {
+      environment_mode: 'production',
+      route_capabilities: [
+        {
+          helper_key: 'refreshCapabilityTruth',
+          route_path_template: '/runtime/capabilities/refresh',
+          http_method: 'GET',
+          access_context_family: 'tenant',
+          required_context: ['tenantId'],
+          scope: 'read',
+          level: 'atomic-route',
+        },
+      ],
+      mcp_tools: [
+        {
+          tool_name: 'capability-truth-refresh-preview',
+          description: 'Explains the dependency-gated capability refresh seam.',
+          input_schema_ref: {
+            schema_key: 'BidviaRemoteCapabilityRefreshInput',
+          },
+          output_mode: 'plan-preview',
+          helper_ref: {
+            helper_key: 'refreshRemoteCapabilityTruth',
+            capability_key: 'refreshRemoteCapabilityTruth',
+          },
+          context_semantic: 'scenario',
+        },
+      ],
+      mcp_server: {
+        available: false,
+        transport: 'stdio',
+        supported_methods: ['initialize', 'tools/list', 'tools/call'],
+      },
+    } as Parameters<typeof refreshRemoteCapabilityTruth>[0]['coreCapabilityPayload'] & {
+      mcp_tools: Array<NonNullable<Parameters<typeof refreshRemoteCapabilityTruth>[0]['coreCapabilityPayload']>['mcp_tools'][number] & {
+        context_semantic: 'scenario';
+      }>;
+    },
+  };
+
+  const refreshed = refreshRemoteCapabilityTruth(input);
+  const capabilityPlaneSnapshot = buildCapabilityPlaneRemoteTruthSnapshot(input, {
+    normalizeServerCapabilityPayload,
+  });
+
+  if (refreshed.routeCapabilities.coreSnapshot && capabilityPlaneSnapshot.routeCapabilities.coreSnapshot) {
+    capabilityPlaneSnapshot.routeCapabilities.coreSnapshot.lastUpdatedAt = refreshed.routeCapabilities.coreSnapshot.lastUpdatedAt;
+  }
+
+  if (refreshed.mcpTools.coreSnapshot && capabilityPlaneSnapshot.mcpTools.coreSnapshot) {
+    capabilityPlaneSnapshot.mcpTools.coreSnapshot.lastUpdatedAt = refreshed.mcpTools.coreSnapshot.lastUpdatedAt;
+  }
+
+  if (refreshed.localMcpServer.coreSnapshot && capabilityPlaneSnapshot.localMcpServer.coreSnapshot) {
+    capabilityPlaneSnapshot.localMcpServer.coreSnapshot.lastUpdatedAt = refreshed.localMcpServer.coreSnapshot.lastUpdatedAt;
+  }
+
+  assert.deepEqual(refreshed, capabilityPlaneSnapshot);
 });
 
 test('refreshRemoteCapabilityTruth consumes provided frozen core payloads and merges them into descriptive local state', () => {

@@ -3,8 +3,10 @@ import assert from 'node:assert/strict';
 
 import {
   buildLocalDiscoveryCatalog,
+  buildLocalMcpProductizationSnapshot,
   buildLocalMcpToolCatalog,
 } from '../src/discovery-catalog.ts';
+import { buildCapabilityPlaneView } from '../src/capability-plane.ts';
 
 test('buildLocalDiscoveryCatalog returns operator-readable local mappings without remote discovery semantics', () => {
   const catalog = buildLocalDiscoveryCatalog();
@@ -112,10 +114,37 @@ test('buildLocalDiscoveryCatalog returns operator-readable local mappings withou
     sourceOfTruth: 'local-sdk-helpers',
     localOnly: true,
     remoteDiscovery: false,
+    taskPlaneCapabilityMode: 'visibility-only',
     cliCommands: [],
     mcpTools: [
       {
         toolName: 'participation-states-read',
+        outputMode: 'truth-fetch-result',
+      },
+    ],
+  });
+
+  const notification = catalog.find((entry) => entry.helperKey === 'getNotification');
+  assert.deepEqual(notification, {
+    helperKey: 'getNotification',
+    routePathTemplate: '/runtime/notifications/:notification_id',
+    httpMethod: 'GET',
+    accessContextFamily: 'principal-governed-read',
+    requiredContext: ['tenantId', 'principalId'],
+    scope: 'read',
+    level: 'atomic-route',
+    localCapabilityTier: 'L0-observe-only',
+    localCapabilityRiskTier: 'observe-only',
+    discoveryKind: 'read',
+    recommendedOutputMode: 'truth-fetch-result',
+    sourceOfTruth: 'local-sdk-helpers',
+    localOnly: true,
+    remoteDiscovery: false,
+    eventNotificationPlaneCapabilityMode: 'visibility-only',
+    cliCommands: [],
+    mcpTools: [
+      {
+        toolName: 'notification-read',
         outputMode: 'truth-fetch-result',
       },
     ],
@@ -214,6 +243,7 @@ test('buildLocalDiscoveryCatalog returns operator-readable local mappings withou
     sourceOfTruth: 'local-sdk-helpers',
     localOnly: true,
     remoteDiscovery: false,
+    taskPlaneCapabilityMode: 'executable',
     cliCommands: [],
     mcpTools: [
       {
@@ -367,6 +397,7 @@ test('buildLocalMcpToolCatalog derives MCP descriptors from the shared local dis
     localCapabilityRiskTier: 'observe-only',
     accessContextFamily: 'principal-governed-read',
     requiredContext: ['tenantId', 'principalId'],
+    taskPlaneCapabilityMode: 'visibility-only',
   });
 
   assert.deepEqual(mcpTools.find((tool) => tool.toolName === 'agent-capability-profile-write-execution'), {
@@ -420,4 +451,16 @@ test('buildLocalMcpToolCatalog derives MCP descriptors from the shared local dis
     accessContextFamily: 'session',
     requiredContext: ['tenantId', 'sessionId'],
   });
+});
+
+test('discovery and MCP productization snapshots stay local-only under the capability-plane boundary', () => {
+  const capabilityPlane = buildCapabilityPlaneView();
+  const mcpProductization = buildLocalMcpProductizationSnapshot();
+
+  assert.equal(capabilityPlane.localSnapshots.descriptiveOnly, true);
+  assert.equal(capabilityPlane.localSnapshots.liveServerNegotiationClaimed, false);
+  assert.equal(capabilityPlane.localSnapshots.remoteRegistryBehaviorClaimed, false);
+  assert.equal(mcpProductization.serverBoundary.remoteDiscovery, false);
+  assert.equal(mcpProductization.serverBoundary.hosted, false);
+  assert.equal(mcpProductization.serverBoundary.sourceOfTruth, 'local-sdk-helpers');
 });

@@ -4,6 +4,8 @@ import assert from 'node:assert/strict';
 test('task-participation helpers export local observation builders for offer, claim, ack, lease, timeout, and retry awareness', async () => {
   const taskParticipationModule = await import('../src/index.ts');
 
+  assert.equal(typeof taskParticipationModule.buildTaskPlaneView, 'function');
+  assert.equal(typeof taskParticipationModule.getTaskPlaneCapabilityMode, 'function');
   assert.equal(typeof taskParticipationModule.buildLocalTaskOfferObservation, 'function');
   assert.equal(typeof taskParticipationModule.buildLocalTaskClaimIntent, 'function');
   assert.equal(typeof taskParticipationModule.buildLocalTaskAckObservation, 'function');
@@ -16,6 +18,30 @@ test('task-participation helpers export local observation builders for offer, cl
   assert.equal(typeof taskParticipationModule.buildTaskLeaseShell, 'function');
   assert.equal(typeof taskParticipationModule.buildTaskTimeoutShell, 'function');
   assert.equal(typeof taskParticipationModule.buildTaskRetryAwarenessShell, 'function');
+});
+
+test('task-plane adapter groups governed task semantics while keeping local shells descriptive-only', async () => {
+  const taskParticipationModule = await import('../src/index.ts');
+
+  const taskPlane = taskParticipationModule.buildTaskPlaneView();
+
+  assert.deepEqual(taskPlane.localShellBoundary, {
+    descriptiveOnly: true,
+    schedulerAuthorityClaim: false,
+    timeoutSemantics: 'local-only',
+    notes: [
+      'Local task shells stay descriptive-only and do not become scheduler authority.',
+      'Do not invent remote timeout payload fields from local timeout observations.',
+    ],
+  });
+  assert.equal(taskPlane.timeoutTruth.payloadPacketStatus, 'blocked-pending-packet');
+  assert.equal(taskPlane.timeoutTruth.localOnly, true);
+  assert.equal(taskPlane.timeoutTruth.remotePayloadSupported, false);
+  assert.equal(taskPlane.timeoutTruth.blockedBy, 'core-plane-payload-packet-not-yet-frozen');
+  assert.equal(taskParticipationModule.getTaskPlaneCapabilityMode('listTaskDispatches'), 'visibility-only');
+  assert.equal(taskParticipationModule.getTaskPlaneCapabilityMode('createTaskDispatch'), 'executable');
+  assert.equal(taskParticipationModule.getTaskPlaneCapabilityMode('suspendTaskDispatch'), 'executable');
+  assert.equal(taskParticipationModule.getTaskPlaneCapabilityMode('missingTaskHelper'), undefined);
 });
 
 test('task-participation helpers keep task offers and retry awareness local and descriptive', async () => {
@@ -169,4 +195,6 @@ test('task-participation helpers keep claim, ack, lease, and timeout shells desc
   assert.equal('dispatchDecision' in ack, false);
   assert.equal('authority' in lease, false);
   assert.equal('retryable' in timeout, false);
+  assert.equal('outcomeRef' in timeout, false);
+  assert.equal('timeoutReason' in timeout, false);
 });

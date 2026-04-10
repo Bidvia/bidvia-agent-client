@@ -80,7 +80,51 @@ test('generic scenario builder normalizes refs and route steps', () => {
   assert.deepEqual(envelope.evidenceRefs, ['evidence://supply/soda-ash-light']);
   assert.deepEqual(envelope.traceIds, ['trace-1']);
   assert.deepEqual(envelope.workflowIds, ['wf-1']);
+  assert.deepEqual(envelope.workflowStage, {
+    workflowIds: ['wf-1'],
+    localStageLabel: null,
+    localStageSemantics: 'local-only',
+    coreStageIdentifier: null,
+    coreStageSemantics: 'blocked-pending-packet',
+    blockedBy: 'core-plane-payload-packet-not-yet-frozen',
+    transitionRule: null,
+  });
   assert.deepEqual(envelope.expectedRouteChain[0]?.requiredContext, ['tenantId', 'principalId', 'companyId']);
+});
+
+test('generic scenario builder keeps workflow ids transportable while blocking invented Core stage identifiers', () => {
+  const envelope = buildScenarioEnvelope({
+    scenarioId: 'scenario-workflow-stage-1',
+    scenarioLabel: 'workflow-stage-boundary',
+    scenarioFamily: 'workflow-stage-boundary',
+    sourceRefs: ['source://workflow/stage'],
+    evidenceRefs: ['evidence://workflow/stage'],
+    traceIds: ['trace-workflow-stage-1'],
+    workflowIds: ['wf-stage-1', 'wf-stage-1'],
+    workflowStage: {
+      workflowIds: ['wf-stage-1', 'wf-stage-1'],
+      localStageLabel: 'governed-run-execution',
+      localStageSemantics: 'local-only',
+      coreStageIdentifier: null,
+      coreStageSemantics: 'blocked-pending-packet',
+      blockedBy: 'core-plane-payload-packet-not-yet-frozen',
+      transitionRule: null,
+    },
+    expectedRouteChain: [
+      buildScenarioRouteStep('submitProposal', ['tenantId', 'principalId', 'registrationId']),
+    ],
+  });
+
+  assert.deepEqual(envelope.workflowIds, ['wf-stage-1']);
+  assert.deepEqual(envelope.workflowStage, {
+    workflowIds: ['wf-stage-1'],
+    localStageLabel: 'governed-run-execution',
+    localStageSemantics: 'local-only',
+    coreStageIdentifier: null,
+    coreStageSemantics: 'blocked-pending-packet',
+    blockedBy: 'core-plane-payload-packet-not-yet-frozen',
+    transitionRule: null,
+  });
 });
 
 test('generic scenario builder rejects missing scenarioId', () => {

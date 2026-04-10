@@ -1,8 +1,11 @@
 import type {
+  BidviaEnterpriseIntegrationPlaneHelperGroup,
   BidviaMcpToolDescriptor,
   BidviaMcpToolOutputMode,
   BidviaRouteCapability,
 } from './contracts.js';
+import { buildCapabilityPlaneDiscoveryBoundary } from './capability-plane.js';
+import { buildEnterpriseIntegrationPlaneView } from './enterprise-integration-plane.js';
 import { exportRouteCapabilityCatalog } from './capabilities.js';
 
 type BidviaLocalDiscoveryKind = 'read' | 'review-safe' | 'execute';
@@ -36,6 +39,8 @@ export interface BidviaLocalDiscoveryCatalogEntry extends Pick<
   | 'level'
   | 'localCapabilityTier'
   | 'localCapabilityRiskTier'
+  | 'taskPlaneCapabilityMode'
+  | 'eventNotificationPlaneCapabilityMode'
 > {
   discoveryKind: BidviaLocalDiscoveryKind;
   recommendedOutputMode: BidviaLocalDiscoveryRecommendedOutputMode;
@@ -68,8 +73,6 @@ export interface BidviaLocalMcpProductizationSnapshot {
   };
   tools: BidviaMcpOperatorToolDiscovery[];
 }
-
-const localDiscoverySourceOfTruth = 'local-sdk-helpers';
 
 const localCliBindings: readonly BidviaLocalDiscoveryCliBinding[] = [
   { command: 'account-agents', helperKey: 'listAccountAgents', recommendedOutputMode: 'truth-fetch-result' },
@@ -239,6 +242,14 @@ const widenedShippedReadMcpBindings: readonly BidviaLocalDiscoveryMcpBinding[] =
     outputMode: 'truth-fetch-result',
     helperKey: 'getTaskDispatch',
     capabilityKey: 'getTaskDispatch',
+  },
+  {
+    toolName: 'notification-read',
+    description: 'Reads the current governed notification detail through the shipped SDK helper.',
+    inputSchemaKey: 'BidviaNotificationIdentifierInput',
+    outputMode: 'truth-fetch-result',
+    helperKey: 'getNotification',
+    capabilityKey: 'getNotification',
   },
 ];
 
@@ -702,6 +713,12 @@ function createLocalMcpToolDescriptor(binding: BidviaLocalDiscoveryMcpBinding): 
     accessContextFamily: capability.accessContextFamily,
     ...(contextSemantic ? { contextSemantic } : {}),
     requiredContext: [...capability.requiredContext],
+    ...(capability.taskPlaneCapabilityMode === undefined
+      ? {}
+      : { taskPlaneCapabilityMode: capability.taskPlaneCapabilityMode }),
+    ...(capability.eventNotificationPlaneCapabilityMode === undefined
+      ? {}
+      : { eventNotificationPlaneCapabilityMode: capability.eventNotificationPlaneCapabilityMode }),
   };
 }
 
@@ -723,6 +740,7 @@ export function getLocalMcpToolDescriptor(toolName: string): BidviaMcpToolDescri
 
 export function buildLocalDiscoveryCatalog(): BidviaLocalDiscoveryCatalogEntry[] {
   const routeCapabilities = buildLocalRouteCapabilityCatalog();
+  const discoveryBoundary = buildCapabilityPlaneDiscoveryBoundary();
 
   return routeCapabilities.map((capability) => {
     const cliBindings = localCliBindings.filter((binding) => binding.helperKey === capability.helperKey);
@@ -746,9 +764,15 @@ export function buildLocalDiscoveryCatalog(): BidviaLocalDiscoveryCatalogEntry[]
       localCapabilityRiskTier: capability.localCapabilityRiskTier,
       discoveryKind: getDiscoveryKind(capability),
       recommendedOutputMode: buildRecommendedOutputMode(cliBindings, mcpBindings, capability),
-      sourceOfTruth: localDiscoverySourceOfTruth,
-      localOnly: true,
-      remoteDiscovery: false,
+      sourceOfTruth: discoveryBoundary.sourceOfTruth,
+      localOnly: discoveryBoundary.localOnly,
+      remoteDiscovery: discoveryBoundary.remoteDiscovery,
+      ...(capability.taskPlaneCapabilityMode === undefined
+        ? {}
+        : { taskPlaneCapabilityMode: capability.taskPlaneCapabilityMode }),
+      ...(capability.eventNotificationPlaneCapabilityMode === undefined
+        ? {}
+        : { eventNotificationPlaneCapabilityMode: capability.eventNotificationPlaneCapabilityMode }),
       cliCommands: cliBindings.map((binding) => binding.command),
       mcpTools: mcpBindings.map((binding) => ({
         toolName: binding.toolName,
@@ -774,12 +798,14 @@ function buildMcpOperatorToolDiscovery(tool: BidviaMcpToolDescriptor): BidviaMcp
 }
 
 export function buildLocalMcpProductizationSnapshot(): BidviaLocalMcpProductizationSnapshot {
+  const discoveryBoundary = buildCapabilityPlaneDiscoveryBoundary();
+
   return {
     serverBoundary: {
       transport: 'stdio',
-      hosted: false,
-      remoteDiscovery: false,
-      sourceOfTruth: localDiscoverySourceOfTruth,
+      hosted: discoveryBoundary.hosted,
+      remoteDiscovery: discoveryBoundary.remoteDiscovery,
+      sourceOfTruth: discoveryBoundary.sourceOfTruth,
     },
     discoverability: {
       truthFetchReadOnly: true,
@@ -787,5 +813,23 @@ export function buildLocalMcpProductizationSnapshot(): BidviaLocalMcpProductizat
       executionRequiresLocalExecutionClient: true,
     },
     tools: buildLocalMcpToolCatalog().map((tool) => buildMcpOperatorToolDiscovery(tool)),
+  };
+}
+
+export function buildEnterpriseIntegrationDiscoverySnapshot(): {
+  plane: 'enterprise-integration';
+  helperGroups: Array<BidviaEnterpriseIntegrationPlaneHelperGroup & { presentDiscoveryEntries: string[] }>;
+} {
+  const plane = buildEnterpriseIntegrationPlaneView();
+  const discoveryCatalog = buildLocalDiscoveryCatalog();
+
+  return {
+    plane: 'enterprise-integration',
+    helperGroups: plane.helperGroups.map((helperGroup) => ({
+      ...helperGroup,
+      presentDiscoveryEntries: discoveryCatalog
+        .filter((entry) => helperGroup.discoveryHelperKeys.includes(entry.helperKey))
+        .map((entry) => entry.helperKey),
+    })),
   };
 }

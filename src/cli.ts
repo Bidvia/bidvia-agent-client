@@ -7,6 +7,7 @@ import packageJson from '../package.json' with { type: 'json' };
 import { BidviaClient, BidviaClientTransportError } from './client.js';
 import type {
   BidviaClientContext,
+  BidviaCorePlaneAdoptionStatus,
   BidviaEvidenceSubmissionInput,
   BidviaHeartbeatInput,
   BidviaProposalSubmissionInput,
@@ -25,9 +26,13 @@ import {
   bidviaNextStageReadRouteDiscoveryGroups,
 } from './capabilities.js';
 import {
+  buildEnterpriseIntegrationDiscoverySnapshot,
   buildLocalDiscoveryCatalog,
+  buildLocalMcpToolCatalog,
   buildLocalRouteCapabilityCatalog,
   buildLocalMcpProductizationSnapshot,
+  getLocalMcpToolDescriptor,
+  getRouteCapabilityFromLocalCatalog,
 } from './discovery-catalog.js';
 import {
   connectionApprovalScenarioAdapter,
@@ -39,8 +44,13 @@ import {
 } from './adapters.js';
 import { buildCommercialActionScenarioPlan } from './commercial-action.js';
 import { buildMultiBusinessChainCoordinatorPlan } from './coordinator.js';
-import { normalizeServerCapabilityPayload } from './server-capabilities.js';
-import { buildLocalRuntimeCapabilitySnapshot } from './runtime-capabilities.js';
+import {
+  buildCapabilityPlaneServerSnapshot,
+} from './capability-plane.js';
+import {
+  buildStage3ReleaseGate,
+  listCorePlaneAdoptionStatuses,
+} from './core-plane-adoption.js';
 import {
   buildReviewPacket,
   exportReviewPacket,
@@ -57,6 +67,7 @@ import {
 import {
   buildOnboardingReadiness,
 } from './onboarding-readiness.js';
+import { buildLocalRuntimeCapabilitySnapshot } from './runtime-capabilities.js';
 import {
   writeOpenClawCompanionBundle,
 } from './openclaw-bundle-export.js';
@@ -70,8 +81,16 @@ import {
 } from './route-context-matrix.js';
 import {
   listOnboardingJourneyCommandHints,
-  requireOnboardingJourneyDefinition,
 } from './onboarding-journey.js';
+import {
+  buildIdentitySessionPlaneCliSnapshot,
+  buildIdentitySessionPlaneJourneyBoundaryStatuses,
+  buildIdentitySessionPlaneProgress,
+  buildIdentitySessionPlaneView,
+} from './identity-session-plane.js';
+import { buildEnterpriseIntegrationPlaneCliSnapshot } from './enterprise-integration-plane.js';
+import { buildTaskPlaneCliSnapshot } from './task-plane.js';
+import { buildWorkflowStagePlaneCliSnapshot } from './workflow-stage-plane.js';
 import {
   type BidviaLocalOnboardingStateWarning,
   type BidviaLocalOnboardingState,
@@ -645,16 +664,12 @@ function buildEffectiveContextSnapshot(
 }
 
 function buildDoctorReadinessEligibility(effectiveContext: ReturnType<typeof buildEffectiveContextSnapshot>) {
-  const missingContext = [
-    effectiveContext.tenantId.value === null ? 'tenantId' : null,
-    effectiveContext.principalId.value === null ? 'principalId' : null,
-    effectiveContext.registrationId.value === null ? 'registrationId' : null,
-  ].filter((value): value is 'tenantId' | 'principalId' | 'registrationId' => value !== null);
-
-  return {
-    eligible: missingContext.length === 0,
-    missingContext,
-  };
+  return buildIdentitySessionPlaneProgress({
+    lastCompletedStep: effectiveContext.lastCompletedStep.value,
+    tenantIdPresent: effectiveContext.tenantId.value !== null,
+    principalIdPresent: effectiveContext.principalId.value !== null,
+    registrationIdPresent: effectiveContext.registrationId.value !== null,
+  }).readinessEligibility;
 }
 
 function buildDoctorReadinessContext(
@@ -671,29 +686,12 @@ function buildDoctorReadinessContext(
 function buildOnboardingProgressSnapshot(
   effectiveContext: ReturnType<typeof buildEffectiveContextSnapshot>,
 ) {
-  const readinessEligibility = buildDoctorReadinessEligibility(effectiveContext);
-  const lastCompletedStep = effectiveContext.lastCompletedStep.value;
-  const hasExplicitProvisionalProgress = lastCompletedStep === 'create-provisional-agent'
-    || lastCompletedStep === 'query-provisional-agent';
-  const hasClaimCompleted = lastCompletedStep === 'claim-provisional-agent'
-    || (!hasExplicitProvisionalProgress && effectiveContext.registrationId.value !== null);
-
-  return {
-    readinessEligibility,
-    lastCompletedStep,
-    hasClaimCompleted,
-    hasExplicitProvisionalProgress,
-    publicProvisionalStatus: hasClaimCompleted
-      ? 'claimed'
-      : hasExplicitProvisionalProgress
-        ? 'in-progress'
-        : 'available',
-    governedRunStatus: effectiveContext.registrationId.value === null
-      ? 'not-ready'
-      : readinessEligibility.eligible
-        ? 'ready'
-        : 'needs-context',
-  };
+  return buildIdentitySessionPlaneProgress({
+    lastCompletedStep: effectiveContext.lastCompletedStep.value,
+    tenantIdPresent: effectiveContext.tenantId.value !== null,
+    principalIdPresent: effectiveContext.principalId.value !== null,
+    registrationIdPresent: effectiveContext.registrationId.value !== null,
+  });
 }
 
 function buildJourneyBoundarySnapshot(
@@ -701,19 +699,10 @@ function buildJourneyBoundarySnapshot(
 ) {
   const onboardingProgress = buildOnboardingProgressSnapshot(effectiveContext);
 
-  return {
-    publicProvisional: {
-      label: 'Public Provisional',
-      chain: 'create -> query -> claim',
-      status: onboardingProgress.publicProvisionalStatus,
-      claimIsSessionBound: true,
-    },
-    governedRun: {
-      label: 'Governed Run',
-      startsAfter: 'successful claim',
-      status: onboardingProgress.governedRunStatus,
-    },
-  };
+  return buildIdentitySessionPlaneJourneyBoundaryStatuses({
+    publicProvisionalStatus: onboardingProgress.publicProvisionalStatus,
+    governedRunStatus: onboardingProgress.governedRunStatus,
+  });
 }
 
 function buildStaticFirstAccessCommandHint(command: string, rationale: string) {
@@ -784,7 +773,7 @@ function buildFirstAccessOnboardingSnapshot(
   effectiveContext: ReturnType<typeof buildEffectiveContextSnapshot>,
   command: 'doctor' | 'onboard',
 ) {
-  const journey = requireOnboardingJourneyDefinition('public-first-onboarding');
+  const journey = buildIdentitySessionPlaneView().canonicalOnboarding;
   const onboardingProgress = buildOnboardingProgressSnapshot(effectiveContext);
 
   if (effectiveContext.tenantId.value === null) {
@@ -1095,6 +1084,8 @@ async function buildContextShowSnapshot(
     command: 'context show',
     scope: 'local-only',
     ...(localStateResult.warnings.length === 0 ? {} : { localStateWarnings: localStateResult.warnings }),
+    identitySessionPlane: buildIdentitySessionPlaneCliSnapshot(),
+    taskPlane: buildTaskPlaneCliSnapshot(),
     journeyBoundary: buildJourneyBoundarySnapshot(effectiveContext),
     context: effectiveContext,
   };
@@ -1115,6 +1106,8 @@ async function buildWhoamiSnapshot(
     identityKind: 'effective-local-context',
     authoritativeRemoteLoginState: false,
     guidance: 'Reports effective local identity/context from env and local onboarding state only. This is not proof of platform login and does not replace /account/me.',
+    identitySessionPlane: buildIdentitySessionPlaneCliSnapshot(),
+    taskPlane: buildTaskPlaneCliSnapshot(),
     journeyBoundary: buildJourneyBoundarySnapshot(effectiveContext),
     identity: {
       tenantId: effectiveContext.tenantId,
@@ -1836,11 +1829,22 @@ function printHelp(printLine: (value: string) => void): void {
 }
 
 function buildOperatorDiscoverySnapshot() {
+  const planeAdoption = listCorePlaneAdoptionStatuses();
+  const enterpriseIntegrationPlane = buildEnterpriseIntegrationPlaneCliSnapshot();
+  const enterpriseIntegrationDiscovery = buildEnterpriseIntegrationDiscoverySnapshot();
+
   return {
     command: 'operator-discovery',
     scope: 'local-only',
     cli: {
       routeCapabilities: buildLocalRouteCapabilityCatalog(),
+      planeAdoption: planeAdoption.map((status): BidviaCorePlaneAdoptionStatus => ({
+        ...status,
+        notes: [...status.notes],
+      })),
+      releaseGate: buildStage3ReleaseGate(),
+      enterpriseIntegrationPlane,
+      enterpriseIntegrationDiscovery,
       nextStageReadRouteDiscoveryGroups: bidviaNextStageReadRouteDiscoveryGroups.map((group) => ({
         groupKey: group.groupKey,
         label: group.label,
@@ -2060,7 +2064,10 @@ export async function runCli(
   }
 
   if (command === 'server-capabilities') {
-    dependencies.printJson(normalizeServerCapabilityPayload(buildSampleServerCapabilityPayload()));
+    dependencies.printJson(buildCapabilityPlaneServerSnapshot(buildSampleServerCapabilityPayload(), {
+      getRouteCapabilityFromLocalCatalog,
+      getLocalMcpToolDescriptor,
+    }));
     return 0;
   }
 
@@ -2350,6 +2357,7 @@ export async function runCli(
     dependencies.printJson({
       command,
       scope: 'local-only',
+      workflowStagePlane: buildWorkflowStagePlaneCliSnapshot(),
       scenarioPlan: buildRegistrationLifecycleCliPlan(now),
     });
     return 0;
@@ -2359,6 +2367,7 @@ export async function runCli(
     dependencies.printJson({
       command,
       scope: 'local-only',
+      workflowStagePlane: buildWorkflowStagePlaneCliSnapshot(),
       scenarioPlan: buildRegisteredAgentOperationsCliPlan(now),
     });
     return 0;

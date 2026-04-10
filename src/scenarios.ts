@@ -1,8 +1,15 @@
 import type {
+  BidviaLocalJourneyStageLabel,
   BidviaScenarioContextKey,
   BidviaScenarioEnvelope,
   BidviaScenarioRouteStep,
+  BidviaWorkflowStageReference,
 } from './contracts.js';
+import { buildWorkflowStageReference } from './workflow-stage-plane.js';
+
+export interface BidviaScenarioEnvelopeInput extends Omit<BidviaScenarioEnvelope, 'workflowStage'> {
+  workflowStage?: BidviaWorkflowStageReference;
+}
 
 function uniqueValues<T>(values: T[]): T[] {
   return Array.from(new Set(values));
@@ -28,11 +35,13 @@ export function requireNonEmptyScenarioRouteChain(expectedRouteChain: BidviaScen
   return expectedRouteChain;
 }
 
-export function buildScenarioEnvelope(envelope: BidviaScenarioEnvelope): BidviaScenarioEnvelope {
+export function buildScenarioEnvelope(envelope: BidviaScenarioEnvelopeInput): BidviaScenarioEnvelope {
   const scenarioId = envelope.scenarioId.trim();
   if (!scenarioId) {
     throw new Error('scenarioId is required');
   }
+
+  const workflowIds = uniqueValues(envelope.workflowIds);
 
   return {
     ...envelope,
@@ -42,7 +51,13 @@ export function buildScenarioEnvelope(envelope: BidviaScenarioEnvelope): BidviaS
     sourceRefs: uniqueValues(envelope.sourceRefs),
     evidenceRefs: uniqueValues(envelope.evidenceRefs),
     traceIds: uniqueValues(envelope.traceIds),
-    workflowIds: uniqueValues(envelope.workflowIds),
+    workflowIds,
+    workflowStage: envelope.workflowStage
+      ? buildWorkflowStageReference(
+        envelope.workflowStage.workflowIds,
+        envelope.workflowStage.localStageLabel as BidviaLocalJourneyStageLabel | null,
+      )
+      : buildWorkflowStageReference(workflowIds, null),
     expectedRouteChain: requireNonEmptyScenarioRouteChain(envelope.expectedRouteChain),
   };
 }

@@ -13,6 +13,7 @@ import type {
   BidviaFreshnessMetadata,
   BidviaNormalizationSnapshotSource,
 } from './contracts.js';
+import { buildTaskPlaneLocalParticipationProjection } from './task-plane.js';
 
 export interface BuildAgentRegistrationStateOptions {
   status: BidviaAgentRegistrationState['status'];
@@ -102,12 +103,14 @@ export function buildLocalParticipationState({
   localStatus,
   localTaskRef,
 }: BuildLocalParticipationStateOptions): BidviaLocalParticipationState {
+  const taskPlaneProjection = buildTaskPlaneLocalParticipationProjection(localStatus, localTaskRef);
+
   return {
     kind: 'local-participation-state',
     localStatus,
     ...(localTaskRef === undefined ? {} : { localTaskRef }),
-    status: localStatus,
-    ...(localTaskRef === undefined ? {} : { taskId: localTaskRef }),
+    status: taskPlaneProjection.status as BidviaLocalParticipationState['status'],
+    ...(taskPlaneProjection.taskId === undefined ? {} : { taskId: taskPlaneProjection.taskId }),
   };
 }
 

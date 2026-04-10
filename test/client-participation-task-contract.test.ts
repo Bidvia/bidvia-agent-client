@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import { BidviaClient } from '../src/client.ts';
+import { buildTaskPlaneView, getTaskPlaneCapabilityMode } from '../src/index.ts';
 
 function createFetchStub() {
   const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
@@ -189,4 +190,15 @@ test('BidviaClient uses operator action headers and frozen payloads for canonica
     reason: 'claim conflicts with active lease',
     now: '2026-03-31T00:10:00.000Z',
   });
+});
+
+test('BidviaClient task wrappers stay aligned with the task-plane adapter and do not invent timeout payload fields', () => {
+  const taskPlane = buildTaskPlaneView();
+
+  assert.equal(taskPlane.outcomeTruth.payloadPacketStatus, 'packet-grounded');
+  assert.equal(taskPlane.timeoutTruth.payloadPacketStatus, 'blocked-pending-packet');
+  assert.equal(taskPlane.timeoutTruth.localOnly, true);
+  assert.equal(taskPlane.timeoutTruth.remotePayloadSupported, false);
+  assert.equal(getTaskPlaneCapabilityMode('completeTaskDispatch'), 'executable');
+  assert.equal(getTaskPlaneCapabilityMode('failTaskDispatch'), 'executable');
 });

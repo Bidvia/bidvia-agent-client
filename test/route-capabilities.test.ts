@@ -23,6 +23,7 @@ import {
   getRouteCapability,
   getNextStageReadRouteDiscoveryGroup,
 } from '../src/capabilities.ts';
+import { buildCapabilityPlaneView } from '../src/capability-plane.ts';
 
 function withDefaultContextSemantic(capability: BidviaRouteCapability): BidviaRouteCapability {
   return {
@@ -133,6 +134,22 @@ test('capability registry gives every shipped route complete local tier and risk
     bidviaRouteCapabilities.every((capability) => capability.localCapabilityRiskTier !== undefined),
     true,
   );
+});
+
+test('capability plane view keeps capability discovery descriptive-only until packet-complete core truth exists', () => {
+  const capabilityPlane = buildCapabilityPlaneView();
+
+  assert.deepEqual(capabilityPlane.adoptionStatus, {
+    plane: 'capability',
+    frozenInCore: true,
+    payloadPacketStatus: 'blocked-pending-packet',
+    canExecuteNow: true,
+    blockedBy: 'core-plane-payload-packet-not-yet-frozen',
+    notes: ['Route remote capability refresh through one fail-closed capability-plane adapter.'],
+  });
+  assert.equal(capabilityPlane.localSnapshots.descriptiveOnly, true);
+  assert.equal(capabilityPlane.localSnapshots.liveServerNegotiationClaimed, false);
+  assert.equal(capabilityPlane.localSnapshots.remoteRegistryBehaviorClaimed, false);
 });
 
 test('capability registry covers representative shipped helpers and route families', () => {
@@ -638,6 +655,7 @@ test('capability registry describes principal-governed reads and canonical parti
     level: 'atomic-route',
     localCapabilityTier: 'L0-observe-only',
     localCapabilityRiskTier: 'observe-only',
+    taskPlaneCapabilityMode: 'visibility-only',
   });
 
   assert.deepEqual(getRouteCapability('createTaskDispatch'), {
@@ -651,6 +669,7 @@ test('capability registry describes principal-governed reads and canonical parti
     level: 'atomic-route',
     localCapabilityTier: 'L3-governed-commercial',
     localCapabilityRiskTier: 'governed-commercial',
+    taskPlaneCapabilityMode: 'executable',
   });
 
   assert.deepEqual(getRouteCapability('rejectClaim'), {
@@ -664,6 +683,7 @@ test('capability registry describes principal-governed reads and canonical parti
     level: 'atomic-route',
     localCapabilityTier: 'L3-governed-commercial',
     localCapabilityRiskTier: 'governed-commercial',
+    taskPlaneCapabilityMode: 'executable',
   });
 });
 

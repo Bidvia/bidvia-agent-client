@@ -7,14 +7,28 @@ test('buildRouteContextMatrix separates public provisional onboarding from gover
   const exports = publicSurface as Record<string, unknown>;
 
   assert.equal(typeof exports.buildRouteContextMatrix, 'function');
+  assert.equal(typeof exports.buildIdentitySessionPlaneView, 'function');
+  assert.equal(typeof exports.buildTaskPlaneView, 'function');
 
   const matrix = (exports.buildRouteContextMatrix as () => unknown)();
+  const identitySessionPlane = (exports.buildIdentitySessionPlaneView as () => unknown)();
+  const taskPlane = (exports.buildTaskPlaneView as () => unknown)();
 
   const typedMatrix = matrix as {
     defaults: {
       baseUrl: string;
       environmentMode: string;
       environmentSelectionRequired: boolean;
+    };
+    identitySessionPlane: unknown;
+    taskPlane: unknown;
+    workflowStagePlane: {
+      localJourneyStages: {
+        labels: string[];
+      };
+      coreStageSemantics: {
+        packetGroundedStageIdentifiers: string[];
+      };
     };
     governedReadPosture: Record<string, unknown>;
     rows: Array<Record<string, unknown>>;
@@ -27,11 +41,20 @@ test('buildRouteContextMatrix separates public provisional onboarding from gover
     environmentSelectionRequired: false,
   });
 
+  assert.deepEqual(typedMatrix.identitySessionPlane, identitySessionPlane);
+  assert.deepEqual(typedMatrix.taskPlane, taskPlane);
+  assert.deepEqual(typedMatrix.workflowStagePlane.localJourneyStages.labels, [
+    'public-provisional',
+    'governed-run-support',
+    'governed-run-execution',
+  ]);
+  assert.deepEqual(typedMatrix.workflowStagePlane.coreStageSemantics.packetGroundedStageIdentifiers, []);
+
   assert.deepEqual(typedMatrix.governedReadPosture, {
     accessContextFamily: 'principal-governed-read',
     requiredContext: ['tenantId', 'principalId'],
     adminSessionOptional: true,
-    operatorGuidance: 'On local docker host, authority and presence require a valid admin session plus operator context. Authority-ladder is an operator-governed write and not a workspace admin-session route.',
+    operatorGuidance: 'On local docker host, authority and presence reads require principal-governed tenant context. Authority-ladder reads use the same principal-governed posture, while ladder writes remain operator-governed and separate from workspace admin-session routes.',
   });
 
   assert.deepEqual(typedMatrix.rows.slice(0, 6), [
@@ -41,6 +64,7 @@ test('buildRouteContextMatrix separates public provisional onboarding from gover
       routePathTemplate: '/runtime/agents/provisional',
       routeFamily: 'agent-onboarding',
       journeyStage: 'public-provisional',
+      journeyStageSemantics: 'local-only',
       accessContextFamily: 'tenant',
       contextSemantic: 'public-provisional',
       requiredContext: ['tenantId'],
@@ -56,6 +80,7 @@ test('buildRouteContextMatrix separates public provisional onboarding from gover
       routePathTemplate: '/runtime/agents/provisional',
       routeFamily: 'agent-onboarding',
       journeyStage: 'public-provisional',
+      journeyStageSemantics: 'local-only',
       accessContextFamily: 'tenant',
       contextSemantic: 'public-provisional',
       requiredContext: ['tenantId'],
@@ -71,6 +96,7 @@ test('buildRouteContextMatrix separates public provisional onboarding from gover
       routePathTemplate: '/runtime/agents/provisional/claim',
       routeFamily: 'agent-onboarding',
       journeyStage: 'public-provisional',
+      journeyStageSemantics: 'local-only',
       accessContextFamily: 'session',
       contextSemantic: 'session',
       requiredContext: ['tenantId', 'sessionId'],
@@ -86,6 +112,7 @@ test('buildRouteContextMatrix separates public provisional onboarding from gover
       routePathTemplate: '/runtime/agents/:agent_registration_id/readiness',
       routeFamily: 'agent-runtime',
       journeyStage: 'governed-run-support',
+      journeyStageSemantics: 'local-only',
       accessContextFamily: 'principal-governed-read',
       contextSemantic: 'principal-governed-read',
       requiredContext: ['tenantId', 'principalId'],
@@ -101,6 +128,7 @@ test('buildRouteContextMatrix separates public provisional onboarding from gover
       routePathTemplate: '/runtime/agents/:registrationId/heartbeat',
       routeFamily: 'agent-runtime',
       journeyStage: 'governed-run-execution',
+      journeyStageSemantics: 'local-only',
       accessContextFamily: 'registration',
       contextSemantic: 'registration',
       requiredContext: ['tenantId', 'registrationId', 'principalId'],
@@ -116,6 +144,7 @@ test('buildRouteContextMatrix separates public provisional onboarding from gover
       routePathTemplate: '/runtime/commercial-actions',
       routeFamily: 'agent-runtime',
       journeyStage: 'governed-run-execution',
+      journeyStageSemantics: 'local-only',
       accessContextFamily: 'operator-company',
       contextSemantic: 'operator-company',
       requiredContext: ['tenantId', 'principalId', 'companyId'],
@@ -150,11 +179,13 @@ test('buildRouteContextMatrix separates public provisional onboarding from gover
       command: 'registration-lifecycle-plan',
       rationale: 'Use the lifecycle plan next so the first successful onboarding path stays aligned with the shipped provisional-to-registration chain.',
       journeyStage: 'governed-run-execution',
+      journeyStageSemantics: 'local-only',
     },
     'governed-run': {
       command: 'registered-agent-operations-plan',
       rationale: 'Use the post-onboarding operations plan after Governed Run has the required registration context.',
       journeyStage: 'governed-run-execution',
+      journeyStageSemantics: 'local-only',
     },
   });
 
@@ -178,6 +209,7 @@ test('buildRouteContextMatrix separates public provisional onboarding from gover
       {
         journeyKey: 'public-first-onboarding',
         journeyStage: 'governed-run-execution',
+        journeyStageSemantics: 'local-only',
         relevance: 'public-first-common',
         command: 'registration-lifecycle-plan',
         rationale: 'Use the lifecycle plan next so the first successful onboarding path stays aligned with the shipped provisional-to-registration chain.',
@@ -185,10 +217,14 @@ test('buildRouteContextMatrix separates public provisional onboarding from gover
       {
         journeyKey: 'governed-run',
         journeyStage: 'governed-run-execution',
+        journeyStageSemantics: 'local-only',
         relevance: 'governed-run-secondary',
         command: 'registered-agent-operations-plan',
         rationale: 'Use the post-onboarding operations plan after Governed Run has the required registration context.',
       },
     ],
   );
+
+  assert.equal((typedMatrix.taskPlane as { timeoutTruth: { payloadPacketStatus: string } }).timeoutTruth.payloadPacketStatus, 'blocked-pending-packet');
+  assert.equal((typedMatrix.taskPlane as { localShellBoundary: { descriptiveOnly: boolean } }).localShellBoundary.descriptiveOnly, true);
 });

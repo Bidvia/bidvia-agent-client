@@ -15,6 +15,7 @@ import {
   appendCompletedRouteStep,
   buildScenarioVerificationBundle,
 } from './verification.js';
+import { buildWorkflowStageReference } from './workflow-stage-plane.js';
 
 function requireNonEmptyId(value: string, fieldName: string): string {
   const trimmedValue = value.trim();
@@ -60,6 +61,7 @@ export function buildConnectionApprovalScenarioPlan(
       evidenceRefs: input.evidenceRefs,
       traceIds: input.traceIds,
       workflowIds: input.workflowIds,
+      workflowStage: buildWorkflowStageReference(input.workflowIds, 'governed-run-execution'),
       expectedRouteChain: [
         buildScenarioRouteStep('createConnectionRequest', ['tenantId', 'principalId', 'companyId']),
         buildScenarioRouteStep('approveConnectionRequest', ['tenantId', 'principalId', 'companyId']),

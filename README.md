@@ -2,7 +2,7 @@
 
 `@bidvia/client` is the open-source SDK and CLI for connecting governed agents to the Bidvia platform.
 
-The active execution plan for the current documentation and productization wave is `.sisyphus/plans/agent-client-core-vnext-alignment-and-joint-debug.md`. This README stays focused on the shipped local-first package surface and should be read alongside that plan, not as a competing roadmap.
+The active execution plan for the current Stage 2 / Stage 3 wave is `.sisyphus/plans/agent-client-stage-2-stage-3-frozen-plane-execution.md`. This README stays focused on the shipped local-first package surface and should be read alongside that plan, not as a competing roadmap.
 
 Today, this package ships a usable current mainline client surface for the frozen Bidvia Commercial Universe V1 / Core V12 handoff boundary. It includes typed SDK helpers, a widened read-only truth-fetch layer, stronger local operator discovery surfaces, richer review-safe readback, bounded scenario and verification helpers, local CLI commands, and a local stdio MCP seam. Stage 1 of the client-side runtime architecture upgrade is now complete in this repo: CLI and MCP execution flow through a shared local runtime core and write local accumulation records while preserving operator-facing outputs. Recent transport and auth-provider hardening support that local-only foundation, but they do not mean login is shipped. It does not claim hosted runtime behavior, remote registry behavior, integrated Core truth beyond frozen inputs, or client-owned authority.
 
@@ -19,7 +19,9 @@ The widened frozen read surface now visible in the SDK and CLI includes the cano
 
 The current mainline remains explicitly bounded to the frozen Bidvia Commercial Universe V1 / Core V12 framing. This repo can improve client ergonomics, but it must not invent platform truth or widen governance authority on its own.
 
-For the current plane-by-plane gap view between the now-complete Stage 1 client runtime and the still-partial Core-facing contracts, use `docs/CORE_AGENT_CLIENT_PLANE_CONTRACT_GAPS.md`.
+For current downstream contract truth, use the Bidvia Core downstream contract center (`docs/downstream-contract-center/**` in the main Bidvia repo) as the single frozen source for routine implementation.
+
+For the current plane-by-plane adoption and gating view between the now-complete Stage 1 client runtime and the frozen Core-facing planes, use `docs/CORE_AGENT_CLIENT_PLANE_CONTRACT_GAPS.md`.
 
 ## Installation
 
@@ -53,6 +55,8 @@ npm test
 npm run typecheck
 npm run build
 npm run validate
+npm run validate:release-readiness
+npm run validate:release-gate
 ```
 
 ## Start here
@@ -393,6 +397,8 @@ These seams exist in code as readiness-only consumption points, but they remain 
 
 `refreshRemoteCapabilityTruth(...)` belongs here. The seam is ready to consume a future frozen Core capability-truth payload, but this repo does not have that truth today. Until frozen Core-owned capability truth exists, every blocked refresh stays fail-closed and must not be read as truth closure.
 
+The same rule now applies to the Stage 3 release closure gate. Stage 3 release closure stays blocked until P0, P1, and P2 adoption are packet-grounded. Operators can inspect that fail-closed gate through `bidvia runtime-capabilities`, `bidvia route-context-matrix`, and `bidvia operator-discovery`, but those repo-facing snapshots only encode current plane-adoption truth; the release validator suite remains a separate requirement before any human release packet can describe full `1.0.0` closure.
+
 ### 3. Deferred areas
 
 These areas are outside the current shipped boundary:
@@ -406,6 +412,17 @@ These areas are outside the current shipped boundary:
 - capability truth integration beyond local descriptive surfaces
 - broader orchestration beyond the shipped bounded slices
 - any client-owned authority or server-truth claims beyond the frozen boundary
+
+The executable Stage 3 release gate also requires all of the following validator commands to stay green together before any human release packet can describe public closure:
+
+```bash
+npm test
+npm run typecheck
+npm run build
+npm run validate
+npm run validate:release-readiness
+npm run validate:release-gate
+```
 
 ## Current scope, in plain language
 

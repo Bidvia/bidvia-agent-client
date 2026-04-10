@@ -7,7 +7,9 @@ import type {
   BidviaCommercialActionRequestApprovalInput,
   BidviaCommercialActionScenarioPlan,
   BidviaCommercialActionScenarioPlanInput,
+  BidviaEnterpriseIntegrationPlaneHelperGroup,
 } from './contracts.js';
+import { getEnterpriseIntegrationPlaneHelperGroup } from './enterprise-integration-plane.js';
 import {
   buildScenarioEnvelope,
   buildScenarioRouteStep,
@@ -17,6 +19,7 @@ import {
   buildReviewPacket,
   buildScenarioVerificationBundle,
 } from './verification.js';
+import { buildWorkflowStageReference } from './workflow-stage-plane.js';
 
 export interface BidviaCommercialActionScenarioResult {
   verificationBundle: BidviaScenarioVerificationBundle;
@@ -93,6 +96,7 @@ export function buildCommercialActionScenarioPlan(
       evidenceRefs: input.evidenceRefs,
       traceIds: input.traceIds,
       workflowIds: input.workflowIds,
+      workflowStage: buildWorkflowStageReference(input.workflowIds, 'governed-run-execution'),
       expectedRouteChain: [
         buildScenarioRouteStep('createCommercialAction', ['tenantId', 'principalId', 'companyId']),
         buildScenarioRouteStep('policyCheckCommercialAction', ['tenantId', 'principalId', 'companyId']),
@@ -177,4 +181,8 @@ export async function readCommercialActionScenarioReview(
     receipt: await client.getCommercialActionReceipt({ commercialActionRequestId }),
     audit: await client.getCommercialActionAudit({ commercialActionRequestId }),
   };
+}
+
+export function buildCommercialActionEnterpriseBoundary(): BidviaEnterpriseIntegrationPlaneHelperGroup {
+  return getEnterpriseIntegrationPlaneHelperGroup('commercial-action');
 }

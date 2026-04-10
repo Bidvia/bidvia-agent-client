@@ -114,6 +114,10 @@ export interface BidviaQueryProvisionalAgentInput {
   provisionalAgentRef: string;
 }
 
+export interface BidviaNotificationIdentifierInput {
+  notificationId: string;
+}
+
 export interface BidviaRegistrationLifecycleScenarioPlanInput {
   scenarioId: string;
   scenarioLabel: string;
@@ -542,6 +546,8 @@ export interface BidviaRouteCapability {
   level: BidviaRouteCapabilityLevel;
   localCapabilityTier: BidviaLocalCapabilityTier;
   localCapabilityRiskTier: BidviaLocalCapabilityRiskTier;
+  taskPlaneCapabilityMode?: BidviaTaskPlaneCapabilityMode;
+  eventNotificationPlaneCapabilityMode?: BidviaEventNotificationPlaneCapabilityMode;
   scenarioRouteSteps?: BidviaScenarioRouteStep[];
 }
 
@@ -600,6 +606,7 @@ export interface BidviaScenarioEnvelope {
   evidenceRefs: string[];
   traceIds: string[];
   workflowIds: string[];
+  workflowStage?: BidviaWorkflowStageReference;
   expectedRouteChain: BidviaScenarioRouteStep[];
   recordIds?: BidviaScenarioEnvelopeRecordIds;
 }
@@ -749,6 +756,8 @@ export interface BidviaMcpToolDescriptor {
   accessContextFamily: BidviaRouteCapabilityAccessContextFamily;
   contextSemantic?: BidviaRouteCapabilityContextSemantic;
   requiredContext: BidviaScenarioContextKey[];
+  taskPlaneCapabilityMode?: BidviaTaskPlaneCapabilityMode;
+  eventNotificationPlaneCapabilityMode?: BidviaEventNotificationPlaneCapabilityMode;
 }
 
 export interface BidviaMcpToolCallRequest {
@@ -1113,6 +1122,8 @@ export interface BidviaLocalRuntimeCapabilitySnapshot {
   mcpTools: BidviaLocalMcpToolKnowledge;
   localMcpServer: BidviaLocalMcpServerAvailability;
   deferredServerNegotiation: BidviaDeferredServerCapabilityNegotiation;
+  planeAdoption: BidviaCorePlaneAdoptionStatus[];
+  stage3ReleaseGate: BidviaStage3ReleaseGate;
 }
 
 export interface BidviaServerCapabilityPayloadRouteCapability {
@@ -1577,4 +1588,295 @@ export interface BidviaGovernedProposalReviewUsePlan {
   proposalRecommendation: BidviaGovernedProposalRecommendation;
   reviewAssessment: BidviaGovernedProposalReviewAssessment;
   authorizedUse: BidviaGovernedAuthorizedUseReceipt;
+}
+
+export const bidviaCorePlaneNames = [
+  'identity-session',
+  'task',
+  'capability',
+  'workflow-stage',
+  'event-notification',
+  'enterprise-integration',
+] as const;
+
+export type BidviaCorePlaneName = (typeof bidviaCorePlaneNames)[number];
+
+export const bidviaCorePlanePayloadPacketStatuses = [
+  'blocked-pending-packet',
+  'packet-grounded',
+] as const;
+
+export type BidviaCorePlanePayloadPacketStatus =
+  (typeof bidviaCorePlanePayloadPacketStatuses)[number];
+
+export interface BidviaCorePlaneAdoptionStatus {
+  plane: BidviaCorePlaneName;
+  frozenInCore: true;
+  payloadPacketStatus: BidviaCorePlanePayloadPacketStatus;
+  canExecuteNow: boolean;
+  blockedBy: string | null;
+  notes: string[];
+}
+
+export interface BidviaCorePlaneAdoptionSnapshot {
+  sourceOfTruth: 'core-downstream-contract-center';
+  statuses: BidviaCorePlaneAdoptionStatus[];
+}
+
+export interface BidviaCorePlaneWaveStatus {
+  wave: 'P0' | 'P1' | 'P2';
+  status: 'blocked' | 'complete';
+  planes: BidviaCorePlaneName[];
+}
+
+export interface BidviaStage3ReleaseGate {
+  status: 'blocked' | 'ready';
+  blockedBy: Array<'plane-adoption-incomplete'>;
+  requiredValidatorCommands: [
+    'npm test',
+    'npm run typecheck',
+    'npm run build',
+    'npm run validate',
+    'npm run validate:release-readiness',
+    'npm run validate:release-gate',
+  ];
+  waves: BidviaCorePlaneWaveStatus[];
+}
+
+export interface BidviaIdentitySessionPlaneGovernedReadPosture {
+  accessContextFamily: 'principal-governed-read';
+  requiredContext: ['tenantId', 'principalId'];
+  adminSessionOptional: true;
+  operatorGuidance: string;
+}
+
+export interface BidviaIdentitySessionPlaneSessionTruth {
+  broaderPlatformLoginClaim: false;
+  payloadPacketStatus: BidviaCorePlanePayloadPacketStatus;
+  blockedBy: string | null;
+  notes: string[];
+}
+
+export interface BidviaIdentitySessionPlaneJourneyBoundary {
+  publicProvisional: {
+    label: 'Public Provisional';
+    chain: 'create -> query -> claim';
+    claimIsSessionBound: true;
+  };
+  governedRun: {
+    label: 'Governed Run';
+    startsAfter: 'successful claim';
+  };
+}
+
+export interface BidviaIdentitySessionPlaneCanonicalOnboardingStep {
+  helperKey: 'createProvisionalAgent' | 'queryProvisionalAgent' | 'claimProvisionalAgent';
+  journeyStage: 'public-provisional';
+  routePathTemplate: string;
+  accessContextFamily: BidviaRouteCapability['accessContextFamily'];
+  contextSemantic: BidviaRouteCapability['contextSemantic'];
+  requiredContext: BidviaScenarioContextKey[];
+  command: string;
+  rationale: string;
+}
+
+export interface BidviaIdentitySessionPlaneView {
+  adoptionStatus: BidviaCorePlaneAdoptionStatus;
+  governedReadPosture: BidviaIdentitySessionPlaneGovernedReadPosture;
+  sessionTruth: BidviaIdentitySessionPlaneSessionTruth;
+  journeyBoundary: BidviaIdentitySessionPlaneJourneyBoundary;
+  canonicalOnboarding: {
+    journeyKey: 'public-first-onboarding';
+    label: 'Public provisional onboarding';
+    helperSteps: BidviaIdentitySessionPlaneCanonicalOnboardingStep[];
+    claim: BidviaIdentitySessionPlaneCanonicalOnboardingStep;
+    firstSuccessNextStep: {
+      command: 'registration-lifecycle-plan';
+      rationale: string;
+      journeyStage: 'governed-run-execution';
+      journeyStageSemantics: 'local-only';
+    };
+  };
+}
+
+export type BidviaLocalJourneyStageLabel =
+  | 'public-provisional'
+  | 'governed-run-support'
+  | 'governed-run-execution';
+
+export interface BidviaWorkflowStageReference {
+  workflowIds: string[];
+  localStageLabel: BidviaLocalJourneyStageLabel | null;
+  localStageSemantics: 'local-only';
+  coreStageIdentifier: null;
+  coreStageSemantics: 'blocked-pending-packet';
+  blockedBy: 'core-plane-payload-packet-not-yet-frozen';
+  transitionRule: null;
+}
+
+export interface BidviaWorkflowStagePlaneView {
+  adoptionStatus: BidviaCorePlaneAdoptionStatus;
+  localJourneyStages: {
+    descriptiveOnly: true;
+    labels: BidviaLocalJourneyStageLabel[];
+    notes: string[];
+  };
+  workflowIdentifiers: {
+    transportableScenarioMetadata: true;
+    notes: string[];
+  };
+  coreStageSemantics: {
+    payloadPacketStatus: 'blocked-pending-packet';
+    blockedBy: 'core-plane-payload-packet-not-yet-frozen';
+    packetGroundedStageIdentifiers: string[];
+    transitionRules: string[];
+    inventedIdentifiersBlocked: true;
+  };
+}
+
+export interface BidviaCapabilityPlaneLocalSnapshotsBoundary {
+  descriptiveOnly: true;
+  liveServerNegotiationClaimed: false;
+  remoteRegistryBehaviorClaimed: false;
+  notes: string[];
+}
+
+export interface BidviaCapabilityPlaneRemoteTruthBoundary {
+  payloadPacketStatus: 'blocked-pending-packet';
+  blockedBy: 'core-plane-payload-packet-not-yet-frozen';
+  liveServerNegotiationClaimed: false;
+  remoteRegistryBehaviorClaimed: false;
+  notes: string[];
+}
+
+export interface BidviaCapabilityPlaneView {
+  adoptionStatus: BidviaCorePlaneAdoptionStatus;
+  localSnapshots: BidviaCapabilityPlaneLocalSnapshotsBoundary;
+  remoteTruth: BidviaCapabilityPlaneRemoteTruthBoundary;
+}
+
+export const bidviaEnterpriseIntegrationPlaneHelperGroupKeys = [
+  'asset-evidence-family',
+  'evidence-submission',
+  'commercial-action',
+  'governed-proposals',
+  'opportunity-handoffs',
+] as const;
+
+export type BidviaEnterpriseIntegrationPlaneHelperGroupKey =
+  (typeof bidviaEnterpriseIntegrationPlaneHelperGroupKeys)[number];
+
+export interface BidviaEnterpriseIntegrationPlaneHelperGroup {
+  groupKey: BidviaEnterpriseIntegrationPlaneHelperGroupKey;
+  label: string;
+  helperKeys: string[];
+  clientMethods: string[];
+  cliCommands: string[];
+  discoveryHelperKeys: string[];
+  broaderEnterpriseAuthorityClaimed: false;
+  broaderSystemAuthorityClaimed: false;
+  payloadPacketStatus: 'blocked-pending-packet';
+  blockedBy: 'core-plane-payload-packet-not-yet-frozen';
+  notes: string[];
+}
+
+export interface BidviaEnterpriseIntegrationPlaneView {
+  adoptionStatus: BidviaCorePlaneAdoptionStatus;
+  visibilityBoundary: {
+    boundedCommercialUniverseOnly: true;
+    broaderEnterpriseAuthorityClaimed: false;
+    broaderSystemAuthorityClaimed: false;
+    notes: string[];
+  };
+  packetTruthBoundary: {
+    payloadPacketStatus: 'blocked-pending-packet';
+    blockedBy: 'core-plane-payload-packet-not-yet-frozen';
+    packetCompleteFieldFamilies: string[];
+    inventedPacketFieldsBlocked: true;
+    notes: string[];
+  };
+  helperGroups: BidviaEnterpriseIntegrationPlaneHelperGroup[];
+}
+
+export const bidviaTaskPlaneCapabilityModes = [
+  'visibility-only',
+  'executable',
+] as const;
+
+export type BidviaTaskPlaneCapabilityMode = (typeof bidviaTaskPlaneCapabilityModes)[number];
+
+export interface BidviaTaskPlaneLocalShellBoundary {
+  descriptiveOnly: true;
+  schedulerAuthorityClaim: false;
+  timeoutSemantics: 'local-only';
+  notes: string[];
+}
+
+export interface BidviaTaskPlaneBlockedTruth {
+  payloadPacketStatus: 'blocked-pending-packet';
+  blockedBy: string;
+  localOnly: true;
+  remotePayloadSupported: false;
+  notes: string[];
+}
+
+export interface BidviaTaskPlaneGroundedTruth {
+  payloadPacketStatus: 'packet-grounded';
+  blockedBy: null;
+  remotePayloadSupported: true;
+  notes: string[];
+}
+
+export interface BidviaTaskPlaneView {
+  adoptionStatus: BidviaCorePlaneAdoptionStatus;
+  localShellBoundary: BidviaTaskPlaneLocalShellBoundary;
+  capabilityModes: {
+    visibilityOnlyHelperKeys: string[];
+    executableHelperKeys: string[];
+  };
+  outcomeTruth: BidviaTaskPlaneGroundedTruth;
+  timeoutTruth: BidviaTaskPlaneBlockedTruth;
+}
+
+export const bidviaEventNotificationPlaneCapabilityModes = [
+  'visibility-only',
+  'blocked-pending-packet',
+] as const;
+
+export type BidviaEventNotificationPlaneCapabilityMode =
+  (typeof bidviaEventNotificationPlaneCapabilityModes)[number];
+
+export interface BidviaEventNotificationPlaneReadRoute {
+  helperKey: 'getNotification';
+  routePathTemplate: '/runtime/notifications/:notification_id';
+  httpMethod: 'GET';
+  requiredContext: ['tenantId', 'principalId'];
+}
+
+export interface BidviaEventNotificationPlaneBlockedExecutionRoute {
+  helperKey:
+    | 'createNotificationDelivery'
+    | 'acknowledgeNotification'
+    | 'retryNotification'
+    | 'expireNotification';
+  routePathTemplate:
+    | '/runtime/notifications/deliveries'
+    | '/runtime/notifications/:notification_id/acknowledgements'
+    | '/runtime/notifications/:notification_id/retry'
+    | '/runtime/notifications/:notification_id/expire';
+  httpMethod: 'POST';
+  blockedBy: 'core-plane-payload-packet-not-yet-frozen';
+  notes: string[];
+}
+
+export interface BidviaEventNotificationPlaneView {
+  adoptionStatus: BidviaCorePlaneAdoptionStatus;
+  capabilityModes: {
+    visibilityOnlyHelperKeys: Array<BidviaEventNotificationPlaneReadRoute['helperKey']>;
+    blockedExecutionHelperKeys: Array<BidviaEventNotificationPlaneBlockedExecutionRoute['helperKey']>;
+  };
+  readRoute: BidviaEventNotificationPlaneReadRoute;
+  notificationReadTruth: BidviaTaskPlaneGroundedTruth;
+  blockedExecutionRoutes: BidviaEventNotificationPlaneBlockedExecutionRoute[];
+  executionTruth: BidviaTaskPlaneBlockedTruth;
 }

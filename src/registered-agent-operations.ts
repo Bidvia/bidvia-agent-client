@@ -14,6 +14,7 @@ import {
   buildReviewPacket,
   buildScenarioVerificationBundle,
 } from './verification.js';
+import { buildWorkflowStageReference } from './workflow-stage-plane.js';
 
 export interface BidviaRegisteredAgentOperationsScenarioResult {
   verificationBundle: BidviaScenarioVerificationBundle;
@@ -43,6 +44,7 @@ export function buildRegisteredAgentOperationsScenarioPlan(
       evidenceRefs: input.evidenceRefs,
       traceIds: input.traceIds,
       workflowIds: input.workflowIds,
+      workflowStage: buildWorkflowStageReference(input.workflowIds, 'governed-run-execution'),
       expectedRouteChain: [
         buildScenarioRouteStep('postHeartbeat', ['tenantId', 'principalId', 'registrationId']),
         buildScenarioRouteStep('uploadSync', ['tenantId', 'principalId', 'registrationId']),

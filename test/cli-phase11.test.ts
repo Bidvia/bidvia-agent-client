@@ -65,6 +65,45 @@ test('launch-topology-smoke prints read-only launch topology json', () => {
   });
 });
 
+test('runtime-capabilities prints a fail-closed Stage 3 release gate summary', () => {
+  const tsxCliPath = path.join(process.cwd(), 'node_modules', 'tsx', 'dist', 'cli.mjs');
+  const result = spawnSync(process.execPath, [tsxCliPath, 'src/cli.ts', 'runtime-capabilities'], {
+    cwd: process.cwd(),
+    env: process.env,
+    encoding: 'utf8',
+  });
+
+  assert.equal(result.status, 0, result.stderr || result.stdout);
+  const output = JSON.parse(result.stdout);
+  assert.equal(output.stage3ReleaseGate.status, 'blocked');
+  assert.deepEqual(output.stage3ReleaseGate.blockedBy, ['plane-adoption-incomplete']);
+  assert.deepEqual(output.stage3ReleaseGate.waves, [
+    {
+      wave: 'P0',
+      status: 'blocked',
+      planes: ['identity-session', 'task', 'event-notification'],
+    },
+    {
+      wave: 'P1',
+      status: 'blocked',
+      planes: ['capability', 'workflow-stage'],
+    },
+    {
+      wave: 'P2',
+      status: 'blocked',
+      planes: ['enterprise-integration'],
+    },
+  ]);
+  assert.deepEqual(output.stage3ReleaseGate.requiredValidatorCommands, [
+    'npm test',
+    'npm run typecheck',
+    'npm run build',
+    'npm run validate',
+    'npm run validate:release-readiness',
+    'npm run validate:release-gate',
+  ]);
+});
+
 test('registration-lifecycle-plan prints a structured local-only lifecycle plan', () => {
   const tsxCliPath = path.join(process.cwd(), 'node_modules', 'tsx', 'dist', 'cli.mjs');
   const result = spawnSync(process.execPath, [tsxCliPath, 'src/cli.ts', 'registration-lifecycle-plan'], {

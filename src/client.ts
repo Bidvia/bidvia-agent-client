@@ -15,6 +15,7 @@ import type {
   BidviaClientContext,
   BidviaClientHeaders,
   BidviaClientHeadersInput,
+  BidviaEnterpriseIntegrationPlaneView,
   BidviaClientRequestPolicy,
   BidviaClientRequestDescriptor,
   BidviaClientTransportErrorKind,
@@ -25,6 +26,7 @@ import type {
   BidviaGenerateMatchCandidatesInput,
   BidviaHeartbeatInput,
   BidviaLeaseWriteInput,
+  BidviaNotificationIdentifierInput,
   BidviaParticipationStateWriteInput,
   BidviaProposalSubmissionInput,
   BidviaProvisionalAgentClaimInput,
@@ -42,6 +44,22 @@ import type {
   BidviaVerificationBundle,
 } from './contracts.js';
 import { exportLegacyVerificationBundle } from './verification.js';
+import {
+  requireIdentitySessionClaimContext,
+  requireIdentitySessionGovernedReadContext,
+} from './identity-session-plane.js';
+import {
+  buildTaskPlaneClaimAcceptBody,
+  buildTaskPlaneClaimBody,
+  buildTaskPlaneClaimRejectBody,
+  buildTaskPlaneLeaseBody,
+  buildTaskPlaneParticipationStateBody,
+  buildTaskPlaneTaskAssignBody,
+  buildTaskPlaneTaskDispatchBody,
+  buildTaskPlaneTaskOutcomeBody,
+  buildTaskPlaneTaskStatusBody,
+} from './task-plane.js';
+import { buildEnterpriseIntegrationPlaneView } from './enterprise-integration-plane.js';
 
 export interface BidviaClientOptions {
   baseUrl: string;
@@ -86,6 +104,10 @@ export class BidviaClient {
 
   constructor(private readonly options: BidviaClientOptions) {
     this.fetchImpl = options.fetchImpl ?? fetch;
+  }
+
+  getEnterpriseIntegrationPlaneView(): BidviaEnterpriseIntegrationPlaneView {
+    return buildEnterpriseIntegrationPlaneView();
   }
 
   async createProvisionalAgent(
@@ -496,27 +518,7 @@ export class BidviaClient {
       context,
       method: 'POST',
       headers: this.requireOperatorActionHeaders(context),
-      body: {
-        state: input.state,
-        reason: input.reason,
-        now: input.now,
-        ...(input.participationRole === undefined
-          ? {}
-          : { participation_role: input.participationRole }),
-        ...(input.visibility === undefined ? {} : { visibility: input.visibility }),
-        ...(input.contextHandoffState === undefined
-          ? {}
-          : { context_handoff_state: input.contextHandoffState }),
-        ...(input.contextHandoffRef === undefined
-          ? {}
-          : { context_handoff_ref: input.contextHandoffRef }),
-        ...(input.coordinationOwnerKind === undefined
-          ? {}
-          : { coordination_owner_kind: input.coordinationOwnerKind }),
-        ...(input.coordinationOwnerRef === undefined
-          ? {}
-          : { coordination_owner_ref: input.coordinationOwnerRef }),
-      },
+      body: buildTaskPlaneParticipationStateBody(input),
       requestPolicy,
     });
   }
@@ -552,11 +554,7 @@ export class BidviaClient {
       context,
       method: 'POST',
       headers: this.requireOperatorActionHeaders(context),
-      body: {
-        lease_scope: input.leaseScope,
-        now: input.now,
-        expires_at: input.expiresAt,
-      },
+      body: buildTaskPlaneLeaseBody(input),
       requestPolicy,
     });
   }
@@ -584,12 +582,7 @@ export class BidviaClient {
       context,
       method: 'POST',
       headers: this.requireOperatorActionHeaders(context),
-      body: {
-        task_kind: input.taskKind,
-        task_ref: input.taskRef,
-        now: input.now,
-        reason: input.reason,
-      },
+      body: buildTaskPlaneTaskDispatchBody(input),
       requestPolicy,
     });
   }
@@ -606,6 +599,29 @@ export class BidviaClient {
         `/task-dispatches/${encodeURIComponent(taskDispatchId)}`,
         context,
       ),
+      {
+        context,
+        method: 'GET',
+        headers: this.requireGovernedReadHeaders(context),
+        requestPolicy,
+      },
+    );
+  }
+
+  async getNotification(notificationId: string, requestPolicy?: BidviaClientRequestPolicy): Promise<unknown>;
+  async getNotification(
+    input: BidviaNotificationIdentifierInput,
+    requestPolicy?: BidviaClientRequestPolicy,
+  ): Promise<unknown>;
+  async getNotification(
+    input: string | BidviaNotificationIdentifierInput,
+    requestPolicy?: BidviaClientRequestPolicy,
+  ) {
+    const context = this.resolveRequestContext(requestPolicy);
+    const notificationId = typeof input === 'string' ? input : input.notificationId;
+
+    return this.request(
+      `/runtime/notifications/${encodeURIComponent(notificationId)}?tenant_id=${encodeURIComponent(this.requireTenantId(context))}`,
       {
         context,
         method: 'GET',
@@ -632,11 +648,7 @@ export class BidviaClient {
         context,
         method: 'POST',
         headers: this.requireOperatorActionHeaders(context),
-        body: {
-          assigned_to_registration_id: input.assignedToRegistrationId,
-          now: input.now,
-          reason: input.reason,
-        },
+        body: buildTaskPlaneTaskAssignBody(input),
         requestPolicy,
       },
     );
@@ -659,10 +671,7 @@ export class BidviaClient {
         context,
         method: 'POST',
         headers: this.requireOperatorActionHeaders(context),
-        body: {
-          now: input.now,
-          reason: input.reason,
-        },
+        body: buildTaskPlaneTaskStatusBody(input),
         requestPolicy,
       },
     );
@@ -685,10 +694,7 @@ export class BidviaClient {
         context,
         method: 'POST',
         headers: this.requireOperatorActionHeaders(context),
-        body: {
-          now: input.now,
-          reason: input.reason,
-        },
+        body: buildTaskPlaneTaskStatusBody(input),
         requestPolicy,
       },
     );
@@ -711,11 +717,7 @@ export class BidviaClient {
         context,
         method: 'POST',
         headers: this.requireOperatorActionHeaders(context),
-        body: {
-          now: input.now,
-          reason: input.reason,
-          outcome_ref: input.outcomeRef,
-        },
+        body: buildTaskPlaneTaskOutcomeBody(input),
         requestPolicy,
       },
     );
@@ -738,11 +740,7 @@ export class BidviaClient {
         context,
         method: 'POST',
         headers: this.requireOperatorActionHeaders(context),
-        body: {
-          now: input.now,
-          reason: input.reason,
-          outcome_ref: input.outcomeRef,
-        },
+        body: buildTaskPlaneTaskOutcomeBody(input),
         requestPolicy,
       },
     );
@@ -758,12 +756,7 @@ export class BidviaClient {
       context,
       method: 'POST',
       headers: this.requireOperatorActionHeaders(context),
-      body: {
-        claim_kind: input.claimKind,
-        claim_ref: input.claimRef,
-        now: input.now,
-        ...(input.taskDispatchId === undefined ? {} : { task_dispatch_id: input.taskDispatchId }),
-      },
+      body: buildTaskPlaneClaimBody(input),
       requestPolicy,
     });
   }
@@ -785,10 +778,7 @@ export class BidviaClient {
         context,
         method: 'POST',
         headers: this.requireOperatorActionHeaders(context),
-        body: {
-          now: input.now,
-          ...(input.taskDispatchId === undefined ? {} : { task_dispatch_id: input.taskDispatchId }),
-        },
+        body: buildTaskPlaneClaimAcceptBody(input),
         requestPolicy,
       },
     );
@@ -811,11 +801,7 @@ export class BidviaClient {
         context,
         method: 'POST',
         headers: this.requireOperatorActionHeaders(context),
-        body: {
-          reason: input.reason,
-          now: input.now,
-          ...(input.taskDispatchId === undefined ? {} : { task_dispatch_id: input.taskDispatchId }),
-        },
+        body: buildTaskPlaneClaimRejectBody(input),
         requestPolicy,
       },
     );
@@ -1539,10 +1525,8 @@ export class BidviaClient {
   }
 
   private requireSessionHeaders(context: BidviaClientContext) {
-    const sessionId = context.sessionId;
-    if (!sessionId) {
-      throw new Error('sessionId is required for session routes');
-    }
+    const { sessionId } = requireIdentitySessionClaimContext(context);
+
     return {
       'x-bidvia-session-id': sessionId,
     };
@@ -1559,10 +1543,8 @@ export class BidviaClient {
   }
 
   private requireGovernedReadHeaders(context: BidviaClientContext) {
-    const principalId = context.principalId;
-    if (!principalId) {
-      throw new Error('principalId is required for governed read routes');
-    }
+    const { principalId } = requireIdentitySessionGovernedReadContext(context);
+
     const headers = this.appendOptionalPrincipalContextHeaders(context, {
       'x-authorized-tenant-id': context.tenantId,
       'x-bidvia-principal-id': principalId,

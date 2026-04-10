@@ -63,6 +63,15 @@ test('buildRegisteredAgentOperationsScenarioPlan builds the exact post-onboardin
   assert.deepEqual(plan.envelope.recordIds, {
     registrations: ['areg-registered-1'],
   });
+  assert.deepEqual(plan.envelope.workflowStage, {
+    workflowIds: ['wf-registered-agent-1'],
+    localStageLabel: 'governed-run-execution',
+    localStageSemantics: 'local-only',
+    coreStageIdentifier: null,
+    coreStageSemantics: 'blocked-pending-packet',
+    blockedBy: 'core-plane-payload-packet-not-yet-frozen',
+    transitionRule: null,
+  });
 });
 
 test('buildRegisteredAgentOperationsScenarioPlan returns deterministic registration-bound inputs', () => {

@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import { BidviaClient, exportVerificationBundle } from '../src/client.ts';
+import { buildIdentitySessionPlaneView } from '../src/index.ts';
 
 function createFetchStub() {
   const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
@@ -18,6 +19,7 @@ function createFetchStub() {
 
 test('BidviaClient uses the frozen provisional->query->claim onboarding contract', async () => {
   const { calls, fetchStub } = createFetchStub();
+  const identitySessionPlane = buildIdentitySessionPlaneView();
   const client = new BidviaClient({
     baseUrl: 'http://127.0.0.1:8787',
     context: {
@@ -42,6 +44,12 @@ test('BidviaClient uses the frozen provisional->query->claim onboarding contract
   });
 
   assert.equal(calls.length, 3);
+  assert.deepEqual(
+    identitySessionPlane.canonicalOnboarding.helperSteps.map((step) => step.helperKey),
+    ['createProvisionalAgent', 'queryProvisionalAgent', 'claimProvisionalAgent'],
+  );
+  assert.deepEqual(identitySessionPlane.canonicalOnboarding.claim.requiredContext, ['tenantId', 'sessionId']);
+  assert.equal(identitySessionPlane.sessionTruth.payloadPacketStatus, 'blocked-pending-packet');
   assert.equal(String(calls[0]?.input), 'http://127.0.0.1:8787/runtime/agents/provisional');
   assert.equal(String(calls[1]?.input), 'http://127.0.0.1:8787/runtime/agents/provisional?provisional_agent_ref=prov-agent-1');
   assert.equal(String(calls[2]?.input), 'http://127.0.0.1:8787/runtime/agents/provisional/claim');

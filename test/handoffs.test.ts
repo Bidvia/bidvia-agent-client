@@ -6,6 +6,7 @@ import type {
 } from '../src/contracts.js';
 import { BidviaClient } from '../src/client.ts';
 import {
+  buildOpportunityPackageHandoffEnterpriseBoundary,
   buildOpportunityPackageHandoffPlan,
   runOpportunityPackageHandoff,
 } from '../src/handoffs.js';
@@ -72,6 +73,15 @@ test('OpportunityPackageHandoff plan builds an explicit package handoff route', 
   assert.deepEqual(plan.envelope.recordIds, {
     opportunities: ['opportunity-1'],
   });
+  assert.deepEqual(plan.envelope.workflowStage, {
+    workflowIds: ['wf-1'],
+    localStageLabel: 'governed-run-execution',
+    localStageSemantics: 'local-only',
+    coreStageIdentifier: null,
+    coreStageSemantics: 'blocked-pending-packet',
+    blockedBy: 'core-plane-payload-packet-not-yet-frozen',
+    transitionRule: null,
+  });
 });
 
 test('package handoff builder rejects blank opportunity ids', () => {
@@ -91,6 +101,20 @@ test('OpportunityPackageHandoff plan does not introduce additional route steps',
 
   assert.equal(plan.envelope.expectedRouteChain.length, 1);
   assert.equal(plan.envelope.expectedRouteChain[0]?.routeKey, 'exportOpportunityPackage');
+});
+
+test('opportunity package handoff helpers expose a bounded enterprise integration boundary', () => {
+  const boundary = buildOpportunityPackageHandoffEnterpriseBoundary();
+
+  assert.equal(boundary.groupKey, 'opportunity-handoffs');
+  assert.deepEqual(boundary.helperKeys, [
+    'buildOpportunityPackageHandoffPlan',
+    'runOpportunityPackageHandoff',
+  ]);
+  assert.equal(boundary.broaderEnterpriseAuthorityClaimed, false);
+  assert.equal(boundary.broaderSystemAuthorityClaimed, false);
+  assert.equal(boundary.payloadPacketStatus, 'blocked-pending-packet');
+  assert.equal(boundary.blockedBy, 'core-plane-payload-packet-not-yet-frozen');
 });
 
 test('runOpportunityPackageHandoff calls only exportOpportunityPackage and returns a review-safe verification bundle', async () => {

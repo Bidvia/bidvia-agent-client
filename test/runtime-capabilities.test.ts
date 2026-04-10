@@ -4,6 +4,14 @@ import assert from 'node:assert/strict';
 import {
   buildLocalRuntimeCapabilitySnapshot,
 } from '../src/runtime-capabilities.ts';
+import {
+  buildCapabilityPlaneLocalRuntimeSnapshot,
+  buildCapabilityPlaneView,
+} from '../src/capability-plane.ts';
+import {
+  buildLocalMcpToolCatalog,
+  buildLocalRouteCapabilityCatalog,
+} from '../src/discovery-catalog.ts';
 import type {
   BidviaLocalRuntimeCapabilitySnapshot,
 } from '../src/contracts.ts';
@@ -36,7 +44,7 @@ test('buildLocalRuntimeCapabilitySnapshot defaults to the public china API while
     true,
   );
   assert.equal(snapshot.mcpTools.source, 'local-static');
-  assert.equal(snapshot.mcpTools.items.length, 64);
+  assert.equal(snapshot.mcpTools.items.length, 65);
   assert.equal(snapshot.mcpTools.schemaVersion, '2026-03-27');
   assert.equal(snapshot.mcpTools.version, 'local-runtime-capability-snapshot');
   assert.equal(snapshot.mcpTools.revision, 'repo-mcp-tools');
@@ -79,6 +87,29 @@ test('buildLocalRuntimeCapabilitySnapshot keeps explicit local and sim base URLs
   assert.equal(simSnapshot.baseUrl, 'https://staging.bidvia.internal');
   assert.equal(simSnapshot.environmentMode, 'sim');
   assert.notEqual(simSnapshot.environmentMode, 'local');
+});
+
+test('buildLocalRuntimeCapabilitySnapshot flows through the explicit capability-plane adapter and keeps local snapshots descriptive-only', () => {
+  const options = {
+    explicitBaseUrl: 'https://staging.bidvia.internal',
+  };
+  const capabilityPlane = buildCapabilityPlaneView();
+
+  const runtimeSnapshot = buildLocalRuntimeCapabilitySnapshot(options);
+  const capabilityPlaneSnapshot = buildCapabilityPlaneLocalRuntimeSnapshot(options, {
+    buildRouteCapabilityCatalog: buildLocalRouteCapabilityCatalog,
+    buildMcpToolCatalog: buildLocalMcpToolCatalog,
+  });
+
+  capabilityPlaneSnapshot.routeCapabilities.lastUpdatedAt = runtimeSnapshot.routeCapabilities.lastUpdatedAt;
+  capabilityPlaneSnapshot.mcpTools.lastUpdatedAt = runtimeSnapshot.mcpTools.lastUpdatedAt;
+  capabilityPlaneSnapshot.localMcpServer.lastUpdatedAt = runtimeSnapshot.localMcpServer.lastUpdatedAt;
+  capabilityPlaneSnapshot.deferredServerNegotiation.lastUpdatedAt = runtimeSnapshot.deferredServerNegotiation.lastUpdatedAt;
+
+  assert.deepEqual(runtimeSnapshot, capabilityPlaneSnapshot);
+  assert.equal(capabilityPlane.localSnapshots.descriptiveOnly, true);
+  assert.equal(capabilityPlane.localSnapshots.liveServerNegotiationClaimed, false);
+  assert.equal(capabilityPlane.localSnapshots.remoteRegistryBehaviorClaimed, false);
 });
 
 test('buildLocalRuntimeCapabilitySnapshot keeps deferred server negotiation explicit and separate from local facts', () => {

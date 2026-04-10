@@ -10,14 +10,22 @@ import {
   type BidviaOnboardingJourneyStage,
 } from './onboarding-journey.js';
 import type {
+  BidviaEventNotificationPlaneView,
+  BidviaIdentitySessionPlaneView,
   BidviaMcpToolOutputMode,
   BidviaRouteCapability,
   BidviaScenarioContextKey,
+  BidviaTaskPlaneView,
+  BidviaWorkflowStagePlaneView,
 } from './contracts.js';
 import { getRouteCapability } from './capabilities.js';
+import { buildStage3ReleaseGate } from './core-plane-adoption.js';
 import { buildLocalDiscoveryCatalog } from './discovery-catalog.js';
-import { buildGovernedReadPosture } from './governed-read-posture.js';
+import { buildEventNotificationPlaneView } from './event-notification-plane.js';
+import { buildIdentitySessionPlaneView } from './identity-session-plane.js';
 import { buildLocalRuntimeCapabilitySnapshot } from './runtime-capabilities.js';
+import { buildTaskPlaneView } from './task-plane.js';
+import { buildWorkflowStagePlaneView } from './workflow-stage-plane.js';
 
 type BidviaRouteContextJourneyKey = BidviaOnboardingJourneyKey;
 
@@ -44,6 +52,7 @@ export interface BidviaRouteContextMatrixRow {
   routePathTemplate: string;
   routeFamily: BidviaRouteContextFamily;
   journeyStage: BidviaRouteContextJourneyStage;
+  journeyStageSemantics: 'local-only';
   accessContextFamily: BidviaRouteCapability['accessContextFamily'];
   contextSemantic: BidviaRouteCapability['contextSemantic'];
   requiredContext: BidviaScenarioContextKey[];
@@ -60,12 +69,17 @@ export interface BidviaRouteContextMatrix {
     environmentMode: string;
     environmentSelectionRequired: false;
   };
+  identitySessionPlane: BidviaIdentitySessionPlaneView;
+  taskPlane: BidviaTaskPlaneView;
+  workflowStagePlane: BidviaWorkflowStagePlaneView;
+  eventNotificationPlane: BidviaEventNotificationPlaneView;
   governedReadPosture: {
     accessContextFamily: 'principal-governed-read';
     requiredContext: ['tenantId', 'principalId'];
     adminSessionOptional: true;
     operatorGuidance: string;
   };
+  stage3ReleaseGate: import('./contracts.js').BidviaStage3ReleaseGate;
   rows: BidviaRouteContextMatrixRow[];
   firstSuccessNextSteps: Record<
     BidviaRouteContextJourneyKey,
@@ -76,6 +90,7 @@ export interface BidviaRouteContextMatrix {
 export interface BidviaRouteContextNextStepHint {
   journeyKey: BidviaRouteContextJourneyKey;
   journeyStage: BidviaRouteContextJourneyStage;
+  journeyStageSemantics: 'local-only';
   relevance: BidviaRouteContextRelevance;
   command: string;
   rationale: string;
@@ -169,6 +184,7 @@ function buildMatrixRow(
     routePathTemplate: capability.routePathTemplate,
     routeFamily: inferRouteFamily(capability.routePathTemplate),
     journeyStage: requireJourneyHelperStage(journey, capability.helperKey),
+    journeyStageSemantics: 'local-only',
     accessContextFamily: capability.accessContextFamily,
     contextSemantic: capability.contextSemantic,
     requiredContext: [...capability.requiredContext],
@@ -184,10 +200,19 @@ function buildMatrixRow(
 export function buildRouteContextMatrix(): BidviaRouteContextMatrix {
   const discoveryCatalogMap = buildDiscoveryCatalogMap();
   const journeys = listOnboardingJourneyDefinitions();
+  const identitySessionPlane = buildIdentitySessionPlaneView();
+  const taskPlane = buildTaskPlaneView();
+  const workflowStagePlane = buildWorkflowStagePlaneView();
+  const eventNotificationPlane = buildEventNotificationPlaneView();
 
   return {
     defaults: buildPublicDefaults(),
-    governedReadPosture: buildGovernedReadPosture(),
+    identitySessionPlane,
+    taskPlane,
+    workflowStagePlane,
+    eventNotificationPlane,
+    governedReadPosture: identitySessionPlane.governedReadPosture,
+    stage3ReleaseGate: buildStage3ReleaseGate(),
     rows: journeys.flatMap((journey) => (
       journey.helperSteps.map(({ helperKey }) => buildMatrixRow(journey, helperKey, discoveryCatalogMap))
     )),
@@ -201,6 +226,7 @@ export function buildRouteContextMatrixNextStepHints(): BidviaRouteContextNextSt
   return listOnboardingJourneyDefinitions().map((journey) => ({
     journeyKey: journey.journeyKey,
     journeyStage: journey.firstSuccessNextStep.journeyStage,
+    journeyStageSemantics: journey.firstSuccessNextStep.journeyStageSemantics,
     relevance: journey.relevance,
     command: journey.firstSuccessNextStep.command,
     rationale: journey.firstSuccessNextStep.rationale,

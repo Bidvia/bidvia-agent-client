@@ -140,6 +140,19 @@ test('runCli prints operator discovery snapshots for CLI route metadata and loca
     scope: string;
       cli: {
         routeCapabilities: Array<{ helperKey: string; routePathTemplate: string; accessContextFamily: string }>;
+        planeAdoption: Array<{
+          plane: string;
+          frozenInCore: boolean;
+          payloadPacketStatus: string;
+          canExecuteNow: boolean;
+          blockedBy: string | null;
+        }>;
+        releaseGate: {
+          status: string;
+          blockedBy: string[];
+          requiredValidatorCommands: string[];
+          waves: Array<{ wave: string; status: string; planes: string[] }>;
+        };
         nextStageReadRouteDiscoveryGroups: Array<{ groupKey: string; discoveryStatus: string; memberCount: number }>;
         nextStepHints: Array<{ journeyKey: string; relevance: string; command: string; rationale: string }>;
       };
@@ -155,6 +168,85 @@ test('runCli prints operator discovery snapshots for CLI route metadata and loca
   };
   assert.equal(snapshot.command, 'operator-discovery');
   assert.equal(snapshot.scope, 'local-only');
+  assert.deepEqual(snapshot.cli.planeAdoption, [
+    {
+      plane: 'identity-session',
+      frozenInCore: true,
+      payloadPacketStatus: 'blocked-pending-packet',
+      canExecuteNow: true,
+      blockedBy: 'core-plane-payload-packet-not-yet-frozen',
+      notes: ['Adopt canonical onboarding and governed-read posture without inventing broader session semantics.'],
+    },
+    {
+      plane: 'task',
+      frozenInCore: true,
+      payloadPacketStatus: 'blocked-pending-packet',
+      canExecuteNow: true,
+      blockedBy: 'core-plane-payload-packet-not-yet-frozen',
+      notes: ['Keep local task shells descriptive-only and block packet-incomplete task semantics.'],
+    },
+    {
+      plane: 'capability',
+      frozenInCore: true,
+      payloadPacketStatus: 'blocked-pending-packet',
+      canExecuteNow: true,
+      blockedBy: 'core-plane-payload-packet-not-yet-frozen',
+      notes: ['Route remote capability refresh through one fail-closed capability-plane adapter.'],
+    },
+    {
+      plane: 'workflow-stage',
+      frozenInCore: true,
+      payloadPacketStatus: 'blocked-pending-packet',
+      canExecuteNow: true,
+      blockedBy: 'core-plane-payload-packet-not-yet-frozen',
+      notes: ['Keep local journey labels separate from Core workflow and stage truth until packet-grounded.'],
+    },
+    {
+      plane: 'event-notification',
+      frozenInCore: true,
+      payloadPacketStatus: 'blocked-pending-packet',
+      canExecuteNow: true,
+      blockedBy: 'core-plane-payload-packet-not-yet-frozen',
+      notes: ['Expose frozen notification visibility now and fail closed on packet-incomplete execution semantics.'],
+    },
+    {
+      plane: 'enterprise-integration',
+      frozenInCore: true,
+      payloadPacketStatus: 'blocked-pending-packet',
+      canExecuteNow: true,
+      blockedBy: 'core-plane-payload-packet-not-yet-frozen',
+      notes: ['Regroup bounded commercial, document, media, attachment, and evidence helpers behind one plane adapter.'],
+    },
+  ]);
+  assert.deepEqual(snapshot.cli.releaseGate, {
+    status: 'blocked',
+    blockedBy: ['plane-adoption-incomplete'],
+    requiredValidatorCommands: [
+      'npm test',
+      'npm run typecheck',
+      'npm run build',
+      'npm run validate',
+      'npm run validate:release-readiness',
+      'npm run validate:release-gate',
+    ],
+    waves: [
+      {
+        wave: 'P0',
+        status: 'blocked',
+        planes: ['identity-session', 'task', 'event-notification'],
+      },
+      {
+        wave: 'P1',
+        status: 'blocked',
+        planes: ['capability', 'workflow-stage'],
+      },
+      {
+        wave: 'P2',
+        status: 'blocked',
+        planes: ['enterprise-integration'],
+      },
+    ],
+  });
   assert.deepEqual(snapshot.cli.routeCapabilities.find((entry) => entry.helperKey === 'listAccountAgents'), {
     helperKey: 'listAccountAgents',
     routePathTemplate: '/runtime/account/agents',
@@ -203,6 +295,7 @@ test('runCli prints operator discovery snapshots for CLI route metadata and loca
     {
       journeyKey: 'public-first-onboarding',
       journeyStage: 'governed-run-execution',
+      journeyStageSemantics: 'local-only',
       relevance: 'public-first-common',
       command: 'registration-lifecycle-plan',
       rationale: 'Use the lifecycle plan next so the first successful onboarding path stays aligned with the shipped provisional-to-registration chain.',
@@ -210,6 +303,7 @@ test('runCli prints operator discovery snapshots for CLI route metadata and loca
     {
       journeyKey: 'governed-run',
       journeyStage: 'governed-run-execution',
+      journeyStageSemantics: 'local-only',
       relevance: 'governed-run-secondary',
       command: 'registered-agent-operations-plan',
       rationale: 'Use the post-onboarding operations plan after Governed Run has the required registration context.',
@@ -261,64 +355,105 @@ test('runCli prints public-first onboarding readiness without requiring environm
   });
 
   assert.equal(exitCode, 0);
-  assert.deepEqual(printed, [{
-    command: 'onboarding-readiness',
+  assert.equal(printed.length, 1);
+  const snapshot = printed[0] as {
+    command: string;
     defaults: {
-      baseUrl: 'https://api.bidvia.cn',
-      environmentMode: 'production',
-      environmentSelectionRequired: false,
-    },
+      baseUrl: string;
+      environmentMode: string;
+      environmentSelectionRequired: boolean;
+    };
     governedReadPosture: {
-      accessContextFamily: 'principal-governed-read',
-      requiredContext: ['tenantId', 'principalId'],
-      adminSessionOptional: true,
-      operatorGuidance: 'On local docker host, authority and presence require a valid admin session plus operator context. Authority-ladder is an operator-governed write and not a workspace admin-session route.',
-    },
+      accessContextFamily: string;
+      requiredContext: string[];
+      adminSessionOptional: boolean;
+      operatorGuidance: string;
+    };
     journey: {
-      journeyKey: 'public-first-onboarding',
-      label: 'Public provisional onboarding',
-      steps: [
-        {
-          helperKey: 'createProvisionalAgent',
-          routePathTemplate: '/runtime/agents/provisional',
-          accessContextFamily: 'tenant',
-          contextSemantic: 'public-provisional',
-          requiredContext: ['tenantId'],
-        },
-        {
-          helperKey: 'queryProvisionalAgent',
-          routePathTemplate: '/runtime/agents/provisional',
-          accessContextFamily: 'tenant',
-          contextSemantic: 'public-provisional',
-          requiredContext: ['tenantId'],
-        },
-        {
-          helperKey: 'claimProvisionalAgent',
-          routePathTemplate: '/runtime/agents/provisional/claim',
-          accessContextFamily: 'session',
-          contextSemantic: 'session',
-          requiredContext: ['tenantId', 'sessionId'],
-        },
-      ],
+      journeyKey: string;
+      label: string;
+      steps: Array<{
+        helperKey: string;
+        routePathTemplate: string;
+        accessContextFamily: string;
+        contextSemantic: string;
+        requiredContext: string[];
+      }>;
       firstSuccessNextStep: {
-        command: 'registration-lifecycle-plan',
-        rationale: 'Use the lifecycle plan next so the first successful onboarding path stays aligned with the shipped provisional-to-registration chain.',
-        journeyStage: 'governed-run-execution',
-      },
-    },
+        command: string;
+        rationale: string;
+        journeyStage: string;
+        journeyStageSemantics: string;
+      };
+    };
     postClaimSupport: {
-      label: 'Governed-run support',
-      steps: [
-        {
-          helperKey: 'getAgentReadiness',
-          routePathTemplate: '/runtime/agents/:agent_registration_id/readiness',
-          accessContextFamily: 'principal-governed-read',
-          contextSemantic: 'principal-governed-read',
-          requiredContext: ['tenantId', 'principalId'],
-        },
-      ],
+      label: string;
+      steps: Array<{
+        helperKey: string;
+        routePathTemplate: string;
+        accessContextFamily: string;
+        contextSemantic: string;
+        requiredContext: string[];
+      }>;
+    };
+  };
+  assert.equal(snapshot.command, 'onboarding-readiness');
+  assert.deepEqual(snapshot.defaults, {
+    baseUrl: 'https://api.bidvia.cn',
+    environmentMode: 'production',
+    environmentSelectionRequired: false,
+  });
+  assert.deepEqual(snapshot.governedReadPosture, {
+    accessContextFamily: 'principal-governed-read',
+    requiredContext: ['tenantId', 'principalId'],
+    adminSessionOptional: true,
+    operatorGuidance: 'On local docker host, authority and presence reads require principal-governed tenant context. Authority-ladder reads use the same principal-governed posture, while ladder writes remain operator-governed and separate from workspace admin-session routes.',
+  });
+  assert.deepEqual(snapshot.journey, {
+    journeyKey: 'public-first-onboarding',
+    label: 'Public provisional onboarding',
+    steps: [
+      {
+        helperKey: 'createProvisionalAgent',
+        routePathTemplate: '/runtime/agents/provisional',
+        accessContextFamily: 'tenant',
+        contextSemantic: 'public-provisional',
+        requiredContext: ['tenantId'],
+      },
+      {
+        helperKey: 'queryProvisionalAgent',
+        routePathTemplate: '/runtime/agents/provisional',
+        accessContextFamily: 'tenant',
+        contextSemantic: 'public-provisional',
+        requiredContext: ['tenantId'],
+      },
+      {
+        helperKey: 'claimProvisionalAgent',
+        routePathTemplate: '/runtime/agents/provisional/claim',
+        accessContextFamily: 'session',
+        contextSemantic: 'session',
+        requiredContext: ['tenantId', 'sessionId'],
+      },
+    ],
+    firstSuccessNextStep: {
+      command: 'registration-lifecycle-plan',
+      rationale: 'Use the lifecycle plan next so the first successful onboarding path stays aligned with the shipped provisional-to-registration chain.',
+      journeyStage: 'governed-run-execution',
+      journeyStageSemantics: 'local-only',
     },
-  }]);
+  });
+  assert.deepEqual(snapshot.postClaimSupport, {
+    label: 'Governed-run support',
+    steps: [
+      {
+        helperKey: 'getAgentReadiness',
+        routePathTemplate: '/runtime/agents/:agent_registration_id/readiness',
+        accessContextFamily: 'principal-governed-read',
+        contextSemantic: 'principal-governed-read',
+        requiredContext: ['tenantId', 'principalId'],
+      },
+    ],
+  });
 });
 
 test('runCli prints an OpenClaw MCP config export that stays local stdio first and treats endpoint override as advanced', async () => {
@@ -408,124 +543,202 @@ test('runCli prints a route-context matrix that keeps public-first rows ahead of
   });
 
   assert.equal(exitCode, 0);
-  assert.deepEqual(printed, [{
-    command: 'route-context-matrix',
+  assert.equal(printed.length, 1);
+  const snapshot = printed[0] as {
+    command: string;
     defaults: {
-      baseUrl: 'https://api.bidvia.cn',
-      environmentMode: 'production',
-      environmentSelectionRequired: false,
-    },
+      baseUrl: string;
+      environmentMode: string;
+      environmentSelectionRequired: boolean;
+    };
     governedReadPosture: {
-      accessContextFamily: 'principal-governed-read',
-      requiredContext: ['tenantId', 'principalId'],
-      adminSessionOptional: true,
-      operatorGuidance: 'On local docker host, authority and presence require a valid admin session plus operator context. Authority-ladder is an operator-governed write and not a workspace admin-session route.',
-    },
-    rows: [
+      accessContextFamily: string;
+      requiredContext: string[];
+      adminSessionOptional: boolean;
+      operatorGuidance: string;
+    };
+    stage3ReleaseGate?: {
+      status: string;
+      blockedBy: string[];
+      requiredValidatorCommands: string[];
+      waves: Array<{ wave: string; status: string; planes: string[] }>;
+    };
+    rows: Array<{
+      journeyKey: string;
+      helperKey: string;
+      routePathTemplate: string;
+      routeFamily: string;
+      journeyStage: string;
+      journeyStageSemantics: string;
+      accessContextFamily: string;
+      contextSemantic: string;
+      requiredContext: string[];
+      operationKind: string;
+      localCapabilityRiskTier: string;
+      relevance: string;
+      presentationTier: string;
+      recommendedOutputMode: string;
+    }>;
+    firstSuccessNextSteps: Record<string, {
+      command: string;
+      rationale: string;
+      journeyStage: string;
+      journeyStageSemantics: string;
+    }>;
+  };
+  assert.equal(snapshot.command, 'route-context-matrix');
+  assert.deepEqual(snapshot.defaults, {
+    baseUrl: 'https://api.bidvia.cn',
+    environmentMode: 'production',
+    environmentSelectionRequired: false,
+  });
+  assert.deepEqual(snapshot.governedReadPosture, {
+    accessContextFamily: 'principal-governed-read',
+    requiredContext: ['tenantId', 'principalId'],
+    adminSessionOptional: true,
+    operatorGuidance: 'On local docker host, authority and presence reads require principal-governed tenant context. Authority-ladder reads use the same principal-governed posture, while ladder writes remain operator-governed and separate from workspace admin-session routes.',
+  });
+  assert.deepEqual(snapshot.stage3ReleaseGate, {
+    status: 'blocked',
+    blockedBy: ['plane-adoption-incomplete'],
+    requiredValidatorCommands: [
+      'npm test',
+      'npm run typecheck',
+      'npm run build',
+      'npm run validate',
+      'npm run validate:release-readiness',
+      'npm run validate:release-gate',
+    ],
+    waves: [
       {
-        journeyKey: 'public-first-onboarding',
-        helperKey: 'createProvisionalAgent',
-        routePathTemplate: '/runtime/agents/provisional',
-        routeFamily: 'agent-onboarding',
-        journeyStage: 'public-provisional',
-        accessContextFamily: 'tenant',
-        contextSemantic: 'public-provisional',
-        requiredContext: ['tenantId'],
-        operationKind: 'execute',
-        localCapabilityRiskTier: 'runtime-execution',
-        relevance: 'public-first-common',
-        presentationTier: 'primary',
-        recommendedOutputMode: 'execution-result',
+        wave: 'P0',
+        status: 'blocked',
+        planes: ['identity-session', 'task', 'event-notification'],
       },
       {
-        journeyKey: 'public-first-onboarding',
-        helperKey: 'queryProvisionalAgent',
-        routePathTemplate: '/runtime/agents/provisional',
-        routeFamily: 'agent-onboarding',
-        journeyStage: 'public-provisional',
-        accessContextFamily: 'tenant',
-        contextSemantic: 'public-provisional',
-        requiredContext: ['tenantId'],
-        operationKind: 'read-only',
-        localCapabilityRiskTier: 'observe-only',
-        relevance: 'public-first-common',
-        presentationTier: 'primary',
-        recommendedOutputMode: 'truth-fetch-result',
+        wave: 'P1',
+        status: 'blocked',
+        planes: ['capability', 'workflow-stage'],
       },
       {
-        journeyKey: 'public-first-onboarding',
-        helperKey: 'claimProvisionalAgent',
-        routePathTemplate: '/runtime/agents/provisional/claim',
-        routeFamily: 'agent-onboarding',
-        journeyStage: 'public-provisional',
-        accessContextFamily: 'session',
-        contextSemantic: 'session',
-        requiredContext: ['tenantId', 'sessionId'],
-        operationKind: 'execute',
-        localCapabilityRiskTier: 'runtime-execution',
-        relevance: 'public-first-common',
-        presentationTier: 'primary',
-        recommendedOutputMode: 'execution-result',
-      },
-      {
-        journeyKey: 'governed-run',
-        helperKey: 'getAgentReadiness',
-        routePathTemplate: '/runtime/agents/:agent_registration_id/readiness',
-        routeFamily: 'agent-runtime',
-        journeyStage: 'governed-run-support',
-        accessContextFamily: 'principal-governed-read',
-        contextSemantic: 'principal-governed-read',
-        requiredContext: ['tenantId', 'principalId'],
-        operationKind: 'read-only',
-        localCapabilityRiskTier: 'observe-only',
-        relevance: 'governed-run-secondary',
-        presentationTier: 'secondary',
-        recommendedOutputMode: 'truth-fetch-result',
-      },
-      {
-        journeyKey: 'governed-run',
-        helperKey: 'postHeartbeat',
-        routePathTemplate: '/runtime/agents/:registrationId/heartbeat',
-        routeFamily: 'agent-runtime',
-        journeyStage: 'governed-run-execution',
-        accessContextFamily: 'registration',
-        contextSemantic: 'registration',
-        requiredContext: ['tenantId', 'registrationId', 'principalId'],
-        operationKind: 'execute',
-        localCapabilityRiskTier: 'runtime-execution',
-        relevance: 'governed-run-secondary',
-        presentationTier: 'secondary',
-        recommendedOutputMode: 'execution-result',
-      },
-      {
-        journeyKey: 'governed-run',
-        helperKey: 'createCommercialAction',
-        routePathTemplate: '/runtime/commercial-actions',
-        routeFamily: 'agent-runtime',
-        journeyStage: 'governed-run-execution',
-        accessContextFamily: 'operator-company',
-        contextSemantic: 'operator-company',
-        requiredContext: ['tenantId', 'principalId', 'companyId'],
-        operationKind: 'execute',
-        localCapabilityRiskTier: 'governed-commercial',
-        relevance: 'governed-run-secondary',
-        presentationTier: 'secondary',
-        recommendedOutputMode: 'execution-result',
+        wave: 'P2',
+        status: 'blocked',
+        planes: ['enterprise-integration'],
       },
     ],
-    firstSuccessNextSteps: {
-      'public-first-onboarding': {
-        command: 'registration-lifecycle-plan',
-        rationale: 'Use the lifecycle plan next so the first successful onboarding path stays aligned with the shipped provisional-to-registration chain.',
-        journeyStage: 'governed-run-execution',
-      },
-      'governed-run': {
-        command: 'registered-agent-operations-plan',
-        rationale: 'Use the post-onboarding operations plan after Governed Run has the required registration context.',
-        journeyStage: 'governed-run-execution',
-      },
+  });
+  assert.deepEqual(snapshot.rows, [
+    {
+      journeyKey: 'public-first-onboarding',
+      helperKey: 'createProvisionalAgent',
+      routePathTemplate: '/runtime/agents/provisional',
+      routeFamily: 'agent-onboarding',
+      journeyStage: 'public-provisional',
+      journeyStageSemantics: 'local-only',
+      accessContextFamily: 'tenant',
+      contextSemantic: 'public-provisional',
+      requiredContext: ['tenantId'],
+      operationKind: 'execute',
+      localCapabilityRiskTier: 'runtime-execution',
+      relevance: 'public-first-common',
+      presentationTier: 'primary',
+      recommendedOutputMode: 'execution-result',
     },
-  }]);
+    {
+      journeyKey: 'public-first-onboarding',
+      helperKey: 'queryProvisionalAgent',
+      routePathTemplate: '/runtime/agents/provisional',
+      routeFamily: 'agent-onboarding',
+      journeyStage: 'public-provisional',
+      journeyStageSemantics: 'local-only',
+      accessContextFamily: 'tenant',
+      contextSemantic: 'public-provisional',
+      requiredContext: ['tenantId'],
+      operationKind: 'read-only',
+      localCapabilityRiskTier: 'observe-only',
+      relevance: 'public-first-common',
+      presentationTier: 'primary',
+      recommendedOutputMode: 'truth-fetch-result',
+    },
+    {
+      journeyKey: 'public-first-onboarding',
+      helperKey: 'claimProvisionalAgent',
+      routePathTemplate: '/runtime/agents/provisional/claim',
+      routeFamily: 'agent-onboarding',
+      journeyStage: 'public-provisional',
+      journeyStageSemantics: 'local-only',
+      accessContextFamily: 'session',
+      contextSemantic: 'session',
+      requiredContext: ['tenantId', 'sessionId'],
+      operationKind: 'execute',
+      localCapabilityRiskTier: 'runtime-execution',
+      relevance: 'public-first-common',
+      presentationTier: 'primary',
+      recommendedOutputMode: 'execution-result',
+    },
+    {
+      journeyKey: 'governed-run',
+      helperKey: 'getAgentReadiness',
+      routePathTemplate: '/runtime/agents/:agent_registration_id/readiness',
+      routeFamily: 'agent-runtime',
+      journeyStage: 'governed-run-support',
+      journeyStageSemantics: 'local-only',
+      accessContextFamily: 'principal-governed-read',
+      contextSemantic: 'principal-governed-read',
+      requiredContext: ['tenantId', 'principalId'],
+      operationKind: 'read-only',
+      localCapabilityRiskTier: 'observe-only',
+      relevance: 'governed-run-secondary',
+      presentationTier: 'secondary',
+      recommendedOutputMode: 'truth-fetch-result',
+    },
+    {
+      journeyKey: 'governed-run',
+      helperKey: 'postHeartbeat',
+      routePathTemplate: '/runtime/agents/:registrationId/heartbeat',
+      routeFamily: 'agent-runtime',
+      journeyStage: 'governed-run-execution',
+      journeyStageSemantics: 'local-only',
+      accessContextFamily: 'registration',
+      contextSemantic: 'registration',
+      requiredContext: ['tenantId', 'registrationId', 'principalId'],
+      operationKind: 'execute',
+      localCapabilityRiskTier: 'runtime-execution',
+      relevance: 'governed-run-secondary',
+      presentationTier: 'secondary',
+      recommendedOutputMode: 'execution-result',
+    },
+    {
+      journeyKey: 'governed-run',
+      helperKey: 'createCommercialAction',
+      routePathTemplate: '/runtime/commercial-actions',
+      routeFamily: 'agent-runtime',
+      journeyStage: 'governed-run-execution',
+      journeyStageSemantics: 'local-only',
+      accessContextFamily: 'operator-company',
+      contextSemantic: 'operator-company',
+      requiredContext: ['tenantId', 'principalId', 'companyId'],
+      operationKind: 'execute',
+      localCapabilityRiskTier: 'governed-commercial',
+      relevance: 'governed-run-secondary',
+      presentationTier: 'secondary',
+      recommendedOutputMode: 'execution-result',
+    },
+  ]);
+  assert.deepEqual(snapshot.firstSuccessNextSteps, {
+    'public-first-onboarding': {
+      command: 'registration-lifecycle-plan',
+      rationale: 'Use the lifecycle plan next so the first successful onboarding path stays aligned with the shipped provisional-to-registration chain.',
+      journeyStage: 'governed-run-execution',
+      journeyStageSemantics: 'local-only',
+    },
+    'governed-run': {
+      command: 'registered-agent-operations-plan',
+      rationale: 'Use the post-onboarding operations plan after Governed Run has the required registration context.',
+      journeyStage: 'governed-run-execution',
+      journeyStageSemantics: 'local-only',
+    },
+  });
 });
 
 test('runCli prints the public-default environment visibility output instead of silently falling back to local', async () => {
@@ -623,6 +836,44 @@ test('runCli prints runtime capability snapshots for the public default and pres
   assert.equal(simSnapshot.baseUrl, 'https://staging.bidvia.internal');
   assert.equal(simSnapshot.environmentMode, 'sim');
   assert.notEqual(simSnapshot.environmentMode, 'local');
+  for (const snapshot of [defaultSnapshot, localSnapshot, simSnapshot] as Array<{
+    stage3ReleaseGate?: {
+      status: string;
+      blockedBy: string[];
+      requiredValidatorCommands: string[];
+      waves: Array<{ wave: string; status: string; planes: string[] }>;
+    };
+  }>) {
+    assert.deepEqual(snapshot.stage3ReleaseGate, {
+      status: 'blocked',
+    blockedBy: ['plane-adoption-incomplete'],
+      requiredValidatorCommands: [
+        'npm test',
+        'npm run typecheck',
+        'npm run build',
+        'npm run validate',
+        'npm run validate:release-readiness',
+        'npm run validate:release-gate',
+      ],
+      waves: [
+        {
+          wave: 'P0',
+          status: 'blocked',
+          planes: ['identity-session', 'task', 'event-notification'],
+        },
+        {
+          wave: 'P1',
+          status: 'blocked',
+          planes: ['capability', 'workflow-stage'],
+        },
+        {
+          wave: 'P2',
+          status: 'blocked',
+          planes: ['enterprise-integration'],
+        },
+      ],
+    });
+  }
 });
 
 test('runCli dry-runs execution commands with structured output instead of invoking the client', async () => {

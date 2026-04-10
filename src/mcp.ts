@@ -799,6 +799,22 @@ async function dispatchGovernanceTruthFetchTool(
           ),
         ),
       },
+      };
+  }
+
+  if (descriptor.helperRef.helperKey === 'getNotification') {
+    return {
+      toolName: descriptor.toolName,
+      outputMode: descriptor.outputMode,
+      result: {
+        truthFetchResult: await client.getNotification(
+          requireStringInput(
+            input,
+            'notificationId',
+            'notificationId is required for notification reads',
+          ),
+        ),
+      },
     };
   }
 

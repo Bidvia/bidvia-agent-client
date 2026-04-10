@@ -69,6 +69,7 @@ type FirstAccessSnapshot = {
       command: string;
       rationale: string;
       journeyStage: string;
+      journeyStageSemantics: string;
     };
   };
 };
@@ -83,6 +84,7 @@ function assertFirstSuccessNextStep(snapshot: FirstAccessSnapshot) {
     command: 'registration-lifecycle-plan',
     rationale: 'Use the lifecycle plan next so the first successful onboarding path stays aligned with the shipped provisional-to-registration chain.',
     journeyStage: 'governed-run-execution',
+    journeyStageSemantics: 'local-only',
   });
 }
 

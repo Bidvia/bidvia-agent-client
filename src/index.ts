@@ -3,6 +3,7 @@ export * from './adapters.js';
 export * from './agent-state.js';
 export * from './capabilities.js';
 export * from './commercial-action.js';
+export * from './capability-plane.js';
 export * from './config.js';
 export {
   resolveBidviaEnvironmentMode,
@@ -10,9 +11,13 @@ export {
 } from './config.js';
 export * from './coordinator.js';
 export * from './connection.js';
+export * from './core-plane-adoption.js';
 export * from './contracts.js';
+export * from './enterprise-integration-plane.js';
+export * from './event-notification-plane.js';
 export * from './heartbeat.js';
 export * from './handoffs.js';
+export * from './identity-session-plane.js';
 export * from './local-onboarding-state.js';
 export * from './mcp.js';
 export * from './mcp-server.js';
@@ -20,8 +25,10 @@ export * from './normalization.js';
 export * from './onboarding-journey.js';
 export * from './scenarios.js';
 export * from './sync.js';
+export * from './task-plane.js';
 export * from './universe.js';
 export * from './verification.js';
+export * from './workflow-stage-plane.js';
 export * from './evidence.js';
 export * from './proposals.js';
 export * from './pricing.js';

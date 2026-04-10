@@ -94,6 +94,19 @@ This release does not claim any of the following:
 
 This local-only version is documented as a completed shipped package surface with aligned CLI, SDK, MCP, docs, examples, and validation framing. The package remains client-owned where it ships local operator value, and Core-deferred where frozen external truth is still required. The adopted frozen read families are documented as shipped SDK/CLI visibility, not as hosted runtime or client-owned authority.
 
+Stage 3 release gate remains blocked in the current repo state. It must not be described as full `1.0.0` closure until P0/P1/P2 plane adoption is packet-grounded. The full release sequence still requires the validator suite below to stay green, but that validator evidence is tracked separately from the repo-facing gate snapshot:
+
+```bash
+npm test
+npm run typecheck
+npm run build
+npm run validate
+npm run validate:release-readiness
+npm run validate:release-gate
+```
+
+Current downstream contract truth for future Stage 2 / Stage 3 adoption work lives in the Bidvia Core downstream contract center (`docs/downstream-contract-center/**` in the main Bidvia repo). This package should align to that center and fail closed whenever a frozen plane still lacks packet-complete payload truth.
+
 ## Next-step notes
 
 The next steps stay the same as the repo's public boundary:

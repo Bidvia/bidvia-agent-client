@@ -6,6 +6,7 @@ import path from 'node:path';
 
 import { BidviaClientTransportError } from '../src/client.ts';
 import { runCli } from '../src/cli.ts';
+import { buildIdentitySessionPlaneView, buildTaskPlaneView } from '../src/index.ts';
 
 function setEnvVar(name: string, value: string | undefined) {
   const previousValue = process.env[name];
@@ -898,6 +899,8 @@ test('runCli returns structured transport failures and does not write local onbo
 
 test('runCli prints missing effective context with missing source attribution on a fresh machine', async () => {
   const printed: unknown[] = [];
+  const identitySessionPlane = buildIdentitySessionPlaneView();
+  const taskPlane = buildTaskPlaneView();
 
   const exitCode = await runCli(['context', 'show'], {
     createClient: () => {
@@ -917,6 +920,15 @@ test('runCli prints missing effective context with missing source attribution on
   assert.deepEqual(printed, [{
     command: 'context show',
     scope: 'local-only',
+    identitySessionPlane: {
+      adoptionStatus: identitySessionPlane.adoptionStatus,
+      sessionTruth: identitySessionPlane.sessionTruth,
+    },
+    taskPlane: {
+      adoptionStatus: taskPlane.adoptionStatus,
+      localShellBoundary: taskPlane.localShellBoundary,
+      timeoutTruth: taskPlane.timeoutTruth,
+    },
     journeyBoundary: {
       publicProvisional: {
         label: 'Public Provisional',
@@ -965,6 +977,8 @@ test('runCli prints missing effective context with missing source attribution on
 
 test('runCli prints effective context with env precedence and local onboarding state fallback while keeping sessions secret-safe', async () => {
   const printed: unknown[] = [];
+  const identitySessionPlane = buildIdentitySessionPlaneView();
+  const taskPlane = buildTaskPlaneView();
   const tempDirectory = mkdtempSync(path.join(tmpdir(), 'bidvia-cli-context-show-'));
   const statePath = path.join(tempDirectory, 'onboarding-state.json');
   const restoreStatePath = setEnvVar('BIDVIA_STATE_PATH', statePath);
@@ -1021,6 +1035,15 @@ test('runCli prints effective context with env precedence and local onboarding s
     assert.deepEqual(printed, [{
       command: 'context show',
       scope: 'local-only',
+      identitySessionPlane: {
+        adoptionStatus: identitySessionPlane.adoptionStatus,
+        sessionTruth: identitySessionPlane.sessionTruth,
+      },
+      taskPlane: {
+        adoptionStatus: taskPlane.adoptionStatus,
+        localShellBoundary: taskPlane.localShellBoundary,
+        timeoutTruth: taskPlane.timeoutTruth,
+      },
       journeyBoundary: {
         publicProvisional: {
           label: 'Public Provisional',
@@ -1075,6 +1098,8 @@ test('runCli prints effective context with env precedence and local onboarding s
 
 test('runCli prints a local-only whoami summary with env precedence, local-state fallback, and explicit non-authoritative login guidance', async () => {
   const printed: unknown[] = [];
+  const identitySessionPlane = buildIdentitySessionPlaneView();
+  const taskPlane = buildTaskPlaneView();
   const tempDirectory = mkdtempSync(path.join(tmpdir(), 'bidvia-cli-whoami-'));
   const statePath = path.join(tempDirectory, 'onboarding-state.json');
   const restoreStatePath = setEnvVar('BIDVIA_STATE_PATH', statePath);
@@ -1136,6 +1161,15 @@ test('runCli prints a local-only whoami summary with env precedence, local-state
       identityKind: 'effective-local-context',
       authoritativeRemoteLoginState: false,
       guidance: 'Reports effective local identity/context from env and local onboarding state only. This is not proof of platform login and does not replace /account/me.',
+      identitySessionPlane: {
+        adoptionStatus: identitySessionPlane.adoptionStatus,
+        sessionTruth: identitySessionPlane.sessionTruth,
+      },
+      taskPlane: {
+        adoptionStatus: taskPlane.adoptionStatus,
+        localShellBoundary: taskPlane.localShellBoundary,
+        timeoutTruth: taskPlane.timeoutTruth,
+      },
       journeyBoundary: {
         publicProvisional: {
           label: 'Public Provisional',
@@ -1192,6 +1226,8 @@ test('runCli prints a local-only whoami summary with env precedence, local-state
 
 test('runCli prints a missing local-only whoami summary when no env or onboarding context is available', async () => {
   const printed: unknown[] = [];
+  const identitySessionPlane = buildIdentitySessionPlaneView();
+  const taskPlane = buildTaskPlaneView();
 
   const exitCode = await runCli(['whoami'], {
     createClient: () => {
@@ -1214,6 +1250,15 @@ test('runCli prints a missing local-only whoami summary when no env or onboardin
     identityKind: 'effective-local-context',
     authoritativeRemoteLoginState: false,
     guidance: 'Reports effective local identity/context from env and local onboarding state only. This is not proof of platform login and does not replace /account/me.',
+    identitySessionPlane: {
+      adoptionStatus: identitySessionPlane.adoptionStatus,
+      sessionTruth: identitySessionPlane.sessionTruth,
+    },
+    taskPlane: {
+      adoptionStatus: taskPlane.adoptionStatus,
+      localShellBoundary: taskPlane.localShellBoundary,
+      timeoutTruth: taskPlane.timeoutTruth,
+    },
     journeyBoundary: {
       publicProvisional: {
         label: 'Public Provisional',

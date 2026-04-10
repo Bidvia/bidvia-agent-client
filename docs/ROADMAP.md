@@ -70,7 +70,7 @@ The repo now needs to be read through two groups of planes rather than through a
 
 ### Core-facing platform planes
 
-These are the planes where Bidvia Core must eventually provide stable, machine-consumable truth so the client stops inferring semantics from individual routes and local metadata:
+These are the planes where Bidvia Core now freezes stable downstream truth and where the client must stop inferring semantics from individual routes and local metadata:
 
 1. identity / session plane
 2. task plane
@@ -79,7 +79,7 @@ These are the planes where Bidvia Core must eventually provide stable, machine-c
 5. event / notification plane
 6. enterprise integration plane
 
-Today, the repo can already consume a frozen subset of these planes through shipped narrow route families, but only parts of them are explicit enough to count as full consumer contracts.
+Core now freezes these six planes through the downstream contract center, but client adoption still proceeds in waves because packet-complete payload truth is not yet equally complete across every plane.
 
 ### Agent-client local planes
 
@@ -113,21 +113,29 @@ This stage must not claim Core truth ownership. It should focus on local runtime
 
 ### Stage 2. Core contract consumption and seam hardening
 
-Stage 2 is not a passive waiting period. The client should continue evolving by hardening the seams that will consume Core truth once it is fully explicit.
+Stage 2 is not a passive waiting period. The client should continue evolving by hardening the seams that consume the frozen six-plane Core truth, while keeping any still-incomplete payload packets fail-closed.
 
 Primary outcomes:
 
 - turn identity/session, task, capability, workflow, event, and enterprise integration dependencies into explicit plane adapters/seams
 - consume Core capability truth only through stable plane-level payloads, not through scattered route heuristics or helper-local metadata
 - replace client-side semantic inference with Core-provided workflow/stage and task-truth consumption wherever those contracts are frozen
-- keep all still-missing Core planes fail-closed and clearly documented, rather than emulating them locally
+- keep all still-packet-incomplete Core plane payloads fail-closed and clearly documented, rather than emulating them locally
 - maintain local runtime evolution while preventing drift between local ergonomics and Core-owned truth
+
+Stage 2 now executes in three waves:
+
+- P0: identity/session, task, and event/notification
+- P1: capability and workflow/stage
+- P2: enterprise integration plus the Stage 3 release gate handoff
 
 This stage is where the repo should converge on a model in which capability growth in Core does not force a version-scale client rewrite, provided the plane contracts remain stable.
 
 ### Stage 3. V1.0 release closure
 
-The public `1.0.0` release should happen only when both the client runtime upgrade and the critical Core contract support are present.
+The public `1.0.0` release should happen only when both the client runtime upgrade and the critical Core contract support are present, and when the repo can prove that blocked payload work remains blocked rather than guessed locally.
+
+Stage 3 is now an explicit release gate, not narrative-only wording. Its default repo-state posture must stay blocked until P0, P1, and P2 adoption are packet-grounded. The release validator suite remains a separate closure requirement rather than a hardcoded runtime-snapshot blocker.
 
 For `1.0.0`, the client must be able to support all of the following through the public product path:
 
@@ -137,7 +145,7 @@ For `1.0.0`, the client must be able to support all of the following through the
 - complete result submission and operator-visible diagnostics
 - complete OpenClaw/local-agent operator path and website/docs handoff consistency
 
-Core does not need a full architectural rewrite before this release, but it does need to expose the minimum stable contract surface required for:
+Core does not need a full architectural rewrite before this release, but it does need to keep exposing the minimum stable contract surface required for:
 
 - claim -> governed-run closure
 - explicit task runtime semantics
@@ -151,7 +159,7 @@ Read this roadmap in order:
 
 1. respect the current shipped boundary and release-language split
 2. complete Stage 1 as a client-owned runtime architecture upgrade
-3. use Stage 2 to harden plane-consumption seams and align on Core contracts as they freeze
-4. use Stage 3 to close the public `1.0.0` release only when both the client runtime and the necessary Core contracts are ready
+3. use Stage 2 to harden plane-consumption seams and align on the frozen Core contracts as they are adopted
+4. use Stage 3 as an executable `1.0.0` closure gate only when both the client runtime and the necessary Core contracts are ready
 
 This ordering keeps the roadmap honest. It allows substantial client-side architecture evolution now, without pretending the client owns Core truth, hosted runtime behavior, remote registry behavior, or model-provider execution.
