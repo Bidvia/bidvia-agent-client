@@ -4,63 +4,25 @@ import type {
   BidviaCorePlaneAdoptionStatus,
   BidviaStage3ReleaseGate,
 } from './contracts.js';
-import { getCorePlaneExecutionSummary } from './plane-execution-gate.js';
+import {
+  listCorePayloadContractMatrixEntries,
+  listCorePayloadPlaneAdoptionSummaries,
+} from './core-payload-contract-matrix.js';
 
-const bidviaCorePlaneAdoptionTemplate: BidviaCorePlaneAdoptionStatus[] = [
-  {
-    plane: 'identity-session',
-    frozenInCore: true,
-    payloadPacketStatus: 'blocked-pending-packet',
-    ...getCorePlaneExecutionSummary('identity-session'),
-    blockedBy: 'core-plane-payload-packet-not-yet-frozen',
-    notes: ['Adopt canonical onboarding and governed-read posture without inventing broader session semantics.'],
-  },
-  {
-    plane: 'task',
-    frozenInCore: true,
-    payloadPacketStatus: 'blocked-pending-packet',
-    ...getCorePlaneExecutionSummary('task'),
-    blockedBy: 'core-plane-payload-packet-not-yet-frozen',
-    notes: ['Keep local task shells descriptive-only and block packet-incomplete task semantics.'],
-  },
-  {
-    plane: 'capability',
-    frozenInCore: true,
-    payloadPacketStatus: 'blocked-pending-packet',
-    ...getCorePlaneExecutionSummary('capability'),
-    blockedBy: 'core-plane-payload-packet-not-yet-frozen',
-    notes: ['Route remote capability refresh through one fail-closed capability-plane adapter.'],
-  },
-  {
-    plane: 'workflow-stage',
-    frozenInCore: true,
-    payloadPacketStatus: 'blocked-pending-packet',
-    ...getCorePlaneExecutionSummary('workflow-stage'),
-    blockedBy: 'core-plane-payload-packet-not-yet-frozen',
-    notes: ['Keep local journey labels separate from Core workflow and stage truth until packet-grounded.'],
-  },
-  {
-    plane: 'event-notification',
-    frozenInCore: true,
-    payloadPacketStatus: 'blocked-pending-packet',
-    ...getCorePlaneExecutionSummary('event-notification'),
-    blockedBy: 'core-plane-payload-packet-not-yet-frozen',
-    notes: ['Expose frozen notification visibility now and fail closed on packet-incomplete execution semantics.'],
-  },
-  {
-    plane: 'enterprise-integration',
-    frozenInCore: true,
-    payloadPacketStatus: 'blocked-pending-packet',
-    ...getCorePlaneExecutionSummary('enterprise-integration'),
-    blockedBy: 'core-plane-payload-packet-not-yet-frozen',
-    notes: ['Regroup bounded commercial, document, media, attachment, and evidence helpers behind one plane adapter.'],
-  },
-];
+const bidviaCorePlaneAdoptionNotesByPlane: Record<BidviaCorePlaneAdoptionStatus['plane'], string[]> = {
+  'identity-session': ['Adopt canonical onboarding and governed-read posture without inventing broader session semantics.'],
+  task: ['Keep local task shells descriptive-only and block packet-incomplete task semantics.'],
+  capability: ['Route remote capability refresh through one fail-closed capability-plane adapter.'],
+  'workflow-stage': ['Keep local journey labels separate from Core workflow and stage truth until packet-grounded.'],
+  'event-notification': ['Expose frozen notification visibility now and fail closed on packet-incomplete execution semantics.'],
+  'enterprise-integration': ['Regroup bounded commercial, document, media, attachment, and evidence helpers behind one plane adapter.'],
+};
 
 export function listCorePlaneAdoptionStatuses(): BidviaCorePlaneAdoptionStatus[] {
-  return bidviaCorePlaneAdoptionTemplate.map((status) => ({
+  return listCorePayloadPlaneAdoptionSummaries().map((status) => ({
     ...status,
-    notes: [...status.notes],
+    frozenInCore: true,
+    notes: [...bidviaCorePlaneAdoptionNotesByPlane[status.plane]],
   }));
 }
 
@@ -100,11 +62,14 @@ export function listStage3ReleaseGateValidatorCommands(): BidviaStage3ReleaseGat
 }
 
 export function listCorePlaneWaveStatuses(): BidviaCorePlaneWaveStatus[] {
-  const statusesByPlane = new Map(listCorePlaneAdoptionStatuses().map((status) => [status.plane, status]));
+  const matrixEntries = listCorePayloadContractMatrixEntries();
 
   return stage3ReleaseGateWavePlanes.map(({ wave, planes }) => ({
     wave,
-    status: planes.every((plane) => statusesByPlane.get(plane)?.payloadPacketStatus === 'packet-grounded')
+    status: planes.every((plane) => matrixEntries.some((entry) => entry.plane === plane))
+      && matrixEntries
+        .filter((entry) => planes.includes(entry.plane))
+        .every((entry) => entry.helperState === 'packet-grounded-read' || entry.helperState === 'packet-grounded-execution')
       ? 'complete'
       : 'blocked',
     planes: [...planes],

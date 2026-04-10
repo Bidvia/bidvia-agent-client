@@ -5,38 +5,9 @@ import type {
   BidviaPlaneExecutionGate,
   BidviaWorkflowStagePlaneView,
 } from './contracts.js';
+import { bidviaCorePlaneNames } from './contracts.js';
 
 const blockedByPendingPacket = 'core-plane-payload-packet-not-yet-frozen' as const;
-
-const corePayloadPlaneExecutionSummaryByPlane: Record<
-  BidviaCorePlaneName,
-  Pick<BidviaCorePlaneAdoptionStatus, 'descriptiveVisibility' | 'executableHelperEligibility'>
-> = {
-  'identity-session': {
-    descriptiveVisibility: 'descriptive-plane-visible',
-    executableHelperEligibility: 'packet-grounded-execution',
-  },
-  task: {
-    descriptiveVisibility: 'descriptive-plane-visible',
-    executableHelperEligibility: 'packet-grounded-execution',
-  },
-  capability: {
-    descriptiveVisibility: 'descriptive-plane-visible',
-    executableHelperEligibility: 'packet-grounded-read',
-  },
-  'workflow-stage': {
-    descriptiveVisibility: 'descriptive-plane-visible',
-    executableHelperEligibility: 'packet-grounded-read',
-  },
-  'event-notification': {
-    descriptiveVisibility: 'descriptive-plane-visible',
-    executableHelperEligibility: 'packet-grounded-execution',
-  },
-  'enterprise-integration': {
-    descriptiveVisibility: 'descriptive-plane-visible',
-    executableHelperEligibility: 'packet-grounded-read',
-  },
-};
 
 const corePayloadContractMatrixEntries: readonly BidviaCorePayloadContractMatrixEntry[] = [
   {
@@ -239,6 +210,51 @@ const corePayloadContractMatrixEntryByHelperKey = new Map(
   corePayloadContractMatrixEntries.map((entry) => [entry.helperKey, entry]),
 );
 
+function isPacketGroundedHelperState(helperState: BidviaCorePayloadContractMatrixEntry['helperState']): boolean {
+  return helperState === 'packet-grounded-read' || helperState === 'packet-grounded-execution';
+}
+
+function listCorePayloadContractEntriesForPlane(plane: BidviaCorePlaneName): BidviaCorePayloadContractMatrixEntry[] {
+  return corePayloadContractMatrixEntries.filter((entry) => entry.plane === plane);
+}
+
+function getCorePayloadPlanePayloadPacketStatus(
+  entries: readonly BidviaCorePayloadContractMatrixEntry[],
+): BidviaCorePlaneAdoptionStatus['payloadPacketStatus'] {
+  return entries.some((entry) => isPacketGroundedHelperState(entry.helperState))
+    ? 'packet-grounded'
+    : 'blocked-pending-packet';
+}
+
+function getCorePayloadPlaneExecutableHelperEligibility(
+  entries: readonly BidviaCorePayloadContractMatrixEntry[],
+): BidviaCorePlaneAdoptionStatus['executableHelperEligibility'] {
+  if (entries.some((entry) => entry.helperState === 'packet-grounded-execution')) {
+    return 'packet-grounded-execution';
+  }
+
+  if (entries.some((entry) => entry.helperState === 'packet-grounded-read')) {
+    return 'packet-grounded-read';
+  }
+
+  if (entries.some((entry) => entry.helperState === 'compatibility-only')) {
+    return 'compatibility-only';
+  }
+
+  return 'blocked-pending-packet';
+}
+
+function getCorePayloadPlaneBlockedBy(
+  entries: readonly BidviaCorePayloadContractMatrixEntry[],
+  payloadPacketStatus: BidviaCorePlaneAdoptionStatus['payloadPacketStatus'],
+): BidviaCorePlaneAdoptionStatus['blockedBy'] {
+  if (payloadPacketStatus === 'packet-grounded') {
+    return null;
+  }
+
+  return entries.find((entry) => entry.blockedBy !== null)?.blockedBy ?? blockedByPendingPacket;
+}
+
 export function listCorePayloadContractMatrixEntries(): BidviaCorePayloadContractMatrixEntry[] {
   return corePayloadContractMatrixEntries.map((entry) => ({
     ...entry,
@@ -260,11 +276,35 @@ export function getCorePayloadContractMatrixEntry(
   };
 }
 
+export function listCorePayloadPlaneAdoptionSummaries(): Array<Pick<
+  BidviaCorePlaneAdoptionStatus,
+  'plane' | 'payloadPacketStatus' | 'descriptiveVisibility' | 'executableHelperEligibility' | 'blockedBy'
+>> {
+  return bidviaCorePlaneNames.map((plane) => {
+    const entries = listCorePayloadContractEntriesForPlane(plane);
+    const payloadPacketStatus = getCorePayloadPlanePayloadPacketStatus(entries);
+
+    return {
+      plane,
+      payloadPacketStatus,
+      descriptiveVisibility: 'descriptive-plane-visible',
+      executableHelperEligibility: getCorePayloadPlaneExecutableHelperEligibility(entries),
+      blockedBy: getCorePayloadPlaneBlockedBy(entries, payloadPacketStatus),
+    };
+  });
+}
+
 export function getCorePayloadPlaneExecutionSummary(
   plane: BidviaCorePlaneName,
 ): Pick<BidviaCorePlaneAdoptionStatus, 'descriptiveVisibility' | 'executableHelperEligibility'> {
+  const summary = listCorePayloadPlaneAdoptionSummaries().find((entry) => entry.plane === plane);
+  if (!summary) {
+    throw new Error(`Missing core payload plane adoption summary for ${plane}`);
+  }
+
   return {
-    ...corePayloadPlaneExecutionSummaryByPlane[plane],
+    descriptiveVisibility: summary.descriptiveVisibility,
+    executableHelperEligibility: summary.executableHelperEligibility,
   };
 }
 
