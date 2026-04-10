@@ -84,6 +84,7 @@ test('buildLocalDiscoveryCatalog returns operator-readable local mappings withou
     level: 'atomic-route',
     localCapabilityTier: 'L0-observe-only',
     localCapabilityRiskTier: 'observe-only',
+    capabilityPlaneCapabilityMode: 'packet-grounded-read',
     discoveryKind: 'read',
     recommendedOutputMode: 'truth-fetch-result',
     sourceOfTruth: 'local-sdk-helpers',
@@ -96,6 +97,48 @@ test('buildLocalDiscoveryCatalog returns operator-readable local mappings withou
         outputMode: 'truth-fetch-result',
       },
     ],
+  });
+
+  const integrationOnboarding = catalog.find((entry) => entry.helperKey === 'submitIntegrationOnboardingContract');
+  assert.deepEqual(integrationOnboarding, {
+    helperKey: 'submitIntegrationOnboardingContract',
+    routePathTemplate: '/runtime/integrations/:integration_code/onboarding-contract',
+    httpMethod: 'POST',
+    accessContextFamily: 'principal-governed-read',
+    requiredContext: ['tenantId', 'principalId'],
+    scope: 'write',
+    level: 'atomic-route',
+    localCapabilityTier: 'L3-governed-commercial',
+    localCapabilityRiskTier: 'governed-commercial',
+    discoveryKind: 'execute',
+    recommendedOutputMode: 'execution-result',
+    sourceOfTruth: 'local-sdk-helpers',
+    localOnly: true,
+    remoteDiscovery: false,
+    runnable: true,
+    blockedBy: null,
+    cliCommands: [],
+    mcpTools: [],
+  });
+
+  const haisiWarehouses = catalog.find((entry) => entry.helperKey === 'listHaisiWmsWarehouses');
+  assert.deepEqual(haisiWarehouses, {
+    helperKey: 'listHaisiWmsWarehouses',
+    routePathTemplate: '/runtime/integrations/haisi-wms/warehouses',
+    httpMethod: 'GET',
+    accessContextFamily: 'principal-governed-read',
+    requiredContext: ['tenantId', 'principalId'],
+    scope: 'read',
+    level: 'atomic-route',
+    localCapabilityTier: 'L0-observe-only',
+    localCapabilityRiskTier: 'observe-only',
+    discoveryKind: 'read',
+    recommendedOutputMode: 'truth-fetch-result',
+    sourceOfTruth: 'local-sdk-helpers',
+    localOnly: true,
+    remoteDiscovery: false,
+    cliCommands: [],
+    mcpTools: [],
   });
 
   const participationStates = catalog.find((entry) => entry.helperKey === 'listParticipationStates');
@@ -431,6 +474,7 @@ test('buildLocalMcpToolCatalog derives MCP descriptors from the shared local dis
     localCapabilityRiskTier: 'observe-only',
     accessContextFamily: 'principal-governed-read',
     requiredContext: ['tenantId', 'principalId'],
+    capabilityPlaneCapabilityMode: 'packet-grounded-read',
   });
 
   assert.deepEqual(mcpTools.find((tool) => tool.toolName === 'query-provisional-agent-read'), {
