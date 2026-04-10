@@ -827,6 +827,83 @@ test('runCli returns structured missing-context failures when provisional onboar
   }
 });
 
+test('runCli claim-provisional-agent can continue from locally persisted sign-in session context when env is absent', async () => {
+  const tempDirectory = mkdtempSync(path.join(tmpdir(), 'bidvia-cli-claim-from-sign-in-'));
+  const statePath = path.join(tempDirectory, 'onboarding-state.json');
+  const restoreStatePath = setEnvVar('BIDVIA_STATE_PATH', statePath);
+  const createClientContexts: unknown[] = [];
+  const claimCalls: Array<{ provisionalAgentRef: string; claimToken: string; now: string }> = [];
+
+  try {
+    const createClient = ((_env?: unknown, contextOverride?: unknown) => {
+      createClientContexts.push(contextOverride);
+      return {
+        signIn: async () => ({
+          tenantId: 'tenant-sign-in',
+          sessionId: 'session-sign-in',
+          principalId: 'principal-sign-in',
+        }),
+        claimProvisionalAgent: async (input: { provisionalAgentRef: string; claimToken: string; now: string }) => {
+          claimCalls.push(input);
+          return {
+            provisionalAgentRef: input.provisionalAgentRef,
+            registrationId: 'areg-claim-from-local-session',
+            principalId: 'principal-claim-from-local-session',
+            companyId: 'company-claim-from-local-session',
+          };
+        },
+      } as never;
+    }) as never;
+
+    const signInExitCode = await runCli([
+      'sign-in',
+      '--input',
+      '{"email":"person@example.com","password":"secret-1","now":"2026-04-10T10:02:00Z"}',
+    ], {
+      createClient,
+      resolveProcessEnv: () => ({
+        BIDVIA_STATE_PATH: statePath,
+      }),
+      now: () => '2026-04-10T10:02:30Z',
+      printJson: () => {},
+      printLine: () => {
+        throw new Error('sign-in should not print help lines');
+      },
+    });
+    const claimExitCode = await runCli([
+      'claim-provisional-agent',
+      '--provisional-agent-ref',
+      'prov-agent-claim-from-local-session',
+      '--claim-token',
+      'claim-token-claim-from-local-session',
+    ], {
+      createClient,
+      resolveProcessEnv: () => ({
+        BIDVIA_STATE_PATH: statePath,
+      }),
+      now: () => '2026-04-10T10:03:00Z',
+      printJson: () => {},
+      printLine: () => {
+        throw new Error('claim-provisional-agent should not print help lines');
+      },
+    });
+
+    assert.equal(signInExitCode, 0);
+    assert.equal(claimExitCode, 0);
+    assert.deepEqual(createClientContexts, [
+      { tenantId: undefined, principalId: undefined, companyId: undefined, registrationId: undefined, sessionId: undefined },
+      { tenantId: 'tenant-sign-in', principalId: 'principal-sign-in', companyId: undefined, registrationId: undefined, sessionId: 'session-sign-in' },
+    ]);
+    assert.deepEqual(claimCalls, [{
+      provisionalAgentRef: 'prov-agent-claim-from-local-session',
+      claimToken: 'claim-token-claim-from-local-session',
+      now: '2026-04-10T10:03:00Z',
+    }]);
+  } finally {
+    restoreStatePath();
+  }
+});
+
 test('runCli returns structured transport failures and does not write local onboarding state when claim-provisional-agent fails', async () => {
   const tempDirectory = mkdtempSync(path.join(tmpdir(), 'bidvia-cli-onboarding-actions-failure-'));
   const statePath = path.join(tempDirectory, 'onboarding-state.json');

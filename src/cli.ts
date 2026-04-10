@@ -588,8 +588,8 @@ const identitySessionRequiredContextByCommand = {
 
 function readOnboardingResultString(
   value: unknown,
-  camelKey: 'tenantId' | 'principalId' | 'companyId' | 'registrationId',
-  snakeKey: 'tenant_id' | 'principal_id' | 'company_id' | 'registration_id',
+  camelKey: 'tenantId' | 'principalId' | 'companyId' | 'registrationId' | 'sessionId',
+  snakeKey: 'tenant_id' | 'principal_id' | 'company_id' | 'registration_id' | 'session_id',
 ): string | undefined {
   if (!value || typeof value !== 'object') {
     return undefined;
@@ -664,7 +664,10 @@ function buildContextValueWithSource(
   };
 }
 
-function buildSecretPresenceWithSource(envValue: string | undefined): {
+function buildSecretPresenceWithSource(
+  envValue: string | undefined,
+  localStateValue?: string,
+): {
   present: boolean;
   source: BidviaContextValueSource;
 } {
@@ -675,10 +678,24 @@ function buildSecretPresenceWithSource(envValue: string | undefined): {
     };
   }
 
+  if (localStateValue !== undefined) {
+    return {
+      present: true,
+      source: 'local-state',
+    };
+  }
+
   return {
     present: false,
     source: 'missing',
   };
+}
+
+function readEffectiveSessionId(
+  env: NodeJS.ProcessEnv,
+  localState: BidviaLocalOnboardingState | null,
+): string | undefined {
+  return readNonEmptyEnvValue(env, 'BIDVIA_SESSION_ID') ?? localState?.sessionId;
 }
 
 function buildEffectiveContextSnapshot(
@@ -691,7 +708,7 @@ function buildEffectiveContextSnapshot(
     companyId: buildContextValueWithSource(readNonEmptyEnvValue(env, 'BIDVIA_COMPANY_ID'), localState?.companyId),
     registrationId: buildContextValueWithSource(readNonEmptyEnvValue(env, 'BIDVIA_REGISTRATION_ID'), localState?.registrationId),
     lastCompletedStep: buildContextValueWithSource(undefined, localState?.lastCompletedStep),
-    sessionId: buildSecretPresenceWithSource(readNonEmptyEnvValue(env, 'BIDVIA_SESSION_ID')),
+    sessionId: buildSecretPresenceWithSource(readNonEmptyEnvValue(env, 'BIDVIA_SESSION_ID'), localState?.sessionId),
     adminSessionId: buildSecretPresenceWithSource(readNonEmptyEnvValue(env, 'BIDVIA_ADMIN_SESSION_ID')),
   };
 }
@@ -803,29 +820,20 @@ function buildOnboardingActionCommandHints(
 }
 
 function buildIdentitySessionCommandHints(command: 'doctor' | 'onboard') {
-  const hints = [
+  return [
+    buildStaticFirstAccessCommandHint(
+      'bidvia sign-in --input ...',
+      'Use the bounded session support path when local continuation needs a session before the session-bound claim step.',
+    ),
     buildStaticFirstAccessCommandHint(
       'bidvia sign-up-personal --input ...',
-      'Create a bounded personal account first when the external user needs a new login before any agent onboarding steps.',
+      'Create a bounded personal account only when the external user still needs prerequisite account setup before the agent-first journey can continue.',
     ),
     buildStaticFirstAccessCommandHint(
       'bidvia sign-up-enterprise --input ...',
-      'Use the bounded enterprise sign-up path when the external user starts from an organization-first setup.',
-    ),
-    buildStaticFirstAccessCommandHint(
-      'bidvia sign-in --input ...',
-      'Establish the bounded V1 session before any session-bound claim or account-me/select-org continuation work.',
+      'Use the bounded enterprise sign-up path only when organization setup is the prerequisite blocker ahead of the primary agent journey.',
     ),
   ];
-
-  if (command === 'doctor') {
-    hints.push(buildStaticFirstAccessCommandHint(
-      'bidvia onboard',
-      'Start or rerun the agent-first onboarding guide after account/session establishment is available.',
-    ));
-  }
-
-  return hints;
 }
 
 function buildVisibilityCommandHints(command: 'doctor' | 'onboard') {
@@ -857,6 +865,16 @@ function buildFirstAccessOnboardingSnapshot(
   const onboardingProgress = buildOnboardingProgressSnapshot(effectiveContext);
 
   if (effectiveContext.tenantId.value === null) {
+    const primaryJourneyHints = command === 'doctor'
+      ? [
+        buildStaticFirstAccessCommandHint(
+          'bidvia onboard',
+          'Keep the visible journey agent-first: start or rerun onboard, then use bounded account/session support only if the primary path still lacks prerequisite context.',
+        ),
+        ...buildVisibilityCommandHints(command),
+      ]
+      : buildVisibilityCommandHints(command);
+
     return {
       journeyKey: journey.journeyKey,
       journeyLabel: journey.label,
@@ -868,8 +886,8 @@ function buildFirstAccessOnboardingSnapshot(
         lastCompletedStep: onboardingProgress.lastCompletedStep,
       },
       nextCommands: [
+        ...primaryJourneyHints,
         ...buildIdentitySessionCommandHints(command),
-        ...buildVisibilityCommandHints(command),
         ...buildOnboardingActionCommandHints(),
       ],
       firstSuccessNextStep: journey.firstSuccessNextStep,
@@ -1361,6 +1379,7 @@ const identitySessionCommandDefinitions = {
 function buildOnboardingActionExecutionContext(
   command: BidviaCliOnboardingActionCommand,
   env: NodeJS.ProcessEnv,
+  localState: BidviaLocalOnboardingState | null,
   effectiveContext: ReturnType<typeof buildEffectiveContextSnapshot>,
 ) {
   if (command === 'create-provisional-agent' || command === 'query-provisional-agent') {
@@ -1378,24 +1397,52 @@ function buildOnboardingActionExecutionContext(
     principalId: effectiveContext.principalId.value ?? undefined,
     companyId: effectiveContext.companyId.value ?? undefined,
     registrationId: effectiveContext.registrationId.value ?? undefined,
-    sessionId: effectiveContext.sessionId.present
-      ? readNonEmptyEnvValue(env, 'BIDVIA_SESSION_ID')
-      : undefined,
+    sessionId: readEffectiveSessionId(env, localState),
   };
 }
 
 function buildIdentitySessionExecutionContext(
   env: NodeJS.ProcessEnv,
+  localState: BidviaLocalOnboardingState | null,
   effectiveContext: ReturnType<typeof buildEffectiveContextSnapshot>,
 ) {
   return {
     tenantId: effectiveContext.tenantId.value ?? undefined,
     principalId: undefined,
-    companyId: undefined,
+    companyId: effectiveContext.companyId.value ?? undefined,
     registrationId: undefined,
-    sessionId: effectiveContext.sessionId.present
-      ? readNonEmptyEnvValue(env, 'BIDVIA_SESSION_ID')
-      : undefined,
+    sessionId: readEffectiveSessionId(env, localState),
+  };
+}
+
+function buildPersistedIdentitySessionState(
+  command: BidviaCliIdentitySessionCommand,
+  result: unknown,
+  existingState: BidviaLocalOnboardingState | null,
+  executionContext: ReturnType<typeof buildIdentitySessionExecutionContext>,
+  now: string,
+) {
+  const tenantId = readOnboardingResultString(result, 'tenantId', 'tenant_id')
+    ?? executionContext.tenantId
+    ?? existingState?.tenantId;
+  const principalId = readOnboardingResultString(result, 'principalId', 'principal_id')
+    ?? existingState?.principalId;
+  const companyId = readOnboardingResultString(result, 'companyId', 'company_id')
+    ?? existingState?.companyId;
+  const sessionId = command === 'session-revoke'
+    ? undefined
+    : readOnboardingResultString(result, 'sessionId', 'session_id')
+      ?? executionContext.sessionId
+      ?? existingState?.sessionId;
+
+  return {
+    ...(tenantId === undefined ? {} : { tenantId }),
+    ...(principalId === undefined ? {} : { principalId }),
+    ...(companyId === undefined ? {} : { companyId }),
+    ...(sessionId === undefined ? {} : { sessionId }),
+    lastCompletedStep: command,
+    createdAt: existingState?.createdAt ?? now,
+    updatedAt: now,
   };
 }
 
@@ -1412,6 +1459,7 @@ function buildPersistedOnboardingActionState(
       tenantId: readOnboardingResultString(result, 'tenantId', 'tenant_id')
         ?? executionContext.tenantId
         ?? existingState?.tenantId,
+      ...(existingState?.sessionId === undefined ? {} : { sessionId: existingState.sessionId }),
       lastCompletedStep: command,
       createdAt: existingState?.createdAt ?? now,
       updatedAt: now,
@@ -1435,6 +1483,7 @@ function buildPersistedOnboardingActionState(
     ...(claimedPrincipalId === undefined ? {} : { principalId: claimedPrincipalId }),
     ...(claimedCompanyId === undefined ? {} : { companyId: claimedCompanyId }),
     ...(claimedRegistrationId === undefined ? {} : { registrationId: claimedRegistrationId }),
+    ...(existingState?.sessionId === undefined ? {} : { sessionId: existingState.sessionId }),
     lastCompletedStep: command,
     createdAt: existingState?.createdAt ?? now,
     updatedAt: now,
@@ -1977,14 +2026,6 @@ function printHelp(printLine: (value: string) => void): void {
   printLine('OpenClaw primary path: export stdio MCP config first, then add the companion bundle when you want bundle/bootstrap packaging.');
   printLine('OpenClaw scope for this version: local-first, Core-truth-consuming, stdio MCP primary.');
   printLine('Stage 1 client runtime is complete locally: CLI and MCP execution share one runtime core and local accumulation layer.');
-  printLine('Account / Session Establishment:');
-  printLine('  sign-up-personal --input ...');
-  printLine('  sign-up-enterprise --input ...');
-  printLine('  sign-in --input ...');
-  printLine('  account-me');
-  printLine('  select-org --input ...');
-  printLine('  session-refresh');
-  printLine('  session-revoke');
   printLine('Getting Started (Agent-first Learn):');
   printLine('  onboard');
   printLine('  whoami');
@@ -1992,6 +2033,14 @@ function printHelp(printLine: (value: string) => void): void {
   printLine('  doctor');
   printLine('  onboarding-readiness');
   printLine('  route-context-matrix');
+  printLine('Prerequisite Account / Session Support:');
+  printLine('  sign-in --input ...');
+  printLine('  sign-up-personal --input ...');
+  printLine('  sign-up-enterprise --input ...');
+  printLine('  account-me');
+  printLine('  select-org --input ...');
+  printLine('  session-refresh');
+  printLine('  session-revoke');
   printLine('  openclaw-mcp-config');
   printLine('  openclaw-bundle-export --output ...');
   printLine('Agent Onboarding (Public Provisional -> Claim):');
@@ -2409,11 +2458,34 @@ export async function runCli(
       );
     }
 
-    const executionContext = buildIdentitySessionExecutionContext(env, effectiveContext);
+    const now = dependencies.now();
+    const executionContext = buildIdentitySessionExecutionContext(env, localStateResult.state, effectiveContext);
 
     try {
       const client = dependencies.createClient(env, executionContext);
       const result = await identitySessionCommand.run(client, parsedArgs);
+
+      try {
+        await writeLocalOnboardingState(
+          buildPersistedIdentitySessionState(
+            command as BidviaCliIdentitySessionCommand,
+            result,
+            localStateResult.state,
+            executionContext,
+            now,
+          ),
+          buildLocalOnboardingStateIoOptions(env),
+        );
+      } catch (error) {
+        return printStructuredFailure(
+          dependencies,
+          buildLocalOnboardingStateWriteFailure(
+            command,
+            resolveLocalOnboardingStatePath(buildLocalOnboardingStateIoOptions(env)),
+            error,
+          ),
+        );
+      }
 
       dependencies.printJson(
         localStateResult.warnings.length === 0
@@ -2465,6 +2537,7 @@ export async function runCli(
     const executionContext = buildOnboardingActionExecutionContext(
       command as BidviaCliOnboardingActionCommand,
       env,
+      localState,
       effectiveContext,
     );
     const requiredContext = onboardingActionRequiredContextByCommand[

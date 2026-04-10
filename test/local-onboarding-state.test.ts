@@ -53,7 +53,7 @@ test('resolveLocalOnboardingStatePath defaults to ~/.bidvia/onboarding-state.jso
   );
 });
 
-test('writeLocalOnboardingState persists only non-secret onboarding fields and readLocalOnboardingState reloads them from the BIDVIA_STATE_PATH override', async () => {
+test('writeLocalOnboardingState persists minimal continuation fields while still excluding token material', async () => {
   const exports = publicSurface as Record<string, unknown>;
   const tempDirectory = mkdtempSync(path.join(tmpdir(), 'bidvia-local-onboarding-state-'));
   const statePath = path.join(tempDirectory, 'onboarding-state.json');
@@ -95,6 +95,7 @@ test('writeLocalOnboardingState persists only non-secret onboarding fields and r
       principalId: 'principal-a',
       companyId: 'company-a',
       registrationId: 'areg-1',
+      sessionId: 'session-secret',
       lastCompletedStep: 'claim-provisional-agent',
       createdAt: '2026-04-02T10:00:00.000Z',
       updatedAt: '2026-04-02T10:05:00.000Z',
@@ -105,6 +106,7 @@ test('writeLocalOnboardingState persists only non-secret onboarding fields and r
       principalId: 'principal-a',
       companyId: 'company-a',
       registrationId: 'areg-1',
+      sessionId: 'session-secret',
       lastCompletedStep: 'claim-provisional-agent',
       createdAt: '2026-04-02T10:00:00.000Z',
       updatedAt: '2026-04-02T10:05:00.000Z',
@@ -117,6 +119,7 @@ test('writeLocalOnboardingState persists only non-secret onboarding fields and r
       principalId: 'principal-a',
       companyId: 'company-a',
       registrationId: 'areg-1',
+      sessionId: 'session-secret',
       lastCompletedStep: 'claim-provisional-agent',
       createdAt: '2026-04-02T10:00:00.000Z',
       updatedAt: '2026-04-02T10:05:00.000Z',

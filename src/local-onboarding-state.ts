@@ -7,6 +7,7 @@ export interface BidviaLocalOnboardingState {
   principalId?: string;
   companyId?: string;
   registrationId?: string;
+  sessionId?: string;
   lastCompletedStep?: string;
   createdAt?: string;
   updatedAt?: string;
@@ -67,6 +68,7 @@ function isBidviaLocalOnboardingState(value: unknown): value is BidviaLocalOnboa
     && isOptionalString(candidate.principalId)
     && isOptionalString(candidate.companyId)
     && isOptionalString(candidate.registrationId)
+    && isOptionalString(candidate.sessionId)
     && isOptionalString(candidate.lastCompletedStep)
     && isOptionalString(candidate.createdAt)
     && isOptionalString(candidate.updatedAt);
@@ -80,6 +82,7 @@ function buildPersistedLocalOnboardingState(
     ...(state.principalId === undefined ? {} : { principalId: state.principalId }),
     ...(state.companyId === undefined ? {} : { companyId: state.companyId }),
     ...(state.registrationId === undefined ? {} : { registrationId: state.registrationId }),
+    ...(state.sessionId === undefined ? {} : { sessionId: state.sessionId }),
     ...(state.lastCompletedStep === undefined ? {} : { lastCompletedStep: state.lastCompletedStep }),
     ...(state.createdAt === undefined ? {} : { createdAt: state.createdAt }),
     ...(state.updatedAt === undefined ? {} : { updatedAt: state.updatedAt }),

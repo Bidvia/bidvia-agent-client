@@ -1,9 +1,31 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { mkdtempSync, readFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
 
 import { runCli } from '../src/cli.ts';
 
-test('runCli help orders V1 account/session commands before onboard, local visibility, and agent onboarding commands', async () => {
+function setEnvVar(name: string, value: string | undefined) {
+  const previousValue = process.env[name];
+
+  if (value === undefined) {
+    delete process.env[name];
+  } else {
+    process.env[name] = value;
+  }
+
+  return () => {
+    if (previousValue === undefined) {
+      delete process.env[name];
+      return;
+    }
+
+    process.env[name] = previousValue;
+  };
+}
+
+test('runCli help keeps the agent-first learn journey ahead of bounded identity/session prerequisite support', async () => {
   const lines: string[] = [];
 
   const exitCode = await runCli(['--help'], {
@@ -29,17 +51,76 @@ test('runCli help orders V1 account/session commands before onboard, local visib
   const claimIndex = lines.indexOf('  claim-provisional-agent --provisional-agent-ref ... --claim-token ...');
   const registrationLifecycleIndex = lines.indexOf('  registration-lifecycle-plan');
 
-  assert(signUpPersonalIndex >= 0);
-  assert(signUpEnterpriseIndex > signUpPersonalIndex);
-  assert(signInIndex > signUpEnterpriseIndex);
-  assert(onboardIndex > signInIndex);
+  assert(onboardIndex >= 0);
   assert(whoamiIndex > onboardIndex);
   assert(contextShowIndex > whoamiIndex);
   assert(doctorIndex > contextShowIndex);
-  assert(createIndex > doctorIndex);
+  assert(signInIndex > doctorIndex);
+  assert(signUpPersonalIndex > signInIndex);
+  assert(signUpEnterpriseIndex > signUpPersonalIndex);
+  assert(createIndex > signUpEnterpriseIndex);
   assert(queryIndex > createIndex);
   assert(claimIndex > queryIndex);
   assert(registrationLifecycleIndex > claimIndex);
+});
+
+test('runCli sign-in persists minimal local continuation state without writing token material', async () => {
+  const printed: unknown[] = [];
+  const tempDirectory = mkdtempSync(path.join(tmpdir(), 'bidvia-cli-sign-in-state-'));
+  const statePath = path.join(tempDirectory, 'onboarding-state.json');
+  const restoreStatePath = setEnvVar('BIDVIA_STATE_PATH', statePath);
+
+  try {
+    const exitCode = await runCli([
+      'sign-in',
+      '--input',
+      '{"email":"person@example.com","password":"secret-1","now":"2026-04-10T10:02:00Z"}',
+    ], {
+      createClient: () => ({
+        signIn: async () => ({
+          tenantId: 'tenant-a',
+          principalId: 'principal-a',
+          companyId: 'company-a',
+          sessionId: 'sess-1',
+          adminSessionId: 'admin-secret-should-not-persist',
+          accessToken: 'access-secret-should-not-persist',
+          refreshToken: 'refresh-secret-should-not-persist',
+        }),
+      }) as never,
+      resolveProcessEnv: () => ({
+        BIDVIA_STATE_PATH: statePath,
+      }),
+      now: () => '2026-04-10T10:02:30Z',
+      printJson: (value) => {
+        printed.push(value);
+      },
+      printLine: () => {
+        throw new Error('sign-in should not print help lines');
+      },
+    });
+
+    assert.equal(exitCode, 0);
+    assert.deepEqual(printed, [{
+      tenantId: 'tenant-a',
+      principalId: 'principal-a',
+      companyId: 'company-a',
+      sessionId: 'sess-1',
+      adminSessionId: 'admin-secret-should-not-persist',
+      accessToken: 'access-secret-should-not-persist',
+      refreshToken: 'refresh-secret-should-not-persist',
+    }]);
+    assert.deepEqual(JSON.parse(readFileSync(statePath, 'utf8')), {
+      tenantId: 'tenant-a',
+      principalId: 'principal-a',
+      companyId: 'company-a',
+      sessionId: 'sess-1',
+      lastCompletedStep: 'sign-in',
+      createdAt: '2026-04-10T10:02:30Z',
+      updatedAt: '2026-04-10T10:02:30Z',
+    });
+  } finally {
+    restoreStatePath();
+  }
 });
 
 test('runCli routes the V1 sign-up and sign-in commands through the existing client helpers with --input json bodies', async () => {
@@ -245,4 +326,98 @@ test('runCli routes account/session continuity commands through the existing cli
     { ok: true, command: 'session-refresh' },
     { ok: true, command: 'session-revoke' },
   ]);
+});
+
+test('runCli identity/session continuation commands can resume from locally persisted sign-in state when env is absent', async () => {
+  const printed: unknown[] = [];
+  const createClientContexts: unknown[] = [];
+  const tempDirectory = mkdtempSync(path.join(tmpdir(), 'bidvia-cli-session-continuation-'));
+  const statePath = path.join(tempDirectory, 'onboarding-state.json');
+  const restoreStatePath = setEnvVar('BIDVIA_STATE_PATH', statePath);
+
+  try {
+    const createClient = ((_env?: unknown, contextOverride?: unknown) => {
+      createClientContexts.push(contextOverride);
+      return {
+        signIn: async () => ({
+          tenantId: 'tenant-a',
+          principalId: 'principal-a',
+          sessionId: 'sess-1',
+        }),
+        selectOrg: async (input: unknown) => ({
+          ok: true,
+          command: 'select-org',
+          ...((input as { orgId: string })),
+          companyId: 'company-b',
+        }),
+        accountMe: async () => ({
+          ok: true,
+        }),
+        getAccountMe: async () => ({
+          ok: true,
+          command: 'account-me',
+        }),
+      } as never;
+    }) as never;
+
+    const signInExitCode = await runCli([
+      'sign-in',
+      '--input',
+      '{"email":"person@example.com","password":"secret-1","now":"2026-04-10T10:02:00Z"}',
+    ], {
+      createClient,
+      resolveProcessEnv: () => ({
+        BIDVIA_STATE_PATH: statePath,
+      }),
+      now: () => '2026-04-10T10:02:30Z',
+      printJson: () => {},
+      printLine: () => {
+        throw new Error('sign-in should not print help lines');
+      },
+    });
+    const selectOrgExitCode = await runCli([
+      'select-org',
+      '--input',
+      '{"orgId":"org-2"}',
+    ], {
+      createClient,
+      resolveProcessEnv: () => ({
+        BIDVIA_STATE_PATH: statePath,
+      }),
+      now: () => '2026-04-10T10:03:00Z',
+      printJson: (value) => {
+        printed.push(value);
+      },
+      printLine: () => {
+        throw new Error('select-org should not print help lines');
+      },
+    });
+    const accountMeExitCode = await runCli(['account-me'], {
+      createClient,
+      resolveProcessEnv: () => ({
+        BIDVIA_STATE_PATH: statePath,
+      }),
+      printJson: (value) => {
+        printed.push(value);
+      },
+      printLine: () => {
+        throw new Error('account-me should not print help lines');
+      },
+    });
+
+    assert.equal(signInExitCode, 0);
+    assert.equal(selectOrgExitCode, 0);
+    assert.equal(accountMeExitCode, 0);
+    assert.deepEqual(createClientContexts, [
+      { tenantId: undefined, principalId: undefined, companyId: undefined, registrationId: undefined, sessionId: undefined },
+      { tenantId: 'tenant-a', principalId: undefined, companyId: undefined, registrationId: undefined, sessionId: 'sess-1' },
+      { tenantId: 'tenant-a', principalId: undefined, companyId: 'company-b', registrationId: undefined, sessionId: 'sess-1' },
+    ]);
+    assert.deepEqual(printed, [
+      { ok: true, command: 'select-org', orgId: 'org-2', companyId: 'company-b' },
+      { ok: true, command: 'account-me' },
+    ]);
+  } finally {
+    restoreStatePath();
+  }
 });
