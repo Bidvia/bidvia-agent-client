@@ -259,6 +259,62 @@ test('buildLocalDiscoveryCatalog returns operator-readable local mappings withou
     ],
   });
 
+  const createLease = catalog.find((entry) => entry.helperKey === 'createLease');
+  assert.deepEqual(createLease, {
+    helperKey: 'createLease',
+    routePathTemplate: '/runtime/agents/:agent_registration_id/leases',
+    httpMethod: 'POST',
+    accessContextFamily: 'operator-company',
+    requiredContext: ['tenantId', 'principalId', 'companyId'],
+    scope: 'write',
+    level: 'atomic-route',
+    localCapabilityTier: 'L3-governed-commercial',
+    localCapabilityRiskTier: 'governed-commercial',
+    discoveryKind: 'execute',
+    recommendedOutputMode: 'execution-result',
+    sourceOfTruth: 'local-sdk-helpers',
+    localOnly: true,
+    remoteDiscovery: false,
+    runnable: true,
+    blockedBy: null,
+    taskPlaneCapabilityMode: 'packet-grounded-execution',
+    cliCommands: [],
+    mcpTools: [
+      {
+        toolName: 'create-lease-execution',
+        outputMode: 'execution-result',
+      },
+    ],
+  });
+
+  const acknowledgeNotification = catalog.find((entry) => entry.helperKey === 'acknowledgeNotification');
+  assert.deepEqual(acknowledgeNotification, {
+    helperKey: 'acknowledgeNotification',
+    routePathTemplate: '/runtime/notifications/:notification_id/acknowledgements',
+    httpMethod: 'POST',
+    accessContextFamily: 'operator-company',
+    requiredContext: ['tenantId', 'principalId', 'companyId'],
+    scope: 'write',
+    level: 'atomic-route',
+    localCapabilityTier: 'L3-governed-commercial',
+    localCapabilityRiskTier: 'governed-commercial',
+    discoveryKind: 'execute',
+    recommendedOutputMode: 'execution-result',
+    sourceOfTruth: 'local-sdk-helpers',
+    localOnly: true,
+    remoteDiscovery: false,
+    runnable: true,
+    blockedBy: null,
+    eventNotificationPlaneCapabilityMode: 'packet-grounded-execution',
+    cliCommands: [],
+    mcpTools: [
+      {
+        toolName: 'acknowledge-notification-execution',
+        outputMode: 'execution-result',
+      },
+    ],
+  });
+
   const postAgentCapabilityProfile = catalog.find((entry) => entry.helperKey === 'postAgentCapabilityProfile');
   assert.deepEqual(postAgentCapabilityProfile, {
     helperKey: 'postAgentCapabilityProfile',

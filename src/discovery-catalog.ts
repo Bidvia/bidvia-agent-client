@@ -259,6 +259,38 @@ const widenedShippedReadMcpBindings: readonly BidviaLocalDiscoveryMcpBinding[] =
 
 const widenedShippedExecutionMcpBindings: readonly BidviaLocalDiscoveryMcpBinding[] = [
   {
+    toolName: 'create-notification-delivery-execution',
+    description: 'Executes the governed notification delivery through the shipped SDK helper.',
+    inputSchemaKey: 'BidviaNotificationDeliveryExecutionInput',
+    outputMode: 'execution-result',
+    helperKey: 'create-notification-delivery-execution',
+    capabilityKey: 'createNotificationDelivery',
+  },
+  {
+    toolName: 'acknowledge-notification-execution',
+    description: 'Executes the governed notification acknowledgement through the shipped SDK helper.',
+    inputSchemaKey: 'BidviaNotificationAcknowledgementExecutionInput',
+    outputMode: 'execution-result',
+    helperKey: 'acknowledge-notification-execution',
+    capabilityKey: 'acknowledgeNotification',
+  },
+  {
+    toolName: 'retry-notification-execution',
+    description: 'Executes the governed notification retry through the shipped SDK helper.',
+    inputSchemaKey: 'BidviaNotificationRetryExecutionInput',
+    outputMode: 'execution-result',
+    helperKey: 'retry-notification-execution',
+    capabilityKey: 'retryNotification',
+  },
+  {
+    toolName: 'expire-notification-execution',
+    description: 'Executes the governed notification expiration through the shipped SDK helper.',
+    inputSchemaKey: 'BidviaNotificationExpirationExecutionInput',
+    outputMode: 'execution-result',
+    helperKey: 'expire-notification-execution',
+    capabilityKey: 'expireNotification',
+  },
+  {
     toolName: 'create-provisional-agent-execution',
     description: 'Executes public provisional agent creation through the shipped SDK helper.',
     inputSchemaKey: 'BidviaProvisionalAgentCreateInput',
