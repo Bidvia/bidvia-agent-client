@@ -17,10 +17,14 @@ function requireEventNotificationPlaneAdoptionStatus(): BidviaCorePlaneAdoptionS
   return adoptionStatus;
 }
 
-const eventNotificationVisibilityOnlyHelperKeys = ['getNotification'] as const;
+const eventNotificationPlaneExecutionGates = listPlaneExecutionGates().filter((gate) => gate.plane === 'event-notification');
 
-const eventNotificationExecutionGates = listPlaneExecutionGates().filter(
-  (gate) => gate.plane === 'event-notification' && gate.executionTruth === 'packet-grounded-execution',
+const eventNotificationVisibilityOnlyHelperKeys = eventNotificationPlaneExecutionGates
+  .filter((gate) => gate.executionTruth === 'packet-grounded-read')
+  .map((gate) => gate.helperKey as 'getNotification');
+
+const eventNotificationExecutionGates = eventNotificationPlaneExecutionGates.filter(
+  (gate) => gate.executionTruth === 'packet-grounded-execution',
 );
 
 function buildEventNotificationBlockedExecutionRoute(
@@ -63,6 +67,10 @@ const eventNotificationCapabilityModeByHelperKey = new Map<string, BidviaEventNo
 
 export function buildEventNotificationPlaneView(): BidviaEventNotificationPlaneView {
   const adoptionStatus = requireEventNotificationPlaneAdoptionStatus();
+  const readRouteEntry = getCorePayloadContractMatrixEntry('getNotification');
+  if (!readRouteEntry?.routePathTemplate) {
+    throw new Error('Missing event notification read route in payload contract matrix');
+  }
 
   return {
     adoptionStatus: {
@@ -75,7 +83,7 @@ export function buildEventNotificationPlaneView(): BidviaEventNotificationPlaneV
     },
     readRoute: {
       helperKey: 'getNotification',
-      routePathTemplate: '/runtime/notifications/:notification_id',
+      routePathTemplate: readRouteEntry.routePathTemplate as '/runtime/notifications/:notification_id',
       httpMethod: 'GET',
       requiredContext: ['tenantId', 'principalId'],
     },

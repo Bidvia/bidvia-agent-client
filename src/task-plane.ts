@@ -26,14 +26,11 @@ function requireTaskPlaneAdoptionStatus(): BidviaCorePlaneAdoptionStatus {
   return adoptionStatus;
 }
 
-const taskPlaneVisibilityOnlyHelperKeys = [
-  'listParticipationStates',
-  'getParticipationState',
-  'listTaskDispatches',
-  'getTaskDispatch',
-] as const;
-
 const taskPlaneExecutionGates = listPlaneExecutionGates().filter((gate) => gate.plane === 'task');
+
+const taskPlaneVisibilityOnlyHelperKeys = taskPlaneExecutionGates
+  .filter((gate) => gate.executionTruth === 'packet-grounded-read')
+  .map((gate) => gate.helperKey);
 
 const taskPlaneExecutableHelperKeys = taskPlaneExecutionGates
   .filter((gate) => gate.executionTruth === 'packet-grounded-execution')

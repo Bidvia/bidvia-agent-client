@@ -51,12 +51,18 @@ test('task-plane executable helper coverage derives from the shared plane execut
   const taskParticipationModule = await import('../src/index.ts');
 
   const taskPlane = taskParticipationModule.buildTaskPlaneView();
+  const readHelperKeys = taskParticipationModule.listPlaneExecutionGates()
+    .filter((gate: { plane: string; executionTruth: string }) => (
+      gate.plane === 'task' && gate.executionTruth === 'packet-grounded-read'
+    ))
+    .map((gate: { helperKey: string }) => gate.helperKey);
   const executableHelperKeys = taskParticipationModule.listPlaneExecutionGates()
     .filter((gate: { plane: string; executionTruth: string }) => (
       gate.plane === 'task' && gate.executionTruth === 'packet-grounded-execution'
     ))
     .map((gate: { helperKey: string }) => gate.helperKey);
 
+  assert.deepEqual(taskPlane.capabilityModes.visibilityOnlyHelperKeys, readHelperKeys);
   assert.deepEqual(taskPlane.capabilityModes.executableHelperKeys, executableHelperKeys);
   assert.equal(taskParticipationModule.getTaskPlaneCapabilityMode('postHeartbeat'), 'packet-grounded-execution');
 });

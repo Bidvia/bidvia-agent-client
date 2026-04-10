@@ -25,6 +25,9 @@ function createFetchStub() {
 test('event notification plane exposes frozen read visibility and packet-grounded execution semantics', () => {
   const plane = buildEventNotificationPlaneView();
   const executionGates = listPlaneExecutionGates().filter((gate) => gate.plane === 'event-notification');
+  const readHelperKeys = executionGates
+    .filter((gate) => gate.executionTruth === 'packet-grounded-read')
+    .map((gate) => gate.helperKey);
   const executionHelperKeys = executionGates
     .filter((gate) => gate.executionTruth === 'packet-grounded-execution')
     .map((gate) => gate.helperKey);
@@ -35,7 +38,7 @@ test('event notification plane exposes frozen read visibility and packet-grounde
   assert.equal(plane.notificationReadTruth.payloadPacketStatus, 'packet-grounded');
   assert.equal(plane.executionTruth.payloadPacketStatus, 'packet-grounded');
   assert.equal(plane.executionTruth.remotePayloadSupported, true);
-  assert.deepEqual(plane.capabilityModes.visibilityOnlyHelperKeys, ['getNotification']);
+  assert.deepEqual(plane.capabilityModes.visibilityOnlyHelperKeys, readHelperKeys);
   assert.deepEqual(plane.capabilityModes.blockedExecutionHelperKeys, executionHelperKeys);
   assert.deepEqual(plane.blockedExecutionRoutes.map((route) => route.routePathTemplate), [
     '/runtime/notifications/deliveries',
