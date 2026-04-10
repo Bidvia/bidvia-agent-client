@@ -85,8 +85,8 @@ test('enterprise integration plane adapter centers the canonical core integratio
     ],
     broaderEnterpriseAuthorityClaimed: false,
     broaderSystemAuthorityClaimed: false,
-    payloadPacketStatus: 'blocked-pending-packet',
-    blockedBy: 'core-plane-payload-packet-not-yet-frozen',
+    payloadPacketStatus: 'packet-grounded',
+    blockedBy: null,
     notes: ['The enterprise plane is anchored to the Core-owned integration route family and visibility boundaries.'],
   });
   assert.deepEqual(plane.helperGroups.find((group) => group.groupKey === 'asset-evidence-family'), {

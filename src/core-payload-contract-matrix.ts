@@ -152,6 +152,19 @@ const corePayloadContractMatrixEntries: readonly BidviaCorePayloadContractMatrix
     notes: ['Notification expiry now derives from the frozen Core notification action payload contract.'],
   },
   ...[
+    ['submitIntegrationOnboardingContract', '/runtime/integrations/:integrationCode/onboarding-contract', 'packet-grounded-execution'],
+    ['logInHaisiWms', '/runtime/integrations/haisi-wms/login', 'packet-grounded-execution'],
+    ['listHaisiWmsWarehouses', '/runtime/integrations/haisi-wms/warehouses', 'packet-grounded-read'],
+    ['createHaisiWmsInbound', '/runtime/integrations/haisi-wms/inbound', 'packet-grounded-execution'],
+  ].map(([helperKey, routePathTemplate, helperState]): BidviaCorePayloadContractMatrixEntry => ({
+    plane: 'enterprise-integration',
+    helperKey,
+    helperState: helperState as BidviaCorePayloadContractMatrixEntry['helperState'],
+    routePathTemplate,
+    blockedBy: null,
+    notes: ['Canonical enterprise integration helpers now derive from the frozen Core integration route family.'],
+  })),
+  ...[
     ['listDocumentArtifacts', '/runtime/document-artifacts'],
     ['getDocumentArtifact', '/runtime/document-artifacts/:document_artifact_id'],
     ['listMediaAssets', '/runtime/media-assets'],

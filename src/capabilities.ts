@@ -358,7 +358,7 @@ const bidviaShippedExpandedReadRouteCapabilities: ReadonlyArray<BidviaRouteCapab
 const bidviaBaseRouteCapabilities: ReadonlyArray<BidviaRouteCapabilityWithOptionalContextSemantic> = [
   {
     helperKey: 'submitIntegrationOnboardingContract',
-    routePathTemplate: '/runtime/integrations/:integration_code/onboarding-contract',
+    routePathTemplate: '/runtime/integrations/:integrationCode/onboarding-contract',
     httpMethod: 'POST',
     accessContextFamily: 'principal-governed-read',
     requiredContext: ['tenantId', 'principalId'],

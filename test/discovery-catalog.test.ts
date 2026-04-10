@@ -102,7 +102,7 @@ test('buildLocalDiscoveryCatalog returns operator-readable local mappings withou
   const integrationOnboarding = catalog.find((entry) => entry.helperKey === 'submitIntegrationOnboardingContract');
   assert.deepEqual(integrationOnboarding, {
     helperKey: 'submitIntegrationOnboardingContract',
-    routePathTemplate: '/runtime/integrations/:integration_code/onboarding-contract',
+    routePathTemplate: '/runtime/integrations/:integrationCode/onboarding-contract',
     httpMethod: 'POST',
     accessContextFamily: 'principal-governed-read',
     requiredContext: ['tenantId', 'principalId'],
