@@ -78,6 +78,7 @@ import {
   buildRouteContextMatrix,
   buildRouteContextMatrixNextStepHints,
 } from './route-context-matrix.js';
+import { listCorePayloadContractMatrixEntries } from './core-payload-contract-matrix.js';
 import { listPlaneExecutionGates } from './plane-execution-gate.js';
 import {
   listOnboardingJourneyCommandHints,
@@ -1842,6 +1843,7 @@ function buildOperatorDiscoverySnapshot() {
         ...status,
         notes: [...status.notes],
       })),
+      corePayloadContractMatrix: listCorePayloadContractMatrixEntries(),
       planeExecutionGates: listPlaneExecutionGates(),
       releaseGate: buildStage3ReleaseGate(),
       enterpriseIntegrationPlane,

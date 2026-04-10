@@ -684,7 +684,7 @@ function getDiscoveryKind(capability: BidviaRouteCapability): BidviaLocalDiscove
     return 'review-safe';
   }
 
-  if (executionGate?.executionTruth === 'blocked-pending-packet') {
+  if (executionGate && executionGate.executionTruth !== 'packet-grounded-execution') {
     return 'blocked';
   }
 
@@ -704,7 +704,7 @@ function buildExecutionDiscoverability(helperKey: string): {
   }
 
   return {
-    runnable: executionGate.executionTruth !== 'blocked-pending-packet',
+    runnable: executionGate.executionTruth === 'packet-grounded-execution',
     blockedBy: executionGate.blockedBy,
   };
 }

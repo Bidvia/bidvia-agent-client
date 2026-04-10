@@ -150,6 +150,7 @@ test('buildLocalRuntimeCapabilitySnapshot keeps deferred server negotiation expl
       level: 'atomic-route',
       localCapabilityTier: 'L2-registration-runtime',
       localCapabilityRiskTier: 'runtime-execution',
+      taskPlaneCapabilityMode: 'packet-grounded-execution',
     }),
   );
   assert.deepEqual(
@@ -266,27 +267,27 @@ test('buildLocalRuntimeCapabilitySnapshot carries shared execution truth without
       {
         plane: 'task',
         descriptiveVisibility: 'descriptive-plane-visible',
-        executableHelperEligibility: 'discoverable-only',
+        executableHelperEligibility: 'packet-grounded-execution',
       },
       {
         plane: 'capability',
         descriptiveVisibility: 'descriptive-plane-visible',
-        executableHelperEligibility: 'discoverable-only',
+        executableHelperEligibility: 'packet-grounded-read',
       },
       {
         plane: 'workflow-stage',
         descriptiveVisibility: 'descriptive-plane-visible',
-        executableHelperEligibility: 'discoverable-only',
+        executableHelperEligibility: 'packet-grounded-read',
       },
       {
         plane: 'event-notification',
         descriptiveVisibility: 'descriptive-plane-visible',
-        executableHelperEligibility: 'discoverable-only',
+        executableHelperEligibility: 'packet-grounded-execution',
       },
       {
         plane: 'enterprise-integration',
         descriptiveVisibility: 'descriptive-plane-visible',
-        executableHelperEligibility: 'discoverable-only',
+        executableHelperEligibility: 'packet-grounded-read',
       },
     ],
   );

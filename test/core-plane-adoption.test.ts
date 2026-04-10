@@ -33,11 +33,11 @@ test('core-plane adoption exports one frozen Core entry per Stage 2 plane and ke
     Object.fromEntries(statuses.map((status) => [status.plane, status.executableHelperEligibility])),
     {
       'identity-session': 'packet-grounded-execution',
-      task: 'discoverable-only',
-      capability: 'discoverable-only',
-      'workflow-stage': 'discoverable-only',
-      'event-notification': 'discoverable-only',
-      'enterprise-integration': 'discoverable-only',
+      task: 'packet-grounded-execution',
+      capability: 'packet-grounded-read',
+      'workflow-stage': 'packet-grounded-read',
+      'event-notification': 'packet-grounded-execution',
+      'enterprise-integration': 'packet-grounded-read',
     },
   );
   assert.equal(statuses.every((status) => status.blockedBy === 'core-plane-payload-packet-not-yet-frozen'), true);
@@ -76,11 +76,11 @@ test('core-plane adoption snapshot stays scoped to frozen Core-facing truth and 
     snapshot.statuses.map((status) => [status.plane, status.executableHelperEligibility]),
     [
       ['identity-session', 'packet-grounded-execution'],
-      ['task', 'discoverable-only'],
-      ['capability', 'discoverable-only'],
-      ['workflow-stage', 'discoverable-only'],
-      ['event-notification', 'discoverable-only'],
-      ['enterprise-integration', 'discoverable-only'],
+      ['task', 'packet-grounded-execution'],
+      ['capability', 'packet-grounded-read'],
+      ['workflow-stage', 'packet-grounded-read'],
+      ['event-notification', 'packet-grounded-execution'],
+      ['enterprise-integration', 'packet-grounded-read'],
     ],
   );
 });

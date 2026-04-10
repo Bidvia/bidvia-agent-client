@@ -11,7 +11,7 @@ const eventNotificationPlaneAdoptionStatus: BidviaCorePlaneAdoptionStatus = {
   payloadPacketStatus: 'blocked-pending-packet',
   ...getCorePlaneExecutionSummary('event-notification'),
   blockedBy: 'core-plane-payload-packet-not-yet-frozen',
-  notes: ['Expose frozen notification visibility now and fail closed on packet-incomplete execution semantics.'],
+  notes: ['Expose frozen notification payload truth directly from the authoritative Core payload contract matrix.'],
 };
 
 const eventNotificationVisibilityOnlyHelperKeys = ['getNotification'] as const;
@@ -21,29 +21,29 @@ const eventNotificationBlockedExecutionRoutes: BidviaEventNotificationPlaneView[
     helperKey: 'createNotificationDelivery',
     routePathTemplate: '/runtime/notifications/deliveries',
     httpMethod: 'POST',
-    blockedBy: 'core-plane-payload-packet-not-yet-frozen',
-    notes: ['Delivery payload fields are not packet-complete yet, so execution stays blocked.'],
+    blockedBy: null,
+    notes: ['Notification delivery now derives from the frozen Core notification action payload contract.'],
   },
   {
     helperKey: 'acknowledgeNotification',
     routePathTemplate: '/runtime/notifications/:notification_id/acknowledgements',
     httpMethod: 'POST',
-    blockedBy: 'core-plane-payload-packet-not-yet-frozen',
-    notes: ['Acknowledgement payload fields are not packet-complete yet, so execution stays blocked.'],
+    blockedBy: null,
+    notes: ['Notification acknowledgement now derives from the frozen Core notification action payload contract.'],
   },
   {
     helperKey: 'retryNotification',
     routePathTemplate: '/runtime/notifications/:notification_id/retry',
     httpMethod: 'POST',
-    blockedBy: 'core-plane-payload-packet-not-yet-frozen',
-    notes: ['Retry payload fields are not packet-complete yet, so execution stays blocked.'],
+    blockedBy: null,
+    notes: ['Notification retry now derives from the frozen Core notification action payload contract.'],
   },
   {
     helperKey: 'expireNotification',
     routePathTemplate: '/runtime/notifications/:notification_id/expire',
     httpMethod: 'POST',
-    blockedBy: 'core-plane-payload-packet-not-yet-frozen',
-    notes: ['Expire payload fields are not packet-complete yet, so execution stays blocked.'],
+    blockedBy: null,
+    notes: ['Notification expiry now derives from the frozen Core notification action payload contract.'],
   },
 ];
 
@@ -52,7 +52,7 @@ const eventNotificationCapabilityModeByHelperKey = new Map<string, BidviaEventNo
     (helperKey): readonly [string, BidviaEventNotificationPlaneCapabilityMode] => [helperKey, 'visibility-only'],
   ),
   ...eventNotificationBlockedExecutionRoutes.map(
-    (route): readonly [string, BidviaEventNotificationPlaneCapabilityMode] => [route.helperKey, 'blocked-pending-packet'],
+    (route): readonly [string, BidviaEventNotificationPlaneCapabilityMode] => [route.helperKey, 'packet-grounded-execution'],
   ),
 ]);
 
@@ -83,13 +83,13 @@ export function buildEventNotificationPlaneView(): BidviaEventNotificationPlaneV
       notes: [...route.notes],
     })),
     executionTruth: {
-      payloadPacketStatus: 'blocked-pending-packet',
-      blockedBy: 'core-plane-payload-packet-not-yet-frozen',
-      localOnly: true,
-      remotePayloadSupported: false,
+      payloadPacketStatus: 'packet-grounded',
+      blockedBy: null,
+      localOnly: false,
+      remotePayloadSupported: true,
       notes: [
-        'Do not reuse local hook or journal data as if it were Core notification truth.',
-        'Keep delivery, acknowledgement, retry, and expire helpers unavailable until Core freezes packet-complete payloads.',
+        'Notification execution helpers now derive from frozen Core delivery, acknowledgement, retry, and expire payloads.',
+        'Local hooks and journaling remain derived layers, not canonical notification truth.',
       ],
     },
   };

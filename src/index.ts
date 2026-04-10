@@ -5,6 +5,7 @@ export * from './capabilities.js';
 export * from './commercial-action.js';
 export * from './capability-plane.js';
 export * from './config.js';
+export * from './core-payload-contract-matrix.js';
 export {
   resolveBidviaEnvironmentMode,
   resolveBidviaEnvironmentModeFromEnv,

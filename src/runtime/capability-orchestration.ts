@@ -183,7 +183,7 @@ export class BidviaCapabilityOrchestrator {
 
     const executionGate = getPlaneExecutionGate(input.helperKey);
 
-    if (executionGate?.executionTruth === 'blocked-pending-packet') {
+    if (executionGate && executionGate.executionTruth !== 'packet-grounded-execution') {
       throw new BidviaBlockedCapabilityExecutionError(policy, [], executionGate.blockedBy);
     }
 

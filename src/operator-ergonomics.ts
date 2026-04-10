@@ -122,7 +122,7 @@ function buildHints(params: {
     hints.push('This MCP execution tool uses the existing local execution client seam.');
   }
 
-  if (params.executionGate?.executionTruth === 'blocked-pending-packet') {
+  if (params.executionGate && params.executionGate.executionTruth !== 'packet-grounded-execution') {
     hints.push('Execution is currently blocked by plane policy until Core freezes the packet-complete payload truth.');
   }
 
@@ -162,7 +162,7 @@ function buildPreflight(
     localCapabilityRiskTier: catalogEntry.localCapabilityRiskTier,
     requiredContext: [...catalogEntry.requiredContext],
     missingContext,
-    runnable: catalogEntry.executionGate?.executionTruth !== 'blocked-pending-packet',
+    runnable: catalogEntry.executionGate?.executionTruth === 'packet-grounded-execution',
     blockedBy: catalogEntry.executionGate?.blockedBy ?? null,
     hints: buildHints({
       surface,

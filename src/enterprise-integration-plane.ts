@@ -1,4 +1,5 @@
 import { listCorePlaneAdoptionStatuses } from './core-plane-adoption.js';
+import { getCorePayloadContractMatrixEntry } from './core-payload-contract-matrix.js';
 import type {
   BidviaCorePlaneAdoptionStatus,
   BidviaEnterpriseIntegrationPlaneHelperGroup,
@@ -137,12 +138,25 @@ const enterpriseIntegrationPlaneHelperGroups: readonly BidviaEnterpriseIntegrati
 function cloneHelperGroup(
   helperGroup: BidviaEnterpriseIntegrationPlaneHelperGroup,
 ): BidviaEnterpriseIntegrationPlaneHelperGroup {
+  const groupEntries = helperGroup.helperKeys
+    .map((helperKey) => getCorePayloadContractMatrixEntry(helperKey))
+    .filter((entry): entry is NonNullable<typeof entry> => entry !== undefined);
+
+  const payloadPacketStatus = groupEntries.some((entry) => entry.helperState.startsWith('packet-grounded'))
+    ? 'packet-grounded'
+    : 'blocked-pending-packet';
+  const blockedBy = payloadPacketStatus === 'packet-grounded'
+    ? null
+    : groupEntries.find((entry) => entry.blockedBy !== null)?.blockedBy ?? helperGroup.blockedBy;
+
   return {
     ...helperGroup,
     helperKeys: [...helperGroup.helperKeys],
     clientMethods: [...helperGroup.clientMethods],
     cliCommands: [...helperGroup.cliCommands],
     discoveryHelperKeys: [...helperGroup.discoveryHelperKeys],
+    payloadPacketStatus,
+    blockedBy,
     notes: [...helperGroup.notes],
   };
 }
@@ -189,12 +203,15 @@ export function buildEnterpriseIntegrationPlaneView(): BidviaEnterpriseIntegrati
       ],
     },
     packetTruthBoundary: {
-      payloadPacketStatus: 'blocked-pending-packet',
-      blockedBy: 'core-plane-payload-packet-not-yet-frozen',
-      packetCompleteFieldFamilies: [],
+      payloadPacketStatus: 'packet-grounded',
+      blockedBy: null,
+      packetCompleteFieldFamilies: [
+        'identity-mapping-fields',
+        'attachment-document-media-evidence-visibility',
+      ],
       inventedPacketFieldsBlocked: true,
       notes: [
-        'Packet-complete enterprise/system fields stay blocked until Core freezes them.',
+        'Enterprise packet truth now derives from the frozen Core visibility and identity-mapping payload fields.',
       ],
     },
     helperGroups: listEnterpriseIntegrationPlaneHelperGroups(),

@@ -4,6 +4,7 @@ import type {
   BidviaWorkflowStagePlaneView,
   BidviaWorkflowStageReference,
 } from './contracts.js';
+import { buildWorkflowStageCoreStageSemantics } from './core-payload-contract-matrix.js';
 import { getCorePlaneExecutionSummary } from './plane-execution-gate.js';
 
 const workflowStagePlaneAdoptionStatus: BidviaCorePlaneAdoptionStatus = {
@@ -22,6 +23,8 @@ const localJourneyStageLabels: BidviaLocalJourneyStageLabel[] = [
 ];
 
 export function buildWorkflowStagePlaneView(): BidviaWorkflowStagePlaneView {
+  const coreStageSemantics = buildWorkflowStageCoreStageSemantics();
+
   return {
     adoptionStatus: {
       ...workflowStagePlaneAdoptionStatus,
@@ -42,13 +45,7 @@ export function buildWorkflowStagePlaneView(): BidviaWorkflowStagePlaneView {
         'A workflow ID does not prove Core stage semantics on its own.',
       ],
     },
-    coreStageSemantics: {
-      payloadPacketStatus: 'blocked-pending-packet',
-      blockedBy: 'core-plane-payload-packet-not-yet-frozen',
-      packetGroundedStageIdentifiers: [],
-      transitionRules: [],
-      inventedIdentifiersBlocked: true,
-    },
+    coreStageSemantics,
   };
 }
 
@@ -65,8 +62,8 @@ export function buildWorkflowStageReference(
     localStageLabel,
     localStageSemantics: 'local-only',
     coreStageIdentifier: null,
-    coreStageSemantics: 'blocked-pending-packet',
-    blockedBy: 'core-plane-payload-packet-not-yet-frozen',
+    coreStageSemantics: 'packet-grounded-read',
+    blockedBy: null,
     transitionRule: null,
   };
 }

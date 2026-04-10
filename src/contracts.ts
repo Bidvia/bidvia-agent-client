@@ -1612,8 +1612,9 @@ export type BidviaCorePlanePayloadPacketStatus =
   (typeof bidviaCorePlanePayloadPacketStatuses)[number];
 
 export const bidviaPlaneExecutionTruths = [
-  'discoverable-only',
+  'compatibility-only',
   'blocked-pending-packet',
+  'packet-grounded-read',
   'packet-grounded-execution',
 ] as const;
 
@@ -1623,6 +1624,15 @@ export interface BidviaPlaneExecutionGate {
   plane: BidviaCorePlaneName;
   helperKey: string;
   executionTruth: BidviaPlaneExecutionTruth;
+  blockedBy: string | null;
+  notes: string[];
+}
+
+export interface BidviaCorePayloadContractMatrixEntry {
+  plane: BidviaCorePlaneName;
+  helperKey: string;
+  helperState: BidviaPlaneExecutionTruth;
+  routePathTemplate: string | null;
   blockedBy: string | null;
   notes: string[];
 }
@@ -1728,8 +1738,8 @@ export interface BidviaWorkflowStageReference {
   localStageLabel: BidviaLocalJourneyStageLabel | null;
   localStageSemantics: 'local-only';
   coreStageIdentifier: null;
-  coreStageSemantics: 'blocked-pending-packet';
-  blockedBy: 'core-plane-payload-packet-not-yet-frozen';
+  coreStageSemantics: 'packet-grounded-read';
+  blockedBy: null;
   transitionRule: null;
 }
 
@@ -1745,8 +1755,8 @@ export interface BidviaWorkflowStagePlaneView {
     notes: string[];
   };
   coreStageSemantics: {
-    payloadPacketStatus: 'blocked-pending-packet';
-    blockedBy: 'core-plane-payload-packet-not-yet-frozen';
+    payloadPacketStatus: 'packet-grounded';
+    blockedBy: null;
     packetGroundedStageIdentifiers: string[];
     transitionRules: string[];
     inventedIdentifiersBlocked: true;
@@ -1794,8 +1804,8 @@ export interface BidviaEnterpriseIntegrationPlaneHelperGroup {
   discoveryHelperKeys: string[];
   broaderEnterpriseAuthorityClaimed: false;
   broaderSystemAuthorityClaimed: false;
-  payloadPacketStatus: 'blocked-pending-packet';
-  blockedBy: 'core-plane-payload-packet-not-yet-frozen';
+  payloadPacketStatus: BidviaCorePlanePayloadPacketStatus;
+  blockedBy: string | null;
   notes: string[];
 }
 
@@ -1808,8 +1818,8 @@ export interface BidviaEnterpriseIntegrationPlaneView {
     notes: string[];
   };
   packetTruthBoundary: {
-    payloadPacketStatus: 'blocked-pending-packet';
-    blockedBy: 'core-plane-payload-packet-not-yet-frozen';
+    payloadPacketStatus: BidviaCorePlanePayloadPacketStatus;
+    blockedBy: string | null;
     packetCompleteFieldFamilies: string[];
     inventedPacketFieldsBlocked: true;
     notes: string[];
@@ -1819,8 +1829,9 @@ export interface BidviaEnterpriseIntegrationPlaneView {
 
 export const bidviaTaskPlaneCapabilityModes = [
   'visibility-only',
+  'compatibility-only',
   'blocked-pending-packet',
-  'executable',
+  'packet-grounded-execution',
 ] as const;
 
 export type BidviaTaskPlaneCapabilityMode = (typeof bidviaTaskPlaneCapabilityModes)[number];
@@ -1833,10 +1844,10 @@ export interface BidviaTaskPlaneLocalShellBoundary {
 }
 
 export interface BidviaTaskPlaneBlockedTruth {
-  payloadPacketStatus: 'blocked-pending-packet';
-  blockedBy: string;
-  localOnly: true;
-  remotePayloadSupported: false;
+  payloadPacketStatus: BidviaCorePlanePayloadPacketStatus;
+  blockedBy: string | null;
+  localOnly: boolean;
+  remotePayloadSupported: boolean;
   notes: string[];
 }
 
@@ -1860,7 +1871,7 @@ export interface BidviaTaskPlaneView {
 
 export const bidviaEventNotificationPlaneCapabilityModes = [
   'visibility-only',
-  'blocked-pending-packet',
+  'packet-grounded-execution',
 ] as const;
 
 export type BidviaEventNotificationPlaneCapabilityMode =
@@ -1885,7 +1896,7 @@ export interface BidviaEventNotificationPlaneBlockedExecutionRoute {
     | '/runtime/notifications/:notification_id/retry'
     | '/runtime/notifications/:notification_id/expire';
   httpMethod: 'POST';
-  blockedBy: 'core-plane-payload-packet-not-yet-frozen';
+  blockedBy: null;
   notes: string[];
 }
 

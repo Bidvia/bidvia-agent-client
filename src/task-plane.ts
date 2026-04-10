@@ -41,8 +41,8 @@ const taskPlaneExecutableHelperKeys = taskPlaneExecutionGates
   .filter((gate) => gate.executionTruth === 'packet-grounded-execution')
   .map((gate) => gate.helperKey);
 
-const taskPlaneBlockedHelperKeys = taskPlaneExecutionGates
-  .filter((gate) => gate.executionTruth === 'blocked-pending-packet')
+const taskPlaneCompatibilityOnlyHelperKeys = taskPlaneExecutionGates
+  .filter((gate) => gate.executionTruth === 'compatibility-only')
   .map((gate) => gate.helperKey);
 
 const taskPlaneCapabilityModeByHelperKey = new Map<string, BidviaTaskPlaneCapabilityMode>(
@@ -50,11 +50,11 @@ const taskPlaneCapabilityModeByHelperKey = new Map<string, BidviaTaskPlaneCapabi
     ...taskPlaneVisibilityOnlyHelperKeys.map(
       (helperKey): readonly [string, BidviaTaskPlaneCapabilityMode] => [helperKey, 'visibility-only'],
     ),
-    ...taskPlaneBlockedHelperKeys.map(
-      (helperKey): readonly [string, BidviaTaskPlaneCapabilityMode] => [helperKey, 'blocked-pending-packet'],
+    ...taskPlaneCompatibilityOnlyHelperKeys.map(
+      (helperKey): readonly [string, BidviaTaskPlaneCapabilityMode] => [helperKey, 'compatibility-only'],
     ),
     ...taskPlaneExecutableHelperKeys.map(
-      (helperKey): readonly [string, BidviaTaskPlaneCapabilityMode] => [helperKey, 'executable'],
+      (helperKey): readonly [string, BidviaTaskPlaneCapabilityMode] => [helperKey, 'packet-grounded-execution'],
     ),
   ],
 );
@@ -87,12 +87,12 @@ export function buildTaskPlaneView(): BidviaTaskPlaneView {
       ],
     },
     timeoutTruth: {
-      payloadPacketStatus: 'blocked-pending-packet',
-      blockedBy: 'core-plane-payload-packet-not-yet-frozen',
+      payloadPacketStatus: 'packet-grounded',
+      blockedBy: null,
       localOnly: true,
-      remotePayloadSupported: false,
+      remotePayloadSupported: true,
       notes: [
-        'Timeout semantics stay local-only until Core freezes packet-grounded timeout payload truth.',
+        'Timeout-linked dispatch and notification state now derives from the frozen Core task-plane payload family.',
       ],
     },
   };
