@@ -101,6 +101,32 @@ const planeExecutionGates: readonly BidviaPlaneExecutionGate[] = [
     notes: ['Commercial-action execution stays blocked until enterprise-integration packet truth is frozen.'],
   },
   ...[
+    'policyCheckCommercialAction',
+    'requestCommercialActionApproval',
+    'executeCommercialAction',
+  ].map(
+    (helperKey): BidviaPlaneExecutionGate => ({
+      plane: 'enterprise-integration',
+      helperKey,
+      executionTruth: 'blocked-pending-packet',
+      blockedBy: blockedByPendingPacket,
+      notes: ['Commercial-action write helpers stay blocked until enterprise-integration packet truth is frozen end to end.'],
+    }),
+  ),
+  ...[
+    'getCommercialActionStatus',
+    'getCommercialActionReceipt',
+    'getCommercialActionAudit',
+  ].map(
+    (helperKey): BidviaPlaneExecutionGate => ({
+      plane: 'enterprise-integration',
+      helperKey,
+      executionTruth: 'packet-grounded-execution',
+      blockedBy: null,
+      notes: ['Commercial-action readback helpers remain packet-grounded visibility surfaces.'],
+    }),
+  ),
+  ...[
     'buildEvidenceSubmissionInput',
     'buildCommercialActionScenarioPlan',
     'runCommercialActionScenario',

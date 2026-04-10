@@ -152,4 +152,58 @@ test('shared plane execution gate covers bounded task and enterprise helper surf
       blockedBy: 'core-plane-payload-packet-not-yet-frozen',
     })),
   );
+
+  assert.deepEqual(
+    [
+      'createCommercialAction',
+      'policyCheckCommercialAction',
+      'requestCommercialActionApproval',
+      'executeCommercialAction',
+    ].map((helperKey) => {
+      const gate = gateByHelperKey.get(helperKey);
+      return gate && {
+        plane: gate.plane,
+        helperKey: gate.helperKey,
+        executionTruth: gate.executionTruth,
+        blockedBy: gate.blockedBy,
+      };
+    }),
+    [
+      'createCommercialAction',
+      'policyCheckCommercialAction',
+      'requestCommercialActionApproval',
+      'executeCommercialAction',
+    ].map((helperKey) => ({
+      plane: 'enterprise-integration',
+      helperKey,
+      executionTruth: 'blocked-pending-packet',
+      blockedBy: 'core-plane-payload-packet-not-yet-frozen',
+    })),
+  );
+
+  assert.deepEqual(
+    [
+      'getCommercialActionStatus',
+      'getCommercialActionReceipt',
+      'getCommercialActionAudit',
+    ].map((helperKey) => {
+      const gate = gateByHelperKey.get(helperKey);
+      return gate && {
+        plane: gate.plane,
+        helperKey: gate.helperKey,
+        executionTruth: gate.executionTruth,
+        blockedBy: gate.blockedBy,
+      };
+    }),
+    [
+      'getCommercialActionStatus',
+      'getCommercialActionReceipt',
+      'getCommercialActionAudit',
+    ].map((helperKey) => ({
+      plane: 'enterprise-integration',
+      helperKey,
+      executionTruth: 'packet-grounded-execution',
+      blockedBy: null,
+    })),
+  );
 });
