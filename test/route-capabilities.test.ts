@@ -622,6 +622,7 @@ test('capability registry keeps singular capability-profile truth canonical and 
     level: 'atomic-route',
     localCapabilityTier: 'L0-observe-only',
     localCapabilityRiskTier: 'observe-only',
+    capabilityPlaneCapabilityMode: 'packet-grounded-read',
   });
 
   assert.equal(getRouteCapability('listAgentCapabilityProfiles'), undefined);
@@ -643,6 +644,21 @@ test('capability registry describes principal-governed reads and canonical parti
     level: 'atomic-route',
     localCapabilityTier: 'L0-observe-only',
     localCapabilityRiskTier: 'observe-only',
+    capabilityPlaneCapabilityMode: 'packet-grounded-read',
+  });
+
+  assert.deepEqual(getRouteCapability('getAgentSummary'), {
+    helperKey: 'getAgentSummary',
+    routePathTemplate: '/runtime/agents/:agent_registration_id/summary',
+    httpMethod: 'GET',
+    accessContextFamily: 'principal-governed-read',
+    contextSemantic: 'principal-governed-read',
+    requiredContext: ['tenantId', 'principalId'],
+    scope: 'read',
+    level: 'atomic-route',
+    localCapabilityTier: 'L0-observe-only',
+    localCapabilityRiskTier: 'observe-only',
+    capabilityPlaneCapabilityMode: 'packet-grounded-read',
   });
 
   assert.deepEqual(getRouteCapability('listParticipationStates'), {

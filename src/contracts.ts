@@ -613,6 +613,7 @@ export interface BidviaRouteCapability {
   level: BidviaRouteCapabilityLevel;
   localCapabilityTier: BidviaLocalCapabilityTier;
   localCapabilityRiskTier: BidviaLocalCapabilityRiskTier;
+  capabilityPlaneCapabilityMode?: BidviaCapabilityPlaneCapabilityMode;
   taskPlaneCapabilityMode?: BidviaTaskPlaneCapabilityMode;
   eventNotificationPlaneCapabilityMode?: BidviaEventNotificationPlaneCapabilityMode;
   scenarioRouteSteps?: BidviaScenarioRouteStep[];
@@ -825,6 +826,7 @@ export interface BidviaMcpToolDescriptor {
   requiredContext: BidviaScenarioContextKey[];
   runnable?: boolean;
   blockedBy?: string | null;
+  capabilityPlaneCapabilityMode?: BidviaCapabilityPlaneCapabilityMode;
   taskPlaneCapabilityMode?: BidviaTaskPlaneCapabilityMode;
   eventNotificationPlaneCapabilityMode?: BidviaEventNotificationPlaneCapabilityMode;
 }
@@ -1687,6 +1689,14 @@ export const bidviaPlaneExecutionTruths = [
 
 export type BidviaPlaneExecutionTruth = (typeof bidviaPlaneExecutionTruths)[number];
 
+export const bidviaCapabilityPlaneCapabilityModes = [
+  'compatibility-only',
+  'packet-grounded-read',
+] as const;
+
+export type BidviaCapabilityPlaneCapabilityMode =
+  (typeof bidviaCapabilityPlaneCapabilityModes)[number];
+
 export interface BidviaPlaneExecutionGate {
   plane: BidviaCorePlaneName;
   helperKey: string;
@@ -1867,10 +1877,18 @@ export interface BidviaCapabilityPlaneRemoteTruthBoundary {
   notes: string[];
 }
 
+export interface BidviaCapabilityPlaneHelperTruthBoundary {
+  packetGroundedReadHelperKeys: Array<
+    'getAgentReadiness' | 'getAgentSummary' | 'getAgentCapabilityProfile'
+  >;
+  compatibilityOnlyHelperKeys: Array<'refreshRemoteCapabilityTruth'>;
+}
+
 export interface BidviaCapabilityPlaneView {
   adoptionStatus: BidviaCorePlaneAdoptionStatus;
   localSnapshots: BidviaCapabilityPlaneLocalSnapshotsBoundary;
   remoteTruth: BidviaCapabilityPlaneRemoteTruthBoundary;
+  helperTruth: BidviaCapabilityPlaneHelperTruthBoundary;
 }
 
 export const bidviaEnterpriseIntegrationPlaneHelperGroupKeys = [

@@ -92,11 +92,11 @@ test('refreshRemoteCapabilityTruth consumes provided frozen core payloads and me
       environment_mode: 'production',
       route_capabilities: [
         {
-          helper_key: 'refreshCapabilityTruth',
-          route_path_template: '/runtime/capabilities/refresh',
+          helper_key: 'getAgentSummary',
+          route_path_template: '/runtime/agents/:agent_registration_id/summary',
           http_method: 'GET',
-          access_context_family: 'tenant',
-          required_context: ['tenantId'],
+          access_context_family: 'principal-governed-read',
+          required_context: ['tenantId', 'principalId'],
           scope: 'read',
           level: 'atomic-route',
         },
@@ -135,16 +135,17 @@ test('refreshRemoteCapabilityTruth consumes provided frozen core payloads and me
   assert.equal(refreshed.routeCapabilities.effectiveSource, 'server-derived');
   assert.deepEqual(refreshed.routeCapabilities.effectiveItems, [
     {
-      helperKey: 'refreshCapabilityTruth',
-      routePathTemplate: '/runtime/capabilities/refresh',
+      helperKey: 'getAgentSummary',
+      routePathTemplate: '/runtime/agents/:agent_registration_id/summary',
       httpMethod: 'GET',
-      accessContextFamily: 'tenant',
-      contextSemantic: 'tenant',
-      requiredContext: ['tenantId'],
+      accessContextFamily: 'principal-governed-read',
+      contextSemantic: 'principal-governed-read',
+      requiredContext: ['tenantId', 'principalId'],
       scope: 'read',
       level: 'atomic-route',
       localCapabilityTier: 'L0-observe-only',
       localCapabilityRiskTier: 'observe-only',
+      capabilityPlaneCapabilityMode: 'packet-grounded-read',
     },
   ]);
   assert.equal(refreshed.routeCapabilities.localSnapshot.items.some((capability) => capability.helperKey === 'postHeartbeat'), true);
@@ -197,6 +198,7 @@ test('refreshRemoteCapabilityTruth fails closed with explicit dependency-gated s
   assert.equal(refreshed.localMcpServer.effectiveValue.available, false);
   assert.equal(refreshed.localMcpServer.localSnapshot.available, true);
   assert.equal(refreshed.localMcpServer.coreSnapshot, null);
+  assert.equal(refreshed.coreTruthRefresh.status, 'blocked');
 });
 
 test('refreshRemoteCapabilityTruth returns an isolated blocked truth snapshot for each dependency-gated refresh', () => {

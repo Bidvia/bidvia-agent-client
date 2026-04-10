@@ -3,7 +3,10 @@ import type {
   BidviaRouteCapabilityContextSemantic,
   BidviaRouteCapability,
 } from './contracts.js';
-import { buildCapabilityPlaneView } from './capability-plane.js';
+import {
+  buildCapabilityPlaneView,
+  getCapabilityPlaneCapabilityMode,
+} from './capability-plane.js';
 import { getEventNotificationPlaneCapabilityMode } from './event-notification-plane.js';
 import { getTaskPlaneCapabilityMode } from './task-plane.js';
 
@@ -20,6 +23,9 @@ function applyRouteContextSemantic(
   return {
     ...capability,
     contextSemantic: capability.contextSemantic ?? capability.accessContextFamily,
+    ...(getCapabilityPlaneCapabilityMode(capability.helperKey) === undefined
+      ? {}
+      : { capabilityPlaneCapabilityMode: getCapabilityPlaneCapabilityMode(capability.helperKey) }),
     ...(taskPlaneCapabilityMode === undefined ? {} : { taskPlaneCapabilityMode }),
     ...(eventNotificationPlaneCapabilityMode === undefined
       ? {}

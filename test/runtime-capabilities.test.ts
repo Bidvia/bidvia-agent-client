@@ -44,7 +44,7 @@ test('buildLocalRuntimeCapabilitySnapshot defaults to the public china API while
     true,
   );
   assert.equal(snapshot.mcpTools.source, 'local-static');
-  assert.equal(snapshot.mcpTools.items.length, 65);
+  assert.equal(snapshot.mcpTools.items.length, 69);
   assert.equal(snapshot.mcpTools.schemaVersion, '2026-03-27');
   assert.equal(snapshot.mcpTools.version, 'local-runtime-capability-snapshot');
   assert.equal(snapshot.mcpTools.revision, 'repo-mcp-tools');
@@ -203,6 +203,37 @@ test('buildLocalRuntimeCapabilitySnapshot includes shipped widened read helpers 
       level: 'atomic-route',
       localCapabilityTier: 'L0-observe-only',
       localCapabilityRiskTier: 'observe-only',
+      capabilityPlaneCapabilityMode: 'packet-grounded-read',
+    }),
+  );
+  assert.deepEqual(
+    snapshot.routeCapabilities.items.find((capability) => capability.helperKey === 'getAgentSummary'),
+    withDefaultContextSemantic({
+      helperKey: 'getAgentSummary',
+      routePathTemplate: '/runtime/agents/:agent_registration_id/summary',
+      httpMethod: 'GET',
+      accessContextFamily: 'principal-governed-read',
+      requiredContext: ['tenantId', 'principalId'],
+      scope: 'read',
+      level: 'atomic-route',
+      localCapabilityTier: 'L0-observe-only',
+      localCapabilityRiskTier: 'observe-only',
+      capabilityPlaneCapabilityMode: 'packet-grounded-read',
+    }),
+  );
+  assert.deepEqual(
+    snapshot.routeCapabilities.items.find((capability) => capability.helperKey === 'getAgentCapabilityProfile'),
+    withDefaultContextSemantic({
+      helperKey: 'getAgentCapabilityProfile',
+      routePathTemplate: '/runtime/agents/:agent_registration_id/capability-profile',
+      httpMethod: 'GET',
+      accessContextFamily: 'principal-governed-read',
+      requiredContext: ['tenantId', 'principalId'],
+      scope: 'read',
+      level: 'atomic-route',
+      localCapabilityTier: 'L0-observe-only',
+      localCapabilityRiskTier: 'observe-only',
+      capabilityPlaneCapabilityMode: 'packet-grounded-read',
     }),
   );
   assert.deepEqual(

@@ -2,6 +2,7 @@ import {
   bidviaMcpServerSupportedMethods,
 } from './contracts.js';
 import type {
+  BidviaCapabilityPlaneCapabilityMode,
   BidviaBlockedCoreCapabilityTruthRefresh,
   BidviaCapabilityPlaneView,
   BidviaCorePlaneAdoptionStatus,
@@ -33,6 +34,12 @@ const localStaticFallbackPolicy = 'prefer-local-static-until-server-negotiation'
 const deferredNegotiationFallbackPolicy = 'await-explicit-server-negotiation';
 const serverDerivedFallbackPolicy = 'retain-server-derived-snapshot-until-replaced';
 const localDiscoverySourceOfTruth = 'local-sdk-helpers' as const;
+const capabilityPlanePacketGroundedReadHelperKeys = [
+  'getAgentReadiness',
+  'getAgentSummary',
+  'getAgentCapabilityProfile',
+] as const;
+const capabilityPlaneCompatibilityOnlyHelperKeys = ['refreshRemoteCapabilityTruth'] as const;
 
 function requireCapabilityPlaneAdoptionStatus(): BidviaCorePlaneAdoptionStatus {
   const adoptionStatus = listCorePlaneAdoptionStatuses().find((status) => status.plane === 'capability');
@@ -83,6 +90,24 @@ function buildBlockedCoreTruthRefresh(): BidviaBlockedCoreCapabilityTruthRefresh
   };
 }
 
+export function getCapabilityPlaneCapabilityMode(
+  helperKey: string,
+): BidviaCapabilityPlaneCapabilityMode | undefined {
+  if (capabilityPlanePacketGroundedReadHelperKeys.includes(
+    helperKey as (typeof capabilityPlanePacketGroundedReadHelperKeys)[number],
+  )) {
+    return 'packet-grounded-read';
+  }
+
+  if (capabilityPlaneCompatibilityOnlyHelperKeys.includes(
+    helperKey as (typeof capabilityPlaneCompatibilityOnlyHelperKeys)[number],
+  )) {
+    return 'compatibility-only';
+  }
+
+  return undefined;
+}
+
 export function buildCapabilityPlaneView(): BidviaCapabilityPlaneView {
   const adoptionStatus = requireCapabilityPlaneAdoptionStatus();
 
@@ -108,6 +133,10 @@ export function buildCapabilityPlaneView(): BidviaCapabilityPlaneView {
       notes: [
         'Keep remote capability refresh fail-closed until Core ships packet-complete capability truth.',
       ],
+    },
+    helperTruth: {
+      packetGroundedReadHelperKeys: [...capabilityPlanePacketGroundedReadHelperKeys],
+      compatibilityOnlyHelperKeys: [...capabilityPlaneCompatibilityOnlyHelperKeys],
     },
   };
 }
@@ -280,6 +309,9 @@ export function buildCapabilityPlaneServerSnapshot(
           requiredContext: [...routeCapability.required_context],
           scope: routeCapability.scope,
           level: routeCapability.level,
+          ...(getCapabilityPlaneCapabilityMode(routeCapability.helper_key) === undefined
+            ? {}
+            : { capabilityPlaneCapabilityMode: getCapabilityPlaneCapabilityMode(routeCapability.helper_key) }),
           ...classification,
         };
       }),

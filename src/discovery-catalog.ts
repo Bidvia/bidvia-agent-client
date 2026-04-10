@@ -41,6 +41,7 @@ export interface BidviaLocalDiscoveryCatalogEntry extends Pick<
   | 'level'
   | 'localCapabilityTier'
   | 'localCapabilityRiskTier'
+  | 'capabilityPlaneCapabilityMode'
   | 'taskPlaneCapabilityMode'
   | 'eventNotificationPlaneCapabilityMode'
 > {
@@ -777,6 +778,9 @@ function createLocalMcpToolDescriptor(binding: BidviaLocalDiscoveryMcpBinding): 
     accessContextFamily: capability.accessContextFamily,
     ...(contextSemantic ? { contextSemantic } : {}),
     requiredContext: [...capability.requiredContext],
+    ...(capability.capabilityPlaneCapabilityMode === undefined
+      ? {}
+      : { capabilityPlaneCapabilityMode: capability.capabilityPlaneCapabilityMode }),
     ...(binding.outputMode !== 'execution-result'
       ? {}
       : buildExecutionDiscoverability(binding.capabilityKey ?? binding.helperKey)),
@@ -832,6 +836,9 @@ export function buildLocalDiscoveryCatalog(): BidviaLocalDiscoveryCatalogEntry[]
       level: capability.level,
       localCapabilityTier: capability.localCapabilityTier,
       localCapabilityRiskTier: capability.localCapabilityRiskTier,
+      ...(capability.capabilityPlaneCapabilityMode === undefined
+        ? {}
+        : { capabilityPlaneCapabilityMode: capability.capabilityPlaneCapabilityMode }),
       discoveryKind: getDiscoveryKind(capability),
       recommendedOutputMode: buildRecommendedOutputMode(cliBindings, mcpBindings, capability),
       sourceOfTruth: discoveryBoundary.sourceOfTruth,
