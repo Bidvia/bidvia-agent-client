@@ -48,12 +48,95 @@ test('BidviaClient uses the frozen provisional->query->claim onboarding contract
     identitySessionPlane.canonicalOnboarding.helperSteps.map((step) => step.helperKey),
     ['createProvisionalAgent', 'queryProvisionalAgent', 'claimProvisionalAgent'],
   );
+  assert.equal(identitySessionPlane.canonicalOnboarding.primaryForAgentOnboarding, true);
   assert.deepEqual(identitySessionPlane.canonicalOnboarding.claim.requiredContext, ['tenantId', 'sessionId']);
+  assert.equal(identitySessionPlane.onboardingSupport.label, 'Bounded V1 account/session prerequisite support');
+  assert.equal(identitySessionPlane.onboardingSupport.fullAccountProductClaim, false);
+  assert.equal(identitySessionPlane.onboardingSupport.prerequisiteSupportOnly, true);
+  assert.deepEqual(
+    identitySessionPlane.onboardingSupport.helperSteps.map((step) => step.helperKey),
+    [
+      'signUpPersonalAccount',
+      'signUpEnterpriseAccount',
+      'signIn',
+      'refreshSession',
+      'revokeSession',
+      'getAccountMe',
+      'selectOrg',
+    ],
+  );
   assert.equal(identitySessionPlane.sessionTruth.payloadPacketStatus, 'blocked-pending-packet');
   assert.equal(String(calls[0]?.input), 'http://127.0.0.1:8787/runtime/agents/provisional');
   assert.equal(String(calls[1]?.input), 'http://127.0.0.1:8787/runtime/agents/provisional?provisional_agent_ref=prov-agent-1');
   assert.equal(String(calls[2]?.input), 'http://127.0.0.1:8787/runtime/agents/provisional/claim');
   assert.equal((calls[2]?.init?.headers as Record<string, string>)['x-bidvia-session-id'], 'sess-1');
+});
+
+test('BidviaClient includes the bounded V1 account and session prerequisite helper surface in the client contract', async () => {
+  const { calls, fetchStub } = createFetchStub();
+  const client = new BidviaClient({
+    baseUrl: 'http://127.0.0.1:8787',
+    context: {
+      tenantId: 'tenant-a',
+      sessionId: 'sess-1',
+    },
+    fetchImpl: fetchStub,
+  });
+
+  await client.signUpPersonalAccount({
+    email: 'person@example.com',
+    password: 'secret-1',
+    displayName: 'Ada Lovelace',
+    now: '2026-04-10T10:00:00Z',
+  });
+  await client.signUpEnterpriseAccount({
+    email: 'ops@example.com',
+    password: 'secret-2',
+    companyName: 'Bidvia Labs',
+    now: '2026-04-10T10:01:00Z',
+  });
+  await client.signIn({
+    email: 'person@example.com',
+    password: 'secret-1',
+    now: '2026-04-10T10:02:00Z',
+  });
+  await client.refreshSession();
+  await client.revokeSession();
+  await client.getAccountMe();
+  await client.selectOrg({ orgId: 'org-2' });
+
+  assert.equal(calls.length, 7);
+  assert.equal(String(calls[0]?.input), 'http://127.0.0.1:8787/runtime/accounts/personal/sign-up');
+  assert.equal(String(calls[1]?.input), 'http://127.0.0.1:8787/runtime/accounts/enterprise/sign-up');
+  assert.equal(String(calls[2]?.input), 'http://127.0.0.1:8787/runtime/sessions/sign-in');
+  assert.equal(String(calls[3]?.input), 'http://127.0.0.1:8787/runtime/sessions/refresh');
+  assert.equal(String(calls[4]?.input), 'http://127.0.0.1:8787/runtime/sessions/revoke');
+  assert.equal(String(calls[5]?.input), 'http://127.0.0.1:8787/runtime/account/me');
+  assert.equal(String(calls[6]?.input), 'http://127.0.0.1:8787/runtime/account/select-org');
+  assert.deepEqual(JSON.parse(String(calls[0]?.init?.body)), {
+    email: 'person@example.com',
+    password: 'secret-1',
+    display_name: 'Ada Lovelace',
+    now: '2026-04-10T10:00:00Z',
+  });
+  assert.deepEqual(JSON.parse(String(calls[1]?.init?.body)), {
+    email: 'ops@example.com',
+    password: 'secret-2',
+    company_name: 'Bidvia Labs',
+    now: '2026-04-10T10:01:00Z',
+  });
+  assert.deepEqual(JSON.parse(String(calls[2]?.init?.body)), {
+    email: 'person@example.com',
+    password: 'secret-1',
+    now: '2026-04-10T10:02:00Z',
+  });
+  assert.equal((calls[3]?.init?.headers as Record<string, string>)['x-bidvia-session-id'], 'sess-1');
+  assert.equal((calls[4]?.init?.headers as Record<string, string>)['x-bidvia-session-id'], 'sess-1');
+  assert.equal((calls[5]?.init?.headers as Record<string, string>)['x-bidvia-session-id'], 'sess-1');
+  assert.equal((calls[6]?.init?.headers as Record<string, string>)['x-bidvia-session-id'], 'sess-1');
+  assert.deepEqual(JSON.parse(String(calls[6]?.init?.body)), {
+    org_id: 'org-2',
+  });
 });
 
 test('BidviaClient accepts object-shaped provisional query input for onboarding symmetry', async () => {

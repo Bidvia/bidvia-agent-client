@@ -1733,6 +1733,20 @@ export interface BidviaIdentitySessionPlaneCanonicalOnboardingStep {
   rationale: string;
 }
 
+export interface BidviaIdentitySessionPlaneOnboardingSupportStep {
+  helperKey:
+    | 'signUpPersonalAccount'
+    | 'signUpEnterpriseAccount'
+    | 'signIn'
+    | 'refreshSession'
+    | 'revokeSession'
+    | 'getAccountMe'
+    | 'selectOrg';
+  routePathTemplate: string;
+  requiredContext: BidviaScenarioContextKey[];
+  rationale: string;
+}
+
 export interface BidviaIdentitySessionPlaneView {
   adoptionStatus: BidviaCorePlaneAdoptionStatus;
   governedReadPosture: BidviaIdentitySessionPlaneGovernedReadPosture;
@@ -1741,6 +1755,7 @@ export interface BidviaIdentitySessionPlaneView {
   canonicalOnboarding: {
     journeyKey: 'public-first-onboarding';
     label: 'Public provisional onboarding';
+    primaryForAgentOnboarding: true;
     helperSteps: BidviaIdentitySessionPlaneCanonicalOnboardingStep[];
     claim: BidviaIdentitySessionPlaneCanonicalOnboardingStep;
     firstSuccessNextStep: {
@@ -1749,6 +1764,13 @@ export interface BidviaIdentitySessionPlaneView {
       journeyStage: 'governed-run-execution';
       journeyStageSemantics: 'local-only';
     };
+  };
+  onboardingSupport: {
+    label: 'Bounded V1 account/session prerequisite support';
+    prerequisiteSupportOnly: true;
+    fullAccountProductClaim: false;
+    helperSteps: BidviaIdentitySessionPlaneOnboardingSupportStep[];
+    notes: string[];
   };
 }
 

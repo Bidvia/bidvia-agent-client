@@ -3,6 +3,7 @@ import type {
   BidviaCorePlaneAdoptionStatus,
   BidviaIdentitySessionPlaneCanonicalOnboardingStep,
   BidviaIdentitySessionPlaneGovernedReadPosture,
+  BidviaIdentitySessionPlaneOnboardingSupportStep,
   BidviaIdentitySessionPlaneView,
   BidviaScenarioContextKey,
 } from './contracts.js';
@@ -65,6 +66,52 @@ const identitySessionCanonicalOnboardingSteps: readonly BidviaIdentitySessionPla
   },
 ];
 
+const identitySessionOnboardingSupportSteps:
+  readonly BidviaIdentitySessionPlaneOnboardingSupportStep[] = [
+    {
+      helperKey: 'signUpPersonalAccount',
+      routePathTemplate: '/runtime/accounts/personal/sign-up',
+      requiredContext: [],
+      rationale: 'Allow bounded personal account creation as pre-claim support without changing the primary provisional agent onboarding chain.',
+    },
+    {
+      helperKey: 'signUpEnterpriseAccount',
+      routePathTemplate: '/runtime/accounts/enterprise/sign-up',
+      requiredContext: [],
+      rationale: 'Allow bounded enterprise account creation as pre-claim support without promoting a broader account product model in the client.',
+    },
+    {
+      helperKey: 'signIn',
+      routePathTemplate: '/runtime/sessions/sign-in',
+      requiredContext: [],
+      rationale: 'Allow bounded session establishment before the canonical provisional claim step when Core returns session truth.',
+    },
+    {
+      helperKey: 'refreshSession',
+      routePathTemplate: '/runtime/sessions/refresh',
+      requiredContext: ['sessionId'],
+      rationale: 'Preserve bounded session freshness support only after a session already exists.',
+    },
+    {
+      helperKey: 'revokeSession',
+      routePathTemplate: '/runtime/sessions/revoke',
+      requiredContext: ['sessionId'],
+      rationale: 'Preserve bounded session invalidation support without widening local login semantics.',
+    },
+    {
+      helperKey: 'getAccountMe',
+      routePathTemplate: '/runtime/account/me',
+      requiredContext: ['sessionId'],
+      rationale: 'Read the bounded account/session payload returned by Core without treating it as a client-owned account product.',
+    },
+    {
+      helperKey: 'selectOrg',
+      routePathTemplate: '/runtime/account/select-org',
+      requiredContext: ['sessionId'],
+      rationale: 'Support bounded active-org selection when Core requires session-scoped organization resolution before claim or governed-run continuation.',
+    },
+  ];
+
 function cloneRequiredContext(
   requiredContext: readonly BidviaScenarioContextKey[],
 ): BidviaScenarioContextKey[] {
@@ -80,8 +127,18 @@ function cloneCanonicalOnboardingStep(
   };
 }
 
+function cloneOnboardingSupportStep(
+  step: BidviaIdentitySessionPlaneOnboardingSupportStep,
+): BidviaIdentitySessionPlaneOnboardingSupportStep {
+  return {
+    ...step,
+    requiredContext: cloneRequiredContext(step.requiredContext),
+  };
+}
+
 export function buildIdentitySessionPlaneView(): BidviaIdentitySessionPlaneView {
   const helperSteps = identitySessionCanonicalOnboardingSteps.map(cloneCanonicalOnboardingStep);
+  const onboardingSupportSteps = identitySessionOnboardingSupportSteps.map(cloneOnboardingSupportStep);
   const claim = helperSteps[2]!;
 
   return {
@@ -100,6 +157,7 @@ export function buildIdentitySessionPlaneView(): BidviaIdentitySessionPlaneView 
       notes: [
         'Treat freshness and invalidation as blocked pending Core packet completion rather than broader login/session truth.',
         'Governed reads stay honest: tenantId plus principalId are required, with adminSessionId only as an optional companion on some routes.',
+        'Account and session helpers are bounded onboarding prerequisites only and do not turn this client into a full account product.',
       ],
     },
     journeyBoundary: {
@@ -116,6 +174,7 @@ export function buildIdentitySessionPlaneView(): BidviaIdentitySessionPlaneView 
     canonicalOnboarding: {
       journeyKey: 'public-first-onboarding',
       label: 'Public provisional onboarding',
+      primaryForAgentOnboarding: true,
       helperSteps,
       claim,
       firstSuccessNextStep: {
@@ -124,6 +183,16 @@ export function buildIdentitySessionPlaneView(): BidviaIdentitySessionPlaneView 
         journeyStage: 'governed-run-execution',
         journeyStageSemantics: getWorkflowStageLocalSemantics('governed-run-execution'),
       },
+    },
+    onboardingSupport: {
+      label: 'Bounded V1 account/session prerequisite support',
+      prerequisiteSupportOnly: true,
+      fullAccountProductClaim: false,
+      helperSteps: onboardingSupportSteps,
+      notes: [
+        'These helpers support V1 account/session prerequisites around onboarding and session continuity only.',
+        'The public provisional create -> query -> claim chain remains the primary agent onboarding path.',
+      ],
     },
   };
 }
