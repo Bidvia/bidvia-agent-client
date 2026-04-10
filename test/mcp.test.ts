@@ -967,8 +967,10 @@ test('dispatchMcpToolCall routes packet-grounded notification execution tools th
       toolName: 'acknowledge-notification-execution',
       arguments: {
         notificationId: 'notification-1',
-        acknowledgedBy: 'operator-1',
+        registrationId: 'areg-1',
+        decision: 'acknowledged',
         now: '2026-04-10T00:01:00.000Z',
+        reason: 'worker accepted the notification task',
       },
     },
     {
@@ -979,15 +981,19 @@ test('dispatchMcpToolCall routes packet-grounded notification execution tools th
   assert.deepEqual(calls, [{
     helper: 'acknowledgeNotification',
     args: ['notification-1', {
-      acknowledgedBy: 'operator-1',
+      registrationId: 'areg-1',
+      decision: 'acknowledged',
       now: '2026-04-10T00:01:00.000Z',
+      reason: 'worker accepted the notification task',
     }],
   }]);
   assert.deepEqual(result.result, {
     executionResult: {
       notificationId: 'notification-1',
-      acknowledgedBy: 'operator-1',
+      registrationId: 'areg-1',
+      decision: 'acknowledged',
       now: '2026-04-10T00:01:00.000Z',
+      reason: 'worker accepted the notification task',
     },
   });
 });
