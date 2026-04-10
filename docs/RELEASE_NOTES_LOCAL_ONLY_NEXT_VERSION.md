@@ -6,6 +6,8 @@ This release captures the completed next local-only version of `@bidvia/client`,
 
 It strengthens the package as a client-owned SDK, CLI, and local stdio MCP surface for the frozen Bidvia Commercial Universe V1 / Core V12 handoff boundary. It does not turn the package into a hosted runtime, a hosted MCP service, a remote registry participant, or a source of Core-owned truth.
 
+The current V1 boundary is agent-first but login-capable. Bounded account/session prerequisite support is now present, but it exists to help external users reach the governed agent path rather than to turn the package into a general account-admin or platform-auth product.
+
 ## What shipped in this version
 
 ### SDK transport hardening
@@ -15,6 +17,10 @@ The SDK transport layer is more dependable for local operator and integrator use
 ### Auth and context provider seams, not login
 
 This version adds clearer local auth and request-context provider seams so callers can supply headers and context in a more controlled way. That is packaging and transport hardening for local use, not shipped login, not hosted auth, and not Core-owned identity behavior.
+
+### Bounded V1 account/session prerequisite support
+
+This version now includes bounded sign-up, sign-in, account-me, select-org, session-refresh, and session-revoke support so an external user can establish context before the governed agent journey continues. Those commands and SDK calls are prerequisite support only; they do not replace the package's agent-first onboarding model.
 
 ### Route and tool tiering with risk metadata
 
@@ -39,6 +45,10 @@ The CLI is easier to use as a local operator surface. Grouped help, stronger pre
 ### Frozen downstream truth-fetch alignment
 
 This version aligns the public docs and release language to the frozen downstream families now visible in the SDK and CLI. That includes `GET /runtime/agents/registrations`, `GET /runtime/agents/:registrationId`, `GET /runtime/authority-profiles`, `GET /runtime/capability-profiles`, `GET /runtime/agents/:registrationId/capability-profile`, plus the shipped participation-state and task-dispatch wrappers. The singular per-registration capability profile is the canonical read surface. If taxonomy or lineage aliases are mentioned at all, treat them as transitional or non-final only.
+
+### Helper-level payload matrix alignment
+
+This version now describes V1 through the helper-level payload matrix rather than through blanket plane-wide blockage language. The current summary is: identity/session `packet-grounded-execution`, task `packet-grounded-execution`, capability `packet-grounded-read`, workflow-stage `blocked-pending-packet`, event-notification `packet-grounded-execution`, and enterprise-integration `packet-grounded-read`. Compatibility wrappers remain documented as `compatibility-only` instead of being confused with the canonical payload-grounded path.
 
 ### Principal-governed read posture, kept honest
 
@@ -83,6 +93,7 @@ Some seams are now better prepared on the client side, but they still depend on 
 This release does not claim any of the following:
 
 - login or broader Core-owned auth
+- platform-auth ownership
 - hosted runtime behavior
 - hosted MCP service behavior
 - remote registry behavior
@@ -92,7 +103,7 @@ This release does not claim any of the following:
 
 ## Verification status
 
-This local-only version is documented as a completed shipped package surface with aligned CLI, SDK, MCP, docs, examples, and validation framing. The package remains client-owned where it ships local operator value, and Core-deferred where frozen external truth is still required. The adopted frozen read families are documented as shipped SDK/CLI visibility, not as hosted runtime or client-owned authority.
+This local-only version is documented as a completed shipped package surface with aligned CLI, SDK, MCP, docs, examples, and validation framing. The package remains client-owned where it ships local operator value, and Core-deferred where frozen external truth is still required. The adopted frozen read families are documented as shipped SDK/CLI visibility, not as hosted runtime, platform-auth ownership, or client-owned authority.
 
 Stage 3 release gate remains blocked in the current repo state. It must not be described as full `1.0.0` closure until P0/P1/P2 plane adoption is packet-grounded. The full release sequence still requires the validator suite below to stay green, but that validator evidence is tracked separately from the repo-facing gate snapshot:
 

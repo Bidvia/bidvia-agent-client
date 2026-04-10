@@ -13,47 +13,51 @@ The framing is strict:
 
 ## Reading rule
 
-Each plane is classified from the client-adoption perspective only:
+Each plane is classified from the client-adoption perspective through the helper-level payload matrix, not through blanket blocked-by-default wording:
 
-- `frozen-in-Core`: Core has frozen the downstream plane in the contract center
-- `blocked pending payload packet`: the client must not invent missing request/response or lifecycle fields; it should land a fail-closed adapter until packet-complete truth exists
-- `frozen`: the client plane is already local-first and stable inside this repo
+- `packet-grounded-execution`: the plane already contains canonical execution helpers grounded by frozen payload truth
+- `packet-grounded-read`: the plane already contains canonical read helpers grounded by frozen payload truth
+- `blocked-pending-packet`: the client must not invent missing request/response or lifecycle fields; it should land a fail-closed helper or wrapper until packet-complete truth exists
+- `compatibility-only`: the helper still exists for bounded compatibility, but it is not the canonical payload-grounded truth path
+- local runtime and local accumulation remain local-first planes that stay outside the shared Core-facing matrix
 
 ## Plane summary
 
 | Plane | Status | Current client-adoption view | Next-stage expectation |
 | --- | --- | --- | --- |
-| Identity / session plane | frozen-in-Core | The client now centralizes onboarding and governed-read semantics behind an explicit identity/session adapter used by readiness, route-context, and CLI guidance. | Keep freshness/invalidation semantics blocked pending payload packet truth instead of widening into broader login/session claims. |
-| Task plane | frozen-in-Core | The client now groups task dispatch / claim / lease semantics behind an explicit task-plane adapter while keeping local task shells descriptive-only. | Keep timeout semantics local-only or blocked pending payload packet truth unless Core grounds them. |
-| Capability plane | frozen-in-Core | Capability-profile reads now flow through an explicit capability-plane adapter, and `refreshRemoteCapabilityTruth(...)` remains dependency-gated and fail-closed. | Keep remote refresh blocked until packet-complete capability payloads are provided. |
-| Workflow / stage plane | frozen-in-Core | The client now distinguishes local journey labels from Core stage semantics behind an explicit workflow/stage adapter. | Keep packet-grounded stage identifiers and transition rules blocked until Core provides them. |
-| Event / notification plane | frozen-in-Core | The client now exposes an explicit event/notification adapter for frozen route visibility while keeping execution semantics fail-closed. | Keep delivery, acknowledgement, retry, and replay semantics blocked until packet-complete truth exists. |
-| Enterprise integration plane | frozen-in-Core | The client now groups bounded asset, evidence, document, attachment, and commercial-action helper slices behind one enterprise integration adapter. | Keep any packet-incomplete enterprise/system detail fail-closed and avoid broader enterprise orchestration claims. |
-| Local runtime / execution session plane | frozen | Stage 1 now gives the client a first-class local execution session and runtime core that CLI and MCP surfaces can consume. | Stage 2 should keep this local plane stable while hardening adapters that consume Core truth through explicit plane seams. |
-| Local accumulation / memory plane | frozen | Stage 1 now gives the client explicit local accumulation for onboarding memory, task execution memory, capability usage memory, and result memory. | Stage 2 should preserve this plane as local-only accumulation and avoid turning it into hosted memory or synthetic Core truth. |
+| Identity / session plane | packet-grounded-execution | Sign-up, sign-in, select-org, and session hygiene now sit alongside provisional create/query/claim so this plane has canonical payload-grounded execution coverage while the visible journey stays agent-first. | Keep freshness/invalidation semantics blocked pending packet completion instead of widening into broader login/session or platform-auth claims. |
+| Task plane | packet-grounded-execution | Canonical heartbeat, claim, and lease helpers are payload-grounded, while compatibility-only task wrappers stay explicitly secondary to the frozen route family. | Keep timeout semantics local-only or blocked pending packet truth unless Core grounds them. |
+| Capability plane | packet-grounded-read | Capability profile and summary reads are payload-grounded, while refresh remains compatibility-only until Core freezes a canonical refresh payload. | Keep remote refresh blocked until packet-complete capability payloads are provided. |
+| Workflow / stage plane | blocked-pending-packet | Local journey labels remain honest and useful, but workflow-stage remains the only broadly blocked Core-facing plane because packet-grounded stage identifiers and transitions are still incomplete. | Keep stage identifiers and transition rules blocked until Core provides them. |
+| Event / notification plane | packet-grounded-execution | Notification detail reads are payload-grounded and notification delivery and acknowledgement helpers are packet-grounded execution helpers. | Keep replay or other still-missing semantics fail-closed unless Core freezes them. |
+| Enterprise integration plane | packet-grounded-read | Integration and commercial read helpers are packet-grounded, while compatibility-only writes and blocked scenario wrappers stay clearly separated. | Keep packet-incomplete enterprise/system detail fail-closed and avoid broader enterprise orchestration claims. |
+| Local runtime / execution session plane | local-first | Stage 1 now gives the client a first-class local execution session and runtime core that CLI and MCP surfaces can consume. | Stage 2 should keep this local plane stable while hardening adapters that consume Core truth through the helper-level payload matrix. |
+| Local accumulation / memory plane | local-first | Stage 1 now gives the client explicit local accumulation for onboarding memory, task execution memory, capability usage memory, and result memory. | Stage 2 should preserve this plane as local-only accumulation and avoid turning it into hosted memory or synthetic Core truth. |
 
 ## Plane details
 
-### 1. Identity / session plane, frozen-in-Core
+### 1. Identity / session plane, packet-grounded-execution
 
 What is already real for the client:
 
 - public provisional create -> query -> claim is an explicit shipped path
+- sign-up, sign-in, account/me, select-org, session refresh, and session revoke now exist as bounded prerequisite support
 - `claim-provisional-agent` is session-bound
 - governed reads already require real `tenantId` plus `principalId`
 - some routes accept `adminSessionId` as an optional companion
 
 Current client adoption state:
 
-- one shared identity/session adapter now centralizes onboarding, route-context, and readiness guidance
+- the helper-level payload matrix now treats the canonical identity/session path as packet-grounded execution rather than as broadly blocked plane adoption
 - session freshness and invalidation semantics remain explicitly blocked when packet-complete truth is still absent
 
 Current client rule:
 
 - use the frozen Core onboarding path exactly
+- keep the package agent-first even though login/session is now supported
 - keep any broader session/login semantics blocked pending payload packet truth
 
-### 2. Task plane, frozen-in-Core
+### 2. Task plane, packet-grounded-execution
 
 What is already real for the client:
 
@@ -63,7 +67,7 @@ What is already real for the client:
 
 Current client adoption state:
 
-- one explicit task-plane adapter now groups task dispatch / claim / lease semantics
+- the helper-level payload matrix now treats canonical claim, lease, and heartbeat helpers as packet-grounded execution and keeps downstream wrappers explicit
 - local descriptive task shells remain separate from frozen Core task truth
 - blocked pending payload packet handling remains in place for task lifecycle fields not yet packet-grounded in Core
 
@@ -72,7 +76,7 @@ Current client rule:
 - lease, suspend, resume, completion, and outcome semantics must come from packet-grounded Core truth when available
 - timeout semantics stay local-only or blocked pending payload packet truth unless Core grounds them explicitly
 
-### 3. Capability plane, frozen-in-Core
+### 3. Capability plane, packet-grounded-read
 
 What is already real for the client:
 
@@ -82,11 +86,11 @@ What is already real for the client:
 
 Current client adoption state:
 
-- one stable capability-plane adapter now fronts capability refresh and runtime snapshots
+- the helper-level payload matrix now treats capability profile and summary visibility as packet-grounded read truth
 - packet-grounded handling for capability manifest, freshness, and execution policy input stays fail-closed until Core provides it
-- `refreshRemoteCapabilityTruth(...)` remains dependency-gated until packet-complete truth exists
+- `refreshRemoteCapabilityTruth(...)` remains compatibility-only until packet-complete truth exists
 
-### 4. Workflow / stage plane, frozen-in-Core
+### 4. Workflow / stage plane, blocked-pending-packet
 
 What is already real for the client:
 
@@ -96,7 +100,7 @@ What is already real for the client:
 
 Current client adoption state:
 
-- one explicit workflow/stage adapter now distinguishes local labels from Core stage semantics
+- workflow-stage remains the only broadly blocked Core-facing plane in the current summary
 - blocked pending payload packet handling remains in place for Core stage identifiers and transition rules that are not yet packet-grounded
 
 Current client rule:
@@ -104,7 +108,7 @@ Current client rule:
 - local journey labels are local guidance only
 - workflow identifiers may travel through scenarios and handoffs without being treated as complete Core stage truth
 
-### 5. Event / notification plane, frozen-in-Core
+### 5. Event / notification plane, packet-grounded-execution
 
 What is already real for the client:
 
@@ -114,7 +118,7 @@ What is already real for the client:
 
 Current client adoption state:
 
-- one explicit event/notification adapter now exposes frozen route visibility through the client surfaces
+- notification delivery and acknowledgement helpers are packet-grounded alongside notification detail visibility
 - blocked pending payload packet handling remains in place for execution or replay semantics not yet packet-grounded
 
 Current client rule:
@@ -122,17 +126,17 @@ Current client rule:
 - local hook audit is not a substitute for governed event truth
 - the client may surface frozen route visibility now, but must fail closed on packet-incomplete event execution semantics
 
-### 6. Enterprise integration plane, frozen-in-Core
+### 6. Enterprise integration plane, packet-grounded-read
 
 What is already real for the client:
 
-- shipped asset, evidence, document, attachment, and commercial-action helper slices already expose a bounded commercial-universe surface
+- shipped asset, evidence, document, attachment, integration, and commercial read helpers already expose a bounded commercial-universe surface
 - review-safe and verification-safe packaging already exist around those bounded slices
 
 Current client adoption state:
 
-- one explicit enterprise integration adapter now groups the bounded helper slices
-- stable payload groupings exist across those bounded helper slices
+- integration and commercial read helpers are packet-grounded
+- compatibility-only writes and blocked scenario wrappers remain clearly separated from the canonical payload-grounded read surface
 - blocked handling remains in place for packet-incomplete enterprise/system fields
 
 ### 7. Local runtime / execution session plane, frozen

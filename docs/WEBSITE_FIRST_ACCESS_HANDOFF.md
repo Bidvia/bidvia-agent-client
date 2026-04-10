@@ -8,6 +8,8 @@ This repo does not implement website code in this phase. The website team owns w
 
 Stage 1 is complete on the client side, but website wording must keep that statement narrow: the package now has a real local runtime core and local accumulation layer behind CLI and MCP execution, while Core still owns platform truth and the website remains spec-only in this repo.
 
+The V1 boundary is agent-first but login-capable. Website copy may mention bounded account/session prerequisite support, but it must keep the package promise centered on the governed agent path rather than on a general account or platform-auth product story.
+
 ## Release boundary
 
 The website copy must stay inside the current shipped boundary:
@@ -20,6 +22,7 @@ The website copy must stay inside the current shipped boundary:
 - no HTTP MCP claims
 - no native-plugin-first claims
 - no login, browser auth, or client-owned auth ownership claims
+- no platform-auth ownership claims
 - no claim that the website owns or replaces the local runtime flow
 
 ## Public journey vocabulary
@@ -31,6 +34,16 @@ Use this exact journey language across website pages and supporting copy:
 3. Governed Run
 
 The CLI is the current public source of truth for this journey.
+
+Bounded prerequisite support that may be mentioned before or around Learn when context is missing:
+
+- `bidvia sign-up-personal --input ...`
+- `bidvia sign-up-enterprise --input ...`
+- `bidvia sign-in --input ...`
+- `bidvia account-me`
+- `bidvia select-org --input ...`
+
+Those commands support the same V1 journey. They do not replace the visible agent-first Learn -> Public Provisional create -> query -> claim -> Governed Run framing.
 
 ## Source-of-truth command map
 
@@ -51,6 +64,7 @@ Meaning:
 - `bidvia context show` explains what local context exists and where it came from
 - `bidvia whoami` gives a local identity summary without claiming platform login
 - `bidvia doctor` stays visible, but website copy should describe it as a governed-run diagnostic once enough context is present
+- if prerequisite context is still missing, the website may point users to bounded support commands such as `sign-up-personal`, `sign-up-enterprise`, `sign-in`, or `select-org` without changing the agent-first framing
 
 `bidvia onboarding-readiness` still exists, but it is now supporting reference material, not the primary first-run entry point.
 
@@ -116,6 +130,7 @@ Do not describe this package as:
 - an HTTP MCP path
 - a native-plugin-first OpenClaw runtime
 - a login or auth product
+- a platform-auth product
 - a remote registry participant
 - a source of Core authority
 - a website-driven onboarding flow that replaces the CLI

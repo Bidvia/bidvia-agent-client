@@ -6,12 +6,15 @@ For current downstream contract truth, use the Bidvia Core downstream contract c
 
 For the next OpenClaw-compatible version, keep one release-language rule explicit: this repo owns local operator ergonomics and guidance, while Bidvia Core still owns the truth being consumed.
 
+The V1 boundary is agent-first but login-capable. Bounded account/session prerequisite support exists so external users can establish context when needed, but the package promise remains the governed agent path rather than a general account-admin or platform-auth shell.
+
 ## Rule
 
 `Bidvia-agent-client` consumes agent-access truth from Bidvia core. It does not define that truth.
 
 ## What core owns
 
+- bounded account/session payload truth for sign-up, sign-in, account/me, select-org, session refresh, and session revoke
 - onboarding semantics
 - provisional / claim semantics
 - heartbeat / presence semantics
@@ -28,6 +31,7 @@ For the next OpenClaw-compatible version, keep one release-language rule explici
 - CLI and SDK ergonomics
 - example implementations
 - local validation helpers
+- bounded account/session prerequisite support commands such as `sign-up-personal`, `sign-up-enterprise`, `sign-in`, `account-me`, `select-org`, `session-refresh`, and `session-revoke`
 - onboarding guidance for internal team agents and seed-user agents
 - scenario packaging and verification-bundle export on the agent side
 - agent-side operating guidance for how to use frozen production contracts safely
@@ -39,10 +43,12 @@ For the next OpenClaw-compatible version, keep one release-language rule explici
 - heartbeat and presence do not create authority
 - client convenience must not bypass platform truth
 - proposals and evidence remain explicit platform operations
+- bounded login/session support must not be described as platform-auth ownership
 - OpenClaw wording must stay local-first, stdio-MCP-first, and must not claim hosted runtime, HTTP MCP, or control-plane ownership
 
 ## Current frozen focus
 
+- bounded sign-up/sign-in/select-org/account-me/session-refresh/session-revoke support that prepares the user for the governed agent path
 - onboarding / claim
 - heartbeat
 - sync

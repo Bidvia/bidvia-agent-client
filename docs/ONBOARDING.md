@@ -9,6 +9,8 @@ This guide shows one primary public journey and one secondary Governed Run journ
 1. the primary public CLI-first journey organized as Learn, then Public Provisional create -> query -> claim, then Governed Run
 2. the secondary Governed Run journey, where local stdio MCP handoff is one packaging/integration path after the public defaults are understood
 
+The V1 boundary is agent-first but login-capable. The visible journey still stays Learn -> Public Provisional create -> query -> claim -> Governed Run, while bounded account/session prerequisite support exists when an external user still needs context establishment before that agent-first path can succeed.
+
 This guide is intentionally more than an API quickstart. It explains how an agent should approach the shipped package surface in the order that matches the current repo boundary.
 
 Stage 1 of the client-side runtime architecture upgrade is now complete in this repo. That means the CLI and local stdio MCP surfaces share one local runtime core and write local accumulation records for onboarding memory, task execution memory, capability usage memory, and result memory. It does not mean Stage 2 Core plane contracts are complete, and it does not change the rule that Core still owns platform truth.
@@ -56,12 +58,13 @@ For the normal public package path, start with the package defaults. The CLI and
 Use this order:
 
 1. read the contract boundary and this onboarding guide
-2. run `bidvia onboard`
-3. run `bidvia context show` or `bidvia whoami` when you need local-first visibility around the same journey
-4. run the explicit public provisional commands, `create-provisional-agent`, `query-provisional-agent`, then `claim-provisional-agent`, when onboarding material is available
-5. once claim has established session-bound identity and local context is ready, run `bidvia doctor` or `bidvia route-context-matrix`
-6. stay on the Governed Run side with `bidvia registration-lifecycle-plan`
-7. when onboarding is already complete, stay on the Governed Run side with `bidvia registered-agent-operations-plan`
+2. if prerequisite account/session context is still missing, use the bounded account/session prerequisite support: `bidvia sign-in`, `bidvia sign-up-personal`, `bidvia sign-up-enterprise`, `bidvia account-me`, `bidvia select-org`, `bidvia session-refresh`, and `bidvia session-revoke`
+3. run `bidvia onboard`
+4. run `bidvia context show` or `bidvia whoami` when you need local-first visibility around the same journey
+5. run the explicit public provisional commands, `create-provisional-agent`, `query-provisional-agent`, then `claim-provisional-agent`, when onboarding material is available
+6. once claim has established session-bound identity and local context is ready, run `bidvia doctor` or `bidvia route-context-matrix`
+7. stay on the Governed Run side with `bidvia registration-lifecycle-plan`
+8. when onboarding is already complete, stay on the Governed Run side with `bidvia registered-agent-operations-plan`
 
 Those commands answer different questions across the Learn → Public Provisional create -> query -> claim → Governed Run flow:
 
@@ -69,6 +72,7 @@ Those commands answer different questions across the Learn → Public Provisiona
 - `context show` shows effective local context plus source attribution
 - `whoami` summarizes local identity without claiming platform login
 - `doctor` shows local diagnostics and, when possible, an optional readiness live check on the Governed Run side after claim
+- bounded account/session prerequisite support stays available through `bidvia sign-in`, `bidvia sign-up-personal`, `bidvia sign-up-enterprise`, `bidvia account-me`, `bidvia select-org`, `bidvia session-refresh`, and `bidvia session-revoke`
 - `create-provisional-agent`, `query-provisional-agent`, and `claim-provisional-agent` keep the public provisional create -> query -> claim chain explicit
 - `claim-provisional-agent` is the session-bound transition point, not a generic tenant-scoped shortcut
 - `route-context-matrix` shows which context family each guided route needs before you move from Public Provisional into Governed Run
@@ -82,6 +86,13 @@ bidvia onboard
 bidvia context show
 bidvia whoami
 bidvia doctor
+bidvia sign-in --input ...
+bidvia sign-up-personal --input ...
+bidvia sign-up-enterprise --input ...
+bidvia account-me
+bidvia select-org --input ...
+bidvia session-refresh --input ...
+bidvia session-revoke --input ...
 bidvia create-provisional-agent --provisional-agent-ref ...
 bidvia query-provisional-agent --provisional-agent-ref ...
 bidvia claim-provisional-agent --provisional-agent-ref ... --claim-token ...
@@ -97,6 +108,13 @@ node dist/cli.js onboard
 node dist/cli.js context show
 node dist/cli.js whoami
 node dist/cli.js doctor
+node dist/cli.js sign-in --input ...
+node dist/cli.js sign-up-personal --input ...
+node dist/cli.js sign-up-enterprise --input ...
+node dist/cli.js account-me
+node dist/cli.js select-org --input ...
+node dist/cli.js session-refresh --input ...
+node dist/cli.js session-revoke --input ...
 node dist/cli.js create-provisional-agent --provisional-agent-ref ...
 node dist/cli.js query-provisional-agent --provisional-agent-ref ...
 node dist/cli.js claim-provisional-agent --provisional-agent-ref ... --claim-token ...
@@ -116,6 +134,13 @@ After that guided path is clear, use the supporting diagnostics and review-safe 
 `onboarding-readiness` still exists as a supporting read-only explainer. It is no longer the primary public first-run entry point.
 
 Stage 3 release closure is still blocked in the current repo state. Use `route-context-matrix` and `runtime-capabilities` to inspect the fail-closed gate, and do not describe the package as full `1.0.0` closure until P0/P1/P2 plane adoption is packet-grounded. The validator suite is still required before release closure, but that evidence is tracked outside these repo-facing runtime snapshots.
+
+The helper-level payload matrix is the truth model for that boundary. In current repo language:
+
+- `packet-grounded-execution` covers identity/session, task, and event-notification helpers where canonical payload truth now exists
+- `packet-grounded-read` covers capability and enterprise-integration helpers where canonical read payload truth now exists
+- `blocked-pending-packet` still applies where workflow-stage or scenario-wrapper payload truth is not yet frozen
+- `compatibility-only` still applies to bounded wrappers that should not be mistaken for the canonical payload-grounded path
 
 In this phase, truth-fetch ships through the SDK and CLI as the widened frozen downstream read surface, with a bounded local stdio MCP seam exposing the currently approved read-only subset. That MCP rollout is phased on purpose: governance-first truth-fetch tools ship first, then business-truth collection and detail tools ship second. In both phases, MCP stays read-only, local stdio only, and a thin wrapper over the shipped SDK helpers.
 
@@ -260,7 +285,7 @@ node dist/cli.js pricing-bases
 node dist/cli.js media-asset --media-asset-id media-1
 ```
 
-This truth-fetch layer stays read-only. The MCP portion stays local stdio only and does not add hosted runtime behavior, hosted MCP, remote registry or remote discovery, login, OAuth, auth implementation, integrated Core capability-truth refresh, full governed notification semantics, broader multi-agent coordination authority, or live negotiation.
+This truth-fetch layer stays read-only. The MCP portion stays local stdio only and does not add hosted runtime behavior, hosted MCP, remote registry or remote discovery, platform-auth ownership, login beyond bounded prerequisite support, OAuth, auth implementation, integrated Core capability-truth refresh, full governed notification semantics, broader multi-agent coordination authority, or live negotiation.
 
 Keep the deferred boundary explicit when you explain this surface to operators or SDK users:
 

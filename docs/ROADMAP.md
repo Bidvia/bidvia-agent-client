@@ -27,7 +27,31 @@ Today the mainline already includes:
 - shipped local scenario-envelope builders plus bounded scenario families for registration lifecycle, registered-agent operations, industry-universe, connection approval, commercial-action continuation, and one honest cross-chain coordinator path across shipped slices
 - shipped local review-packet, verification-bundle, CLI preview/export, static capability metadata, local runtime snapshot, server-capability normalization, static MCP catalog, bounded local stdio MCP server, and environment-mode visibility surfaces
 
-This is meaningful progress, but it is still not the full operating-kit destination. The repo remains bounded by frozen Core contracts and must not claim platform authority, hosted runtime behavior, integrated Core truth, or a general workflow engine.
+This is meaningful progress, but it is still not the full operating-kit destination. The repo remains bounded by frozen Core contracts and must not claim platform authority, hosted runtime behavior, integrated Core truth, platform-auth ownership, or a general workflow engine.
+
+The current V1 framing is agent-first with bounded login/session prerequisite support. External users may need account/session establishment before they can continue, but the package promise stays centered on the governed agent path rather than on a general account product shell.
+
+## Payload-grounded V1 truth model
+
+The current mainline should now be described through the helper-level payload matrix rather than through blanket plane-wide blockage language.
+
+The canonical summary is:
+
+- `identity-session | packet-grounded-execution`
+- `task | packet-grounded-execution`
+- `capability | packet-grounded-read`
+- `workflow-stage | blocked-pending-packet`
+- `event-notification | packet-grounded-execution`
+- `enterprise-integration | packet-grounded-read`
+
+That helper-level payload matrix is grounded in the downstream contract center and keeps four distinct helper states visible in repo language:
+
+- `packet-grounded-execution`
+- `packet-grounded-read`
+- `blocked-pending-packet`
+- `compatibility-only`
+
+Docs should therefore stop implying that all six Core-facing planes are broadly blocked. Only the workflow-stage plane remains broadly blocked at the current plane-summary level; the others already contain payload-grounded helpers and must be described accordingly.
 
 ## Release-language split for the current mainline
 
@@ -50,7 +74,7 @@ For the next OpenClaw-compatible version, the roadmap language should stay speci
 
 These are implemented seams that must stay fail-closed until Bidvia Core provides frozen truth:
 
-- `refreshRemoteCapabilityTruth(...)` is implemented as a readiness-only consumption seam, but it is blocked until frozen Core capability truth and freshness semantics exist
+- `refreshRemoteCapabilityTruth(...)` is implemented as a readiness-only consumption seam, but it remains `compatibility-only` until frozen Core capability truth and freshness semantics exist
 - the seam can accept a future server-derived capability payload shape without rewriting the client boundary, but it must not be described as integrated Core truth, truth closure, live negotiation, remote discovery, hosted MCP/runtime behavior, or remote registry behavior
 
 ### Deferred Core, runtime, and control-plane areas
@@ -117,7 +141,7 @@ Stage 2 is not a passive waiting period. The client should continue evolving by 
 
 Primary outcomes:
 
-- turn identity/session, task, capability, workflow, event, and enterprise integration dependencies into explicit plane adapters/seams
+- keep identity/session, task, capability, workflow, event, and enterprise integration dependencies aligned to the helper-level payload matrix instead of collapsing them into coarser plane defaults
 - consume Core capability truth only through stable plane-level payloads, not through scattered route heuristics or helper-local metadata
 - replace client-side semantic inference with Core-provided workflow/stage and task-truth consumption wherever those contracts are frozen
 - keep all still-packet-incomplete Core plane payloads fail-closed and clearly documented, rather than emulating them locally
