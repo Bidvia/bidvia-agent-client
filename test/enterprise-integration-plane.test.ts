@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 
 import * as publicSurface from '../src/index.ts';
 
-test('enterprise integration plane adapter groups bounded enterprise helper families without broader authority claims', () => {
+test('enterprise integration plane adapter centers the canonical core integration route family without broader authority claims', () => {
   const exports = publicSurface as Record<string, unknown>;
 
   assert.equal(typeof exports.buildEnterpriseIntegrationPlaneView, 'function');
@@ -54,12 +54,41 @@ test('enterprise integration plane adapter groups bounded enterprise helper fami
   ]);
   assert.equal(plane.packetTruthBoundary.inventedPacketFieldsBlocked, true);
   assert.deepEqual(plane.helperGroups.map((group) => group.groupKey), [
+    'core-integration-routes',
     'asset-evidence-family',
     'evidence-submission',
     'commercial-action',
     'governed-proposals',
     'opportunity-handoffs',
   ]);
+  assert.deepEqual(plane.helperGroups.find((group) => group.groupKey === 'core-integration-routes'), {
+    groupKey: 'core-integration-routes',
+    label: 'Canonical Core enterprise integration routes',
+    helperKeys: [
+      'submitIntegrationOnboardingContract',
+      'logInHaisiWms',
+      'listHaisiWmsWarehouses',
+      'createHaisiWmsInbound',
+    ],
+    clientMethods: [
+      'submitIntegrationOnboardingContract',
+      'logInHaisiWms',
+      'listHaisiWmsWarehouses',
+      'createHaisiWmsInbound',
+    ],
+    cliCommands: [],
+    discoveryHelperKeys: [
+      'submitIntegrationOnboardingContract',
+      'logInHaisiWms',
+      'listHaisiWmsWarehouses',
+      'createHaisiWmsInbound',
+    ],
+    broaderEnterpriseAuthorityClaimed: false,
+    broaderSystemAuthorityClaimed: false,
+    payloadPacketStatus: 'blocked-pending-packet',
+    blockedBy: 'core-plane-payload-packet-not-yet-frozen',
+    notes: ['The enterprise plane is anchored to the Core-owned integration route family and visibility boundaries.'],
+  });
   assert.deepEqual(plane.helperGroups.find((group) => group.groupKey === 'asset-evidence-family'), {
     groupKey: 'asset-evidence-family',
     label: 'Assets, documents, media, evidence, and attachment bindings',
@@ -111,7 +140,7 @@ test('enterprise integration plane adapter groups bounded enterprise helper fami
   });
   assert.deepEqual(plane.helperGroups.find((group) => group.groupKey === 'commercial-action'), {
     groupKey: 'commercial-action',
-    label: 'Bounded commercial action continuation',
+    label: 'Bounded commercial-action support',
     helperKeys: [
       'buildCommercialActionScenarioPlan',
       'runCommercialActionScenario',
@@ -140,6 +169,6 @@ test('enterprise integration plane adapter groups bounded enterprise helper fami
     broaderSystemAuthorityClaimed: false,
     payloadPacketStatus: 'packet-grounded',
     blockedBy: null,
-    notes: ['Commercial-action helpers stay bounded to the shipped governed continuation slice.'],
+    notes: ['Commercial-action helpers stay bounded support and do not define the enterprise integration plane itself.'],
   });
 });

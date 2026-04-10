@@ -9,6 +9,34 @@ import type {
 
 const enterpriseIntegrationPlaneHelperGroups: readonly BidviaEnterpriseIntegrationPlaneHelperGroup[] = [
   {
+    groupKey: 'core-integration-routes',
+    label: 'Canonical Core enterprise integration routes',
+    helperKeys: [
+      'submitIntegrationOnboardingContract',
+      'logInHaisiWms',
+      'listHaisiWmsWarehouses',
+      'createHaisiWmsInbound',
+    ],
+    clientMethods: [
+      'submitIntegrationOnboardingContract',
+      'logInHaisiWms',
+      'listHaisiWmsWarehouses',
+      'createHaisiWmsInbound',
+    ],
+    cliCommands: [],
+    discoveryHelperKeys: [
+      'submitIntegrationOnboardingContract',
+      'logInHaisiWms',
+      'listHaisiWmsWarehouses',
+      'createHaisiWmsInbound',
+    ],
+    broaderEnterpriseAuthorityClaimed: false,
+    broaderSystemAuthorityClaimed: false,
+    payloadPacketStatus: 'blocked-pending-packet',
+    blockedBy: 'core-plane-payload-packet-not-yet-frozen',
+    notes: ['The enterprise plane is anchored to the Core-owned integration route family and visibility boundaries.'],
+  },
+  {
     groupKey: 'asset-evidence-family',
     label: 'Assets, documents, media, evidence, and attachment bindings',
     helperKeys: ['consumeAssetObjectFamily', 'explainAssetConsumption'],
@@ -72,7 +100,7 @@ const enterpriseIntegrationPlaneHelperGroups: readonly BidviaEnterpriseIntegrati
   },
   {
     groupKey: 'commercial-action',
-    label: 'Bounded commercial action continuation',
+    label: 'Bounded commercial-action support',
     helperKeys: [
       'buildCommercialActionScenarioPlan',
       'runCommercialActionScenario',
@@ -101,7 +129,7 @@ const enterpriseIntegrationPlaneHelperGroups: readonly BidviaEnterpriseIntegrati
     broaderSystemAuthorityClaimed: false,
     payloadPacketStatus: 'blocked-pending-packet',
     blockedBy: 'core-plane-payload-packet-not-yet-frozen',
-    notes: ['Commercial-action helpers stay bounded to the shipped governed continuation slice.'],
+    notes: ['Commercial-action helpers stay bounded support and do not define the enterprise integration plane itself.'],
   },
   {
     groupKey: 'governed-proposals',
@@ -203,7 +231,7 @@ export function buildEnterpriseIntegrationPlaneView(): BidviaEnterpriseIntegrati
       broaderEnterpriseAuthorityClaimed: false,
       broaderSystemAuthorityClaimed: false,
       notes: [
-        'This adapter groups only the shipped commercial-universe integration slices already present in this repo.',
+        'This adapter exposes the frozen Core integration route family plus bounded support slices already present in this repo.',
         'It does not claim broader enterprise or system authority.',
       ],
     },
