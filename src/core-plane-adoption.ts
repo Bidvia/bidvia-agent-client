@@ -14,7 +14,7 @@ const bidviaCorePlaneAdoptionNotesByPlane: Record<BidviaCorePlaneAdoptionStatus[
   task: ['Keep local task shells descriptive-only and block packet-incomplete task semantics.'],
   capability: ['Route remote capability refresh through one fail-closed capability-plane adapter.'],
   'workflow-stage': ['Keep local journey labels separate from Core workflow and stage truth until packet-grounded.'],
-  'event-notification': ['Expose frozen notification visibility now and fail closed on packet-incomplete execution semantics.'],
+  'event-notification': ['Expose frozen notification visibility and packet-grounded delivery or acknowledgement semantics directly from Core-owned payload truth.'],
   'enterprise-integration': ['Regroup bounded commercial, document, media, attachment, and evidence helpers behind one plane adapter.'],
 };
 
