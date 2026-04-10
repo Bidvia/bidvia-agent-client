@@ -284,8 +284,8 @@ test('local MCP stdio server exposes bounded tool metadata and handles review-sa
         localCapabilityRiskTier: 'runtime-execution',
         accessContextFamily: 'registration',
         requiredContext: ['tenantId', 'registrationId', 'principalId'],
-        runnable: false,
-        blockedBy: 'core-plane-payload-packet-not-yet-frozen',
+        runnable: true,
+        blockedBy: null,
       },
     );
 

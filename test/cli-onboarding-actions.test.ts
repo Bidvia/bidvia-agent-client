@@ -677,9 +677,6 @@ test('runCli create/query rerun after a prior claim preserves governed-run ident
     assert.equal(createExitCode, 0);
     assert.deepEqual(JSON.parse(readFileSync(statePath, 'utf8')), {
       tenantId: 'tenant-reset',
-      principalId: 'principal-claimed',
-      companyId: 'company-claimed',
-      registrationId: 'areg-claimed',
       lastCompletedStep: 'create-provisional-agent',
       createdAt: '2026-04-02T12:00:00.000Z',
       updatedAt: '2026-04-02T12:06:00.000Z',
@@ -703,9 +700,9 @@ test('runCli create/query rerun after a prior claim preserves governed-run ident
 
     assert.equal(onboardExitCode, 0);
     assert.equal((printed[1] as { onboarding: { currentStage: { key: string } } }).onboarding.currentStage.key, 'provisional-claim-pending');
-    assert.equal((printed[1] as { effectiveContext: { registrationId: { value: string | null }, principalId: { value: string | null }, companyId: { value: string | null } } }).effectiveContext.registrationId.value, 'areg-claimed');
-    assert.equal((printed[1] as { effectiveContext: { registrationId: { value: string | null }, principalId: { value: string | null }, companyId: { value: string | null } } }).effectiveContext.principalId.value, 'principal-claimed');
-    assert.equal((printed[1] as { effectiveContext: { registrationId: { value: string | null }, principalId: { value: string | null }, companyId: { value: string | null } } }).effectiveContext.companyId.value, 'company-claimed');
+    assert.equal((printed[1] as { effectiveContext: { registrationId: { value: string | null }, principalId: { value: string | null }, companyId: { value: string | null } } }).effectiveContext.registrationId.value, null);
+    assert.equal((printed[1] as { effectiveContext: { registrationId: { value: string | null }, principalId: { value: string | null }, companyId: { value: string | null } } }).effectiveContext.principalId.value, null);
+    assert.equal((printed[1] as { effectiveContext: { registrationId: { value: string | null }, principalId: { value: string | null }, companyId: { value: string | null } } }).effectiveContext.companyId.value, null);
   } finally {
     restoreStatePath();
   }

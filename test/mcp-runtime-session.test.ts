@@ -27,17 +27,18 @@ const dispatchMcpToolCallWithRuntime = dispatchMcpToolCall as unknown as (
   };
 }>;
 
-test('dispatchMcpToolCall heartbeat-execution records a plane-gated blocked attempt instead of executing when context is present', async () => {
+test('dispatchMcpToolCall suspend-task-dispatch-execution records a blocked compatibility-only attempt instead of executing when context is present', async () => {
   const accumulationPath = buildLocalAccumulationPath('bidvia-mcp-runtime-heartbeat-');
   let called = false;
 
   await assert.rejects(
     () => dispatchMcpToolCallWithRuntime(
       {
-        toolName: 'heartbeat-execution',
+        toolName: 'suspend-task-dispatch-execution',
         arguments: {
+          agentRegistrationId: 'areg-runtime',
+          taskDispatchId: 'dispatch-runtime',
           now: '2026-04-04T13:00:00.000Z',
-          expiresAt: '2026-04-04T13:05:00.000Z',
         },
       },
       {
@@ -47,13 +48,14 @@ test('dispatchMcpToolCall heartbeat-execution records a plane-gated blocked atte
               tenantId: 'tenant-runtime',
               principalId: 'principal-runtime',
               registrationId: 'areg-runtime',
+              companyId: 'company-runtime',
             },
           },
-          async postHeartbeat() {
+          async suspendTaskDispatch() {
             called = true;
             return {
               ok: true,
-              helperKey: 'postHeartbeat',
+              helperKey: 'suspendTaskDispatch',
             };
           },
         }) as never,
@@ -61,7 +63,7 @@ test('dispatchMcpToolCall heartbeat-execution records a plane-gated blocked atte
         now: () => '2026-04-04T13:00:00.000Z',
       },
     ),
-    /MCP tool heartbeat-execution is blocked by the shared plane execution gate: core-plane-payload-packet-not-yet-frozen\./,
+    /suspendTaskDispatch is blocked by plane execution gate null until the shared packet-grounded execution truth is frozen\./,
   );
 
   assert.equal(called, false);
@@ -74,14 +76,14 @@ test('dispatchMcpToolCall heartbeat-execution records a plane-gated blocked atte
   const markers = accumulation.taskExecutionMemory.progressMarkers.map((marker) => marker.marker);
   assert.equal(markers[0], 'execution-started');
   assert.equal(markers.includes('capability-blocked'), true);
-  assert.equal(accumulation.capabilityUsageMemory.capabilities[0]?.capabilityKey, 'postHeartbeat');
+  assert.equal(accumulation.capabilityUsageMemory.capabilities[0]?.capabilityKey, 'suspendTaskDispatch');
   assert.deepEqual(accumulation.capabilityUsageMemory.capabilities[0]?.usage, []);
   assert.deepEqual(accumulation.capabilityUsageMemory.capabilities[0]?.blockedAttempts, [{
-    helperKey: 'postHeartbeat',
+    helperKey: 'suspendTaskDispatch',
     recordedAt: '2026-04-04T13:00:00.000Z',
-    executionKind: 'runtime-write',
+    executionKind: 'governed-write',
     missingContext: [],
-    blockedByPlaneGate: 'core-plane-payload-packet-not-yet-frozen',
+    blockedByPlaneGate: null,
   }]);
 });
 

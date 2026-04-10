@@ -200,7 +200,7 @@ test('BidviaTaskRuntime blocks risky capability execution when required local co
   });
 });
 
-test('BidviaTaskRuntime blocks plane-gated runtime writes separately from missing-context failures when required context is present', async () => {
+test('BidviaTaskRuntime blocks operator-company writes when task runtime identity lacks company context', async () => {
   const exports = publicSurface as Record<string, unknown>;
 
   assert.equal(typeof exports.createBidviaTaskRuntime, 'function');
@@ -233,18 +233,21 @@ test('BidviaTaskRuntime blocks plane-gated runtime writes separately from missin
   let executed = false;
   await assert.rejects(
     () => (runtime.callCapability as (input: Record<string, unknown>) => Promise<unknown>)({
-      helperKey: 'postHeartbeat',
-      capabilityKey: 'heartbeat.write',
+      helperKey: 'createTaskDispatch',
+      capabilityKey: 'task-dispatch.write',
       input: {
+        agentRegistrationId: 'areg-1',
+        taskKind: 'runtime-task',
+        taskRef: 'task-ref-1',
         now: '2026-04-04T13:00:00.000Z',
-        expiresAt: '2026-04-04T13:05:00.000Z',
+        reason: 'compatibility-only write should stay blocked',
       },
       call: async () => {
         executed = true;
         return { ok: true };
       },
     }),
-    /postHeartbeat is blocked by plane execution gate core-plane-payload-packet-not-yet-frozen until the shared packet-grounded execution truth is frozen\./,
+    /createTaskDispatch requires local execution context before it can run remotely\. Missing: companyId\./,
   );
 
   assert.equal(executed, false);
@@ -256,15 +259,15 @@ test('BidviaTaskRuntime blocks plane-gated runtime writes separately from missin
   ]);
   assert.match(
     (runtime.getJournal as () => { progressMarkers: Array<{ marker: string; detail?: string }> })().progressMarkers[1].detail ?? '',
-    /postHeartbeat is blocked by plane execution gate core-plane-payload-packet-not-yet-frozen until the shared packet-grounded execution truth is frozen\./,
+    /createTaskDispatch requires local execution context before it can run remotely\. Missing: companyId\./,
   );
   assert.equal(hookEvents.length, 1);
   assert.deepEqual(hookEvents[0].result, {
     blocked: true,
-    helperKey: 'postHeartbeat',
-    executionKind: 'runtime-write',
-    missingContext: [],
-    blockedByPlaneGate: 'core-plane-payload-packet-not-yet-frozen',
+    helperKey: 'createTaskDispatch',
+    executionKind: 'governed-write',
+    missingContext: ['companyId'],
+    blockedByPlaneGate: null,
   });
 });
 
@@ -273,7 +276,14 @@ test('BidviaTaskRuntime uses concurrent orchestration for governed reads and a s
 
   assert.equal(typeof exports.createBidviaTaskRuntime, 'function');
 
-  const session = buildExecutionSession(exports);
+  const session = buildExecutionSession(exports, {
+    tenantId: 'tenant-a',
+    principalId: 'principal-a',
+    registrationId: 'areg-1',
+    sessionId: 'session-a',
+    companyId: 'company-a',
+    adminSessionId: 'admin-session-a',
+  });
   const createBidviaTaskRuntime = exports.createBidviaTaskRuntime as (input: Record<string, unknown>) => Promise<Record<string, unknown>>;
   const runtime = await createBidviaTaskRuntime({
     session,

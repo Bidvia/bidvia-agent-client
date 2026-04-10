@@ -1222,9 +1222,6 @@ function buildPersistedOnboardingActionState(
       tenantId: readOnboardingResultString(result, 'tenantId', 'tenant_id')
         ?? executionContext.tenantId
         ?? existingState?.tenantId,
-      ...(existingState?.principalId === undefined ? {} : { principalId: existingState.principalId }),
-      ...(existingState?.companyId === undefined ? {} : { companyId: existingState.companyId }),
-      ...(existingState?.registrationId === undefined ? {} : { registrationId: existingState.registrationId }),
       lastCompletedStep: command,
       createdAt: existingState?.createdAt ?? now,
       updatedAt: now,

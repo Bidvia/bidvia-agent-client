@@ -182,8 +182,12 @@ export class BidviaCapabilityOrchestrator {
     }
 
     const executionGate = getPlaneExecutionGate(input.helperKey);
+    const capability = getRouteCapability(input.helperKey);
+    const executionAllowed = executionGate === undefined
+      || executionGate.executionTruth === 'packet-grounded-execution'
+      || (executionGate.executionTruth === 'packet-grounded-read' && capability?.scope === 'read');
 
-    if (executionGate && executionGate.executionTruth !== 'packet-grounded-execution') {
+    if (!executionAllowed) {
       throw new BidviaBlockedCapabilityExecutionError(policy, [], executionGate.blockedBy);
     }
 
