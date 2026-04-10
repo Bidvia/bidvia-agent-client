@@ -142,10 +142,10 @@ test('capability plane view keeps capability discovery descriptive-only until pa
   assert.deepEqual(capabilityPlane.adoptionStatus, {
     plane: 'capability',
     frozenInCore: true,
-    payloadPacketStatus: 'blocked-pending-packet',
+    payloadPacketStatus: 'packet-grounded',
     descriptiveVisibility: 'descriptive-plane-visible',
     executableHelperEligibility: 'packet-grounded-read',
-    blockedBy: 'core-plane-payload-packet-not-yet-frozen',
+    blockedBy: null,
     notes: ['Route remote capability refresh through one fail-closed capability-plane adapter.'],
   });
   assert.equal(capabilityPlane.localSnapshots.descriptiveOnly, true);

@@ -277,7 +277,7 @@ test('buildLocalRuntimeCapabilitySnapshot carries shared execution truth without
       {
         plane: 'workflow-stage',
         descriptiveVisibility: 'descriptive-plane-visible',
-        executableHelperEligibility: 'packet-grounded-read',
+        executableHelperEligibility: 'blocked-pending-packet',
       },
       {
         plane: 'event-notification',

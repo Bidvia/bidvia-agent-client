@@ -25,7 +25,6 @@ import {
   buildStage3ReleaseGate,
   listCorePlaneAdoptionStatuses,
 } from './core-plane-adoption.js';
-import { getCorePlaneExecutionSummary } from './plane-execution-gate.js';
 
 const runtimeCapabilitySnapshotSchemaVersion = '2026-03-27';
 const localRuntimeCapabilitySnapshotVersion = 'local-runtime-capability-snapshot';
@@ -35,14 +34,14 @@ const deferredNegotiationFallbackPolicy = 'await-explicit-server-negotiation';
 const serverDerivedFallbackPolicy = 'retain-server-derived-snapshot-until-replaced';
 const localDiscoverySourceOfTruth = 'local-sdk-helpers' as const;
 
-const capabilityPlaneAdoptionStatus: BidviaCorePlaneAdoptionStatus = {
-  plane: 'capability',
-  frozenInCore: true,
-  payloadPacketStatus: 'blocked-pending-packet',
-  ...getCorePlaneExecutionSummary('capability'),
-  blockedBy: 'core-plane-payload-packet-not-yet-frozen',
-  notes: ['Route remote capability refresh through one fail-closed capability-plane adapter.'],
-};
+function requireCapabilityPlaneAdoptionStatus(): BidviaCorePlaneAdoptionStatus {
+  const adoptionStatus = listCorePlaneAdoptionStatuses().find((status) => status.plane === 'capability');
+  if (!adoptionStatus) {
+    throw new Error('Missing core plane adoption status for capability');
+  }
+
+  return adoptionStatus;
+}
 
 const blockedCoreTruthRefreshTemplate: BidviaBlockedCoreCapabilityTruthRefresh = {
   source: 'dependency-gated',
@@ -85,10 +84,12 @@ function buildBlockedCoreTruthRefresh(): BidviaBlockedCoreCapabilityTruthRefresh
 }
 
 export function buildCapabilityPlaneView(): BidviaCapabilityPlaneView {
+  const adoptionStatus = requireCapabilityPlaneAdoptionStatus();
+
   return {
     adoptionStatus: {
-      ...capabilityPlaneAdoptionStatus,
-      notes: [...capabilityPlaneAdoptionStatus.notes],
+      ...adoptionStatus,
+      notes: [...adoptionStatus.notes],
     },
     localSnapshots: {
       descriptiveOnly: true,
