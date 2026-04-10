@@ -27,10 +27,11 @@ test('V1 release candidate reflects the actual public release state', () => {
   assert(gate.waves.every((wave) => wave.status === 'complete'));
 
   assert.match(readme, /current package version is `1\.0\.0`/i);
-  assert.match(readme, /formal `1\.0\.0` release/i);
-  assert.doesNotMatch(readme, /Stage 3 release gate is still blocked/i);
+  assert.match(readme, /`1\.0\.0` package state/i);
+  assert.match(readme, /release-ready public surface/i);
+  assert.match(readme, /npm publication is still a separate final human step/i);
 
-  assert.match(releaseNotes, /formal `1\.0\.0` release/i);
+  assert.match(releaseNotes, /formal `1\.0\.0` package state/i);
   assert.match(releaseNotes, /Stage 3 release gate is now ready/i);
-  assert.doesNotMatch(releaseNotes, /must not be described as full `1\.0\.0` closure/i);
+  assert.match(releaseNotes, /final `1\.0\.0` publication still requires/i);
 });

@@ -1,8 +1,8 @@
 # Changelog
 
-## 0.1.0
+## 1.0.0
 
-First public package release for `@bidvia/client`.
+Release-ready V1 package state for `@bidvia/client`.
 
 ### Shipped surface
 
@@ -18,7 +18,13 @@ First public package release for `@bidvia/client`.
 - no hosted MCP service
 - no hosted runtime packaging claims
 - no remote registry or discovery behavior
-- no login or client-owned Core truth closure
+- no platform-auth ownership or client-owned Core truth closure
+
+### Added in the 1.0.0 line
+
+- bounded sign-up/sign-in/account-me/select-org/session support as onboarding prerequisite support
+- payload-grounded task, event/notification, capability, and enterprise helper alignment
+- customer-facing README and release-boundary guidance for the formal 1.0.0 package state
 
 ### Release-readiness additions included in this release line
 

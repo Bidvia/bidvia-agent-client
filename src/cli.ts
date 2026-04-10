@@ -2032,7 +2032,6 @@ function printHelp(printLine: (value: string) => void): void {
   printLine('  context show');
   printLine('  doctor');
   printLine('  onboarding-readiness');
-  printLine('  route-context-matrix');
   printLine('Prerequisite Account / Session Support:');
   printLine('  sign-in --input ...');
   printLine('  sign-up-personal --input ...');
@@ -2041,6 +2040,7 @@ function printHelp(printLine: (value: string) => void): void {
   printLine('  select-org --input ...');
   printLine('  session-refresh');
   printLine('  session-revoke');
+  printLine('Advanced Integration (OpenClaw / Companion Bundle):');
   printLine('  openclaw-mcp-config');
   printLine('  openclaw-bundle-export --output ...');
   printLine('Agent Onboarding (Public Provisional -> Claim):');
@@ -2048,6 +2048,7 @@ function printHelp(printLine: (value: string) => void): void {
   printLine('  query-provisional-agent --provisional-agent-ref ...');
   printLine('  claim-provisional-agent --provisional-agent-ref ... --claim-token ...');
   printLine('Agent Runtime (Run):');
+  printLine('  route-context-matrix');
   printLine('  registration-lifecycle-plan');
   printLine('  registered-agent-operations-plan');
   printLine('  mcp-server');

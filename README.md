@@ -16,7 +16,7 @@ The package is agent-first but login-capable: external users may need bounded ac
 
 The current package version is `1.0.0`.
 
-This is the customer-facing V1 entrypoint for the formal `1.0.0` release. The Stage 3 release gate is now ready for the actual public proof target in this repo: the shipped SDK, CLI, MCP handoff, account/session prerequisite support, governed onboarding path, and frozen downstream read surface are aligned and release-verifiable.
+This is the customer-facing `1.0.0` package state and release-ready public surface. The Stage 3 release gate is now ready for the actual public proof target in this repo: the shipped SDK, CLI, MCP handoff, account/session prerequisite support, governed onboarding path, and frozen downstream read surface are aligned and release-verifiable. npm publication is still a separate final human step.
 
 ## Installation
 
@@ -24,7 +24,7 @@ Requirements:
 
 - Node.js `>=20`
 
-Install from npm:
+Published install path:
 
 ```bash
 npm install @bidvia/client
@@ -54,13 +54,27 @@ Those validator commands must stay green together before any human release packe
 
 ## Quick start
 
-If you are evaluating the package as an external user, use the default public API path first. The CLI and SDK resolve against `https://api.bidvia.cn` unless you intentionally choose a different deployment entrypoint. Then follow the CLI onboarding path below in order: establish account/session context, continue through Learn, complete public provisional create -> query -> claim, and only then move into governed run.
+If you are evaluating the package as an external user, use the default public API path first. The CLI and SDK resolve against `https://api.bidvia.cn` unless you intentionally choose a different deployment entrypoint. Then follow the CLI onboarding path below in order: start with Learn, use bounded account/session prerequisite support when needed, complete public provisional create -> query -> claim, and only then move into governed run.
 
 ## CLI onboarding path
 
 The CLI onboarding path is customer-facing, but it stays honest about prerequisites.
 
-### 1. Establish login and session context first
+### 1. Start with the visible Learn stage
+
+```bash
+bidvia onboard
+bidvia whoami
+bidvia context show
+bidvia doctor
+```
+
+- `onboard` is the visible first-run command
+- `whoami` summarizes local identity without claiming platform login
+- `context show` explains which local context fields are present
+- `doctor` is a governed-run diagnostic once enough context exists
+
+### 2. Use bounded account/session prerequisite support when needed
 
 When account or session context is still missing, start with the bounded prerequisite support:
 
@@ -75,23 +89,9 @@ bidvia account-me
 Session support is available when needed:
 
 ```bash
-bidvia session-refresh --input ...
-bidvia session-revoke --input ...
+bidvia session-refresh
+bidvia session-revoke
 ```
-
-### 2. Continue the agent-first Learn stage
-
-```bash
-bidvia onboard
-bidvia whoami
-bidvia context show
-bidvia doctor
-```
-
-- `onboard` is the visible first-run command
-- `whoami` summarizes local identity without claiming platform login
-- `context show` explains which local context fields are present
-- `doctor` is a governed-run diagnostic once enough context exists
 
 ### 3. Run the public provisional onboarding chain
 

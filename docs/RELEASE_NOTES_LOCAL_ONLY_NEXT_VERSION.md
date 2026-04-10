@@ -103,9 +103,9 @@ This release does not claim any of the following:
 
 ## Verification status
 
-This formal `1.0.0` release is documented as a completed shipped package surface with aligned CLI, SDK, MCP, docs, examples, and validation framing. The package remains client-owned where it ships local operator value, and Core-deferred where frozen external truth is still required. The adopted frozen read families are documented as shipped SDK/CLI visibility, not as hosted runtime, platform-auth ownership, or client-owned authority.
+This formal `1.0.0` package state is documented as a completed shipped package surface with aligned CLI, SDK, MCP, docs, examples, and validation framing. The package remains client-owned where it ships local operator value, and Core-deferred where frozen external truth is still required. The adopted frozen read families are documented as shipped SDK/CLI visibility, not as hosted runtime, platform-auth ownership, or client-owned authority. npm publication remains a separate final human step after this release-ready package state.
 
-Stage 3 release gate is now ready in the current repo state because the actual V1 proof target is complete for the shipped public surface. The full `1.0.0` release still requires the validator suite below to stay green, and that validator evidence remains part of the formal release packet:
+Stage 3 release gate is now ready in the current repo state because the actual V1 proof target is complete for the shipped public surface. The final `1.0.0` publication still requires the validator suite below to stay green, and that validator evidence remains part of the formal release packet:
 
 ```bash
 npm test
