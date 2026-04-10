@@ -152,6 +152,53 @@ const widenedExecutionDispatchersByCapabilityKey: Record<string, BidviaGenericEx
       requireObjectInput(input, 'createProvisionalAgent input is required for MCP execution') as never,
     );
   },
+  createNotificationDelivery(client, input) {
+    return client.createNotificationDelivery(
+      requireObjectInput(input, 'createNotificationDelivery input is required for notification delivery execution') as never,
+    );
+  },
+  acknowledgeNotification(client, input) {
+    return client.acknowledgeNotification(
+      requireExecutionStringInput(
+        input,
+        ['notificationId'],
+        'notificationId is required for governed notification acknowledgement execution',
+      ),
+      buildExecutionPayload(
+        input,
+        ['notificationId'],
+        'notificationId is required for governed notification acknowledgement execution',
+      ) as never,
+    );
+  },
+  retryNotification(client, input) {
+    return client.retryNotification(
+      requireExecutionStringInput(
+        input,
+        ['notificationId'],
+        'notificationId is required for governed notification retry execution',
+      ),
+      buildExecutionPayload(
+        input,
+        ['notificationId'],
+        'notificationId is required for governed notification retry execution',
+      ) as never,
+    );
+  },
+  expireNotification(client, input) {
+    return client.expireNotification(
+      requireExecutionStringInput(
+        input,
+        ['notificationId'],
+        'notificationId is required for governed notification expiration execution',
+      ),
+      buildExecutionPayload(
+        input,
+        ['notificationId'],
+        'notificationId is required for governed notification expiration execution',
+      ) as never,
+    );
+  },
   claimProvisionalAgent(client, input) {
     return client.claimProvisionalAgent(
       requireObjectInput(input, 'claimProvisionalAgent input is required for MCP execution') as never,

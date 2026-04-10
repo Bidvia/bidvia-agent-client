@@ -73,6 +73,10 @@ const expectedBidviaMcpToolNames = [
   'task-dispatches-read',
   'task-dispatch-read',
   'notification-read',
+  'create-notification-delivery-execution',
+  'acknowledge-notification-execution',
+  'retry-notification-execution',
+  'expire-notification-execution',
   'create-provisional-agent-execution',
   'claim-provisional-agent-execution',
   'download-sync-execution',
@@ -867,7 +871,44 @@ test('dispatchMcpToolCall exposes widened Task 1 governance read descriptors in 
   assert.equal((getMcpToolDescriptor('task-dispatch-read') as { taskPlaneCapabilityMode?: string }).taskPlaneCapabilityMode, 'visibility-only');
   assert.equal((getMcpToolDescriptor('notification-read') as { eventNotificationPlaneCapabilityMode?: string }).eventNotificationPlaneCapabilityMode, 'visibility-only');
   assert.equal((getMcpToolDescriptor('suspend-task-dispatch-execution') as { taskPlaneCapabilityMode?: string }).taskPlaneCapabilityMode, 'compatibility-only');
-  assert.equal(getMcpToolDescriptor('acknowledge-notification-execution'), undefined);
+  assert.deepEqual(getMcpToolDescriptor('create-lease-execution') as { runnable?: boolean; blockedBy?: string | null; taskPlaneCapabilityMode?: string }, {
+    toolName: 'create-lease-execution',
+    description: 'Executes the governed lease creation through the shipped SDK helper.',
+    inputSchemaRef: {
+      schemaKey: 'BidviaLeaseExecutionInput',
+    },
+    outputMode: 'execution-result',
+    helperRef: {
+      helperKey: 'create-lease-execution',
+      capabilityKey: 'createLease',
+    },
+    localCapabilityTier: 'L3-governed-commercial',
+    localCapabilityRiskTier: 'governed-commercial',
+    accessContextFamily: 'operator-company',
+    requiredContext: ['tenantId', 'principalId', 'companyId'],
+    runnable: true,
+    blockedBy: null,
+    taskPlaneCapabilityMode: 'packet-grounded-execution',
+  });
+  assert.deepEqual(getMcpToolDescriptor('acknowledge-notification-execution') as { runnable?: boolean; blockedBy?: string | null; eventNotificationPlaneCapabilityMode?: string }, {
+    toolName: 'acknowledge-notification-execution',
+    description: 'Executes the governed notification acknowledgement through the shipped SDK helper.',
+    inputSchemaRef: {
+      schemaKey: 'BidviaNotificationAcknowledgementExecutionInput',
+    },
+    outputMode: 'execution-result',
+    helperRef: {
+      helperKey: 'acknowledge-notification-execution',
+      capabilityKey: 'acknowledgeNotification',
+    },
+    localCapabilityTier: 'L3-governed-commercial',
+    localCapabilityRiskTier: 'governed-commercial',
+    accessContextFamily: 'operator-company',
+    requiredContext: ['tenantId', 'principalId', 'companyId'],
+    runnable: true,
+    blockedBy: null,
+    eventNotificationPlaneCapabilityMode: 'packet-grounded-execution',
+  });
 });
 
 test('dispatchMcpToolCall routes notification visibility reads through the shipped SDK helper only', async () => {
@@ -898,6 +939,55 @@ test('dispatchMcpToolCall routes notification visibility reads through the shipp
   assert.deepEqual(result.result, {
     truthFetchResult: {
       notificationId: 'notification-1',
+    },
+  });
+});
+
+test('dispatchMcpToolCall routes packet-grounded notification execution tools through shipped SDK helpers', async () => {
+  const calls: Array<{ helper: string; args: unknown[] }> = [];
+  const client = {
+    options: {
+      context: {
+        tenantId: 'tenant-runtime',
+        principalId: 'principal-runtime',
+        companyId: 'company-runtime',
+      },
+    },
+    async acknowledgeNotification(notificationId: string, input: Record<string, unknown>) {
+      calls.push({ helper: 'acknowledgeNotification', args: [notificationId, input] });
+      return {
+        notificationId,
+        ...input,
+      };
+    },
+  };
+
+  const result = await dispatchMcpToolCallWithExecution(
+    {
+      toolName: 'acknowledge-notification-execution',
+      arguments: {
+        notificationId: 'notification-1',
+        acknowledgedBy: 'operator-1',
+        now: '2026-04-10T00:01:00.000Z',
+      },
+    },
+    {
+      createExecutionClient: () => client as never,
+    },
+  );
+
+  assert.deepEqual(calls, [{
+    helper: 'acknowledgeNotification',
+    args: ['notification-1', {
+      acknowledgedBy: 'operator-1',
+      now: '2026-04-10T00:01:00.000Z',
+    }],
+  }]);
+  assert.deepEqual(result.result, {
+    executionResult: {
+      notificationId: 'notification-1',
+      acknowledgedBy: 'operator-1',
+      now: '2026-04-10T00:01:00.000Z',
     },
   });
 });
