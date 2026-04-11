@@ -400,8 +400,17 @@ test('runCli doctor captures readiness live-check transport failures inside stru
       code: 'active_role_binding_required',
     },
   });
-  assert.equal(snapshot.onboarding.currentStage.key, 'ready-for-registration-lifecycle');
-  assert.deepEqual(snapshot.onboarding.nextCommands.map((entry) => entry.command), ['bidvia registration-lifecycle-plan']);
+  assert.equal(snapshot.onboarding.currentStage.key, 'active-role-binding-required');
+  assert.equal(snapshot.onboarding.currentStage.blocked, true);
+  assert.equal(snapshot.onboarding.currentStage.blockedOn, 'active-role-binding');
+  assert.deepEqual(snapshot.onboarding.nextCommands.map((entry) => entry.command), [
+    'bidvia select-org --input ...',
+    'bidvia account-me',
+    'bidvia agent-self-service --registration-id ... --input ...',
+    'bidvia context show',
+    'bidvia route-context-matrix',
+    'bidvia registration-lifecycle-plan',
+  ]);
   assertFirstSuccessNextStep(snapshot);
 });
 

@@ -398,7 +398,6 @@ test('runCli claim-provisional-agent persists nested registration identity field
   assert.deepEqual(JSON.parse(readFileSync(statePath, 'utf8')), {
     tenantId: 'tenant-nested',
     principalId: 'principal-nested',
-    companyId: 'company-nested',
     registrationId: 'areg-nested',
     lastCompletedStep: 'claim-provisional-agent',
     createdAt: '2026-04-02T12:05:15.000Z',
@@ -530,6 +529,56 @@ test('runCli writes provisional create/query progress into local onboarding stat
   } finally {
     restoreStatePath();
   }
+});
+
+test('runCli agent-self-service preserves existing claimed registration context when the response omits it', async () => {
+  const tempDirectory = mkdtempSync(path.join(tmpdir(), 'bidvia-cli-agent-self-service-state-'));
+  const statePath = path.join(tempDirectory, 'onboarding-state.json');
+
+  writeFileSync(statePath, JSON.stringify({
+    tenantId: 'tenant-existing',
+    principalId: 'principal-existing',
+    companyId: 'company-existing',
+    registrationId: 'areg-existing',
+    sessionId: 'sess-existing',
+    lastCompletedStep: 'claim-provisional-agent',
+    createdAt: '2026-04-11T17:00:00Z',
+    updatedAt: '2026-04-11T17:01:00Z',
+  }, null, 2), 'utf8');
+
+  const exitCode = await runCli([
+    'agent-self-service',
+    '--registration-id',
+    'areg-existing',
+    '--input',
+    '{"now":"2026-04-11T17:26:00Z","taskDispatchAcceptance":{"acceptsTaskDispatches":true}}',
+  ], {
+    createClient: () => ({
+      patchAgentSelfService: async () => ({
+        taskDispatchAcceptance: {
+          accepts_task_dispatches: true,
+        },
+      }),
+    }) as never,
+    resolveProcessEnv: () => ({
+      BIDVIA_STATE_PATH: statePath,
+    }),
+    now: () => '2026-04-11T17:26:00Z',
+    printJson: () => {},
+    printLine: () => {},
+  });
+
+  assert.equal(exitCode, 0);
+  assert.deepEqual(JSON.parse(readFileSync(statePath, 'utf8')), {
+    tenantId: 'tenant-existing',
+    principalId: 'principal-existing',
+    companyId: 'company-existing',
+    registrationId: 'areg-existing',
+    sessionId: 'sess-existing',
+    lastCompletedStep: 'agent-self-service',
+    createdAt: '2026-04-11T17:00:00Z',
+    updatedAt: '2026-04-11T17:26:00Z',
+  });
 });
 
 test('runCli onboarding action writes honor injected BIDVIA_STATE_PATH instead of process env drift', async () => {

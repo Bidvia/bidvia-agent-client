@@ -51,6 +51,7 @@ test('runCli help lists truth-fetch read-only commands under the advanced govern
     '  sign-up-enterprise --input ...',
     '  account-me',
     '  select-org --input ...',
+    '  agent-self-service --registration-id ... --input ...',
     '  session-refresh',
     '  session-revoke',
     'Advanced Integration (OpenClaw / Companion Bundle):',
@@ -121,9 +122,6 @@ test('runCli help lists truth-fetch read-only commands under the advanced govern
     '  evidence-asset --evidence-asset-id ...',
     '  attachment-bindings',
     '  attachment-binding --attachment-binding-id ...',
-    '  file-resources',
-    '  file-resource --file-resource-id ...',
-    '  target-attachment-bindings --target-ref ...',
   ];
   assert.deepEqual(lines.slice(0, expectedVisibilityLines.length), expectedVisibilityLines);
   assert.equal(lines[expectedVisibilityLines.length], '  industry-universe-plan');

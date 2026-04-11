@@ -117,6 +117,7 @@ export interface BidviaQueryProvisionalAgentInput {
 export interface BidviaPersonalAccountSignUpInput {
   email: string;
   password: string;
+  invitationToken: string;
   displayName: string;
   now: string;
 }
@@ -124,6 +125,7 @@ export interface BidviaPersonalAccountSignUpInput {
 export interface BidviaEnterpriseAccountSignUpInput {
   email: string;
   password: string;
+  invitationToken: string;
   companyName: string;
   now: string;
 }
@@ -174,6 +176,20 @@ export interface BidviaHaisiWmsInboundInput {
 
 export interface BidviaSelectOrgInput {
   orgId: string;
+}
+
+export interface BidviaAgentSelfServicePatchInput {
+  selfDescription?: string;
+  capabilityProfile?: Record<string, unknown>;
+  taskDispatchAcceptance?: {
+    acceptsTaskDispatches?: boolean;
+    acceptedTaskDispatchScopes?: string[];
+  };
+  participationState?: {
+    state: string;
+    reason?: string;
+  };
+  now: string;
 }
 
 export interface BidviaNotificationIdentifierInput {
@@ -578,7 +594,7 @@ export interface BidviaExportOpportunityPackageInput {
 
 export type BidviaScenarioContextKey = keyof BidviaClientContext;
 
-export const bidviaRouteCapabilityHttpMethods = ['GET', 'POST'] as const;
+export const bidviaRouteCapabilityHttpMethods = ['GET', 'POST', 'PATCH'] as const;
 
 export type BidviaRouteCapabilityHttpMethod = (typeof bidviaRouteCapabilityHttpMethods)[number];
 
@@ -1832,7 +1848,8 @@ export interface BidviaIdentitySessionPlaneOnboardingSupportStep {
     | 'refreshSession'
     | 'revokeSession'
     | 'getAccountMe'
-    | 'selectOrg';
+    | 'selectOrg'
+    | 'patchAgentSelfService';
   routePathTemplate: string;
   requiredContext: BidviaScenarioContextKey[];
   rationale: string;

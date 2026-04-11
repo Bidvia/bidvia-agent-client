@@ -133,6 +133,11 @@ test('BidviaClient semantic, pricing, and asset-binding reads use the frozen tru
     baseUrl: 'http://127.0.0.1:8787',
     context: {
       tenantId: 'tenant-a',
+      principalId: 'operator-system',
+      principalType: 'system',
+      authorizedRole: 'operator_admin',
+      companyId: 'company-a',
+      adminSessionId: 'admin-session-1',
     },
     fetchImpl: fetchStub,
   });
@@ -163,18 +168,18 @@ test('BidviaClient semantic, pricing, and asset-binding reads use the frozen tru
   assert.deepEqual(attachmentBindings, responseBody);
   assert.deepEqual(attachmentBinding, responseBody);
   assert.equal(calls.length, 12);
-  assert.equal(String(calls[0]?.input), 'http://127.0.0.1:8787/runtime/canonical-semantic-concepts');
+  assert.equal(String(calls[0]?.input), 'http://127.0.0.1:8787/runtime/canonical-semantic-concepts?tenant_id=tenant-a');
   assert.equal(String(calls[1]?.input), 'http://127.0.0.1:8787/runtime/canonical-semantic-concepts/csc-1');
-  assert.equal(String(calls[2]?.input), 'http://127.0.0.1:8787/runtime/pricing-bases');
+  assert.equal(String(calls[2]?.input), 'http://127.0.0.1:8787/runtime/pricing-bases?tenant_id=tenant-a');
   assert.equal(String(calls[3]?.input), 'http://127.0.0.1:8787/runtime/pricing-bases/pb-1');
-  assert.equal(String(calls[4]?.input), 'http://127.0.0.1:8787/runtime/document-artifacts');
-  assert.equal(String(calls[5]?.input), 'http://127.0.0.1:8787/runtime/document-artifacts/da-1');
-  assert.equal(String(calls[6]?.input), 'http://127.0.0.1:8787/runtime/media-assets');
-  assert.equal(String(calls[7]?.input), 'http://127.0.0.1:8787/runtime/media-assets/ma-1');
-  assert.equal(String(calls[8]?.input), 'http://127.0.0.1:8787/runtime/evidence-assets');
-  assert.equal(String(calls[9]?.input), 'http://127.0.0.1:8787/runtime/evidence-assets/ea-1');
-  assert.equal(String(calls[10]?.input), 'http://127.0.0.1:8787/runtime/attachment-bindings');
-  assert.equal(String(calls[11]?.input), 'http://127.0.0.1:8787/runtime/attachment-bindings/ab-1');
+  assert.equal(String(calls[4]?.input), 'http://127.0.0.1:8787/runtime/document-artifacts?tenant_id=tenant-a');
+  assert.equal(String(calls[5]?.input), 'http://127.0.0.1:8787/runtime/document-artifacts/da-1?tenant_id=tenant-a');
+  assert.equal(String(calls[6]?.input), 'http://127.0.0.1:8787/runtime/media-assets?tenant_id=tenant-a');
+  assert.equal(String(calls[7]?.input), 'http://127.0.0.1:8787/runtime/media-assets/ma-1?tenant_id=tenant-a');
+  assert.equal(String(calls[8]?.input), 'http://127.0.0.1:8787/runtime/evidence-assets?tenant_id=tenant-a');
+  assert.equal(String(calls[9]?.input), 'http://127.0.0.1:8787/runtime/evidence-assets/ea-1?tenant_id=tenant-a');
+  assert.equal(String(calls[10]?.input), 'http://127.0.0.1:8787/runtime/attachment-bindings?tenant_id=tenant-a');
+  assert.equal(String(calls[11]?.input), 'http://127.0.0.1:8787/runtime/attachment-bindings/ab-1?tenant_id=tenant-a');
   for (const call of calls) {
     assert.equal(call.init?.method, 'GET');
   }

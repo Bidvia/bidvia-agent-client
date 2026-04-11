@@ -63,6 +63,7 @@ test('BidviaClient uses the frozen provisional->query->claim onboarding contract
       'revokeSession',
       'getAccountMe',
       'selectOrg',
+      'patchAgentSelfService',
     ],
   );
   const supportStepsByHelperKey = new Map(
@@ -93,12 +94,14 @@ test('BidviaClient includes the bounded V1 account and session prerequisite help
   await client.signUpPersonalAccount({
     email: 'person@example.com',
     password: 'secret-1',
+    invitationToken: 'invite-token-123',
     displayName: 'Ada Lovelace',
     now: '2026-04-10T10:00:00Z',
   });
   await client.signUpEnterpriseAccount({
     email: 'ops@example.com',
     password: 'secret-2',
+    invitationToken: 'invite-token-456',
     companyName: 'Bidvia Labs',
     now: '2026-04-10T10:01:00Z',
   });
@@ -123,12 +126,14 @@ test('BidviaClient includes the bounded V1 account and session prerequisite help
   assert.deepEqual(JSON.parse(String(calls[0]?.init?.body)), {
     email: 'person@example.com',
     password: 'secret-1',
+    invitation_token: 'invite-token-123',
     display_name: 'Ada Lovelace',
     now: '2026-04-10T10:00:00Z',
   });
   assert.deepEqual(JSON.parse(String(calls[1]?.init?.body)), {
     email: 'ops@example.com',
     password: 'secret-2',
+    invitation_token: 'invite-token-456',
     company_name: 'Bidvia Labs',
     now: '2026-04-10T10:01:00Z',
   });

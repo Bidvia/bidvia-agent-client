@@ -68,6 +68,27 @@ test('buildOnboardingReadiness keeps official onboarding focused on public provi
           contextSemantic: 'principal-governed-read',
           requiredContext: ['tenantId', 'principalId'],
         },
+        {
+          helperKey: 'getAccountMe',
+          routePathTemplate: '/runtime/account/me',
+          accessContextFamily: 'session',
+          contextSemantic: 'session',
+          requiredContext: ['tenantId', 'sessionId'],
+        },
+        {
+          helperKey: 'selectOrg',
+          routePathTemplate: '/runtime/account/select-org',
+          accessContextFamily: 'session',
+          contextSemantic: 'session',
+          requiredContext: ['tenantId', 'sessionId'],
+        },
+        {
+          helperKey: 'patchAgentSelfService',
+          routePathTemplate: '/runtime/account/agents/:agentId/self-service',
+          accessContextFamily: 'session',
+          contextSemantic: 'session',
+          requiredContext: ['tenantId', 'sessionId'],
+        },
       ],
     },
   });

@@ -327,10 +327,7 @@ type BidviaCliTruthFetchCommand =
   | 'evidence-assets'
   | 'evidence-asset'
   | 'attachment-bindings'
-  | 'attachment-binding'
-  | 'file-resources'
-  | 'file-resource'
-  | 'target-attachment-bindings';
+  | 'attachment-binding';
 
 type BidviaCliTruthFetchCommandDefinition = {
   run: (client: BidviaClient, parsedArgs: BidviaCliParsedArgs) => Promise<unknown>;
@@ -347,6 +344,7 @@ type BidviaCliIdentitySessionCommand =
   | 'sign-in'
   | 'account-me'
   | 'select-org'
+  | 'agent-self-service'
   | 'session-refresh'
   | 'session-revoke';
 
@@ -373,8 +371,9 @@ type BidviaCliSupportedValueFlag =
   | '--media-asset-id'
   | '--evidence-asset-id'
   | '--attachment-binding-id'
-  | '--file-resource-id'
   | '--target-ref'
+  | '--agent-id'
+  | '--registration-id'
   | '--output';
 
 const bidviaCliSupportedValueFlags = new Set<BidviaCliSupportedValueFlag>([
@@ -400,8 +399,8 @@ const bidviaCliSupportedValueFlags = new Set<BidviaCliSupportedValueFlag>([
   '--media-asset-id',
   '--evidence-asset-id',
   '--attachment-binding-id',
-  '--file-resource-id',
   '--target-ref',
+  '--agent-id',
   '--output',
 ]);
 
@@ -451,9 +450,6 @@ const truthFetchVisibilityHelpLines = [
   '  evidence-asset --evidence-asset-id ...',
   '  attachment-bindings',
   '  attachment-binding --attachment-binding-id ...',
-  '  file-resources',
-  '  file-resource --file-resource-id ...',
-  '  target-attachment-bindings --target-ref ...',
 ] as const;
 
 const truthFetchSupportedFlagsByCommand = {
@@ -486,8 +482,6 @@ const truthFetchSupportedFlagsByCommand = {
   'media-asset': ['--media-asset-id'],
   'evidence-asset': ['--evidence-asset-id'],
   'attachment-binding': ['--attachment-binding-id'],
-  'file-resource': ['--file-resource-id'],
-  'target-attachment-bindings': ['--target-ref'],
 } as const satisfies Partial<Record<string, readonly BidviaCliSupportedValueFlag[]>>;
 
 const truthFetchRequiredFlagsByCommand = {
@@ -519,8 +513,6 @@ const truthFetchRequiredFlagsByCommand = {
   'media-asset': ['--media-asset-id'],
   'evidence-asset': ['--evidence-asset-id'],
   'attachment-binding': ['--attachment-binding-id'],
-  'file-resource': ['--file-resource-id'],
-  'target-attachment-bindings': ['--target-ref'],
 } as const satisfies Partial<Record<string, readonly BidviaCliSupportedValueFlag[]>>;
 
 const truthFetchCollectionCommands = new Set([
@@ -545,7 +537,6 @@ const truthFetchCollectionCommands = new Set([
   'media-assets',
   'evidence-assets',
   'attachment-bindings',
-  'file-resources',
 ]);
 
 const onboardingActionSupportedFlagsByCommand = {
@@ -560,6 +551,7 @@ const identitySessionSupportedFlagsByCommand = {
   'sign-in': ['--input'],
   'account-me': [],
   'select-org': ['--input'],
+  'agent-self-service': ['--registration-id', '--agent-id', '--input'],
   'session-refresh': [],
   'session-revoke': [],
 } as const satisfies Record<BidviaCliIdentitySessionCommand, readonly BidviaCliSupportedValueFlag[]>;
@@ -579,6 +571,7 @@ const identitySessionRequiredContextByCommand = {
   'sign-in': [],
   'account-me': ['tenantId', 'sessionId'],
   'select-org': ['tenantId', 'sessionId'],
+  'agent-self-service': ['tenantId', 'sessionId'],
   'session-refresh': ['tenantId', 'sessionId'],
   'session-revoke': ['tenantId', 'sessionId'],
 } as const satisfies Record<
@@ -986,7 +979,75 @@ function buildFirstAccessOnboardingSnapshot(
 
 function buildDoctorOnboardingSnapshot(
   effectiveContext: ReturnType<typeof buildEffectiveContextSnapshot>,
+  readinessLiveCheck: {
+    status: string;
+    error?: {
+      responseBody?: unknown;
+    };
+  },
 ) {
+  const readinessErrorCode = (() => {
+    const responseBody = readinessLiveCheck.error?.responseBody;
+    if (!responseBody || typeof responseBody !== 'object') {
+      return undefined;
+    }
+
+    const body = responseBody as Record<string, unknown>;
+    if (typeof body.code === 'string') {
+      return body.code;
+    }
+
+    if (body.error && typeof body.error === 'object' && body.error !== null) {
+      const nestedError = body.error as Record<string, unknown>;
+      if (typeof nestedError.code === 'string') {
+        return nestedError.code;
+      }
+    }
+
+    return undefined;
+  })();
+
+  if (readinessLiveCheck.status === 'failed' && readinessErrorCode === 'active_role_binding_required') {
+    return {
+      journeyKey: 'public-first-onboarding',
+      journeyLabel: 'Public provisional onboarding',
+      currentStage: {
+        key: 'active-role-binding-required',
+        label: 'Public provisional onboarding is complete locally, but governed run is still blocked until the requested tenant has an active role binding for the current principal.',
+        blocked: true,
+        blockedOn: 'active-role-binding',
+        lastCompletedStep: effectiveContext.lastCompletedStep.value,
+      },
+      nextCommands: [
+        buildStaticFirstAccessCommandHint(
+          'bidvia select-org --input ...',
+          'If account/me shows multi_org or active_org_resolution_required, select the active org context before governed-run authorization can continue.',
+        ),
+        buildStaticFirstAccessCommandHint(
+          'bidvia account-me',
+          'Confirm the current account and active org context before asking Core or Site operators to bind the acting principal to the requested tenant.',
+        ),
+        buildStaticFirstAccessCommandHint(
+          'bidvia agent-self-service --registration-id ... --input ...',
+          'Use bounded self-service to configure task dispatch acceptance, accepted scopes, and claimed-agent metadata before expecting task dispatch or governed runtime access to widen.',
+        ),
+        buildStaticFirstAccessCommandHint(
+          'bidvia context show',
+          'Confirm the claimed local identity fields that the runtime commands are about to use.',
+        ),
+        buildStaticFirstAccessCommandHint(
+          'bidvia route-context-matrix',
+          'Review which governed-read and governed-run routes stay blocked until role binding is active for this tenant.',
+        ),
+        buildStaticFirstAccessCommandHint(
+          'bidvia registration-lifecycle-plan',
+          'Use the lifecycle plan once role binding is active so the first governed run follows the shipped post-claim path cleanly.',
+        ),
+      ],
+      firstSuccessNextStep: buildIdentitySessionPlaneView().canonicalOnboarding.firstSuccessNextStep,
+    };
+  }
+
   return buildFirstAccessOnboardingSnapshot(effectiveContext, 'doctor');
 }
 
@@ -1164,7 +1225,7 @@ async function buildDoctorSnapshot(
       guidance: 'Reachability only confirms that the configured endpoint answered. It does not prove login, governed auth, or route readiness.',
     },
     readinessLiveCheck,
-    onboarding: buildDoctorOnboardingSnapshot(effectiveContext),
+    onboarding: buildDoctorOnboardingSnapshot(effectiveContext, readinessLiveCheck),
   };
 }
 
@@ -1316,6 +1377,7 @@ const identitySessionCommandDefinitions = {
       return client.signUpPersonalAccount({
         email: readRequiredStringInput('sign-up-personal', input, 'email'),
         password: readRequiredStringInput('sign-up-personal', input, 'password'),
+        invitationToken: readRequiredStringInput('sign-up-personal', input, 'invitationToken'),
         displayName: readRequiredStringInput('sign-up-personal', input, 'displayName'),
         now: readRequiredStringInput('sign-up-personal', input, 'now'),
       });
@@ -1328,6 +1390,7 @@ const identitySessionCommandDefinitions = {
       return client.signUpEnterpriseAccount({
         email: readRequiredStringInput('sign-up-enterprise', input, 'email'),
         password: readRequiredStringInput('sign-up-enterprise', input, 'password'),
+        invitationToken: readRequiredStringInput('sign-up-enterprise', input, 'invitationToken'),
         companyName: readRequiredStringInput('sign-up-enterprise', input, 'companyName'),
         now: readRequiredStringInput('sign-up-enterprise', input, 'now'),
       });
@@ -1354,6 +1417,27 @@ const identitySessionCommandDefinitions = {
       const input = parseCliJsonInput('select-org', parsedArgs.input);
       return client.selectOrg({
         orgId: readRequiredStringInput('select-org', input, 'orgId'),
+      });
+    },
+  },
+  'agent-self-service': {
+    helperKey: 'patchAgentSelfService',
+    run: (client, parsedArgs) => {
+      const input = parseCliJsonInput('agent-self-service', parsedArgs.input);
+      const registrationId = parsedArgs.flagValues['--registration-id'] ?? parsedArgs.flagValues['--agent-id'];
+      if (!registrationId) {
+        throw new Error('agent-self-service requires --registration-id or --agent-id');
+      }
+      return client.patchAgentSelfService(registrationId, {
+        now: readRequiredStringInput('agent-self-service', input, 'now'),
+        ...(input.selfDescription === undefined ? {} : { selfDescription: input.selfDescription as string }),
+        ...(input.capabilityProfile === undefined ? {} : { capabilityProfile: input.capabilityProfile as Record<string, unknown> }),
+        ...(input.taskDispatchAcceptance === undefined
+          ? {}
+          : { taskDispatchAcceptance: input.taskDispatchAcceptance as { acceptsTaskDispatches?: boolean; acceptedTaskDispatchScopes?: string[] } }),
+        ...(input.participationState === undefined
+          ? {}
+          : { participationState: input.participationState as { state: string; reason?: string } }),
       });
     },
   },
@@ -1422,16 +1506,27 @@ function buildPersistedIdentitySessionState(
   executionContext: ReturnType<typeof buildIdentitySessionExecutionContext>,
   now: string,
 ) {
+  const sessionRecord = (result && typeof result === 'object' && 'session' in (result as Record<string, unknown>))
+    ? (result as Record<string, unknown>).session as Record<string, unknown> | undefined
+    : undefined;
+  const preserveExistingClaimedContext = command === 'agent-self-service';
   const tenantId = readOnboardingResultString(result, 'tenantId', 'tenant_id')
+    ?? readOnboardingResultString(sessionRecord, 'tenantId', 'tenant_id')
     ?? executionContext.tenantId
     ?? existingState?.tenantId;
   const principalId = readOnboardingResultString(result, 'principalId', 'principal_id')
-    ?? existingState?.principalId;
+    ?? readOnboardingRegistrationResultString(result, 'principalId', ['principal_id'])
+    ?? (preserveExistingClaimedContext ? existingState?.principalId : undefined);
   const companyId = readOnboardingResultString(result, 'companyId', 'company_id')
-    ?? existingState?.companyId;
+    ?? readOnboardingRegistrationResultString(result, 'companyId', ['company_id'])
+    ?? (preserveExistingClaimedContext ? existingState?.companyId : undefined);
+  const registrationId = readOnboardingResultString(result, 'registrationId', 'registration_id')
+    ?? readOnboardingRegistrationResultString(result, 'registrationId', ['agent_registration_id', 'registration_id'])
+    ?? (preserveExistingClaimedContext ? existingState?.registrationId : undefined);
   const sessionId = command === 'session-revoke'
     ? undefined
     : readOnboardingResultString(result, 'sessionId', 'session_id')
+      ?? readOnboardingResultString(sessionRecord, 'sessionId', 'session_id')
       ?? executionContext.sessionId
       ?? existingState?.sessionId;
 
@@ -1439,6 +1534,7 @@ function buildPersistedIdentitySessionState(
     ...(tenantId === undefined ? {} : { tenantId }),
     ...(principalId === undefined ? {} : { principalId }),
     ...(companyId === undefined ? {} : { companyId }),
+    ...(registrationId === undefined ? {} : { registrationId }),
     ...(sessionId === undefined ? {} : { sessionId }),
     lastCompletedStep: command,
     createdAt: existingState?.createdAt ?? now,
@@ -1470,7 +1566,7 @@ function buildPersistedOnboardingActionState(
     ?? readOnboardingRegistrationResultString(result, 'principalId', ['principal_id'])
     ?? (effectiveContext.principalId.source === 'env' ? effectiveContext.principalId.value ?? undefined : undefined);
   const claimedCompanyId = readOnboardingResultString(result, 'companyId', 'company_id')
-    ?? readOnboardingRegistrationResultString(result, 'companyId', ['company_id', 'tenant_id'])
+    ?? readOnboardingRegistrationResultString(result, 'companyId', ['company_id'])
     ?? (effectiveContext.companyId.source === 'env' ? effectiveContext.companyId.value ?? undefined : undefined);
   const claimedRegistrationId = readOnboardingResultString(result, 'registrationId', 'registration_id')
     ?? readOnboardingRegistrationResultString(result, 'registrationId', ['agent_registration_id', 'registration_id'])
@@ -1660,15 +1756,6 @@ const truthFetchCommandDefinitions: Record<BidviaCliTruthFetchCommand, BidviaCli
   },
   'attachment-binding': {
     run: (client, parsedArgs) => client.getAttachmentBinding(parsedArgs.flagValues['--attachment-binding-id']!),
-  },
-  'file-resources': {
-    run: (client) => client.listFileResources(),
-  },
-  'file-resource': {
-    run: (client, parsedArgs) => client.getFileResource(parsedArgs.flagValues['--file-resource-id']!),
-  },
-  'target-attachment-bindings': {
-    run: (client, parsedArgs) => client.listTargetAttachmentBindings(parsedArgs.flagValues['--target-ref']!),
   },
 };
 
@@ -2038,6 +2125,7 @@ function printHelp(printLine: (value: string) => void): void {
   printLine('  sign-up-enterprise --input ...');
   printLine('  account-me');
   printLine('  select-org --input ...');
+  printLine('  agent-self-service --registration-id ... --input ...');
   printLine('  session-refresh');
   printLine('  session-revoke');
   printLine('Advanced Integration (OpenClaw / Companion Bundle):');
@@ -2632,21 +2720,52 @@ export async function runCli(
 
   const truthFetchCommand = truthFetchCommandDefinitions[command as BidviaCliTruthFetchCommand];
   if (truthFetchCommand) {
-    const client = dependencies.createClient();
-    const result = await truthFetchCommand.run(client, parsedArgs);
-    dependencies.printJson(result);
-    return 0;
+    try {
+      const client = dependencies.createClient();
+      const result = await truthFetchCommand.run(client, parsedArgs);
+      dependencies.printJson(result);
+      return 0;
+    } catch (error) {
+      if (error instanceof Error) {
+        const match = error.message.match(/^(tenantId|principalId|sessionId|companyId|registrationId) is required/);
+        if (match) {
+          return printStructuredFailure(
+            dependencies,
+            buildStructuredFailure(
+              command,
+              'missing-context',
+              error.message,
+            ),
+          );
+        }
+      }
+
+      throw error;
+    }
   }
 
   const executionCommand = dependencies.executionCommands[command as BidviaRegisteredAgentExecutionCommand];
   if (executionCommand) {
+    const localStateResult = await readCliLocalOnboardingState(dependencies);
+    const localState = localStateResult.state;
+    const baseExecutionContext = dependencies.resolveExecutionContext();
+    const executionContext = {
+      tenantId: baseExecutionContext.tenantId ?? localState?.tenantId,
+      principalId: baseExecutionContext.principalId ?? localState?.principalId,
+      companyId: baseExecutionContext.companyId ?? localState?.companyId,
+      registrationId: baseExecutionContext.registrationId ?? localState?.registrationId,
+      sessionId: baseExecutionContext.sessionId ?? localState?.sessionId,
+      adminSessionId: baseExecutionContext.adminSessionId,
+      principalType: baseExecutionContext.principalType,
+      authorizedRole: baseExecutionContext.authorizedRole,
+    };
     const runtimeKeys = resolveExecutionCommandRuntimeKeys(
       command as BidviaRegisteredAgentExecutionCommand,
       executionCommand,
     );
     const preflight = buildCliExecutionPreflight(
       command,
-      dependencies.resolveExecutionContext(),
+      executionContext,
       parsedArgs.dryRun,
     );
 
@@ -2694,9 +2813,9 @@ export async function runCli(
       transport: 'cli',
       helperKey: runtimeKeys.helperKey,
       capabilityKey: runtimeKeys.capabilityKey,
-      identity: buildBidviaSurfaceRuntimeIdentityContext(dependencies.resolveExecutionContext()),
+      identity: buildBidviaSurfaceRuntimeIdentityContext(executionContext),
       input: executionCommand.buildInput(now),
-      createClient: () => dependencies.createClient(),
+      createClient: () => dependencies.createClient(env, executionContext),
       execute: async (client) => executionCommand.run(client, now),
       now: dependencies.now,
       accumulation: { env },

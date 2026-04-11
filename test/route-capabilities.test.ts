@@ -45,7 +45,7 @@ test('capability contract exposes bounded descriptive metadata labels', () => {
     'runtime-execution',
     'governed-commercial',
   ]);
-  assert.deepEqual(bidviaRouteCapabilityHttpMethods, ['GET', 'POST']);
+  assert.deepEqual(bidviaRouteCapabilityHttpMethods, ['GET', 'POST', 'PATCH']);
   assert.deepEqual(bidviaRouteCapabilityAccessContextFamilies, [
     'tenant',
     'registration',
@@ -537,9 +537,6 @@ test('capability registry exposes shipped widened T2 and T3 truth-fetch helpers 
     'getPricingQuotation',
     'listPricingExplanations',
     'getPricingExplanation',
-    'listFileResources',
-    'getFileResource',
-    'listTargetAttachmentBindings',
   ] as const;
 
   assert.equal(

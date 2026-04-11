@@ -123,6 +123,46 @@ test('runCli sign-in persists minimal local continuation state without writing t
   }
 });
 
+test('runCli sign-in persists tenant and session identifiers from nested session payloads', async () => {
+  const tempDirectory = mkdtempSync(path.join(tmpdir(), 'bidvia-cli-sign-in-state-nested-'));
+  const statePath = path.join(tempDirectory, 'onboarding-state.json');
+  const restoreStatePath = setEnvVar('BIDVIA_STATE_PATH', statePath);
+
+  try {
+    const exitCode = await runCli([
+      'sign-in',
+      '--input',
+      '{"email":"person@example.com","password":"secret-1","now":"2026-04-10T10:12:00Z"}',
+    ], {
+      createClient: () => ({
+        signIn: async () => ({
+          session: {
+            session_id: 'sess-nested-1',
+            tenant_id: 'tenant-nested-1',
+          },
+        }),
+      }) as never,
+      resolveProcessEnv: () => ({
+        BIDVIA_STATE_PATH: statePath,
+      }),
+      now: () => '2026-04-10T10:12:30Z',
+      printJson: () => {},
+      printLine: () => {},
+    });
+
+    assert.equal(exitCode, 0);
+    assert.deepEqual(JSON.parse(readFileSync(statePath, 'utf8')), {
+      tenantId: 'tenant-nested-1',
+      sessionId: 'sess-nested-1',
+      lastCompletedStep: 'sign-in',
+      createdAt: '2026-04-10T10:12:30Z',
+      updatedAt: '2026-04-10T10:12:30Z',
+    });
+  } finally {
+    restoreStatePath();
+  }
+});
+
 test('runCli routes the V1 sign-up and sign-in commands through the existing client helpers with --input json bodies', async () => {
   const printed: unknown[] = [];
   const calls: Array<{ command: string; input: unknown }> = [];
@@ -145,7 +185,7 @@ test('runCli routes the V1 sign-up and sign-in commands through the existing cli
   const signUpPersonalExitCode = await runCli([
     'sign-up-personal',
     '--input',
-    '{"email":"person@example.com","password":"secret-1","displayName":"Ada Lovelace","now":"2026-04-10T10:00:00Z"}',
+    '{"email":"person@example.com","password":"secret-1","invitationToken":"invite-token-123","displayName":"Ada Lovelace","now":"2026-04-10T10:00:00Z"}',
   ], {
     createClient,
     printJson: (value) => {
@@ -158,7 +198,7 @@ test('runCli routes the V1 sign-up and sign-in commands through the existing cli
   const signUpEnterpriseExitCode = await runCli([
     'sign-up-enterprise',
     '--input',
-    '{"email":"ops@example.com","password":"secret-2","companyName":"Bidvia Labs","now":"2026-04-10T10:01:00Z"}',
+    '{"email":"ops@example.com","password":"secret-2","invitationToken":"invite-token-456","companyName":"Bidvia Labs","now":"2026-04-10T10:01:00Z"}',
   ], {
     createClient,
     printJson: (value) => {
@@ -191,6 +231,7 @@ test('runCli routes the V1 sign-up and sign-in commands through the existing cli
       input: {
         email: 'person@example.com',
         password: 'secret-1',
+        invitationToken: 'invite-token-123',
         displayName: 'Ada Lovelace',
         now: '2026-04-10T10:00:00Z',
       },
@@ -200,6 +241,7 @@ test('runCli routes the V1 sign-up and sign-in commands through the existing cli
       input: {
         email: 'ops@example.com',
         password: 'secret-2',
+        invitationToken: 'invite-token-456',
         companyName: 'Bidvia Labs',
         now: '2026-04-10T10:01:00Z',
       },
@@ -326,6 +368,90 @@ test('runCli routes account/session continuity commands through the existing cli
     { ok: true, command: 'session-refresh' },
     { ok: true, command: 'session-revoke' },
   ]);
+});
+
+test('runCli routes bounded claimed-agent self-service patch commands through the existing client helper', async () => {
+  const printed: unknown[] = [];
+  const calls: Array<{ agentId: string; input: unknown }> = [];
+
+  const exitCode = await runCli([
+    'agent-self-service',
+    '--agent-id',
+    'agent-1',
+    '--input',
+    '{"now":"2026-04-11T17:20:30Z","selfDescription":"Visible agent profile","taskDispatchAcceptance":{"acceptsTaskDispatches":true,"acceptedTaskDispatchScopes":["COMMERCIAL_ACTION_REVIEW"]},"participationState":{"state":"AVAILABLE","reason":"ready-for-task-dispatch"}}',
+  ], {
+    createClient: () => ({
+      patchAgentSelfService: async (agentId: string, input: unknown) => {
+        calls.push({ agentId, input });
+        return { ok: true, command: 'agent-self-service' };
+      },
+    }) as never,
+    resolveProcessEnv: () => ({
+      BIDVIA_TENANT_ID: 'tenant-a',
+      BIDVIA_SESSION_ID: 'sess-1',
+    }),
+    printJson: (value) => {
+      printed.push(value);
+    },
+    printLine: () => {
+      throw new Error('agent-self-service should not print help lines');
+    },
+  });
+
+  assert.equal(exitCode, 0);
+  assert.deepEqual(calls, [{
+    agentId: 'agent-1',
+    input: {
+      now: '2026-04-11T17:20:30Z',
+      selfDescription: 'Visible agent profile',
+      taskDispatchAcceptance: {
+        acceptsTaskDispatches: true,
+        acceptedTaskDispatchScopes: ['COMMERCIAL_ACTION_REVIEW'],
+      },
+      participationState: {
+        state: 'AVAILABLE',
+        reason: 'ready-for-task-dispatch',
+      },
+    },
+  }]);
+  assert.deepEqual(printed, [{ ok: true, command: 'agent-self-service' }]);
+});
+
+test('runCli agent-self-service accepts --registration-id for claimed registration scope', async () => {
+  const calls: Array<{ agentId: string; input: unknown }> = [];
+
+  const exitCode = await runCli([
+    'agent-self-service',
+    '--registration-id',
+    'areg-1',
+    '--input',
+    '{"now":"2026-04-11T17:25:00Z","taskDispatchAcceptance":{"acceptsTaskDispatches":true}}',
+  ], {
+    createClient: () => ({
+      patchAgentSelfService: async (agentId: string, input: unknown) => {
+        calls.push({ agentId, input });
+        return { ok: true };
+      },
+    }) as never,
+    resolveProcessEnv: () => ({
+      BIDVIA_TENANT_ID: 'tenant-a',
+      BIDVIA_SESSION_ID: 'sess-1',
+    }),
+    printJson: () => {},
+    printLine: () => {},
+  });
+
+  assert.equal(exitCode, 0);
+  assert.deepEqual(calls, [{
+    agentId: 'areg-1',
+    input: {
+      now: '2026-04-11T17:25:00Z',
+      taskDispatchAcceptance: {
+        acceptsTaskDispatches: true,
+      },
+    },
+  }]);
 });
 
 test('runCli identity/session continuation commands can resume from locally persisted sign-in state when env is absent', async () => {

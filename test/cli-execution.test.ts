@@ -167,11 +167,11 @@ test('runCli default execution context does not silently inject tenant-a when he
     assert.equal(failure.error.command, 'heartbeat');
     assert.equal(
       failure.error.message,
-      'The heartbeat command requires local execution context before it can run remotely. Missing: tenantId, registrationId, principalId.',
+      'The heartbeat command requires local execution context before it can run remotely. Missing: registrationId, principalId.',
     );
-    assert.deepEqual(failure.error.details, ['tenantId', 'registrationId', 'principalId']);
+    assert.deepEqual(failure.error.details, ['registrationId', 'principalId']);
     assert.deepEqual(failure.error.preflight.requiredContext, ['tenantId', 'registrationId', 'principalId']);
-    assert.deepEqual(failure.error.preflight.missingContext, ['tenantId', 'registrationId', 'principalId']);
+    assert.deepEqual(failure.error.preflight.missingContext, ['registrationId', 'principalId']);
   } finally {
     restorePrincipalId();
     restoreRegistrationId();

@@ -129,6 +129,31 @@ test('writeLocalOnboardingState persists minimal continuation fields while still
   }
 });
 
+test('writeLocalOnboardingState persists explicit companyId only and never invents it from tenantId', async () => {
+  const exports = publicSurface as Record<string, unknown>;
+  const tempDirectory = mkdtempSync(path.join(tmpdir(), 'bidvia-local-onboarding-state-company-'));
+  const statePath = path.join(tempDirectory, 'onboarding-state.json');
+
+  const writeLocalOnboardingState = exports.writeLocalOnboardingState as (
+    state: Record<string, unknown>,
+    options?: { env?: NodeJS.ProcessEnv; homeDirectory?: string },
+  ) => Promise<{ path: string; state: Record<string, unknown> }>;
+
+  const result = await writeLocalOnboardingState({
+    tenantId: 'tenant-public',
+    principalId: 'principal-1',
+    registrationId: 'areg-1',
+    lastCompletedStep: 'claim-provisional-agent',
+    createdAt: '2026-04-02T10:00:00.000Z',
+    updatedAt: '2026-04-02T10:05:00.000Z',
+  }, {
+    env: { BIDVIA_STATE_PATH: statePath },
+  });
+
+  assert.equal('companyId' in result.state, false);
+  assert.equal('companyId' in JSON.parse(readFileSync(statePath, 'utf8')), false);
+});
+
 test('readLocalOnboardingState returns null when no local onboarding state file exists at the resolved path', async () => {
   const exports = publicSurface as Record<string, unknown>;
   const tempDirectory = mkdtempSync(path.join(tmpdir(), 'bidvia-local-onboarding-state-missing-'));

@@ -110,6 +110,12 @@ const identitySessionOnboardingSupportSteps:
       requiredContext: ['tenantId', 'sessionId'],
       rationale: 'Support bounded active-org selection when Core requires session-scoped organization resolution before claim or governed-run continuation.',
     },
+    {
+      helperKey: 'patchAgentSelfService',
+      routePathTemplate: '/runtime/account/agents/:agentId/self-service',
+      requiredContext: ['tenantId', 'sessionId'],
+      rationale: 'Support bounded self-service updates for task dispatch acceptance, accepted scopes, participation state, and limited claimed-agent metadata without widening platform authority.',
+    },
   ];
 
 function cloneRequiredContext(

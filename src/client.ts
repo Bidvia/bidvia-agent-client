@@ -1,4 +1,5 @@
 import type {
+  BidviaAgentSelfServicePatchInput,
   BidviaAgentAuthorityLadderWriteInput,
   BidviaAgentAuthorityProfileWriteInput,
   BidviaAgentCapabilityProfileWriteInput,
@@ -221,6 +222,7 @@ export class BidviaClient {
       body: {
         email: input.email,
         password: input.password,
+        invitation_token: input.invitationToken,
         display_name: input.displayName,
         now: input.now,
       },
@@ -239,6 +241,7 @@ export class BidviaClient {
       body: {
         email: input.email,
         password: input.password,
+        invitation_token: input.invitationToken,
         company_name: input.companyName,
         now: input.now,
       },
@@ -298,6 +301,46 @@ export class BidviaClient {
       headers: this.requireSessionHeaders(context),
       body: {
         org_id: input.orgId,
+      },
+      requestPolicy,
+    });
+  }
+
+
+  async patchAgentSelfService(
+    agentId: string,
+    input: BidviaAgentSelfServicePatchInput,
+    requestPolicy?: BidviaClientRequestPolicy,
+  ) {
+    const context = this.resolveRequestContext(requestPolicy);
+    return this.request(`/runtime/account/agents/${encodeURIComponent(agentId)}/self-service`, {
+      context,
+      method: 'PATCH',
+      headers: this.requireSessionHeaders(context),
+      body: {
+        now: input.now,
+        ...(input.selfDescription === undefined ? {} : { self_description: input.selfDescription }),
+        ...(input.capabilityProfile === undefined ? {} : { capability_profile: input.capabilityProfile }),
+        ...(input.taskDispatchAcceptance === undefined
+          ? {}
+          : {
+              task_dispatch_acceptance: {
+                ...(input.taskDispatchAcceptance.acceptsTaskDispatches === undefined
+                  ? {}
+                  : { accepts_task_dispatches: input.taskDispatchAcceptance.acceptsTaskDispatches }),
+                ...(input.taskDispatchAcceptance.acceptedTaskDispatchScopes === undefined
+                  ? {}
+                  : { accepted_task_dispatch_scopes: input.taskDispatchAcceptance.acceptedTaskDispatchScopes }),
+              },
+            }),
+        ...(input.participationState === undefined
+          ? {}
+          : {
+              participation_state: {
+                state: input.participationState.state,
+                ...(input.participationState.reason === undefined ? {} : { reason: input.participationState.reason }),
+              },
+            }),
       },
       requestPolicy,
     });
@@ -1078,9 +1121,10 @@ export class BidviaClient {
   async listCanonicalSemanticConcepts(requestPolicy?: BidviaClientRequestPolicy) {
     const context = this.resolveRequestContext(requestPolicy);
     this.requireTenantId(context);
-    return this.request('/runtime/canonical-semantic-concepts', {
+    return this.request(this.tenantScopedReadPath(context, '/runtime/canonical-semantic-concepts'), {
       context,
       method: 'GET',
+      headers: this.requireGovernedReadHeaders(context),
       requestPolicy,
     });
   }
@@ -1096,6 +1140,7 @@ export class BidviaClient {
       {
         context,
         method: 'GET',
+        headers: this.requireGovernedReadHeaders(context),
         requestPolicy,
       },
     );
@@ -1104,9 +1149,10 @@ export class BidviaClient {
   async listCanonicalSemanticLabels(requestPolicy?: BidviaClientRequestPolicy) {
     const context = this.resolveRequestContext(requestPolicy);
     this.requireTenantId(context);
-    return this.request('/runtime/canonical-semantic-labels', {
+    return this.request(this.tenantScopedReadPath(context, '/runtime/canonical-semantic-labels'), {
       context,
       method: 'GET',
+      headers: this.requireGovernedReadHeaders(context),
       requestPolicy,
     });
   }
@@ -1122,6 +1168,7 @@ export class BidviaClient {
       {
         context,
         method: 'GET',
+        headers: this.requireGovernedReadHeaders(context),
         requestPolicy,
       },
     );
@@ -1130,9 +1177,10 @@ export class BidviaClient {
   async listCanonicalSemanticMappings(requestPolicy?: BidviaClientRequestPolicy) {
     const context = this.resolveRequestContext(requestPolicy);
     this.requireTenantId(context);
-    return this.request('/runtime/canonical-semantic-mappings', {
+    return this.request(this.tenantScopedReadPath(context, '/runtime/canonical-semantic-mappings'), {
       context,
       method: 'GET',
+      headers: this.requireGovernedReadHeaders(context),
       requestPolicy,
     });
   }
@@ -1148,6 +1196,7 @@ export class BidviaClient {
       {
         context,
         method: 'GET',
+        headers: this.requireGovernedReadHeaders(context),
         requestPolicy,
       },
     );
@@ -1156,9 +1205,10 @@ export class BidviaClient {
   async listCanonicalSemanticTaxonomyEntries(requestPolicy?: BidviaClientRequestPolicy) {
     const context = this.resolveRequestContext(requestPolicy);
     this.requireTenantId(context);
-    return this.request('/runtime/canonical-semantic-taxonomy-entries', {
+    return this.request(this.tenantScopedReadPath(context, '/runtime/canonical-semantic-taxonomy-entries'), {
       context,
       method: 'GET',
+      headers: this.requireGovernedReadHeaders(context),
       requestPolicy,
     });
   }
@@ -1174,6 +1224,7 @@ export class BidviaClient {
       {
         context,
         method: 'GET',
+        headers: this.requireGovernedReadHeaders(context),
         requestPolicy,
       },
     );
@@ -1182,9 +1233,10 @@ export class BidviaClient {
   async listCanonicalSemanticLineageLinks(requestPolicy?: BidviaClientRequestPolicy) {
     const context = this.resolveRequestContext(requestPolicy);
     this.requireTenantId(context);
-    return this.request('/runtime/canonical-semantic-lineage-links', {
+    return this.request(this.tenantScopedReadPath(context, '/runtime/canonical-semantic-lineage-links'), {
       context,
       method: 'GET',
+      headers: this.requireGovernedReadHeaders(context),
       requestPolicy,
     });
   }
@@ -1200,6 +1252,7 @@ export class BidviaClient {
       {
         context,
         method: 'GET',
+        headers: this.requireGovernedReadHeaders(context),
         requestPolicy,
       },
     );
@@ -1208,9 +1261,10 @@ export class BidviaClient {
   async listPricingBases(requestPolicy?: BidviaClientRequestPolicy) {
     const context = this.resolveRequestContext(requestPolicy);
     this.requireTenantId(context);
-    return this.request('/runtime/pricing-bases', {
+    return this.request(this.tenantScopedReadPath(context, '/runtime/pricing-bases'), {
       context,
       method: 'GET',
+      headers: this.requireGovernedReadHeaders(context),
       requestPolicy,
     });
   }
@@ -1221,6 +1275,7 @@ export class BidviaClient {
     return this.request(`/runtime/pricing-bases/${encodeURIComponent(pricingBasisId)}`, {
       context,
       method: 'GET',
+      headers: this.requireGovernedReadHeaders(context),
       requestPolicy,
     });
   }
@@ -1228,9 +1283,10 @@ export class BidviaClient {
   async listPricingRuleAtoms(requestPolicy?: BidviaClientRequestPolicy) {
     const context = this.resolveRequestContext(requestPolicy);
     this.requireTenantId(context);
-    return this.request('/runtime/pricing-rule-atoms', {
+    return this.request(this.tenantScopedReadPath(context, '/runtime/pricing-rule-atoms'), {
       context,
       method: 'GET',
+      headers: this.requireGovernedReadHeaders(context),
       requestPolicy,
     });
   }
@@ -1241,6 +1297,7 @@ export class BidviaClient {
     return this.request(`/runtime/pricing-rule-atoms/${encodeURIComponent(pricingRuleAtomId)}`, {
       context,
       method: 'GET',
+      headers: this.requireGovernedReadHeaders(context),
       requestPolicy,
     });
   }
@@ -1248,9 +1305,10 @@ export class BidviaClient {
   async listPricingQuotationMethodModules(requestPolicy?: BidviaClientRequestPolicy) {
     const context = this.resolveRequestContext(requestPolicy);
     this.requireTenantId(context);
-    return this.request('/runtime/pricing-quotation-method-modules', {
+    return this.request(this.tenantScopedReadPath(context, '/runtime/pricing-quotation-method-modules'), {
       context,
       method: 'GET',
+      headers: this.requireGovernedReadHeaders(context),
       requestPolicy,
     });
   }
@@ -1266,6 +1324,7 @@ export class BidviaClient {
       {
         context,
         method: 'GET',
+        headers: this.requireGovernedReadHeaders(context),
         requestPolicy,
       },
     );
@@ -1274,9 +1333,10 @@ export class BidviaClient {
   async listPricingQuoteTemplates(requestPolicy?: BidviaClientRequestPolicy) {
     const context = this.resolveRequestContext(requestPolicy);
     this.requireTenantId(context);
-    return this.request('/runtime/pricing-quote-templates', {
+    return this.request(this.tenantScopedReadPath(context, '/runtime/pricing-quote-templates'), {
       context,
       method: 'GET',
+      headers: this.requireGovernedReadHeaders(context),
       requestPolicy,
     });
   }
@@ -1292,6 +1352,7 @@ export class BidviaClient {
       {
         context,
         method: 'GET',
+        headers: this.requireGovernedReadHeaders(context),
         requestPolicy,
       },
     );
@@ -1300,9 +1361,10 @@ export class BidviaClient {
   async listPricingQuotations(requestPolicy?: BidviaClientRequestPolicy) {
     const context = this.resolveRequestContext(requestPolicy);
     this.requireTenantId(context);
-    return this.request('/runtime/pricing-quotations', {
+    return this.request(this.tenantScopedReadPath(context, '/runtime/pricing-quotations'), {
       context,
       method: 'GET',
+      headers: this.requireGovernedReadHeaders(context),
       requestPolicy,
     });
   }
@@ -1316,6 +1378,7 @@ export class BidviaClient {
     return this.request(`/runtime/pricing-quotations/${encodeURIComponent(pricingQuotationId)}`, {
       context,
       method: 'GET',
+      headers: this.requireGovernedReadHeaders(context),
       requestPolicy,
     });
   }
@@ -1323,9 +1386,10 @@ export class BidviaClient {
   async listPricingExplanations(requestPolicy?: BidviaClientRequestPolicy) {
     const context = this.resolveRequestContext(requestPolicy);
     this.requireTenantId(context);
-    return this.request('/runtime/pricing-explanations', {
+    return this.request(this.tenantScopedReadPath(context, '/runtime/pricing-explanations'), {
       context,
       method: 'GET',
+      headers: this.requireGovernedReadHeaders(context),
       requestPolicy,
     });
   }
@@ -1339,6 +1403,7 @@ export class BidviaClient {
     return this.request(`/runtime/pricing-explanations/${encodeURIComponent(pricingExplanationId)}`, {
       context,
       method: 'GET',
+      headers: this.requireGovernedReadHeaders(context),
       requestPolicy,
     });
   }
@@ -1346,9 +1411,10 @@ export class BidviaClient {
   async listDocumentArtifacts(requestPolicy?: BidviaClientRequestPolicy) {
     const context = this.resolveRequestContext(requestPolicy);
     this.requireTenantId(context);
-    return this.request('/runtime/document-artifacts', {
+    return this.request(this.tenantScopedReadPath(context, '/runtime/document-artifacts'), {
       context,
       method: 'GET',
+      headers: this.requireGovernedReadHeaders(context),
       requestPolicy,
     });
   }
@@ -1356,9 +1422,10 @@ export class BidviaClient {
   async getDocumentArtifact(documentArtifactId: string, requestPolicy?: BidviaClientRequestPolicy) {
     const context = this.resolveRequestContext(requestPolicy);
     this.requireTenantId(context);
-    return this.request(`/runtime/document-artifacts/${encodeURIComponent(documentArtifactId)}`, {
+    return this.request(this.tenantScopedReadPath(context, `/runtime/document-artifacts/${encodeURIComponent(documentArtifactId)}`), {
       context,
       method: 'GET',
+      headers: this.requireGovernedReadHeaders(context),
       requestPolicy,
     });
   }
@@ -1366,9 +1433,10 @@ export class BidviaClient {
   async listMediaAssets(requestPolicy?: BidviaClientRequestPolicy) {
     const context = this.resolveRequestContext(requestPolicy);
     this.requireTenantId(context);
-    return this.request('/runtime/media-assets', {
+    return this.request(this.tenantScopedReadPath(context, '/runtime/media-assets'), {
       context,
       method: 'GET',
+      headers: this.requireGovernedReadHeaders(context),
       requestPolicy,
     });
   }
@@ -1376,9 +1444,10 @@ export class BidviaClient {
   async getMediaAsset(mediaAssetId: string, requestPolicy?: BidviaClientRequestPolicy) {
     const context = this.resolveRequestContext(requestPolicy);
     this.requireTenantId(context);
-    return this.request(`/runtime/media-assets/${encodeURIComponent(mediaAssetId)}`, {
+    return this.request(this.tenantScopedReadPath(context, `/runtime/media-assets/${encodeURIComponent(mediaAssetId)}`), {
       context,
       method: 'GET',
+      headers: this.requireGovernedReadHeaders(context),
       requestPolicy,
     });
   }
@@ -1386,9 +1455,10 @@ export class BidviaClient {
   async listEvidenceAssets(requestPolicy?: BidviaClientRequestPolicy) {
     const context = this.resolveRequestContext(requestPolicy);
     this.requireTenantId(context);
-    return this.request('/runtime/evidence-assets', {
+    return this.request(this.tenantScopedReadPath(context, '/runtime/evidence-assets'), {
       context,
       method: 'GET',
+      headers: this.requireGovernedReadHeaders(context),
       requestPolicy,
     });
   }
@@ -1396,9 +1466,10 @@ export class BidviaClient {
   async getEvidenceAsset(evidenceAssetId: string, requestPolicy?: BidviaClientRequestPolicy) {
     const context = this.resolveRequestContext(requestPolicy);
     this.requireTenantId(context);
-    return this.request(`/runtime/evidence-assets/${encodeURIComponent(evidenceAssetId)}`, {
+    return this.request(this.tenantScopedReadPath(context, `/runtime/evidence-assets/${encodeURIComponent(evidenceAssetId)}`), {
       context,
       method: 'GET',
+      headers: this.requireGovernedReadHeaders(context),
       requestPolicy,
     });
   }
@@ -1406,9 +1477,10 @@ export class BidviaClient {
   async listAttachmentBindings(requestPolicy?: BidviaClientRequestPolicy) {
     const context = this.resolveRequestContext(requestPolicy);
     this.requireTenantId(context);
-    return this.request('/runtime/attachment-bindings', {
+    return this.request(this.tenantScopedReadPath(context, '/runtime/attachment-bindings'), {
       context,
       method: 'GET',
+      headers: this.requireGovernedReadHeaders(context),
       requestPolicy,
     });
   }
@@ -1419,9 +1491,10 @@ export class BidviaClient {
   ) {
     const context = this.resolveRequestContext(requestPolicy);
     this.requireTenantId(context);
-    return this.request(`/runtime/attachment-bindings/${encodeURIComponent(attachmentBindingId)}`, {
+    return this.request(this.tenantScopedReadPath(context, `/runtime/attachment-bindings/${encodeURIComponent(attachmentBindingId)}`), {
       context,
       method: 'GET',
+      headers: this.requireGovernedReadHeaders(context),
       requestPolicy,
     });
   }
@@ -1429,9 +1502,10 @@ export class BidviaClient {
   async listFileResources(requestPolicy?: BidviaClientRequestPolicy) {
     const context = this.resolveRequestContext(requestPolicy);
     this.requireTenantId(context);
-    return this.request('/runtime/file-resources', {
+    return this.request(this.tenantScopedReadPath(context, '/runtime/file-resources'), {
       context,
       method: 'GET',
+      headers: this.requireGovernedReadHeaders(context),
       requestPolicy,
     });
   }
@@ -1442,6 +1516,7 @@ export class BidviaClient {
     return this.request(`/runtime/file-resources/${encodeURIComponent(fileResourceId)}`, {
       context,
       method: 'GET',
+      headers: this.requireGovernedReadHeaders(context),
       requestPolicy,
     });
   }
@@ -1452,9 +1527,10 @@ export class BidviaClient {
   ) {
     const context = this.resolveRequestContext(requestPolicy);
     this.requireTenantId(context);
-    return this.request(`/runtime/targets/${encodeURIComponent(targetRef)}/attachment-bindings`, {
+    return this.request(this.tenantScopedReadPath(context, `/runtime/targets/${encodeURIComponent(targetRef)}/attachment-bindings`), {
       context,
       method: 'GET',
+      headers: this.requireGovernedReadHeaders(context),
       requestPolicy,
     });
   }
@@ -1765,6 +1841,10 @@ export class BidviaClient {
     return `/runtime/agents/${encodeURIComponent(registrationId)}${suffix}?tenant_id=${encodeURIComponent(tenantId)}`;
   }
 
+  private tenantScopedReadPath(context: BidviaClientContext, path: string) {
+    return `${path}?tenant_id=${encodeURIComponent(this.requireTenantId(context))}`;
+  }
+
   private agentRuntimePath(
     agentRegistrationId: string,
     suffix: string,
@@ -1817,6 +1897,9 @@ export class BidviaClient {
       'x-authorized-tenant-id': context.tenantId,
       'x-bidvia-principal-id': principalId,
     });
+    if (context.companyId) {
+      headers['x-authorized-company-id'] = context.companyId;
+    }
     if (context.adminSessionId) {
       headers['x-bidvia-admin-session-id'] = context.adminSessionId;
     }
@@ -1866,7 +1949,7 @@ export class BidviaClient {
 
   private async request(path: string, params: {
     context: BidviaClientContext;
-    method: 'GET' | 'POST';
+    method: 'GET' | 'POST' | 'PATCH';
     headers?: Record<string, string>;
     body?: unknown;
     requestPolicy?: BidviaClientRequestPolicy;
@@ -1974,7 +2057,7 @@ export class BidviaClient {
   private async resolveRequestHeaders(params: {
     context: BidviaClientContext;
     path: string;
-    method: 'GET' | 'POST';
+      method: 'GET' | 'POST' | 'PATCH';
     headers?: BidviaClientHeaders;
     body?: unknown;
   }): Promise<BidviaClientHeaders> {
@@ -1992,7 +2075,7 @@ export class BidviaClient {
 
   private createRequestDescriptor(
     context: BidviaClientContext,
-    method: 'GET' | 'POST',
+    method: 'GET' | 'POST' | 'PATCH',
     path: string,
   ): BidviaClientRequestDescriptor {
     return {

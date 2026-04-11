@@ -38,12 +38,14 @@ test('BidviaClient exposes the bounded V1 personal, enterprise, and sign-in onbo
   await Reflect.apply(signUpPersonalAccount, client, [{
     email: 'person@example.com',
     password: 'secret-1',
+    invitationToken: 'invite-token-123',
     displayName: 'Ada Lovelace',
     now: '2026-04-10T10:00:00Z',
   }]);
   await Reflect.apply(signUpEnterpriseAccount, client, [{
     email: 'ops@example.com',
     password: 'secret-2',
+    invitationToken: 'invite-token-456',
     companyName: 'Bidvia Labs',
     now: '2026-04-10T10:01:00Z',
   }]);
@@ -63,12 +65,14 @@ test('BidviaClient exposes the bounded V1 personal, enterprise, and sign-in onbo
   assert.deepEqual(JSON.parse(String(calls[0]?.init?.body)), {
     email: 'person@example.com',
     password: 'secret-1',
+    invitation_token: 'invite-token-123',
     display_name: 'Ada Lovelace',
     now: '2026-04-10T10:00:00Z',
   });
   assert.deepEqual(JSON.parse(String(calls[1]?.init?.body)), {
     email: 'ops@example.com',
     password: 'secret-2',
+    invitation_token: 'invite-token-456',
     company_name: 'Bidvia Labs',
     now: '2026-04-10T10:01:00Z',
   });
@@ -121,6 +125,57 @@ test('BidviaClient uses the bounded V1 session helper family with session header
   assert.equal((calls[0]?.init?.headers as Record<string, string>)['x-authorized-tenant-id'], undefined);
   assert.deepEqual(JSON.parse(String(calls[3]?.init?.body)), {
     org_id: 'org-2',
+  });
+});
+
+test('BidviaClient exposes a bounded claimed-agent self-service patch surface for task dispatch acceptance and participation state', async () => {
+  const { calls, fetchStub } = createFetchStub();
+  const client = new BidviaClient({
+    baseUrl: 'http://127.0.0.1:8787',
+    context: {
+      tenantId: 'tenant-public',
+      sessionId: 'sess-1',
+    },
+    fetchImpl: fetchStub,
+  });
+
+  const patchAgentSelfService = Reflect.get(client, 'patchAgentSelfService');
+  assert.equal(typeof patchAgentSelfService, 'function');
+
+  await Reflect.apply(patchAgentSelfService, client, ['agent-1', {
+    now: '2026-04-11T17:20:00Z',
+    selfDescription: 'Keeps a bounded customer-facing profile.',
+    capabilityProfile: {
+      domainStrengths: ['pricing'],
+    },
+    taskDispatchAcceptance: {
+      acceptsTaskDispatches: true,
+      acceptedTaskDispatchScopes: ['COMMERCIAL_ACTION_REVIEW'],
+    },
+    participationState: {
+      state: 'AVAILABLE',
+      reason: 'ready-for-task-dispatch',
+    },
+  }]);
+
+  assert.equal(calls.length, 1);
+  assert.equal(String(calls[0]?.input), 'http://127.0.0.1:8787/runtime/account/agents/agent-1/self-service');
+  assert.equal(calls[0]?.init?.method, 'PATCH');
+  assert.equal((calls[0]?.init?.headers as Record<string, string>)['x-bidvia-session-id'], 'sess-1');
+  assert.deepEqual(JSON.parse(String(calls[0]?.init?.body)), {
+    now: '2026-04-11T17:20:00Z',
+    self_description: 'Keeps a bounded customer-facing profile.',
+    capability_profile: {
+      domainStrengths: ['pricing'],
+    },
+    task_dispatch_acceptance: {
+      accepts_task_dispatches: true,
+      accepted_task_dispatch_scopes: ['COMMERCIAL_ACTION_REVIEW'],
+    },
+    participation_state: {
+      state: 'AVAILABLE',
+      reason: 'ready-for-task-dispatch',
+    },
   });
 });
 

@@ -45,7 +45,12 @@ function buildPublicDefaults() {
 export function buildOnboardingReadiness() {
   const identitySessionPlane = buildIdentitySessionPlaneView();
   const journey = requireOnboardingJourneyDefinition('public-first-onboarding');
-  const postClaimSupportSteps = [requireGuidedRouteStep('getAgentReadiness')];
+  const postClaimSupportSteps = [
+    requireGuidedRouteStep('getAgentReadiness'),
+    requireGuidedRouteStep('getAccountMe'),
+    requireGuidedRouteStep('selectOrg'),
+    requireGuidedRouteStep('patchAgentSelfService'),
+  ];
 
   return {
     defaults: buildPublicDefaults(),
