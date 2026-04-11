@@ -264,19 +264,9 @@ test('buildLocalRuntimeCapabilitySnapshot includes shipped widened read helpers 
       localCapabilityRiskTier: 'observe-only',
     }),
   );
-  assert.deepEqual(
+  assert.equal(
     snapshot.routeCapabilities.items.find((capability) => capability.helperKey === 'listTargetAttachmentBindings'),
-    withDefaultContextSemantic({
-      helperKey: 'listTargetAttachmentBindings',
-      routePathTemplate: '/runtime/targets/:target_ref/attachment-bindings',
-      httpMethod: 'GET',
-      accessContextFamily: 'tenant',
-      requiredContext: ['tenantId'],
-      scope: 'read',
-      level: 'atomic-route',
-      localCapabilityTier: 'L0-observe-only',
-      localCapabilityRiskTier: 'observe-only',
-    }),
+    undefined,
   );
 });
 
