@@ -63,6 +63,11 @@ type FirstAccessSnapshot = {
       blocked: boolean;
       blockedOn: string | null;
       lastCompletedStep: string | null;
+      requiredActor?: string;
+      recommendedNextStep?: string;
+      nextStepKind?: string;
+      canSelfResolve?: boolean;
+      boundaryMessage?: string;
     };
     nextCommands: Array<{ command: string; rationale: string }>;
     firstSuccessNextStep: {
@@ -376,6 +381,11 @@ test('runCli doctor captures readiness live-check transport failures inside stru
         {
           responseBody: {
             code: 'active_role_binding_required',
+            required_actor: 'enterprise_admin',
+            boundary_message: 'governed runtime access remains blocked until an active tenant role binding is established for the acting principal',
+            recommended_next_step: 'request_role_binding_activation',
+            next_step_kind: 'role_binding_activation',
+            can_self_resolve: false,
           },
         },
       );
@@ -398,11 +408,21 @@ test('runCli doctor captures readiness live-check transport failures inside stru
     status: 403,
     responseBody: {
       code: 'active_role_binding_required',
+      required_actor: 'enterprise_admin',
+      boundary_message: 'governed runtime access remains blocked until an active tenant role binding is established for the acting principal',
+      recommended_next_step: 'request_role_binding_activation',
+      next_step_kind: 'role_binding_activation',
+      can_self_resolve: false,
     },
   });
   assert.equal(snapshot.onboarding.currentStage.key, 'active-role-binding-required');
   assert.equal(snapshot.onboarding.currentStage.blocked, true);
   assert.equal(snapshot.onboarding.currentStage.blockedOn, 'active-role-binding');
+  assert.equal(snapshot.onboarding.currentStage.requiredActor, 'enterprise_admin');
+  assert.equal(snapshot.onboarding.currentStage.recommendedNextStep, 'request_role_binding_activation');
+  assert.equal(snapshot.onboarding.currentStage.nextStepKind, 'role_binding_activation');
+  assert.equal(snapshot.onboarding.currentStage.canSelfResolve, false);
+  assert.equal(snapshot.onboarding.currentStage.boundaryMessage, 'governed runtime access remains blocked until an active tenant role binding is established for the acting principal');
   assert.deepEqual(snapshot.onboarding.nextCommands.map((entry) => entry.command), [
     'bidvia select-org --input ...',
     'bidvia account-me',

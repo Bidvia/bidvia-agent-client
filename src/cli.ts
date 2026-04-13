@@ -238,6 +238,7 @@ type BidviaCliStructuredFailure = {
     message: string;
     validInputs?: string[];
     details?: string[];
+    allowedStates?: string[];
     preflight?: BidviaExecutionOperatorPreflight;
     transport?: {
       name: string;
@@ -1008,6 +1009,9 @@ function buildDoctorOnboardingSnapshot(
   })();
 
   if (readinessLiveCheck.status === 'failed' && readinessErrorCode === 'active_role_binding_required') {
+    const responseBody = readinessLiveCheck.error?.responseBody && typeof readinessLiveCheck.error.responseBody === 'object'
+      ? readinessLiveCheck.error.responseBody as Record<string, unknown>
+      : null;
     return {
       journeyKey: 'public-first-onboarding',
       journeyLabel: 'Public provisional onboarding',
@@ -1017,6 +1021,11 @@ function buildDoctorOnboardingSnapshot(
         blocked: true,
         blockedOn: 'active-role-binding',
         lastCompletedStep: effectiveContext.lastCompletedStep.value,
+        ...(responseBody && typeof responseBody.required_actor === 'string' ? { requiredActor: responseBody.required_actor } : {}),
+        ...(responseBody && typeof responseBody.recommended_next_step === 'string' ? { recommendedNextStep: responseBody.recommended_next_step } : {}),
+        ...(responseBody && typeof responseBody.next_step_kind === 'string' ? { nextStepKind: responseBody.next_step_kind } : {}),
+        ...(responseBody && typeof responseBody.can_self_resolve === 'boolean' ? { canSelfResolve: responseBody.can_self_resolve } : {}),
+        ...(responseBody && typeof responseBody.boundary_message === 'string' ? { boundaryMessage: responseBody.boundary_message } : {}),
       },
       nextCommands: [
         buildStaticFirstAccessCommandHint(
@@ -1422,11 +1431,26 @@ const identitySessionCommandDefinitions = {
   },
   'agent-self-service': {
     helperKey: 'patchAgentSelfService',
-    run: (client, parsedArgs) => {
+    run: async (client, parsedArgs) => {
       const input = parseCliJsonInput('agent-self-service', parsedArgs.input);
       const registrationId = parsedArgs.flagValues['--registration-id'] ?? parsedArgs.flagValues['--agent-id'];
       if (!registrationId) {
         throw new Error('agent-self-service requires --registration-id or --agent-id');
+      }
+      if (input.participationState !== undefined) {
+        const claimedAgent = await client.getAccountAgent(registrationId);
+        const writableParticipationStates = claimedAgent
+          && typeof claimedAgent === 'object'
+          && 'governance_boundary' in (claimedAgent as Record<string, unknown>)
+          && typeof (claimedAgent as Record<string, unknown>).governance_boundary === 'object'
+          && (claimedAgent as { governance_boundary: Record<string, unknown> }).governance_boundary !== null
+          && 'writable_participation_states' in (claimedAgent as { governance_boundary: Record<string, unknown> }).governance_boundary
+          && Array.isArray((claimedAgent as { governance_boundary: Record<string, unknown> }).governance_boundary.writable_participation_states)
+          ? (claimedAgent as { governance_boundary: { writable_participation_states: string[] } }).governance_boundary.writable_participation_states
+          : undefined;
+        if (writableParticipationStates && !writableParticipationStates.includes((input.participationState as { state: string }).state)) {
+          throw new Error(`participationState.state is not currently writable through bounded self-service for this claimed agent|${writableParticipationStates.join(',')}`);
+        }
       }
       return client.patchAgentSelfService(registrationId, {
         now: readRequiredStringInput('agent-self-service', input, 'now'),
@@ -2587,6 +2611,20 @@ export async function runCli(
       return 0;
     } catch (error) {
       if (error instanceof Error && !(error instanceof BidviaClientTransportError)) {
+        if (command === 'agent-self-service' && error.message.startsWith('participationState.state is not currently writable through bounded self-service for this claimed agent|')) {
+          const [, allowedStatesRaw] = error.message.split('|', 2);
+          return printStructuredFailure(
+            dependencies,
+            buildStructuredFailure(
+              command,
+              'invalid-input',
+              'participationState.state is not currently writable through bounded self-service for this claimed agent',
+              {
+                allowedStates: allowedStatesRaw ? allowedStatesRaw.split(',').filter(Boolean) : [],
+              },
+            ),
+          );
+        }
         return printStructuredFailure(
           dependencies,
           buildStructuredFailure(

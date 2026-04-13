@@ -382,6 +382,11 @@ test('runCli routes bounded claimed-agent self-service patch commands through th
     '{"now":"2026-04-11T17:20:30Z","selfDescription":"Visible agent profile","taskDispatchAcceptance":{"acceptsTaskDispatches":true,"acceptedTaskDispatchScopes":["COMMERCIAL_ACTION_REVIEW"]},"participationState":{"state":"AVAILABLE","reason":"ready-for-task-dispatch"}}',
   ], {
     createClient: () => ({
+      getAccountAgent: async () => ({
+        governance_boundary: {
+          writable_participation_states: ['AVAILABLE'],
+        },
+      }),
       patchAgentSelfService: async (agentId: string, input: unknown) => {
         calls.push({ agentId, input });
         return { ok: true, command: 'agent-self-service' };
@@ -450,6 +455,47 @@ test('runCli agent-self-service accepts --registration-id for claimed registrati
       taskDispatchAcceptance: {
         acceptsTaskDispatches: true,
       },
+    },
+  }]);
+});
+
+test('runCli agent-self-service rejects participationState values outside Core writable participation subset', async () => {
+  const printed: unknown[] = [];
+
+  const exitCode = await runCli([
+    'agent-self-service',
+    '--registration-id',
+    'areg-1',
+    '--input',
+    '{"now":"2026-04-11T17:33:00Z","participationState":{"state":"AVAILABLE"}}',
+  ], {
+    createClient: () => ({
+      getAccountAgent: async () => ({
+        governance_boundary: {
+          writable_participation_states: ['registered', 'verified_for_contribution'],
+        },
+      }),
+      patchAgentSelfService: async () => {
+        throw new Error('patchAgentSelfService should not be called when state is outside writable subset');
+      },
+    }) as never,
+    resolveProcessEnv: () => ({
+      BIDVIA_TENANT_ID: 'tenant-a',
+      BIDVIA_SESSION_ID: 'sess-1',
+    }),
+    printJson: (value) => {
+      printed.push(value);
+    },
+    printLine: () => {},
+  });
+
+  assert.equal(exitCode, 1);
+  assert.deepEqual(printed, [{
+    error: {
+      code: 'invalid-input',
+      command: 'agent-self-service',
+      message: 'participationState.state is not currently writable through bounded self-service for this claimed agent',
+      allowedStates: ['registered', 'verified_for_contribution'],
     },
   }]);
 });
