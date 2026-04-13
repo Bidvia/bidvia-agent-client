@@ -1012,6 +1012,9 @@ function buildDoctorOnboardingSnapshot(
     const responseBody = readinessLiveCheck.error?.responseBody && typeof readinessLiveCheck.error.responseBody === 'object'
       ? readinessLiveCheck.error.responseBody as Record<string, unknown>
       : null;
+    const authoritativePayload = responseBody && responseBody.error && typeof responseBody.error === 'object'
+      ? responseBody.error as Record<string, unknown>
+      : responseBody;
     return {
       journeyKey: 'public-first-onboarding',
       journeyLabel: 'Public provisional onboarding',
@@ -1021,11 +1024,11 @@ function buildDoctorOnboardingSnapshot(
         blocked: true,
         blockedOn: 'active-role-binding',
         lastCompletedStep: effectiveContext.lastCompletedStep.value,
-        ...(responseBody && typeof responseBody.required_actor === 'string' ? { requiredActor: responseBody.required_actor } : {}),
-        ...(responseBody && typeof responseBody.recommended_next_step === 'string' ? { recommendedNextStep: responseBody.recommended_next_step } : {}),
-        ...(responseBody && typeof responseBody.next_step_kind === 'string' ? { nextStepKind: responseBody.next_step_kind } : {}),
-        ...(responseBody && typeof responseBody.can_self_resolve === 'boolean' ? { canSelfResolve: responseBody.can_self_resolve } : {}),
-        ...(responseBody && typeof responseBody.boundary_message === 'string' ? { boundaryMessage: responseBody.boundary_message } : {}),
+        ...(authoritativePayload && typeof authoritativePayload.required_actor === 'string' ? { requiredActor: authoritativePayload.required_actor } : {}),
+        ...(authoritativePayload && typeof authoritativePayload.recommended_next_step === 'string' ? { recommendedNextStep: authoritativePayload.recommended_next_step } : {}),
+        ...(authoritativePayload && typeof authoritativePayload.next_step_kind === 'string' ? { nextStepKind: authoritativePayload.next_step_kind } : {}),
+        ...(authoritativePayload && typeof authoritativePayload.can_self_resolve === 'boolean' ? { canSelfResolve: authoritativePayload.can_self_resolve } : {}),
+        ...(authoritativePayload && typeof authoritativePayload.boundary_message === 'string' ? { boundaryMessage: authoritativePayload.boundary_message } : {}),
       },
       nextCommands: [
         buildStaticFirstAccessCommandHint(
