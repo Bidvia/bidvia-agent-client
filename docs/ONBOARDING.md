@@ -60,7 +60,7 @@ Use this order:
 1. read the contract boundary and this onboarding guide
 2. run `bidvia onboard`
 3. run `bidvia context show` or `bidvia whoami` when you need local-first visibility around the same journey
-4. if prerequisite account/session context is still missing, use the bounded account/session prerequisite support: `bidvia sign-in`, `bidvia sign-up-personal`, `bidvia sign-up-enterprise`, `bidvia account-me`, `bidvia select-org`, `bidvia session-refresh`, and `bidvia session-revoke`
+4. if prerequisite account/session context is still missing, use the bounded account/session prerequisite support: `bidvia sign-in`, `bidvia sign-up-personal`, `bidvia sign-up-enterprise`, `bidvia account-me`, `bidvia select-org`, `bidvia session-refresh`, and `bidvia session-revoke`; once a session exists, the same bounded surface may also expose membership lifecycle and dispatch-authority helpers without turning the package into a general account-admin shell
 5. run the explicit public provisional commands, `create-provisional-agent`, `query-provisional-agent`, then `claim-provisional-agent`, when onboarding material is available
 6. once claim has established session-bound identity and local context is ready, run `bidvia doctor` or `bidvia route-context-matrix`
 7. stay on the Governed Run side with `bidvia registration-lifecycle-plan`
@@ -73,6 +73,7 @@ Those commands answer different questions across the Learn → Public Provisiona
 - `whoami` summarizes local identity without claiming platform login
 - `doctor` shows local diagnostics and, when possible, an optional readiness live check on the Governed Run side after claim
 - bounded account/session prerequisite support stays available through `bidvia sign-in`, `bidvia sign-up-personal`, `bidvia sign-up-enterprise`, `bidvia account-me`, `bidvia select-org`, `bidvia session-refresh`, and `bidvia session-revoke`
+- bounded session-scoped membership lifecycle helpers and bounded dispatch-authority read/request helpers stay in the same prerequisite surface when Core requires them
 - `create-provisional-agent`, `query-provisional-agent`, and `claim-provisional-agent` keep the public provisional create -> query -> claim chain explicit
 - `claim-provisional-agent` is the session-bound transition point, not a generic tenant-scoped shortcut
 - `route-context-matrix` shows which context family each guided route needs before you move from Public Provisional into Governed Run
@@ -133,7 +134,7 @@ After that guided path is clear, use the supporting diagnostics and review-safe 
 
 `onboarding-readiness` still exists as a supporting read-only explainer. It is no longer the primary public first-run entry point.
 
-Stage 3 release gate is now ready in the current repo state for the shipped V1 helper set. Use `route-context-matrix` and `runtime-capabilities` to inspect the release-ready gate, and keep the remaining distinction clear: the package is at `1.0.0` release-ready state, while npm publication is still a separate final human step. The validator suite remains required before that publication step.
+Stage 3 release gate remains blocked in the current repo state for the shipped V1 helper set. Use `route-context-matrix` and `runtime-capabilities` to inspect the blocked gate posture, and keep the remaining distinction clear: the package documents a formal `1.0.0` release boundary, but workflow-stage and other packet-incomplete seams still keep Stage 3 closure blocked until Core freezes the missing truth. The validator suite remains required before any human release packet can describe closure.
 
 The helper-level payload matrix is the truth model for that boundary. In current repo language:
 
@@ -148,7 +149,9 @@ The honest phase split is:
 
 - the SDK and CLI expose the widened governance deep-read family and the broader business truth-fetch families listed below
 - the canonical frozen governance reads now visible in SDK and CLI include `GET /runtime/agents/registrations`, `GET /runtime/agents/:registrationId`, `GET /runtime/authority-profiles`, `GET /runtime/capability-profiles`, and `GET /runtime/agents/:registrationId/capability-profile`
+- bounded identity/session prerequisite support also includes the shipped membership lifecycle and dispatch-authority helper families when session-bound account context is required before or around governed run
 - the same public surface also includes the shipped participation-state and task-dispatch wrappers, while keeping local helper aliases clearly local
+- the same public surface also includes the adopted account-scoped task-dispatch and notification helper families where downstream packets are already frozen
 - the MCP seam keeps the currently approved governance-first tools for `account-*`, `agent-presence`, and `agent-authority`
 - the MCP seam also exposes the shipped business-truth collection and detail tools for canonical semantics, pricing, document, media, evidence, and attachment reads
 - the SDK and CLI stay the source of truth, and MCP only forwards to those already-shipped helpers

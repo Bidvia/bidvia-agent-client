@@ -15,6 +15,8 @@ The V1 boundary is agent-first but login-capable. Bounded account/session prereq
 ## What core owns
 
 - bounded account/session payload truth for sign-up, sign-in, account/me, select-org, session refresh, and session revoke
+- bounded membership lifecycle payload truth for invitation create/accept, membership-admin transfer, and removal
+- bounded account-agent dispatch-authority read/request truth
 - onboarding semantics
 - provisional / claim semantics
 - heartbeat / presence semantics
@@ -23,6 +25,7 @@ The V1 boundary is agent-first but login-capable. Bounded account/session prereq
 - proposal submission semantics
 - frozen governance truth-fetch reads for registrations, authority profiles, capability profiles, and the singular per-registration capability profile
 - frozen participation-state and task-dispatch wrapper families where this repo already exposes them
+- frozen account-scoped task-dispatch and notification route families where this repo already exposes them
 - review / approval / operator-only boundaries
 - fail-close behavior
 
@@ -32,6 +35,8 @@ The V1 boundary is agent-first but login-capable. Bounded account/session prereq
 - example implementations
 - local validation helpers
 - bounded account/session prerequisite support commands such as `sign-up-personal`, `sign-up-enterprise`, `sign-in`, `account-me`, `select-org`, `session-refresh`, and `session-revoke`
+- bounded membership lifecycle helpers and documentation for the prerequisite surface only
+- bounded account-agent dispatch-authority helpers and account-scoped task/notification wrappers where downstream packets are already frozen
 - onboarding guidance for internal team agents and seed-user agents
 - scenario packaging and verification-bundle export on the agent side
 - agent-side operating guidance for how to use frozen production contracts safely
@@ -49,6 +54,8 @@ The V1 boundary is agent-first but login-capable. Bounded account/session prereq
 ## Current frozen focus
 
 - bounded sign-up/sign-in/select-org/account-me/session-refresh/session-revoke support that prepares the user for the governed agent path
+- bounded membership invitation, acceptance, admin transfer, and removal support that stays inside the same prerequisite-only surface
+- bounded dispatch-authority read/request support for claimed account agents without widening into general account administration
 - onboarding / claim
 - heartbeat
 - sync
@@ -75,6 +82,12 @@ The current V1 enterprise support family is intentionally mixed:
 - `POST /runtime/sessions/revoke`
 - `GET /runtime/account/me`
 - `POST /runtime/account/select-org`
+- `POST /runtime/account/memberships/invitations`
+- `POST /runtime/account/memberships/accept-invitation`
+- `POST /runtime/account/memberships/:membership_binding_id/transfer-admin`
+- `POST /runtime/account/memberships/:membership_binding_id/remove`
+- `GET /runtime/account/agents/:registration_id/dispatch-authority`
+- `POST /runtime/account/agents/:registration_id/dispatch-authority-requests`
 - `POST /runtime/agents/provisional`
 - `GET /runtime/agents/provisional?provisional_agent_ref=<...>`
 - `POST /runtime/agents/provisional/claim`
@@ -95,6 +108,16 @@ The current V1 enterprise support family is intentionally mixed:
 - `GET /runtime/agents/:registration_id/task-dispatches`
 - `GET /runtime/agents/:registration_id/task-dispatches/:task_dispatch_id`
 - `POST /runtime/agents/:registration_id/task-dispatches`
+- `GET /runtime/account/agents/:registration_id/task-dispatches`
+- `GET /runtime/account/agents/:registration_id/task-dispatches/:task_dispatch_id`
+- `POST /runtime/account/agents/:registration_id/task-dispatches`
+- `POST /runtime/account/agents/:registration_id/task-dispatches/:task_dispatch_id/assign`
+- `POST /runtime/account/agents/:registration_id/task-dispatches/:task_dispatch_id/suspend`
+- `POST /runtime/account/agents/:registration_id/task-dispatches/:task_dispatch_id/resume`
+- `POST /runtime/account/agents/:registration_id/task-dispatches/:task_dispatch_id/complete`
+- `POST /runtime/account/agents/:registration_id/task-dispatches/:task_dispatch_id/fail`
+- `GET /runtime/notifications/:notification_id`
+- `POST /runtime/notifications/:notification_id/acknowledge`
 - `POST /runtime/integrations/:integrationCode/onboarding-contract`
 - `POST /runtime/integrations/haisi-wms/login`
 - `GET /runtime/integrations/haisi-wms/warehouses`

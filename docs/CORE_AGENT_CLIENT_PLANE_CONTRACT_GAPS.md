@@ -25,11 +25,11 @@ Each plane is classified from the client-adoption perspective through the helper
 
 | Plane | Status | Current client-adoption view | Next-stage expectation |
 | --- | --- | --- | --- |
-| Identity / session plane | packet-grounded-execution | Sign-up, sign-in, select-org, and session hygiene now sit alongside provisional create/query/claim so this plane has canonical payload-grounded execution coverage while the visible journey stays agent-first. | Keep freshness/invalidation semantics blocked pending packet completion instead of widening into broader login/session or platform-auth claims. |
-| Task plane | packet-grounded-execution | Canonical heartbeat, claim, and lease helpers are payload-grounded, while compatibility-only task wrappers stay explicitly secondary to the frozen route family. | Keep timeout semantics local-only or blocked pending packet truth unless Core grounds them. |
+| Identity / session plane | packet-grounded-execution | Sign-up, sign-in, select-org, and session hygiene now sit alongside provisional create/query/claim, with bounded membership lifecycle helpers and bounded dispatch-authority read/request support extending the same prerequisite-only surface while the visible journey stays agent-first. | Keep freshness/invalidation semantics blocked pending packet completion instead of widening into broader login/session or platform-auth claims. |
+| Task plane | packet-grounded-execution | Canonical heartbeat, claim, and lease helpers are payload-grounded, and the adopted account-scoped task-dispatch family now sits alongside the registration-scoped route family without changing the bounded client posture. | Keep timeout semantics local-only or blocked pending packet truth unless Core grounds them. |
 | Capability plane | packet-grounded-read | Capability profile and summary reads are payload-grounded, while refresh remains compatibility-only until Core freezes a canonical refresh payload. | Keep remote refresh blocked until packet-complete capability payloads are provided. |
 | Workflow / stage plane | blocked-pending-packet | Local journey labels remain honest and useful, but workflow-stage remains the only broadly blocked Core-facing plane because packet-grounded stage identifiers and transitions are still incomplete. | Keep stage identifiers and transition rules blocked until Core provides them. |
-| Event / notification plane | packet-grounded-execution | Notification detail reads are payload-grounded and notification delivery and acknowledgement helpers are packet-grounded execution helpers. | Keep replay or other still-missing semantics fail-closed unless Core freezes them. |
+| Event / notification plane | packet-grounded-execution | Notification detail reads are payload-grounded and notification delivery and acknowledgement helpers, including the adopted account-scoped acknowledgement path, are packet-grounded execution helpers. | Keep replay or other still-missing semantics fail-closed unless Core freezes them. |
 | Enterprise integration plane | packet-grounded-read | Integration and commercial read helpers are packet-grounded, while compatibility-only writes and blocked scenario wrappers stay clearly separated. | Keep packet-incomplete enterprise/system detail fail-closed and avoid broader enterprise orchestration claims. |
 | Local runtime / execution session plane | local-first | Stage 1 now gives the client a first-class local execution session and runtime core that CLI and MCP surfaces can consume. | Stage 2 should keep this local plane stable while hardening adapters that consume Core truth through the helper-level payload matrix. |
 | Local accumulation / memory plane | local-first | Stage 1 now gives the client explicit local accumulation for onboarding memory, task execution memory, capability usage memory, and result memory. | Stage 2 should preserve this plane as local-only accumulation and avoid turning it into hosted memory or synthetic Core truth. |
@@ -42,6 +42,8 @@ What is already real for the client:
 
 - public provisional create -> query -> claim is an explicit shipped path
 - sign-up, sign-in, account/me, select-org, session refresh, and session revoke now exist as bounded prerequisite support
+- bounded membership invitation create/accept, membership-admin transfer, and membership removal are shipped as session-scoped prerequisite support only
+- bounded account-agent dispatch-authority reads and requests are shipped without turning the client into a general account-admin shell
 - `claim-provisional-agent` is session-bound
 - governed reads already require real `tenantId` plus `principalId`
 - some routes accept `adminSessionId` as an optional companion
@@ -50,6 +52,7 @@ Current client adoption state:
 
 - the helper-level payload matrix now treats the canonical identity/session path as packet-grounded execution rather than as broadly blocked plane adoption
 - session freshness and invalidation semantics remain explicitly blocked when packet-complete truth is still absent
+- bounded membership lifecycle and dispatch-authority support remain prerequisite-only rather than broader account-product claims
 
 Current client rule:
 
@@ -63,6 +66,7 @@ What is already real for the client:
 
 - Stage 1 added a local task runtime, journal, resumability, and lifecycle hooks
 - the shipped participation-state and task-dispatch families are already consumable
+- the adopted account-scoped task-dispatch route family is already consumable where this repo exposes it
 - CLI and MCP execution now route through the same local runtime core before operator-facing results are returned
 
 Current client adoption state:
@@ -119,6 +123,7 @@ What is already real for the client:
 Current client adoption state:
 
 - notification delivery and acknowledgement helpers are packet-grounded alongside notification detail visibility
+- adopted account-scoped notification acknowledgement remains bounded to the currently frozen downstream route family
 - blocked pending payload packet handling remains in place for execution or replay semantics not yet packet-grounded
 
 Current client rule:
