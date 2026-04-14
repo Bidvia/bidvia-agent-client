@@ -27,46 +27,47 @@ const dispatchMcpToolCallWithRuntime = dispatchMcpToolCall as unknown as (
   };
 }>;
 
-test('dispatchMcpToolCall suspend-task-dispatch-execution records a blocked compatibility-only attempt instead of executing when context is present', async () => {
+test('dispatchMcpToolCall suspend-task-dispatch-execution executes and records committed local runtime memory when context is present', async () => {
   const accumulationPath = buildLocalAccumulationPath('bidvia-mcp-runtime-heartbeat-');
   let called = false;
 
-  await assert.rejects(
-    () => dispatchMcpToolCallWithRuntime(
-      {
-        toolName: 'suspend-task-dispatch-execution',
-        arguments: {
-          agentRegistrationId: 'areg-runtime',
-          taskDispatchId: 'dispatch-runtime',
-          now: '2026-04-04T13:00:00.000Z',
+  const response = await dispatchMcpToolCallWithRuntime(
+    {
+      toolName: 'suspend-task-dispatch-execution',
+      arguments: {
+        agentRegistrationId: 'areg-runtime',
+        taskDispatchId: 'dispatch-runtime',
+        now: '2026-04-04T13:00:00.000Z',
+      },
+    },
+    {
+      createExecutionClient: () => ({
+        options: {
+          context: {
+            tenantId: 'tenant-runtime',
+            principalId: 'principal-runtime',
+            registrationId: 'areg-runtime',
+            companyId: 'company-runtime',
+          },
         },
-      },
-      {
-        createExecutionClient: () => ({
-          options: {
-            context: {
-              tenantId: 'tenant-runtime',
-              principalId: 'principal-runtime',
-              registrationId: 'areg-runtime',
-              companyId: 'company-runtime',
-            },
-          },
-          async suspendTaskDispatch() {
-            called = true;
-            return {
-              ok: true,
-              helperKey: 'suspendTaskDispatch',
-            };
-          },
-        }) as never,
-        localAccumulationPath: accumulationPath,
-        now: () => '2026-04-04T13:00:00.000Z',
-      },
-    ),
-    /suspendTaskDispatch is blocked by plane execution gate null until the shared packet-grounded execution truth is frozen\./,
+        async suspendTaskDispatch() {
+          called = true;
+          return {
+            ok: true,
+            helperKey: 'suspendTaskDispatch',
+          };
+        },
+      }) as never,
+      localAccumulationPath: accumulationPath,
+      now: () => '2026-04-04T13:00:00.000Z',
+    },
   );
 
-  assert.equal(called, false);
+  assert.equal(called, true);
+  assert.deepEqual(response.result.executionResult, {
+    ok: true,
+    helperKey: 'suspendTaskDispatch',
+  });
 
   const accumulation = await readLocalAccumulation({
     path: accumulationPath,
@@ -75,16 +76,24 @@ test('dispatchMcpToolCall suspend-task-dispatch-execution records a blocked comp
   assert.ok(accumulation);
   const markers = accumulation.taskExecutionMemory.progressMarkers.map((marker) => marker.marker);
   assert.equal(markers[0], 'execution-started');
-  assert.equal(markers.includes('capability-blocked'), true);
+  assert.equal(markers.includes('result-staged'), true);
+  assert.equal(markers.includes('result-committed'), true);
   assert.equal(accumulation.capabilityUsageMemory.capabilities[0]?.capabilityKey, 'suspendTaskDispatch');
-  assert.deepEqual(accumulation.capabilityUsageMemory.capabilities[0]?.usage, []);
-  assert.deepEqual(accumulation.capabilityUsageMemory.capabilities[0]?.blockedAttempts, [{
+  assert.deepEqual(accumulation.capabilityUsageMemory.capabilities[0]?.usage, [{
     helperKey: 'suspendTaskDispatch',
     recordedAt: '2026-04-04T13:00:00.000Z',
-    executionKind: 'governed-write',
-    missingContext: [],
-    blockedByPlaneGate: null,
+    outcome: 'succeeded',
   }]);
+  assert.deepEqual(accumulation.capabilityUsageMemory.capabilities[0]?.blockedAttempts, []);
+  assert.deepEqual(accumulation.resultMemory.results[0], {
+    resultRef: 'local-result://mcp-suspendTaskDispatch-2026-04-04T13-00-00-000Z',
+    kind: 'execution-result',
+    terminalState: 'complete',
+    commitState: 'committed',
+    outcomeRef: 'outcome://local-result-mcp-suspendTaskDispatch-2026-04-04T13-00-00-000Z-complete',
+    recordedAt: '2026-04-04T13:00:00.000Z',
+    detail: '{"ok":true,"helperKey":"suspendTaskDispatch"}',
+  });
 });
 
 test('dispatchMcpToolCall create-provisional-agent-execution preserves the public provisional response while recording onboarding memory and helper-keyed capability usage', async () => {
