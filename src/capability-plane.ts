@@ -41,6 +41,39 @@ const capabilityPlanePacketGroundedReadHelperKeys = [
 ] as const;
 const capabilityPlaneCompatibilityOnlyHelperKeys = ['refreshRemoteCapabilityTruth'] as const;
 
+function buildCapabilityReadTruthSemantics() {
+  return {
+    dispatchEligibilityDerivedFromReadTruth: false as const,
+    governedRunAuthorizationDerivedFromReadTruth: false as const,
+    notes: [
+      'packet-grounded capability/readiness truth stays read-only and does not widen dispatch eligibility',
+      'packet-grounded capability/readiness truth stays read-only and does not widen governed-run authorization',
+    ],
+  };
+}
+
+export function getCapabilityPlaneReadTruthSurface(
+  helperKey: string,
+): Pick<
+  BidviaCapabilityPlaneView['helperTruth'],
+  | 'dispatchEligibilityDerivedFromReadTruth'
+  | 'governedRunAuthorizationDerivedFromReadTruth'
+> | undefined {
+  if (getCapabilityPlaneCapabilityMode(helperKey) !== 'packet-grounded-read') {
+    return undefined;
+  }
+
+  const {
+    dispatchEligibilityDerivedFromReadTruth,
+    governedRunAuthorizationDerivedFromReadTruth,
+  } = buildCapabilityReadTruthSemantics();
+
+  return {
+    dispatchEligibilityDerivedFromReadTruth,
+    governedRunAuthorizationDerivedFromReadTruth,
+  };
+}
+
 function requireCapabilityPlaneAdoptionStatus(): BidviaCorePlaneAdoptionStatus {
   const adoptionStatus = listCorePlaneAdoptionStatuses().find((status) => status.plane === 'capability');
   if (!adoptionStatus) {
@@ -137,6 +170,7 @@ export function buildCapabilityPlaneView(): BidviaCapabilityPlaneView {
     helperTruth: {
       packetGroundedReadHelperKeys: [...capabilityPlanePacketGroundedReadHelperKeys],
       compatibilityOnlyHelperKeys: [...capabilityPlaneCompatibilityOnlyHelperKeys],
+      ...buildCapabilityReadTruthSemantics(),
     },
   };
 }
@@ -312,6 +346,12 @@ export function buildCapabilityPlaneServerSnapshot(
           ...(getCapabilityPlaneCapabilityMode(routeCapability.helper_key) === undefined
             ? {}
             : { capabilityPlaneCapabilityMode: getCapabilityPlaneCapabilityMode(routeCapability.helper_key) }),
+          ...(getCapabilityPlaneReadTruthSurface(routeCapability.helper_key) === undefined
+            ? {}
+            : {
+                dispatchEligibilityDerivedFromCapabilityReadTruth: false,
+                governedRunAuthorizationDerivedFromCapabilityReadTruth: false,
+              }),
           ...classification,
         };
       }),
@@ -336,6 +376,12 @@ export function buildCapabilityPlaneServerSnapshot(
           ...(getCapabilityPlaneCapabilityMode(mcpTool.helper_ref.helper_key) === undefined
             ? {}
             : { capabilityPlaneCapabilityMode: getCapabilityPlaneCapabilityMode(mcpTool.helper_ref.helper_key) }),
+          ...(getCapabilityPlaneReadTruthSurface(mcpTool.helper_ref.helper_key) === undefined
+            ? {}
+            : {
+                dispatchEligibilityDerivedFromCapabilityReadTruth: false,
+                governedRunAuthorizationDerivedFromCapabilityReadTruth: false,
+              }),
           ...classification,
           ...(mcpTool.context_semantic ? { contextSemantic: mcpTool.context_semantic } : {}),
         };

@@ -9,10 +9,13 @@ import { buildLocalDiscoveryCatalog } from '../src/discovery-catalog.ts';
 import { getMcpToolDescriptor } from '../src/mcp.ts';
 
 test('capability-plane truth separates packet-grounded read helpers from compatibility-only refresh helpers', () => {
-  const capabilityPlane = buildCapabilityPlaneView() as {
+  const capabilityPlane = buildCapabilityPlaneView() as unknown as {
     helperTruth?: {
       packetGroundedReadHelperKeys: string[];
       compatibilityOnlyHelperKeys: string[];
+      dispatchEligibilityDerivedFromReadTruth: boolean;
+      governedRunAuthorizationDerivedFromReadTruth: boolean;
+      notes: string[];
     };
   };
 
@@ -27,38 +30,83 @@ test('capability-plane truth separates packet-grounded read helpers from compati
       'getAgentCapabilityProfile',
     ],
     compatibilityOnlyHelperKeys: ['refreshRemoteCapabilityTruth'],
+    dispatchEligibilityDerivedFromReadTruth: false,
+    governedRunAuthorizationDerivedFromReadTruth: false,
+    notes: [
+      'packet-grounded capability/readiness truth stays read-only and does not widen dispatch eligibility',
+      'packet-grounded capability/readiness truth stays read-only and does not widen governed-run authorization',
+    ],
   });
 });
 
-test('capability-plane packet-grounded read truth flows through local discovery and MCP descriptors without widening refresh truth', () => {
+test('capability-plane packet-grounded read truth flows through local discovery and MCP descriptors without implying dispatch or governed-run eligibility', () => {
   const catalog = buildLocalDiscoveryCatalog();
+  const readinessEntry = catalog.find((entry) => entry.helperKey === 'getAgentReadiness') as {
+    capabilityPlaneCapabilityMode?: string;
+    dispatchEligibilityDerivedFromCapabilityReadTruth?: boolean;
+    governedRunAuthorizationDerivedFromCapabilityReadTruth?: boolean;
+  };
+  const summaryEntry = catalog.find((entry) => entry.helperKey === 'getAgentSummary') as {
+    capabilityPlaneCapabilityMode?: string;
+    dispatchEligibilityDerivedFromCapabilityReadTruth?: boolean;
+    governedRunAuthorizationDerivedFromCapabilityReadTruth?: boolean;
+  };
+  const capabilityProfileEntry = catalog.find((entry) => entry.helperKey === 'getAgentCapabilityProfile') as {
+    capabilityPlaneCapabilityMode?: string;
+    dispatchEligibilityDerivedFromCapabilityReadTruth?: boolean;
+    governedRunAuthorizationDerivedFromCapabilityReadTruth?: boolean;
+  };
+  const readinessDescriptor = getMcpToolDescriptor('agent-readiness-read') as {
+    capabilityPlaneCapabilityMode?: string;
+    dispatchEligibilityDerivedFromCapabilityReadTruth?: boolean;
+    governedRunAuthorizationDerivedFromCapabilityReadTruth?: boolean;
+  };
+  const summaryDescriptor = getMcpToolDescriptor('agent-summary-read') as {
+    capabilityPlaneCapabilityMode?: string;
+    dispatchEligibilityDerivedFromCapabilityReadTruth?: boolean;
+    governedRunAuthorizationDerivedFromCapabilityReadTruth?: boolean;
+  };
+  const capabilityProfileDescriptor = getMcpToolDescriptor('agent-capability-profile-read') as {
+    capabilityPlaneCapabilityMode?: string;
+    dispatchEligibilityDerivedFromCapabilityReadTruth?: boolean;
+    governedRunAuthorizationDerivedFromCapabilityReadTruth?: boolean;
+  };
 
   assert.equal(
-    (catalog.find((entry) => entry.helperKey === 'getAgentReadiness') as { capabilityPlaneCapabilityMode?: string })
-      .capabilityPlaneCapabilityMode,
+    readinessEntry.capabilityPlaneCapabilityMode,
     'packet-grounded-read',
   );
+  assert.equal(readinessEntry.dispatchEligibilityDerivedFromCapabilityReadTruth, false);
+  assert.equal(readinessEntry.governedRunAuthorizationDerivedFromCapabilityReadTruth, false);
   assert.equal(
-    (catalog.find((entry) => entry.helperKey === 'getAgentSummary') as { capabilityPlaneCapabilityMode?: string })
-      .capabilityPlaneCapabilityMode,
+    summaryEntry.capabilityPlaneCapabilityMode,
     'packet-grounded-read',
   );
+  assert.equal(summaryEntry.dispatchEligibilityDerivedFromCapabilityReadTruth, false);
+  assert.equal(summaryEntry.governedRunAuthorizationDerivedFromCapabilityReadTruth, false);
   assert.equal(
-    (catalog.find((entry) => entry.helperKey === 'getAgentCapabilityProfile') as { capabilityPlaneCapabilityMode?: string })
-      .capabilityPlaneCapabilityMode,
+    capabilityProfileEntry.capabilityPlaneCapabilityMode,
     'packet-grounded-read',
   );
+  assert.equal(capabilityProfileEntry.dispatchEligibilityDerivedFromCapabilityReadTruth, false);
+  assert.equal(capabilityProfileEntry.governedRunAuthorizationDerivedFromCapabilityReadTruth, false);
 
   assert.equal(
-    (getMcpToolDescriptor('agent-readiness-read') as { capabilityPlaneCapabilityMode?: string }).capabilityPlaneCapabilityMode,
+    readinessDescriptor.capabilityPlaneCapabilityMode,
     'packet-grounded-read',
   );
+  assert.equal(readinessDescriptor.dispatchEligibilityDerivedFromCapabilityReadTruth, false);
+  assert.equal(readinessDescriptor.governedRunAuthorizationDerivedFromCapabilityReadTruth, false);
   assert.equal(
-    (getMcpToolDescriptor('agent-summary-read') as { capabilityPlaneCapabilityMode?: string }).capabilityPlaneCapabilityMode,
+    summaryDescriptor.capabilityPlaneCapabilityMode,
     'packet-grounded-read',
   );
+  assert.equal(summaryDescriptor.dispatchEligibilityDerivedFromCapabilityReadTruth, false);
+  assert.equal(summaryDescriptor.governedRunAuthorizationDerivedFromCapabilityReadTruth, false);
   assert.equal(
-    (getMcpToolDescriptor('agent-capability-profile-read') as { capabilityPlaneCapabilityMode?: string }).capabilityPlaneCapabilityMode,
+    capabilityProfileDescriptor.capabilityPlaneCapabilityMode,
     'packet-grounded-read',
   );
+  assert.equal(capabilityProfileDescriptor.dispatchEligibilityDerivedFromCapabilityReadTruth, false);
+  assert.equal(capabilityProfileDescriptor.governedRunAuthorizationDerivedFromCapabilityReadTruth, false);
 });
