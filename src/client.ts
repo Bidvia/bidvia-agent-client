@@ -1,4 +1,5 @@
 import type {
+  BidviaAccountAgentDispatchAuthorityRequestInput,
   BidviaAgentSelfServicePatchInput,
   BidviaAgentAuthorityLadderWriteInput,
   BidviaAgentAuthorityProfileWriteInput,
@@ -461,6 +462,45 @@ export class BidviaClient {
       headers: this.requireSessionHeaders(context),
       requestPolicy,
     });
+  }
+
+  async getAccountAgentDispatchAuthority(
+    agentRegistrationId: string,
+    requestPolicy?: BidviaClientRequestPolicy,
+  ) {
+    const context = this.resolveRequestContext(requestPolicy);
+    this.requireTenantId(context);
+    return this.request(
+      `/runtime/account/agents/${encodeURIComponent(agentRegistrationId)}/dispatch-authority`,
+      {
+        context,
+        method: 'GET',
+        headers: this.requireSessionHeaders(context),
+        requestPolicy,
+      },
+    );
+  }
+
+  async createAccountAgentDispatchAuthorityRequest(
+    agentRegistrationId: string,
+    input: BidviaAccountAgentDispatchAuthorityRequestInput,
+    requestPolicy?: BidviaClientRequestPolicy,
+  ) {
+    const context = this.resolveRequestContext(requestPolicy);
+    this.requireTenantId(context);
+    return this.request(
+      `/runtime/account/agents/${encodeURIComponent(agentRegistrationId)}/dispatch-authority-requests`,
+      {
+        context,
+        method: 'POST',
+        headers: this.requireSessionHeaders(context),
+        body: {
+          now: input.now,
+          rationale: input.rationale,
+        },
+        requestPolicy,
+      },
+    );
   }
 
   async listAccountAgentBindings(requestPolicy?: BidviaClientRequestPolicy) {
