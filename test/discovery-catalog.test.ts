@@ -92,6 +92,8 @@ test('buildLocalDiscoveryCatalog returns operator-readable local mappings withou
     localCapabilityTier: 'L0-observe-only',
     localCapabilityRiskTier: 'observe-only',
     capabilityPlaneCapabilityMode: 'packet-grounded-read',
+    dispatchEligibilityDerivedFromCapabilityReadTruth: false,
+    governedRunAuthorizationDerivedFromCapabilityReadTruth: false,
     discoveryKind: 'read',
     recommendedOutputMode: 'truth-fetch-result',
     sourceOfTruth: 'local-sdk-helpers',
@@ -327,14 +329,14 @@ test('discovery catalog marks the canonical downstream task consumer routes as a
     level: 'atomic-route',
     localCapabilityTier: 'L3-governed-commercial',
     localCapabilityRiskTier: 'governed-commercial',
-    discoveryKind: 'blocked',
+    discoveryKind: 'execute',
     recommendedOutputMode: 'execution-result',
     sourceOfTruth: 'local-sdk-helpers',
     localOnly: true,
     remoteDiscovery: false,
-    runnable: false,
+    runnable: true,
     blockedBy: null,
-    taskPlaneCapabilityMode: 'compatibility-only',
+    taskPlaneCapabilityMode: 'packet-grounded-execution',
     cliCommands: [],
     mcpTools: [
       {
@@ -507,6 +509,8 @@ test('buildLocalMcpToolCatalog derives MCP descriptors from the shared local dis
     accessContextFamily: 'principal-governed-read',
     requiredContext: ['tenantId', 'principalId'],
     capabilityPlaneCapabilityMode: 'packet-grounded-read',
+    dispatchEligibilityDerivedFromCapabilityReadTruth: false,
+    governedRunAuthorizationDerivedFromCapabilityReadTruth: false,
   });
 
   assert.deepEqual(mcpTools.find((tool) => tool.toolName === 'query-provisional-agent-read'), {

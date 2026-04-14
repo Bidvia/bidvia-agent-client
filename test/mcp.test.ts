@@ -73,10 +73,7 @@ const expectedBidviaMcpToolNames = [
   'task-dispatches-read',
   'task-dispatch-read',
   'notification-read',
-  'create-notification-delivery-execution',
   'acknowledge-notification-execution',
-  'retry-notification-execution',
-  'expire-notification-execution',
   'create-provisional-agent-execution',
   'claim-provisional-agent-execution',
   'download-sync-execution',
@@ -356,44 +353,44 @@ test('dispatchMcpToolCall missing-context wording keeps public provisional creat
   );
 });
 
-test('dispatchMcpToolCall blocks compatibility-only execution helpers even when required context is present', async () => {
+test('dispatchMcpToolCall routes packet-grounded task execution helpers when required context is present', async () => {
   let called = false;
 
-  await assert.rejects(
-    () => dispatchMcpToolCallWithExecution(
-      {
-        toolName: 'suspend-task-dispatch-execution',
-        arguments: {
-          agentRegistrationId: 'areg-runtime',
-          taskDispatchId: 'dispatch-1',
-          now: '2026-04-04T13:00:00.000Z',
-        },
-      },
-      {
-        createExecutionClient: () => ({
-          options: {
-            context: {
-              tenantId: 'tenant-runtime',
-              principalId: 'principal-runtime',
-              registrationId: 'areg-runtime',
-              companyId: 'company-runtime',
-            },
-          },
-          async suspendTaskDispatch() {
-            called = true;
-            return {
-              ok: true,
-            };
-          },
-        }) as never,
-      },
-    ),
+  const result = await dispatchMcpToolCallWithExecution(
     {
-      message: 'suspendTaskDispatch is blocked by plane execution gate null until the shared packet-grounded execution truth is frozen.',
+      toolName: 'suspend-task-dispatch-execution',
+      arguments: {
+        agentRegistrationId: 'areg-runtime',
+        taskDispatchId: 'dispatch-1',
+        now: '2026-04-04T13:00:00.000Z',
+      },
+    },
+    {
+      createExecutionClient: () => ({
+        options: {
+          context: {
+            tenantId: 'tenant-runtime',
+            principalId: 'principal-runtime',
+            registrationId: 'areg-runtime',
+            companyId: 'company-runtime',
+          },
+        },
+        async suspendTaskDispatch() {
+          called = true;
+          return {
+            ok: true,
+          };
+        },
+      }) as never,
     },
   );
 
-  assert.equal(called, false);
+  assert.equal(called, true);
+  assert.deepEqual(result.result, {
+    executionResult: {
+      ok: true,
+    },
+  });
 });
 
 test('MCP tool catalog export returns stable machine-readable descriptor data', () => {
@@ -870,7 +867,7 @@ test('dispatchMcpToolCall exposes widened Task 1 governance read descriptors in 
   assert.equal(getMcpToolDescriptor('notification-read')?.toolName, 'notification-read');
   assert.equal((getMcpToolDescriptor('task-dispatch-read') as { taskPlaneCapabilityMode?: string }).taskPlaneCapabilityMode, 'visibility-only');
   assert.equal((getMcpToolDescriptor('notification-read') as { eventNotificationPlaneCapabilityMode?: string }).eventNotificationPlaneCapabilityMode, 'visibility-only');
-  assert.equal((getMcpToolDescriptor('suspend-task-dispatch-execution') as { taskPlaneCapabilityMode?: string }).taskPlaneCapabilityMode, 'compatibility-only');
+  assert.equal((getMcpToolDescriptor('suspend-task-dispatch-execution') as { taskPlaneCapabilityMode?: string }).taskPlaneCapabilityMode, 'packet-grounded-execution');
   assert.deepEqual(getMcpToolDescriptor('create-lease-execution') as { runnable?: boolean; blockedBy?: string | null; taskPlaneCapabilityMode?: string }, {
     toolName: 'create-lease-execution',
     description: 'Executes the governed lease creation through the shipped SDK helper.',
