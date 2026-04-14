@@ -42,6 +42,8 @@ export interface BidviaLocalDiscoveryCatalogEntry extends Pick<
   | 'localCapabilityTier'
   | 'localCapabilityRiskTier'
   | 'capabilityPlaneCapabilityMode'
+  | 'dispatchEligibilityDerivedFromCapabilityReadTruth'
+  | 'governedRunAuthorizationDerivedFromCapabilityReadTruth'
   | 'taskPlaneCapabilityMode'
   | 'eventNotificationPlaneCapabilityMode'
 > {
@@ -754,6 +756,18 @@ function createLocalMcpToolDescriptor(binding: BidviaLocalDiscoveryMcpBinding): 
     ...(capability.capabilityPlaneCapabilityMode === undefined
       ? {}
       : { capabilityPlaneCapabilityMode: capability.capabilityPlaneCapabilityMode }),
+    ...(capability.dispatchEligibilityDerivedFromCapabilityReadTruth === undefined
+      ? {}
+      : {
+          dispatchEligibilityDerivedFromCapabilityReadTruth:
+            capability.dispatchEligibilityDerivedFromCapabilityReadTruth,
+        }),
+    ...(capability.governedRunAuthorizationDerivedFromCapabilityReadTruth === undefined
+      ? {}
+      : {
+          governedRunAuthorizationDerivedFromCapabilityReadTruth:
+            capability.governedRunAuthorizationDerivedFromCapabilityReadTruth,
+        }),
     ...(binding.outputMode !== 'execution-result'
       ? {}
       : buildExecutionDiscoverability(binding.capabilityKey ?? binding.helperKey)),
@@ -812,6 +826,18 @@ export function buildLocalDiscoveryCatalog(): BidviaLocalDiscoveryCatalogEntry[]
       ...(capability.capabilityPlaneCapabilityMode === undefined
         ? {}
         : { capabilityPlaneCapabilityMode: capability.capabilityPlaneCapabilityMode }),
+      ...(capability.dispatchEligibilityDerivedFromCapabilityReadTruth === undefined
+        ? {}
+        : {
+            dispatchEligibilityDerivedFromCapabilityReadTruth:
+              capability.dispatchEligibilityDerivedFromCapabilityReadTruth,
+          }),
+      ...(capability.governedRunAuthorizationDerivedFromCapabilityReadTruth === undefined
+        ? {}
+        : {
+            governedRunAuthorizationDerivedFromCapabilityReadTruth:
+              capability.governedRunAuthorizationDerivedFromCapabilityReadTruth,
+          }),
       discoveryKind: getDiscoveryKind(capability),
       recommendedOutputMode: buildRecommendedOutputMode(cliBindings, mcpBindings, capability),
       sourceOfTruth: discoveryBoundary.sourceOfTruth,
