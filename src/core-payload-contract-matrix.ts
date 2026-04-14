@@ -350,20 +350,10 @@ export function listCorePayloadPlaneExecutionGates(): BidviaPlaneExecutionGate[]
 
 export function buildWorkflowStageCoreStageSemantics(): BidviaWorkflowStagePlaneView['coreStageSemantics'] {
   return {
-    payloadPacketStatus: 'packet-grounded',
-    blockedBy: null,
-    packetGroundedStageIdentifiers: [
-      'notification.notification_state',
-      'task.task_state',
-      'latest_participation_state.context_handoff_state',
-    ],
-    transitionRules: [
-      'transitions[].transition_kind',
-      'transitions[].from_notification_state',
-      'transitions[].to_notification_state',
-      'transitions[].from_task_state',
-      'transitions[].to_task_state',
-    ],
+    payloadPacketStatus: 'blocked-pending-packet',
+    blockedBy: 'core-write-semantics-not-frozen',
+    packetGroundedStageIdentifiers: [],
+    transitionRules: [],
     inventedIdentifiersBlocked: true,
   };
 }

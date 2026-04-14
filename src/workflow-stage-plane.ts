@@ -35,8 +35,7 @@ export function buildWorkflowStagePlaneView(): BidviaWorkflowStagePlaneView {
       descriptiveOnly: true,
       labels: [...localJourneyStageLabels],
       notes: [
-        'Local journey stages are operator-facing guidance only.',
-        'Do not treat local journey labels as Core-owned stage identifiers or transition truth.',
+        'local journey labels remain operator guidance and do not become Core-owned workflow-stage truth',
       ],
     },
     workflowIdentifiers: {
@@ -63,8 +62,8 @@ export function buildWorkflowStageReference(
     localStageLabel,
     localStageSemantics: 'local-only',
     coreStageIdentifier: null,
-    coreStageSemantics: 'packet-grounded-read',
-    blockedBy: null,
+    coreStageSemantics: 'blocked-pending-packet',
+    blockedBy: 'core-write-semantics-not-frozen',
     transitionRule: null,
   };
 }
