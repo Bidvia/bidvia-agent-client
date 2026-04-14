@@ -1,4 +1,5 @@
 import type {
+  BidviaAcceptAccountMembershipInvitationInput,
   BidviaAccountAgentDispatchAuthorityRequestInput,
   BidviaAgentSelfServicePatchInput,
   BidviaAgentAuthorityLadderWriteInput,
@@ -21,6 +22,7 @@ import type {
   BidviaClientRequestPolicy,
   BidviaClientRequestDescriptor,
   BidviaClientTransportErrorKind,
+  BidviaCreateAccountMembershipInvitationInput,
   BidviaCreateConnectionRequestInput,
   BidviaEnterpriseAccountSignUpInput,
   BidviaCreateListingInput,
@@ -43,6 +45,7 @@ import type {
   BidviaProvisionalAgentClaimInput,
   BidviaProvisionalAgentCreateInput,
   BidviaQueryProvisionalAgentInput,
+  BidviaRemoveAccountMembershipInput,
   BidviaSelectOrgInput,
   BidviaSignInInput,
   BidviaSyncUploadInput,
@@ -54,6 +57,7 @@ import type {
   BidviaTaskDispatchResumeInput,
   BidviaTaskDispatchSuspendInput,
   BidviaTaskDispatchWriteInput,
+  BidviaTransferAccountMembershipAdminInput,
   BidviaVerificationBundle,
 } from './contracts.js';
 import { exportLegacyVerificationBundle } from './verification.js';
@@ -305,6 +309,83 @@ export class BidviaClient {
       },
       requestPolicy,
     });
+  }
+
+  async createAccountMembershipInvitation(
+    input: BidviaCreateAccountMembershipInvitationInput,
+    requestPolicy?: BidviaClientRequestPolicy,
+  ) {
+    const context = this.resolveRequestContext(requestPolicy);
+    return this.request('/runtime/account/memberships/invitations', {
+      context,
+      method: 'POST',
+      headers: this.requireSessionHeaders(context),
+      body: {
+        org_id: input.orgId,
+        invitee_email: input.inviteeEmail,
+        now: input.now,
+      },
+      requestPolicy,
+    });
+  }
+
+  async acceptAccountMembershipInvitation(
+    input: BidviaAcceptAccountMembershipInvitationInput,
+    requestPolicy?: BidviaClientRequestPolicy,
+  ) {
+    const context = this.resolveRequestContext(requestPolicy);
+    return this.request('/runtime/account/memberships/accept-invitation', {
+      context,
+      method: 'POST',
+      headers: this.requireSessionHeaders(context),
+      body: {
+        invitation_token: input.invitationToken,
+        now: input.now,
+      },
+      requestPolicy,
+    });
+  }
+
+  async transferAccountMembershipAdmin(
+    membershipBindingId: string,
+    input: BidviaTransferAccountMembershipAdminInput,
+    requestPolicy?: BidviaClientRequestPolicy,
+  ) {
+    const context = this.resolveRequestContext(requestPolicy);
+    return this.request(
+      `/runtime/account/memberships/${encodeURIComponent(membershipBindingId)}/transfer-admin`,
+      {
+        context,
+        method: 'POST',
+        headers: this.requireSessionHeaders(context),
+        body: {
+          target_account_id: input.targetAccountId,
+          now: input.now,
+        },
+        requestPolicy,
+      },
+    );
+  }
+
+  async removeAccountMembership(
+    membershipBindingId: string,
+    input: BidviaRemoveAccountMembershipInput,
+    requestPolicy?: BidviaClientRequestPolicy,
+  ) {
+    const context = this.resolveRequestContext(requestPolicy);
+    return this.request(
+      `/runtime/account/memberships/${encodeURIComponent(membershipBindingId)}/remove`,
+      {
+        context,
+        method: 'POST',
+        headers: this.requireSessionHeaders(context),
+        body: {
+          reason: input.reason,
+          now: input.now,
+        },
+        requestPolicy,
+      },
+    );
   }
 
 
