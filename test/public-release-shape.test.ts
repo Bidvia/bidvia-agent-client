@@ -133,10 +133,13 @@ test('public release docs no longer depend on transitional publication wording i
   assert.match(onboardingGuide, /route-context-matrix/i);
   assert.match(onboardingGuide, /runtime-capabilities/i);
   assert.match(readme, /formal `1\.0\.0` release/i);
-  assert.match(releaseNotes, /formal `1\.0\.0` release/i);
-  assert.match(releaseNotes, /Stage 3 release gate is now ready/i);
-  assert.doesNotMatch(readme, /Stage 3 release gate is still blocked/i);
-  assert.doesNotMatch(releaseNotes, /must not be described as full `1\.0\.0` closure/i);
+  assert.match(releaseNotes, /formal release packet/i);
+  assert.match(readme, /Stage 3 release gate remains blocked/i);
+  assert.match(releaseNotes, /Stage 3 release gate remains blocked/i);
+  assert.match(releaseChecklist, /do not describe `1\.0\.0` closure as complete/i);
+  assert.match(releaseNotes, /downstream contract center/i);
+  assert.doesNotMatch(releaseNotes, /Stage 3 release gate is now ready/i);
+  assert.doesNotMatch(readme, /release-ready public surface/i);
 
   assert.match(roadmap, /This file remains the single roadmap for `bidvia-agent-client`\./);
   assert.match(roadmap, /Individual `\.sisyphus\/plans\/\*\.md` files are execution slices/);

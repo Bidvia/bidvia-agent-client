@@ -22,8 +22,10 @@ That current slice is centered on the execution layer, with adjacent scenario, v
 Today the mainline already includes:
 
 - shipped local helpers for onboarding, claim, heartbeat, sync, evidence, proposal, and related governed execution flows
+- shipped bounded identity/session prerequisite helpers for membership lifecycle and account-agent dispatch-authority support without widening into a general account-admin shell
 - shipped local helper coverage for pricing, media, evidence, document, attachment, proposal, review, and authorized-use explanation surfaces
 - shipped SDK/CLI visibility for the frozen registration, authority-profile, capability-profile, singular agent-capability-profile, participation-state, and task-dispatch route families now adopted downstream
+- shipped account-scoped task-dispatch and notification helper families where the downstream packets are already frozen and adopted here
 - shipped local scenario-envelope builders plus bounded scenario families for registration lifecycle, registered-agent operations, industry-universe, connection approval, commercial-action continuation, and one honest cross-chain coordinator path across shipped slices
 - shipped local review-packet, verification-bundle, CLI preview/export, static capability metadata, local runtime snapshot, server-capability normalization, static MCP catalog, bounded local stdio MCP server, and environment-mode visibility surfaces
 

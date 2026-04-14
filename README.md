@@ -150,6 +150,9 @@ console.log(heartbeat);
 The shipped SDK includes:
 
 - bounded account/session prerequisite support
+- bounded membership lifecycle support for invitation create/accept, admin transfer, and removal
+- bounded account-agent dispatch-authority read/request support
+- account-scoped task-dispatch and notification canonical families where the current downstream packets are already adopted
 - provisional create -> query -> claim helpers
 - registration-bound heartbeat, sync, evidence, and proposal helpers
 - governed reads such as `authority-profiles`, `capability-profile`, agent registration visibility, participation-state visibility, and task-dispatch visibility
@@ -189,6 +192,8 @@ The current helper-level payload model matters:
 
 - packet-grounded execution helpers already ship in the identity/session, task, and event-notification surfaces
 - packet-grounded read helpers already ship in the capability and enterprise surfaces
+- identity/session prerequisite support remains bounded even when it now includes membership lifecycle and dispatch-authority helpers
+- account-scoped task-dispatch and notification helpers only claim the currently adopted downstream route families; they do not imply a general account-admin shell
 - some wrappers remain `compatibility-only`
 - workflow-stage and other packet-incomplete seams remain blocked until Core freezes the missing payloads
 
