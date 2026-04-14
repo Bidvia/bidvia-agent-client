@@ -727,7 +727,7 @@ const bidviaBaseRouteCapabilities: ReadonlyArray<BidviaRouteCapabilityWithOption
   },
   {
     helperKey: 'createLease',
-    routePathTemplate: '/runtime/agents/:agent_registration_id/leases',
+    routePathTemplate: '/runtime/account/agents/:agent_registration_id/leases',
     httpMethod: 'POST',
     accessContextFamily: 'operator-company',
     requiredContext: ['tenantId', 'principalId', 'companyId'],
@@ -738,7 +738,7 @@ const bidviaBaseRouteCapabilities: ReadonlyArray<BidviaRouteCapabilityWithOption
   },
   {
     helperKey: 'listTaskDispatches',
-    routePathTemplate: '/runtime/agents/:agent_registration_id/task-dispatches',
+    routePathTemplate: '/runtime/account/agents/:agent_registration_id/task-dispatches',
     httpMethod: 'GET',
     accessContextFamily: 'principal-governed-read',
     requiredContext: ['tenantId', 'principalId'],
@@ -749,7 +749,7 @@ const bidviaBaseRouteCapabilities: ReadonlyArray<BidviaRouteCapabilityWithOption
   },
   {
     helperKey: 'getTaskDispatch',
-    routePathTemplate: '/runtime/agents/:agent_registration_id/task-dispatches/:task_dispatch_id',
+    routePathTemplate: '/runtime/account/agents/:agent_registration_id/task-dispatches/:task_dispatch_id',
     httpMethod: 'GET',
     accessContextFamily: 'principal-governed-read',
     requiredContext: ['tenantId', 'principalId'],
@@ -815,7 +815,7 @@ const bidviaBaseRouteCapabilities: ReadonlyArray<BidviaRouteCapabilityWithOption
   },
   {
     helperKey: 'createTaskDispatch',
-    routePathTemplate: '/runtime/agents/:agent_registration_id/task-dispatches',
+    routePathTemplate: '/runtime/account/agents/:agent_registration_id/task-dispatches',
     httpMethod: 'POST',
     accessContextFamily: 'operator-company',
     requiredContext: ['tenantId', 'principalId', 'companyId'],
@@ -826,7 +826,7 @@ const bidviaBaseRouteCapabilities: ReadonlyArray<BidviaRouteCapabilityWithOption
   },
   {
     helperKey: 'assignTaskDispatch',
-    routePathTemplate: '/runtime/agents/:agent_registration_id/task-dispatches/:task_dispatch_id/assign',
+    routePathTemplate: '/runtime/account/agents/:agent_registration_id/task-dispatches/:task_dispatch_id/assign',
     httpMethod: 'POST',
     accessContextFamily: 'operator-company',
     requiredContext: ['tenantId', 'principalId', 'companyId'],
@@ -837,7 +837,7 @@ const bidviaBaseRouteCapabilities: ReadonlyArray<BidviaRouteCapabilityWithOption
   },
   {
     helperKey: 'suspendTaskDispatch',
-    routePathTemplate: '/runtime/agents/:agent_registration_id/task-dispatches/:task_dispatch_id/suspend',
+    routePathTemplate: '/runtime/account/agents/:agent_registration_id/task-dispatches/:task_dispatch_id/suspend',
     httpMethod: 'POST',
     accessContextFamily: 'operator-company',
     requiredContext: ['tenantId', 'principalId', 'companyId'],
@@ -848,7 +848,7 @@ const bidviaBaseRouteCapabilities: ReadonlyArray<BidviaRouteCapabilityWithOption
   },
   {
     helperKey: 'resumeTaskDispatch',
-    routePathTemplate: '/runtime/agents/:agent_registration_id/task-dispatches/:task_dispatch_id/resume',
+    routePathTemplate: '/runtime/account/agents/:agent_registration_id/task-dispatches/:task_dispatch_id/resume',
     httpMethod: 'POST',
     accessContextFamily: 'operator-company',
     requiredContext: ['tenantId', 'principalId', 'companyId'],
@@ -859,7 +859,7 @@ const bidviaBaseRouteCapabilities: ReadonlyArray<BidviaRouteCapabilityWithOption
   },
   {
     helperKey: 'completeTaskDispatch',
-    routePathTemplate: '/runtime/agents/:agent_registration_id/task-dispatches/:task_dispatch_id/complete',
+    routePathTemplate: '/runtime/account/agents/:agent_registration_id/task-dispatches/:task_dispatch_id/complete',
     httpMethod: 'POST',
     accessContextFamily: 'operator-company',
     requiredContext: ['tenantId', 'principalId', 'companyId'],
@@ -870,7 +870,7 @@ const bidviaBaseRouteCapabilities: ReadonlyArray<BidviaRouteCapabilityWithOption
   },
   {
     helperKey: 'failTaskDispatch',
-    routePathTemplate: '/runtime/agents/:agent_registration_id/task-dispatches/:task_dispatch_id/fail',
+    routePathTemplate: '/runtime/account/agents/:agent_registration_id/task-dispatches/:task_dispatch_id/fail',
     httpMethod: 'POST',
     accessContextFamily: 'operator-company',
     requiredContext: ['tenantId', 'principalId', 'companyId'],
@@ -881,7 +881,7 @@ const bidviaBaseRouteCapabilities: ReadonlyArray<BidviaRouteCapabilityWithOption
   },
   {
     helperKey: 'createClaim',
-    routePathTemplate: '/runtime/agents/:agent_registration_id/claims',
+    routePathTemplate: '/runtime/account/agents/:agent_registration_id/claims',
     httpMethod: 'POST',
     accessContextFamily: 'operator-company',
     requiredContext: ['tenantId', 'principalId', 'companyId'],
@@ -892,7 +892,7 @@ const bidviaBaseRouteCapabilities: ReadonlyArray<BidviaRouteCapabilityWithOption
   },
   {
     helperKey: 'acceptClaim',
-    routePathTemplate: '/runtime/agents/:agent_registration_id/claims/:claim_id/accept',
+    routePathTemplate: '/runtime/account/agents/:agent_registration_id/claims/:claim_id/accept',
     httpMethod: 'POST',
     accessContextFamily: 'operator-company',
     requiredContext: ['tenantId', 'principalId', 'companyId'],
@@ -903,7 +903,7 @@ const bidviaBaseRouteCapabilities: ReadonlyArray<BidviaRouteCapabilityWithOption
   },
   {
     helperKey: 'rejectClaim',
-    routePathTemplate: '/runtime/agents/:agent_registration_id/claims/:claim_id/reject',
+    routePathTemplate: '/runtime/account/agents/:agent_registration_id/claims/:claim_id/reject',
     httpMethod: 'POST',
     accessContextFamily: 'operator-company',
     requiredContext: ['tenantId', 'principalId', 'companyId'],
