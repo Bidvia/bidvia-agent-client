@@ -172,3 +172,66 @@ test('core payload contract matrix exposes one authoritative helper truth table 
     },
   );
 });
+
+test('core payload contract matrix marks canonical notification consumption as account-scoped read plus acknowledgement-only execution', () => {
+  const exports = publicSurface as Record<string, unknown>;
+  const entries = (exports.listCorePayloadContractMatrixEntries as () => Array<{
+    plane: string;
+    helperKey: string;
+    helperState: string;
+    routePathTemplate: string | null;
+    blockedBy: string | null;
+  }>)();
+
+  const entryByHelperKey = new Map(entries.map((entry) => [entry.helperKey, entry]));
+  const notificationEntrySnapshot = (helperKey: string) => entryByHelperKey.get(helperKey) && {
+    plane: entryByHelperKey.get(helperKey)?.plane,
+    helperKey: entryByHelperKey.get(helperKey)?.helperKey,
+    helperState: entryByHelperKey.get(helperKey)?.helperState,
+    routePathTemplate: entryByHelperKey.get(helperKey)?.routePathTemplate,
+    blockedBy: entryByHelperKey.get(helperKey)?.blockedBy,
+  };
+
+  assert.deepEqual(notificationEntrySnapshot('getNotification'), {
+    plane: 'event-notification',
+    helperKey: 'getNotification',
+    helperState: 'packet-grounded-read',
+    routePathTemplate: '/runtime/account/agents/:agent_registration_id/notifications/:notification_id',
+    blockedBy: null,
+  });
+  assert.deepEqual(notificationEntrySnapshot('acknowledgeNotification'), {
+    plane: 'event-notification',
+    helperKey: 'acknowledgeNotification',
+    helperState: 'packet-grounded-execution',
+    routePathTemplate: '/runtime/account/agents/:agent_registration_id/notifications/:notification_id/acknowledgements',
+    blockedBy: null,
+  });
+  assert.deepEqual(
+    ['createNotificationDelivery', 'retryNotification', 'expireNotification'].map((helperKey) =>
+      notificationEntrySnapshot(helperKey),
+    ),
+    [
+      {
+        plane: 'event-notification',
+        helperKey: 'createNotificationDelivery',
+        helperState: 'compatibility-only',
+        routePathTemplate: null,
+        blockedBy: null,
+      },
+      {
+        plane: 'event-notification',
+        helperKey: 'retryNotification',
+        helperState: 'compatibility-only',
+        routePathTemplate: null,
+        blockedBy: null,
+      },
+      {
+        plane: 'event-notification',
+        helperKey: 'expireNotification',
+        helperState: 'compatibility-only',
+        routePathTemplate: null,
+        blockedBy: null,
+      },
+    ],
+  );
+});
