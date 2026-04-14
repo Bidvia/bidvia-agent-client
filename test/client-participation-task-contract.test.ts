@@ -17,7 +17,7 @@ function createFetchStub() {
   return { calls, fetchStub };
 }
 
-test('BidviaClient uses governed read headers for canonical participation-state and task GET wrappers', async () => {
+test('BidviaClient uses governed read headers for canonical participation-state and account-scoped task GET wrappers', async () => {
   const { calls, fetchStub } = createFetchStub();
   const client = new BidviaClient({
     baseUrl: 'http://127.0.0.1:8787',
@@ -37,14 +37,14 @@ test('BidviaClient uses governed read headers for canonical participation-state 
   assert.equal(calls.length, 4);
   assert.equal(String(calls[0]?.input), 'http://127.0.0.1:8787/runtime/agents/areg-1/participation-states?tenant_id=tenant-a');
   assert.equal(String(calls[1]?.input), 'http://127.0.0.1:8787/runtime/agents/areg-1/participation-states/pstate-1?tenant_id=tenant-a');
-  assert.equal(String(calls[2]?.input), 'http://127.0.0.1:8787/runtime/agents/areg-1/task-dispatches?tenant_id=tenant-a');
-  assert.equal(String(calls[3]?.input), 'http://127.0.0.1:8787/runtime/agents/areg-1/task-dispatches/dispatch-1?tenant_id=tenant-a');
+  assert.equal(String(calls[2]?.input), 'http://127.0.0.1:8787/runtime/account/agents/areg-1/task-dispatches?tenant_id=tenant-a');
+  assert.equal(String(calls[3]?.input), 'http://127.0.0.1:8787/runtime/account/agents/areg-1/task-dispatches/dispatch-1?tenant_id=tenant-a');
   assert.equal((calls[0]?.init?.headers as Record<string, string>)['x-authorized-tenant-id'], 'tenant-a');
   assert.equal((calls[0]?.init?.headers as Record<string, string>)['x-bidvia-principal-id'], 'actor-1');
   assert.equal((calls[0]?.init?.headers as Record<string, string>)['x-bidvia-admin-session-id'], 'admin-sess-1');
 });
 
-test('BidviaClient uses operator action headers and frozen payloads for canonical participation-state and task POST wrappers', async () => {
+test('BidviaClient uses operator action headers and frozen payloads for canonical participation-state and account-scoped task POST wrappers', async () => {
   const { calls, fetchStub } = createFetchStub();
   const client = new BidviaClient({
     baseUrl: 'http://127.0.0.1:8787',
@@ -78,19 +78,6 @@ test('BidviaClient uses operator action headers and frozen payloads for canonica
     now: '2026-03-31T00:02:00.000Z',
     reason: 'new notification work',
   });
-  await client.assignTaskDispatch('areg-1', 'dispatch-1', {
-    assignedToRegistrationId: 'areg-2',
-    now: '2026-03-31T00:03:00.000Z',
-    reason: 'specialized worker available',
-  });
-  await client.suspendTaskDispatch('areg-1', 'dispatch-1', {
-    now: '2026-03-31T00:04:00.000Z',
-    reason: 'external dependency pending',
-  });
-  await client.resumeTaskDispatch('areg-1', 'dispatch-1', {
-    now: '2026-03-31T00:05:00.000Z',
-    reason: 'dependency resolved',
-  });
   await client.completeTaskDispatch('areg-1', 'dispatch-1', {
     now: '2026-03-31T00:06:00.000Z',
     reason: 'task finished',
@@ -117,18 +104,15 @@ test('BidviaClient uses operator action headers and frozen payloads for canonica
     now: '2026-03-31T00:10:00.000Z',
   });
 
-  assert.equal(calls.length, 11);
+  assert.equal(calls.length, 8);
   assert.equal(String(calls[0]?.input), 'http://127.0.0.1:8787/runtime/agents/areg-1/participation-states?tenant_id=tenant-a');
-  assert.equal(String(calls[1]?.input), 'http://127.0.0.1:8787/runtime/agents/areg-1/leases?tenant_id=tenant-a');
-  assert.equal(String(calls[2]?.input), 'http://127.0.0.1:8787/runtime/agents/areg-1/task-dispatches?tenant_id=tenant-a');
-  assert.equal(String(calls[3]?.input), 'http://127.0.0.1:8787/runtime/agents/areg-1/task-dispatches/dispatch-1/assign?tenant_id=tenant-a');
-  assert.equal(String(calls[4]?.input), 'http://127.0.0.1:8787/runtime/agents/areg-1/task-dispatches/dispatch-1/suspend?tenant_id=tenant-a');
-  assert.equal(String(calls[5]?.input), 'http://127.0.0.1:8787/runtime/agents/areg-1/task-dispatches/dispatch-1/resume?tenant_id=tenant-a');
-  assert.equal(String(calls[6]?.input), 'http://127.0.0.1:8787/runtime/agents/areg-1/task-dispatches/dispatch-1/complete?tenant_id=tenant-a');
-  assert.equal(String(calls[7]?.input), 'http://127.0.0.1:8787/runtime/agents/areg-1/task-dispatches/dispatch-1/fail?tenant_id=tenant-a');
-  assert.equal(String(calls[8]?.input), 'http://127.0.0.1:8787/runtime/agents/areg-1/claims?tenant_id=tenant-a');
-  assert.equal(String(calls[9]?.input), 'http://127.0.0.1:8787/runtime/agents/areg-1/claims/claim-1/accept?tenant_id=tenant-a');
-  assert.equal(String(calls[10]?.input), 'http://127.0.0.1:8787/runtime/agents/areg-1/claims/claim-1/reject?tenant_id=tenant-a');
+  assert.equal(String(calls[1]?.input), 'http://127.0.0.1:8787/runtime/account/agents/areg-1/leases?tenant_id=tenant-a');
+  assert.equal(String(calls[2]?.input), 'http://127.0.0.1:8787/runtime/account/agents/areg-1/task-dispatches?tenant_id=tenant-a');
+  assert.equal(String(calls[3]?.input), 'http://127.0.0.1:8787/runtime/account/agents/areg-1/task-dispatches/dispatch-1/complete?tenant_id=tenant-a');
+  assert.equal(String(calls[4]?.input), 'http://127.0.0.1:8787/runtime/account/agents/areg-1/task-dispatches/dispatch-1/fail?tenant_id=tenant-a');
+  assert.equal(String(calls[5]?.input), 'http://127.0.0.1:8787/runtime/account/agents/areg-1/claims?tenant_id=tenant-a');
+  assert.equal(String(calls[6]?.input), 'http://127.0.0.1:8787/runtime/account/agents/areg-1/claims/claim-1/accept?tenant_id=tenant-a');
+  assert.equal(String(calls[7]?.input), 'http://127.0.0.1:8787/runtime/account/agents/areg-1/claims/claim-1/reject?tenant_id=tenant-a');
   assert.equal((calls[0]?.init?.headers as Record<string, string>)['x-authorized-company-id'], 'company-a');
   assert.deepEqual(JSON.parse(String(calls[0]?.init?.body)), {
     state: 'ACTIVE',
@@ -153,39 +137,26 @@ test('BidviaClient uses operator action headers and frozen payloads for canonica
     reason: 'new notification work',
   });
   assert.deepEqual(JSON.parse(String(calls[3]?.init?.body)), {
-    assigned_to_registration_id: 'areg-2',
-    now: '2026-03-31T00:03:00.000Z',
-    reason: 'specialized worker available',
-  });
-  assert.deepEqual(JSON.parse(String(calls[4]?.init?.body)), {
-    now: '2026-03-31T00:04:00.000Z',
-    reason: 'external dependency pending',
-  });
-  assert.deepEqual(JSON.parse(String(calls[5]?.init?.body)), {
-    now: '2026-03-31T00:05:00.000Z',
-    reason: 'dependency resolved',
-  });
-  assert.deepEqual(JSON.parse(String(calls[6]?.init?.body)), {
     now: '2026-03-31T00:06:00.000Z',
     reason: 'task finished',
     outcome_ref: 'outcome://dispatch/1',
   });
-  assert.deepEqual(JSON.parse(String(calls[7]?.init?.body)), {
+  assert.deepEqual(JSON.parse(String(calls[4]?.init?.body)), {
     now: '2026-03-31T00:07:00.000Z',
     reason: 'task failed',
     outcome_ref: 'outcome://dispatch/1/failure',
   });
-  assert.deepEqual(JSON.parse(String(calls[8]?.init?.body)), {
+  assert.deepEqual(JSON.parse(String(calls[5]?.init?.body)), {
     claim_kind: 'ownership',
     claim_ref: 'claim://1',
     task_dispatch_id: 'dispatch-1',
     now: '2026-03-31T00:08:00.000Z',
   });
-  assert.deepEqual(JSON.parse(String(calls[9]?.init?.body)), {
+  assert.deepEqual(JSON.parse(String(calls[6]?.init?.body)), {
     task_dispatch_id: 'dispatch-1',
     now: '2026-03-31T00:09:00.000Z',
   });
-  assert.deepEqual(JSON.parse(String(calls[10]?.init?.body)), {
+  assert.deepEqual(JSON.parse(String(calls[7]?.init?.body)), {
     task_dispatch_id: 'dispatch-1',
     reason: 'claim conflicts with active lease',
     now: '2026-03-31T00:10:00.000Z',
