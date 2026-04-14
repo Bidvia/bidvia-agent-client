@@ -45,7 +45,7 @@ test('shared plane execution gate distinguishes runnable helper exceptions from 
   assert.deepEqual(gateByHelperKey.get('createNotificationDelivery'), {
     plane: 'event-notification',
     helperKey: 'createNotificationDelivery',
-    executionTruth: 'packet-grounded-execution',
+    executionTruth: 'compatibility-only',
     blockedBy: null,
   });
 
@@ -56,7 +56,7 @@ test('shared plane execution gate distinguishes runnable helper exceptions from 
       helperKey: 'acknowledgeNotification',
       executionTruth: 'packet-grounded-execution',
       blockedBy: null,
-      notes: ['Notification acknowledgement now derives from the frozen Core notification action payload contract.'],
+      notes: ['Notification acknowledgement is the canonical account-scoped consumer execution helper in this wave.'],
     },
   );
 });
