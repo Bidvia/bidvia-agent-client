@@ -19,14 +19,16 @@ test('core payload contract matrix exposes one authoritative helper truth table 
 
   const entryByHelperKey = new Map(entries.map((entry) => [entry.helperKey, entry]));
 
+  const taskEntrySnapshot = (helperKey: string) => entryByHelperKey.get(helperKey) && {
+    plane: entryByHelperKey.get(helperKey)?.plane,
+    helperKey: entryByHelperKey.get(helperKey)?.helperKey,
+    helperState: entryByHelperKey.get(helperKey)?.helperState,
+    routePathTemplate: entryByHelperKey.get(helperKey)?.routePathTemplate,
+    blockedBy: entryByHelperKey.get(helperKey)?.blockedBy,
+  };
+
   assert.deepEqual(
-    entryByHelperKey.get('postHeartbeat') && {
-      plane: entryByHelperKey.get('postHeartbeat')?.plane,
-      helperKey: entryByHelperKey.get('postHeartbeat')?.helperKey,
-      helperState: entryByHelperKey.get('postHeartbeat')?.helperState,
-      routePathTemplate: entryByHelperKey.get('postHeartbeat')?.routePathTemplate,
-      blockedBy: entryByHelperKey.get('postHeartbeat')?.blockedBy,
-    },
+    taskEntrySnapshot('postHeartbeat'),
     {
       plane: 'task',
       helperKey: 'postHeartbeat',
@@ -36,36 +38,106 @@ test('core payload contract matrix exposes one authoritative helper truth table 
     },
   );
   assert.deepEqual(
-    entryByHelperKey.get('listTaskDispatches') && {
-      plane: entryByHelperKey.get('listTaskDispatches')?.plane,
-      helperKey: entryByHelperKey.get('listTaskDispatches')?.helperKey,
-      helperState: entryByHelperKey.get('listTaskDispatches')?.helperState,
-      routePathTemplate: entryByHelperKey.get('listTaskDispatches')?.routePathTemplate,
-      blockedBy: entryByHelperKey.get('listTaskDispatches')?.blockedBy,
-    },
-    {
-      plane: 'task',
-      helperKey: 'listTaskDispatches',
-      helperState: 'packet-grounded-read',
-      routePathTemplate: '/runtime/agents/:agent_registration_id/task-dispatches',
-      blockedBy: null,
-    },
-  );
-  assert.deepEqual(
-    entryByHelperKey.get('createTaskDispatch') && {
-      plane: entryByHelperKey.get('createTaskDispatch')?.plane,
-      helperKey: entryByHelperKey.get('createTaskDispatch')?.helperKey,
-      helperState: entryByHelperKey.get('createTaskDispatch')?.helperState,
-      routePathTemplate: entryByHelperKey.get('createTaskDispatch')?.routePathTemplate,
-      blockedBy: entryByHelperKey.get('createTaskDispatch')?.blockedBy,
-    },
-    {
-      plane: 'task',
-      helperKey: 'createTaskDispatch',
-      helperState: 'compatibility-only',
-      routePathTemplate: '/runtime/agents/:agent_registration_id/task-dispatches',
-      blockedBy: null,
-    },
+    [
+      'listTaskDispatches',
+      'getTaskDispatch',
+      'createLease',
+      'createTaskDispatch',
+      'assignTaskDispatch',
+      'suspendTaskDispatch',
+      'resumeTaskDispatch',
+      'completeTaskDispatch',
+      'failTaskDispatch',
+      'createClaim',
+      'acceptClaim',
+      'rejectClaim',
+    ].map((helperKey) => taskEntrySnapshot(helperKey)),
+    [
+      {
+        plane: 'task',
+        helperKey: 'listTaskDispatches',
+        helperState: 'packet-grounded-read',
+        routePathTemplate: '/runtime/account/agents/:agent_registration_id/task-dispatches',
+        blockedBy: null,
+      },
+      {
+        plane: 'task',
+        helperKey: 'getTaskDispatch',
+        helperState: 'packet-grounded-read',
+        routePathTemplate: '/runtime/account/agents/:agent_registration_id/task-dispatches/:task_dispatch_id',
+        blockedBy: null,
+      },
+      {
+        plane: 'task',
+        helperKey: 'createLease',
+        helperState: 'packet-grounded-execution',
+        routePathTemplate: '/runtime/account/agents/:agent_registration_id/leases',
+        blockedBy: null,
+      },
+      {
+        plane: 'task',
+        helperKey: 'createTaskDispatch',
+        helperState: 'packet-grounded-execution',
+        routePathTemplate: '/runtime/account/agents/:agent_registration_id/task-dispatches',
+        blockedBy: null,
+      },
+      {
+        plane: 'task',
+        helperKey: 'assignTaskDispatch',
+        helperState: 'packet-grounded-execution',
+        routePathTemplate: '/runtime/account/agents/:agent_registration_id/task-dispatches/:task_dispatch_id/assign',
+        blockedBy: null,
+      },
+      {
+        plane: 'task',
+        helperKey: 'suspendTaskDispatch',
+        helperState: 'packet-grounded-execution',
+        routePathTemplate: '/runtime/account/agents/:agent_registration_id/task-dispatches/:task_dispatch_id/suspend',
+        blockedBy: null,
+      },
+      {
+        plane: 'task',
+        helperKey: 'resumeTaskDispatch',
+        helperState: 'packet-grounded-execution',
+        routePathTemplate: '/runtime/account/agents/:agent_registration_id/task-dispatches/:task_dispatch_id/resume',
+        blockedBy: null,
+      },
+      {
+        plane: 'task',
+        helperKey: 'completeTaskDispatch',
+        helperState: 'packet-grounded-execution',
+        routePathTemplate: '/runtime/account/agents/:agent_registration_id/task-dispatches/:task_dispatch_id/complete',
+        blockedBy: null,
+      },
+      {
+        plane: 'task',
+        helperKey: 'failTaskDispatch',
+        helperState: 'packet-grounded-execution',
+        routePathTemplate: '/runtime/account/agents/:agent_registration_id/task-dispatches/:task_dispatch_id/fail',
+        blockedBy: null,
+      },
+      {
+        plane: 'task',
+        helperKey: 'createClaim',
+        helperState: 'packet-grounded-execution',
+        routePathTemplate: '/runtime/account/agents/:agent_registration_id/claims',
+        blockedBy: null,
+      },
+      {
+        plane: 'task',
+        helperKey: 'acceptClaim',
+        helperState: 'packet-grounded-execution',
+        routePathTemplate: '/runtime/account/agents/:agent_registration_id/claims/:claim_id/accept',
+        blockedBy: null,
+      },
+      {
+        plane: 'task',
+        helperKey: 'rejectClaim',
+        helperState: 'packet-grounded-execution',
+        routePathTemplate: '/runtime/account/agents/:agent_registration_id/claims/:claim_id/reject',
+        blockedBy: null,
+      },
+    ],
   );
   assert.deepEqual(
     entryByHelperKey.get('buildCommercialActionScenarioPlan') && {

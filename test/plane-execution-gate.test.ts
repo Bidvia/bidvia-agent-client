@@ -132,7 +132,7 @@ test('shared plane execution gate covers bounded task and enterprise helper surf
     ].map((helperKey) => ({
       plane: 'task',
       helperKey,
-      executionTruth: 'compatibility-only',
+      executionTruth: 'packet-grounded-execution',
       blockedBy: null,
     })),
   );

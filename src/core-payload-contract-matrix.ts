@@ -53,8 +53,8 @@ const corePayloadContractMatrixEntries: readonly BidviaCorePayloadContractMatrix
   ...[
     ['listParticipationStates', '/runtime/agents/:agent_registration_id/participation-states'],
     ['getParticipationState', '/runtime/agents/:agent_registration_id/participation-states/:participation_state_id'],
-    ['listTaskDispatches', '/runtime/agents/:agent_registration_id/task-dispatches'],
-    ['getTaskDispatch', '/runtime/agents/:agent_registration_id/task-dispatches/:task_dispatch_id'],
+    ['listTaskDispatches', '/runtime/account/agents/:agent_registration_id/task-dispatches'],
+    ['getTaskDispatch', '/runtime/account/agents/:agent_registration_id/task-dispatches/:task_dispatch_id'],
   ].map(([helperKey, routePathTemplate]): BidviaCorePayloadContractMatrixEntry => ({
     plane: 'task',
     helperKey,
@@ -64,10 +64,10 @@ const corePayloadContractMatrixEntries: readonly BidviaCorePayloadContractMatrix
     notes: ['Task-plane read visibility is frozen by the canonical dispatch and participation route family.'],
   })),
   ...[
-    ['createLease', '/runtime/agents/:agent_registration_id/leases'],
-    ['createClaim', '/runtime/agents/:agent_registration_id/claims'],
-    ['acceptClaim', '/runtime/agents/:agent_registration_id/claims/:claim_id/accept'],
-    ['rejectClaim', '/runtime/agents/:agent_registration_id/claims/:claim_id/reject'],
+    ['createLease', '/runtime/account/agents/:agent_registration_id/leases'],
+    ['createClaim', '/runtime/account/agents/:agent_registration_id/claims'],
+    ['acceptClaim', '/runtime/account/agents/:agent_registration_id/claims/:claim_id/accept'],
+    ['rejectClaim', '/runtime/account/agents/:agent_registration_id/claims/:claim_id/reject'],
   ].map(([helperKey, routePathTemplate]): BidviaCorePayloadContractMatrixEntry => ({
     plane: 'task',
     helperKey,
@@ -78,19 +78,19 @@ const corePayloadContractMatrixEntries: readonly BidviaCorePayloadContractMatrix
   })),
   ...[
     ['createParticipationState', '/runtime/agents/:agent_registration_id/participation-states'],
-    ['createTaskDispatch', '/runtime/agents/:agent_registration_id/task-dispatches'],
-    ['assignTaskDispatch', '/runtime/agents/:agent_registration_id/task-dispatches/:task_dispatch_id/assign'],
-    ['suspendTaskDispatch', '/runtime/agents/:agent_registration_id/task-dispatches/:task_dispatch_id/suspend'],
-    ['resumeTaskDispatch', '/runtime/agents/:agent_registration_id/task-dispatches/:task_dispatch_id/resume'],
-    ['completeTaskDispatch', '/runtime/agents/:agent_registration_id/task-dispatches/:task_dispatch_id/complete'],
-    ['failTaskDispatch', '/runtime/agents/:agent_registration_id/task-dispatches/:task_dispatch_id/fail'],
+    ['createTaskDispatch', '/runtime/account/agents/:agent_registration_id/task-dispatches'],
+    ['assignTaskDispatch', '/runtime/account/agents/:agent_registration_id/task-dispatches/:task_dispatch_id/assign'],
+    ['suspendTaskDispatch', '/runtime/account/agents/:agent_registration_id/task-dispatches/:task_dispatch_id/suspend'],
+    ['resumeTaskDispatch', '/runtime/account/agents/:agent_registration_id/task-dispatches/:task_dispatch_id/resume'],
+    ['completeTaskDispatch', '/runtime/account/agents/:agent_registration_id/task-dispatches/:task_dispatch_id/complete'],
+    ['failTaskDispatch', '/runtime/account/agents/:agent_registration_id/task-dispatches/:task_dispatch_id/fail'],
   ].map(([helperKey, routePathTemplate]): BidviaCorePayloadContractMatrixEntry => ({
     plane: 'task',
     helperKey,
-    helperState: 'compatibility-only',
+    helperState: 'packet-grounded-execution',
     routePathTemplate,
     blockedBy: null,
-    notes: ['This helper is a downstream wrapper outside the current canonical Core task route family.'],
+    notes: ['Task-dispatch write helpers now derive from the frozen Core account-scoped task route family.'],
   })),
   ...[
     ['getAgentSummary', '/runtime/agents/:agent_registration_id/summary'],
