@@ -319,7 +319,7 @@ test('buildLocalDiscoveryCatalog returns operator-readable local mappings withou
 test('discovery catalog marks the canonical downstream task consumer routes as account-scoped', () => {
   assert.deepEqual(requireDiscoveryEntry('createTaskDispatch'), {
     helperKey: 'createTaskDispatch',
-    routePathTemplate: '/runtime/account/agents/:agentId/task-dispatches',
+    routePathTemplate: '/runtime/account/agents/:agent_registration_id/task-dispatches',
     httpMethod: 'POST',
     accessContextFamily: 'operator-company',
     requiredContext: ['tenantId', 'principalId', 'companyId'],
@@ -346,7 +346,7 @@ test('discovery catalog marks the canonical downstream task consumer routes as a
 
   assert.deepEqual(requireDiscoveryEntry('createLease'), {
     helperKey: 'createLease',
-    routePathTemplate: '/runtime/account/agents/:agentId/leases',
+    routePathTemplate: '/runtime/account/agents/:agent_registration_id/leases',
     httpMethod: 'POST',
     accessContextFamily: 'operator-company',
     requiredContext: ['tenantId', 'principalId', 'companyId'],
@@ -373,9 +373,11 @@ test('discovery catalog marks the canonical downstream task consumer routes as a
 });
 
 test('discovery catalog marks the canonical downstream notification consumer routes as account-scoped acknowledgement-only execution', () => {
+  const catalog = buildLocalDiscoveryCatalog();
+
   assert.deepEqual(requireDiscoveryEntry('getNotification'), {
     helperKey: 'getNotification',
-    routePathTemplate: '/runtime/account/agents/:agentId/notifications/:notificationId',
+    routePathTemplate: '/runtime/account/agents/:agent_registration_id/notifications/:notification_id',
     httpMethod: 'GET',
     accessContextFamily: 'principal-governed-read',
     requiredContext: ['tenantId', 'principalId'],
@@ -400,7 +402,7 @@ test('discovery catalog marks the canonical downstream notification consumer rou
 
   assert.deepEqual(requireDiscoveryEntry('acknowledgeNotification'), {
     helperKey: 'acknowledgeNotification',
-    routePathTemplate: '/runtime/account/agents/:agentId/notifications/:notificationId/acknowledgements',
+    routePathTemplate: '/runtime/account/agents/:agent_registration_id/notifications/:notification_id/acknowledgements',
     httpMethod: 'POST',
     accessContextFamily: 'operator-company',
     requiredContext: ['tenantId', 'principalId', 'companyId'],
@@ -424,17 +426,27 @@ test('discovery catalog marks the canonical downstream notification consumer rou
       },
     ],
   });
+
+  assert.equal(catalog.some((entry) => entry.helperKey === 'createNotificationDelivery'), false);
+  assert.equal(catalog.some((entry) => entry.helperKey === 'retryNotification'), false);
+  assert.equal(catalog.some((entry) => entry.helperKey === 'expireNotification'), false);
 });
 
 test('discovery catalog includes the dispatch-authority route family in the downstream baseline', () => {
   const catalog = buildLocalDiscoveryCatalog();
 
   assert.equal(
-    catalog.some((entry) => entry.routePathTemplate === '/runtime/account/agents/:agentId/dispatch-authority'),
+    catalog.some(
+      (entry) => entry.routePathTemplate === '/runtime/account/agents/:agent_registration_id/dispatch-authority',
+    ),
     true,
   );
   assert.equal(
-    catalog.some((entry) => entry.routePathTemplate === '/runtime/account/agents/:agentId/dispatch-authority-requests'),
+    catalog.some(
+      (entry) =>
+        entry.routePathTemplate ===
+        '/runtime/account/agents/:agent_registration_id/dispatch-authority-requests',
+    ),
     true,
   );
 });
