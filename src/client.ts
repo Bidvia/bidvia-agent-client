@@ -786,7 +786,7 @@ export class BidviaClient {
     requestPolicy?: BidviaClientRequestPolicy,
   ) {
     const context = this.resolveRequestContext(requestPolicy);
-    return this.request(this.agentRuntimePath(agentRegistrationId, '/leases', context), {
+    return this.request(this.accountTaskPlanePath(agentRegistrationId, '/leases', context), {
       context,
       method: 'POST',
       headers: this.requireOperatorActionHeaders(context),
@@ -800,7 +800,7 @@ export class BidviaClient {
     requestPolicy?: BidviaClientRequestPolicy,
   ) {
     const context = this.resolveRequestContext(requestPolicy);
-    return this.request(this.agentRuntimePath(agentRegistrationId, '/task-dispatches', context), {
+    return this.request(this.accountTaskPlanePath(agentRegistrationId, '/task-dispatches', context), {
       context,
       method: 'GET',
       headers: this.requireGovernedReadHeaders(context),
@@ -814,7 +814,7 @@ export class BidviaClient {
     requestPolicy?: BidviaClientRequestPolicy,
   ) {
     const context = this.resolveRequestContext(requestPolicy);
-    return this.request(this.agentRuntimePath(agentRegistrationId, '/task-dispatches', context), {
+    return this.request(this.accountTaskPlanePath(agentRegistrationId, '/task-dispatches', context), {
       context,
       method: 'POST',
       headers: this.requireOperatorActionHeaders(context),
@@ -830,7 +830,7 @@ export class BidviaClient {
   ) {
     const context = this.resolveRequestContext(requestPolicy);
     return this.request(
-      this.agentRuntimePath(
+      this.accountTaskPlanePath(
         agentRegistrationId,
         `/task-dispatches/${encodeURIComponent(taskDispatchId)}`,
         context,
@@ -950,7 +950,7 @@ export class BidviaClient {
   ) {
     const context = this.resolveRequestContext(requestPolicy);
     return this.request(
-      this.agentRuntimePath(
+      this.accountTaskPlanePath(
         agentRegistrationId,
         `/task-dispatches/${encodeURIComponent(taskDispatchId)}/assign`,
         context,
@@ -973,7 +973,7 @@ export class BidviaClient {
   ) {
     const context = this.resolveRequestContext(requestPolicy);
     return this.request(
-      this.agentRuntimePath(
+      this.accountTaskPlanePath(
         agentRegistrationId,
         `/task-dispatches/${encodeURIComponent(taskDispatchId)}/suspend`,
         context,
@@ -996,7 +996,7 @@ export class BidviaClient {
   ) {
     const context = this.resolveRequestContext(requestPolicy);
     return this.request(
-      this.agentRuntimePath(
+      this.accountTaskPlanePath(
         agentRegistrationId,
         `/task-dispatches/${encodeURIComponent(taskDispatchId)}/resume`,
         context,
@@ -1019,7 +1019,7 @@ export class BidviaClient {
   ) {
     const context = this.resolveRequestContext(requestPolicy);
     return this.request(
-      this.agentRuntimePath(
+      this.accountTaskPlanePath(
         agentRegistrationId,
         `/task-dispatches/${encodeURIComponent(taskDispatchId)}/complete`,
         context,
@@ -1042,7 +1042,7 @@ export class BidviaClient {
   ) {
     const context = this.resolveRequestContext(requestPolicy);
     return this.request(
-      this.agentRuntimePath(
+      this.accountTaskPlanePath(
         agentRegistrationId,
         `/task-dispatches/${encodeURIComponent(taskDispatchId)}/fail`,
         context,
@@ -1063,7 +1063,7 @@ export class BidviaClient {
     requestPolicy?: BidviaClientRequestPolicy,
   ) {
     const context = this.resolveRequestContext(requestPolicy);
-    return this.request(this.agentRuntimePath(agentRegistrationId, '/claims', context), {
+    return this.request(this.accountTaskPlanePath(agentRegistrationId, '/claims', context), {
       context,
       method: 'POST',
       headers: this.requireOperatorActionHeaders(context),
@@ -1080,7 +1080,7 @@ export class BidviaClient {
   ) {
     const context = this.resolveRequestContext(requestPolicy);
     return this.request(
-      this.agentRuntimePath(
+      this.accountTaskPlanePath(
         agentRegistrationId,
         `/claims/${encodeURIComponent(claimId)}/accept`,
         context,
@@ -1103,7 +1103,7 @@ export class BidviaClient {
   ) {
     const context = this.resolveRequestContext(requestPolicy);
     return this.request(
-      this.agentRuntimePath(
+      this.accountTaskPlanePath(
         agentRegistrationId,
         `/claims/${encodeURIComponent(claimId)}/reject`,
         context,
@@ -1851,6 +1851,14 @@ export class BidviaClient {
     context: BidviaClientContext,
   ) {
     return `/runtime/agents/${encodeURIComponent(agentRegistrationId)}${suffix}?tenant_id=${encodeURIComponent(this.requireTenantId(context))}`;
+  }
+
+  private accountTaskPlanePath(
+    agentRegistrationId: string,
+    suffix: string,
+    context: BidviaClientContext,
+  ) {
+    return `/runtime/account/agents/${encodeURIComponent(agentRegistrationId)}${suffix}?tenant_id=${encodeURIComponent(this.requireTenantId(context))}`;
   }
 
   private requireTenantId(context: BidviaClientContext) {

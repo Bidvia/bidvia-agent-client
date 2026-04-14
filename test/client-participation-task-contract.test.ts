@@ -78,6 +78,19 @@ test('BidviaClient uses operator action headers and frozen payloads for canonica
     now: '2026-03-31T00:02:00.000Z',
     reason: 'new notification work',
   });
+  await client.assignTaskDispatch('areg-1', 'dispatch-1', {
+    assignedToRegistrationId: 'areg-2',
+    now: '2026-03-31T00:03:00.000Z',
+    reason: 'handoff to active worker',
+  });
+  await client.suspendTaskDispatch('areg-1', 'dispatch-1', {
+    now: '2026-03-31T00:04:00.000Z',
+    reason: 'waiting for upstream dependency',
+  });
+  await client.resumeTaskDispatch('areg-1', 'dispatch-1', {
+    now: '2026-03-31T00:05:00.000Z',
+    reason: 'dependency resolved',
+  });
   await client.completeTaskDispatch('areg-1', 'dispatch-1', {
     now: '2026-03-31T00:06:00.000Z',
     reason: 'task finished',
@@ -104,15 +117,18 @@ test('BidviaClient uses operator action headers and frozen payloads for canonica
     now: '2026-03-31T00:10:00.000Z',
   });
 
-  assert.equal(calls.length, 8);
+  assert.equal(calls.length, 11);
   assert.equal(String(calls[0]?.input), 'http://127.0.0.1:8787/runtime/agents/areg-1/participation-states?tenant_id=tenant-a');
   assert.equal(String(calls[1]?.input), 'http://127.0.0.1:8787/runtime/account/agents/areg-1/leases?tenant_id=tenant-a');
   assert.equal(String(calls[2]?.input), 'http://127.0.0.1:8787/runtime/account/agents/areg-1/task-dispatches?tenant_id=tenant-a');
-  assert.equal(String(calls[3]?.input), 'http://127.0.0.1:8787/runtime/account/agents/areg-1/task-dispatches/dispatch-1/complete?tenant_id=tenant-a');
-  assert.equal(String(calls[4]?.input), 'http://127.0.0.1:8787/runtime/account/agents/areg-1/task-dispatches/dispatch-1/fail?tenant_id=tenant-a');
-  assert.equal(String(calls[5]?.input), 'http://127.0.0.1:8787/runtime/account/agents/areg-1/claims?tenant_id=tenant-a');
-  assert.equal(String(calls[6]?.input), 'http://127.0.0.1:8787/runtime/account/agents/areg-1/claims/claim-1/accept?tenant_id=tenant-a');
-  assert.equal(String(calls[7]?.input), 'http://127.0.0.1:8787/runtime/account/agents/areg-1/claims/claim-1/reject?tenant_id=tenant-a');
+  assert.equal(String(calls[3]?.input), 'http://127.0.0.1:8787/runtime/account/agents/areg-1/task-dispatches/dispatch-1/assign?tenant_id=tenant-a');
+  assert.equal(String(calls[4]?.input), 'http://127.0.0.1:8787/runtime/account/agents/areg-1/task-dispatches/dispatch-1/suspend?tenant_id=tenant-a');
+  assert.equal(String(calls[5]?.input), 'http://127.0.0.1:8787/runtime/account/agents/areg-1/task-dispatches/dispatch-1/resume?tenant_id=tenant-a');
+  assert.equal(String(calls[6]?.input), 'http://127.0.0.1:8787/runtime/account/agents/areg-1/task-dispatches/dispatch-1/complete?tenant_id=tenant-a');
+  assert.equal(String(calls[7]?.input), 'http://127.0.0.1:8787/runtime/account/agents/areg-1/task-dispatches/dispatch-1/fail?tenant_id=tenant-a');
+  assert.equal(String(calls[8]?.input), 'http://127.0.0.1:8787/runtime/account/agents/areg-1/claims?tenant_id=tenant-a');
+  assert.equal(String(calls[9]?.input), 'http://127.0.0.1:8787/runtime/account/agents/areg-1/claims/claim-1/accept?tenant_id=tenant-a');
+  assert.equal(String(calls[10]?.input), 'http://127.0.0.1:8787/runtime/account/agents/areg-1/claims/claim-1/reject?tenant_id=tenant-a');
   assert.equal((calls[0]?.init?.headers as Record<string, string>)['x-authorized-company-id'], 'company-a');
   assert.deepEqual(JSON.parse(String(calls[0]?.init?.body)), {
     state: 'ACTIVE',
@@ -137,39 +153,62 @@ test('BidviaClient uses operator action headers and frozen payloads for canonica
     reason: 'new notification work',
   });
   assert.deepEqual(JSON.parse(String(calls[3]?.init?.body)), {
+    assigned_to_registration_id: 'areg-2',
+    now: '2026-03-31T00:03:00.000Z',
+    reason: 'handoff to active worker',
+  });
+  assert.deepEqual(JSON.parse(String(calls[4]?.init?.body)), {
+    now: '2026-03-31T00:04:00.000Z',
+    reason: 'waiting for upstream dependency',
+  });
+  assert.deepEqual(JSON.parse(String(calls[5]?.init?.body)), {
+    now: '2026-03-31T00:05:00.000Z',
+    reason: 'dependency resolved',
+  });
+  assert.deepEqual(JSON.parse(String(calls[6]?.init?.body)), {
     now: '2026-03-31T00:06:00.000Z',
     reason: 'task finished',
     outcome_ref: 'outcome://dispatch/1',
   });
-  assert.deepEqual(JSON.parse(String(calls[4]?.init?.body)), {
+  assert.deepEqual(JSON.parse(String(calls[7]?.init?.body)), {
     now: '2026-03-31T00:07:00.000Z',
     reason: 'task failed',
     outcome_ref: 'outcome://dispatch/1/failure',
   });
-  assert.deepEqual(JSON.parse(String(calls[5]?.init?.body)), {
+  assert.deepEqual(JSON.parse(String(calls[8]?.init?.body)), {
     claim_kind: 'ownership',
     claim_ref: 'claim://1',
     task_dispatch_id: 'dispatch-1',
     now: '2026-03-31T00:08:00.000Z',
   });
-  assert.deepEqual(JSON.parse(String(calls[6]?.init?.body)), {
+  assert.deepEqual(JSON.parse(String(calls[9]?.init?.body)), {
     task_dispatch_id: 'dispatch-1',
     now: '2026-03-31T00:09:00.000Z',
   });
-  assert.deepEqual(JSON.parse(String(calls[7]?.init?.body)), {
+  assert.deepEqual(JSON.parse(String(calls[10]?.init?.body)), {
     task_dispatch_id: 'dispatch-1',
     reason: 'claim conflicts with active lease',
     now: '2026-03-31T00:10:00.000Z',
   });
 });
 
-test('BidviaClient task wrappers stay aligned with the task-plane adapter and do not invent timeout payload fields', () => {
+test('BidviaClient task wrappers stay aligned with the canonical account-scoped task-plane adapter and do not invent timeout payload fields', () => {
   const taskPlane = buildTaskPlaneView();
 
   assert.equal(taskPlane.outcomeTruth.payloadPacketStatus, 'packet-grounded');
   assert.equal(taskPlane.timeoutTruth.payloadPacketStatus, 'packet-grounded');
   assert.equal(taskPlane.timeoutTruth.localOnly, true);
   assert.equal(taskPlane.timeoutTruth.remotePayloadSupported, true);
-  assert.equal(getTaskPlaneCapabilityMode('completeTaskDispatch'), 'compatibility-only');
-  assert.equal(getTaskPlaneCapabilityMode('failTaskDispatch'), 'compatibility-only');
+  assert.equal(getTaskPlaneCapabilityMode('listTaskDispatches'), 'visibility-only');
+  assert.equal(getTaskPlaneCapabilityMode('getTaskDispatch'), 'visibility-only');
+  assert.equal(getTaskPlaneCapabilityMode('createLease'), 'packet-grounded-execution');
+  assert.equal(getTaskPlaneCapabilityMode('createTaskDispatch'), 'packet-grounded-execution');
+  assert.equal(getTaskPlaneCapabilityMode('assignTaskDispatch'), 'packet-grounded-execution');
+  assert.equal(getTaskPlaneCapabilityMode('suspendTaskDispatch'), 'packet-grounded-execution');
+  assert.equal(getTaskPlaneCapabilityMode('resumeTaskDispatch'), 'packet-grounded-execution');
+  assert.equal(getTaskPlaneCapabilityMode('completeTaskDispatch'), 'packet-grounded-execution');
+  assert.equal(getTaskPlaneCapabilityMode('failTaskDispatch'), 'packet-grounded-execution');
+  assert.equal(getTaskPlaneCapabilityMode('createClaim'), 'packet-grounded-execution');
+  assert.equal(getTaskPlaneCapabilityMode('acceptClaim'), 'packet-grounded-execution');
+  assert.equal(getTaskPlaneCapabilityMode('rejectClaim'), 'packet-grounded-execution');
 });
