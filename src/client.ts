@@ -855,9 +855,10 @@ export class BidviaClient {
   ) {
     const context = this.resolveRequestContext(requestPolicy);
     const notificationId = typeof input === 'string' ? input : input.notificationId;
+    const agentRegistrationId = this.requirePrincipalId(context);
 
     return this.request(
-      `/runtime/notifications/${encodeURIComponent(notificationId)}?tenant_id=${encodeURIComponent(this.requireTenantId(context))}`,
+      `/runtime/account/agents/${encodeURIComponent(agentRegistrationId)}/notifications/${encodeURIComponent(notificationId)}?tenant_id=${encodeURIComponent(this.requireTenantId(context))}`,
       {
         context,
         method: 'GET',
@@ -891,9 +892,10 @@ export class BidviaClient {
     requestPolicy?: BidviaClientRequestPolicy,
   ) {
     const context = this.resolveRequestContext(requestPolicy);
+    const agentRegistrationId = this.requirePrincipalId(context);
 
     return this.request(
-      `/runtime/notifications/${encodeURIComponent(notificationId)}/acknowledgements?tenant_id=${encodeURIComponent(this.requireTenantId(context))}`,
+      `/runtime/account/agents/${encodeURIComponent(agentRegistrationId)}/notifications/${encodeURIComponent(notificationId)}/acknowledgements?tenant_id=${encodeURIComponent(this.requireTenantId(context))}`,
       {
         context,
         method: 'POST',

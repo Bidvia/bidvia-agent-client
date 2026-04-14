@@ -87,7 +87,7 @@ export function buildEventNotificationPlaneView(): BidviaEventNotificationPlaneV
     },
     readRoute: {
       helperKey: 'getNotification',
-      routePathTemplate: readRouteEntry.routePathTemplate as '/runtime/notifications/:notification_id',
+      routePathTemplate: readRouteEntry.routePathTemplate as '/runtime/account/agents/:agent_registration_id/notifications/:notification_id',
       httpMethod: 'GET',
       requiredContext: ['tenantId', 'principalId'],
     },
@@ -95,7 +95,7 @@ export function buildEventNotificationPlaneView(): BidviaEventNotificationPlaneV
       payloadPacketStatus: 'packet-grounded',
       blockedBy: null,
       remotePayloadSupported: true,
-      notes: ['Notification detail visibility is frozen and can be surfaced as a governed read without inventing execution payloads.'],
+      notes: ['Notification detail visibility is frozen as an account-scoped governed read without inventing extra execution payloads.'],
     },
     executionRoutes: eventNotificationExecutionRoutes.map((route) => ({
       ...route,
@@ -107,7 +107,7 @@ export function buildEventNotificationPlaneView(): BidviaEventNotificationPlaneV
       localOnly: false,
       remotePayloadSupported: true,
       notes: [
-        'Notification execution helpers now derive from frozen Core delivery, acknowledgement, retry, and expire payloads.',
+        'Notification acknowledgement is the only canonical packet-grounded consumer execution helper in this wave.',
         'Local hooks and journaling remain derived layers, not canonical notification truth.',
       ],
     },

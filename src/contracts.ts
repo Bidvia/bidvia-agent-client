@@ -2042,22 +2042,14 @@ export type BidviaEventNotificationPlaneCapabilityMode =
 
 export interface BidviaEventNotificationPlaneReadRoute {
   helperKey: 'getNotification';
-  routePathTemplate: '/runtime/notifications/:notification_id';
+  routePathTemplate: '/runtime/account/agents/:agent_registration_id/notifications/:notification_id';
   httpMethod: 'GET';
   requiredContext: ['tenantId', 'principalId'];
 }
 
 export interface BidviaEventNotificationPlaneExecutionRoute {
-  helperKey:
-    | 'createNotificationDelivery'
-    | 'acknowledgeNotification'
-    | 'retryNotification'
-    | 'expireNotification';
-  routePathTemplate:
-    | '/runtime/notifications/deliveries'
-    | '/runtime/notifications/:notification_id/acknowledgements'
-    | '/runtime/notifications/:notification_id/retry'
-    | '/runtime/notifications/:notification_id/expire';
+  helperKey: 'acknowledgeNotification';
+  routePathTemplate: '/runtime/account/agents/:agent_registration_id/notifications/:notification_id/acknowledgements';
   httpMethod: 'POST';
   blockedBy: null;
   notes: string[];

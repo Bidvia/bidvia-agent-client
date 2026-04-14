@@ -22,7 +22,7 @@ function createFetchStub() {
   return { calls, fetchStub };
 }
 
-test('event notification plane exposes frozen read visibility and packet-grounded execution semantics', () => {
+test('event notification plane exposes account-scoped read visibility and acknowledgement-only packet-grounded execution semantics', () => {
   const plane = buildEventNotificationPlaneView();
   const executionGates = listPlaneExecutionGates().filter((gate) => gate.plane === 'event-notification');
   const readHelperKeys = executionGates
@@ -40,18 +40,18 @@ test('event notification plane exposes frozen read visibility and packet-grounde
   assert.equal(plane.executionTruth.remotePayloadSupported, true);
   assert.deepEqual(
     [
-      '/runtime/account/agents/:agentId/notifications',
+      '/runtime/account/agents/:agent_registration_id/notifications',
       plane.readRoute.routePathTemplate,
     ],
     [
-      '/runtime/account/agents/:agentId/notifications',
-      '/runtime/account/agents/:agentId/notifications/:notificationId',
+      '/runtime/account/agents/:agent_registration_id/notifications',
+      '/runtime/account/agents/:agent_registration_id/notifications/:notification_id',
     ],
   );
   assert.deepEqual(plane.capabilityModes.visibilityOnlyHelperKeys, readHelperKeys);
   assert.deepEqual(plane.capabilityModes.executionHelperKeys, executionHelperKeys);
   assert.deepEqual(plane.executionRoutes.map((route) => route.routePathTemplate), [
-    '/runtime/account/agents/:agentId/notifications/:notificationId/acknowledgements',
+    '/runtime/account/agents/:agent_registration_id/notifications/:notification_id/acknowledgements',
   ]);
   assert.equal(getEventNotificationPlaneCapabilityMode('getNotification'), 'visibility-only');
   assert.equal(getEventNotificationPlaneCapabilityMode('acknowledgeNotification'), 'packet-grounded-execution');
