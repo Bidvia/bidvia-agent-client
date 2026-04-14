@@ -116,6 +116,18 @@ const identitySessionOnboardingSupportSteps:
       requiredContext: ['tenantId', 'sessionId'],
       rationale: 'Support bounded self-service updates for task dispatch acceptance, accepted scopes, participation state, and limited claimed-agent metadata without widening platform authority.',
     },
+    {
+      helperKey: 'getAccountAgentDispatchAuthority',
+      routePathTemplate: '/runtime/account/agents/:agent_registration_id/dispatch-authority',
+      requiredContext: ['tenantId', 'sessionId'],
+      rationale: 'Read bounded session-scoped dispatch-authority status for a claimed account agent without widening into operator or approval workflow semantics.',
+    },
+    {
+      helperKey: 'createAccountAgentDispatchAuthorityRequest',
+      routePathTemplate: '/runtime/account/agents/:agent_registration_id/dispatch-authority-requests',
+      requiredContext: ['tenantId', 'sessionId'],
+      rationale: 'Request dispatch-authority review through a bounded session-scoped account-agent route distinct from active role-binding activation.',
+    },
   ];
 
 function cloneRequiredContext(
@@ -164,6 +176,7 @@ export function buildIdentitySessionPlaneView(): BidviaIdentitySessionPlaneView 
         'Treat freshness and invalidation as blocked pending Core packet completion rather than broader login/session truth.',
         'Governed reads stay honest: tenantId plus principalId are required, with adminSessionId only as an optional companion on some routes.',
         'Account and session helpers are bounded onboarding prerequisites only and do not turn this client into a full account product.',
+        'Dispatch-authority reads and requests stay session-bound and account-agent scoped, with review boundaries kept distinct from active role-binding activation.',
       ],
     },
     journeyBoundary: {

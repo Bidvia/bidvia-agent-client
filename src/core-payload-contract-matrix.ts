@@ -43,6 +43,26 @@ const corePayloadContractMatrixEntries: readonly BidviaCorePayloadContractMatrix
     notes: ['Governed readiness reads are frozen as canonical deep-read payload truth.'],
   },
   {
+    plane: 'identity-session',
+    helperKey: 'getAccountAgentDispatchAuthority',
+    helperState: 'packet-grounded-read',
+    routePathTemplate: '/runtime/account/agents/:agent_registration_id/dispatch-authority',
+    blockedBy: null,
+    notes: [
+      'Account-agent dispatch-authority visibility is frozen as a bounded session-scoped read and does not imply permanent ineligibility.',
+    ],
+  },
+  {
+    plane: 'identity-session',
+    helperKey: 'createAccountAgentDispatchAuthorityRequest',
+    helperState: 'packet-grounded-execution',
+    routePathTemplate: '/runtime/account/agents/:agent_registration_id/dispatch-authority-requests',
+    blockedBy: null,
+    notes: [
+      'Dispatch-authority review requests are bounded session-scoped writes distinct from active role-binding activation or operator execution flows.',
+    ],
+  },
+  {
     plane: 'task',
     helperKey: 'postHeartbeat',
     helperState: 'packet-grounded-execution',

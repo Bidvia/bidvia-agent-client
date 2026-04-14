@@ -192,6 +192,11 @@ export interface BidviaAgentSelfServicePatchInput {
   now: string;
 }
 
+export interface BidviaAccountAgentDispatchAuthorityRequestInput {
+  now: string;
+  rationale: string;
+}
+
 export interface BidviaNotificationIdentifierInput {
   notificationId: string;
 }
@@ -1849,7 +1854,9 @@ export interface BidviaIdentitySessionPlaneOnboardingSupportStep {
     | 'revokeSession'
     | 'getAccountMe'
     | 'selectOrg'
-    | 'patchAgentSelfService';
+    | 'patchAgentSelfService'
+    | 'getAccountAgentDispatchAuthority'
+    | 'createAccountAgentDispatchAuthorityRequest';
   routePathTemplate: string;
   requiredContext: BidviaScenarioContextKey[];
   rationale: string;
