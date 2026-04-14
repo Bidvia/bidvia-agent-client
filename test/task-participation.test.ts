@@ -42,8 +42,9 @@ test('task-plane adapter groups governed task semantics while keeping local shel
   assert.equal(taskPlane.timeoutTruth.remotePayloadSupported, true);
   assert.equal(taskPlane.timeoutTruth.blockedBy, null);
   assert.equal(taskParticipationModule.getTaskPlaneCapabilityMode('listTaskDispatches'), 'visibility-only');
-  assert.equal(taskParticipationModule.getTaskPlaneCapabilityMode('createTaskDispatch'), 'compatibility-only');
-  assert.equal(taskParticipationModule.getTaskPlaneCapabilityMode('suspendTaskDispatch'), 'compatibility-only');
+  assert.equal(taskParticipationModule.getTaskPlaneCapabilityMode('createTaskDispatch'), 'packet-grounded-execution');
+  assert.equal(taskParticipationModule.getTaskPlaneCapabilityMode('suspendTaskDispatch'), 'packet-grounded-execution');
+  assert.equal(taskParticipationModule.getTaskPlaneCapabilityMode('createParticipationState'), 'packet-grounded-execution');
   assert.equal(taskParticipationModule.getTaskPlaneCapabilityMode('missingTaskHelper'), undefined);
 });
 
@@ -61,9 +62,24 @@ test('task-plane executable helper coverage derives from the shared plane execut
       gate.plane === 'task' && gate.executionTruth === 'packet-grounded-execution'
     ))
     .map((gate: { helperKey: string }) => gate.helperKey);
+  const canonicalExecutableHelperKeys = [
+    'createParticipationState',
+    'createLease',
+    'createTaskDispatch',
+    'assignTaskDispatch',
+    'suspendTaskDispatch',
+    'resumeTaskDispatch',
+    'completeTaskDispatch',
+    'failTaskDispatch',
+    'createClaim',
+    'acceptClaim',
+    'rejectClaim',
+    'postHeartbeat',
+  ];
 
   assert.deepEqual(taskPlane.capabilityModes.visibilityOnlyHelperKeys, readHelperKeys);
-  assert.deepEqual(taskPlane.capabilityModes.executableHelperKeys, executableHelperKeys);
+  assert.deepEqual(taskPlane.capabilityModes.executableHelperKeys, canonicalExecutableHelperKeys);
+  assert.deepEqual([...taskPlane.capabilityModes.executableHelperKeys].sort(), [...executableHelperKeys].sort());
   assert.equal(taskParticipationModule.getTaskPlaneCapabilityMode('postHeartbeat'), 'packet-grounded-execution');
 });
 

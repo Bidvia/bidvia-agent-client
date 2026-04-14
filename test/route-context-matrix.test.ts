@@ -243,6 +243,52 @@ test('buildRouteContextMatrix separates public provisional onboarding from gover
 
   assert.equal((typedMatrix.taskPlane as { timeoutTruth: { payloadPacketStatus: string } }).timeoutTruth.payloadPacketStatus, 'packet-grounded');
   assert.equal((typedMatrix.taskPlane as { localShellBoundary: { descriptiveOnly: boolean } }).localShellBoundary.descriptiveOnly, true);
+  assert.deepEqual(
+    (
+      typedMatrix.taskPlane as {
+        capabilityModes: {
+          visibilityOnlyHelperKeys: string[];
+          executableHelperKeys: string[];
+        };
+      }
+    ).capabilityModes.visibilityOnlyHelperKeys.filter((helperKey) => (
+      helperKey === 'listTaskDispatches' || helperKey === 'getTaskDispatch'
+    )),
+    ['listTaskDispatches', 'getTaskDispatch'],
+  );
+  assert.deepEqual(
+    (
+      typedMatrix.taskPlane as {
+        capabilityModes: {
+          visibilityOnlyHelperKeys: string[];
+          executableHelperKeys: string[];
+        };
+      }
+    ).capabilityModes.executableHelperKeys.filter((helperKey) => (
+      helperKey === 'createLease'
+      || helperKey === 'createTaskDispatch'
+      || helperKey === 'assignTaskDispatch'
+      || helperKey === 'suspendTaskDispatch'
+      || helperKey === 'resumeTaskDispatch'
+      || helperKey === 'completeTaskDispatch'
+      || helperKey === 'failTaskDispatch'
+      || helperKey === 'createClaim'
+      || helperKey === 'acceptClaim'
+      || helperKey === 'rejectClaim'
+    )),
+    [
+      'createLease',
+      'createTaskDispatch',
+      'assignTaskDispatch',
+      'suspendTaskDispatch',
+      'resumeTaskDispatch',
+      'completeTaskDispatch',
+      'failTaskDispatch',
+      'createClaim',
+      'acceptClaim',
+      'rejectClaim',
+    ],
+  );
   assert.equal(
     (
       typedMatrix.rows.find((row) => row.helperKey === 'postHeartbeat') as { executionTruth: string }

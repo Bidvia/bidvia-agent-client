@@ -28,13 +28,39 @@ function requireTaskPlaneAdoptionStatus(): BidviaCorePlaneAdoptionStatus {
 
 const taskPlaneExecutionGates = listPlaneExecutionGates().filter((gate) => gate.plane === 'task');
 
+const canonicalTaskPlaneExecutableHelperOrder = [
+  'createParticipationState',
+  'createLease',
+  'createTaskDispatch',
+  'assignTaskDispatch',
+  'suspendTaskDispatch',
+  'resumeTaskDispatch',
+  'completeTaskDispatch',
+  'failTaskDispatch',
+  'createClaim',
+  'acceptClaim',
+  'rejectClaim',
+] as const;
+
+const canonicalTaskPlaneExecutableHelperOrderSet = new Set<string>(canonicalTaskPlaneExecutableHelperOrder);
+
 const taskPlaneVisibilityOnlyHelperKeys = taskPlaneExecutionGates
   .filter((gate) => gate.executionTruth === 'packet-grounded-read')
   .map((gate) => gate.helperKey);
 
-const taskPlaneExecutableHelperKeys = taskPlaneExecutionGates
-  .filter((gate) => gate.executionTruth === 'packet-grounded-execution')
-  .map((gate) => gate.helperKey);
+const taskPlaneExecutableHelperKeySet = new Set(
+  taskPlaneExecutionGates
+    .filter((gate) => gate.executionTruth === 'packet-grounded-execution')
+    .map((gate) => gate.helperKey),
+);
+
+const taskPlaneExecutableHelperKeys = [
+  ...canonicalTaskPlaneExecutableHelperOrder.filter((helperKey) => taskPlaneExecutableHelperKeySet.has(helperKey)),
+  ...taskPlaneExecutionGates
+    .filter((gate) => gate.executionTruth === 'packet-grounded-execution')
+    .map((gate) => gate.helperKey)
+    .filter((helperKey) => !canonicalTaskPlaneExecutableHelperOrderSet.has(helperKey)),
+];
 
 const taskPlaneCompatibilityOnlyHelperKeys = taskPlaneExecutionGates
   .filter((gate) => gate.executionTruth === 'compatibility-only')
