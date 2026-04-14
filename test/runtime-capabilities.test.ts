@@ -44,7 +44,7 @@ test('buildLocalRuntimeCapabilitySnapshot defaults to the public china API while
     true,
   );
   assert.equal(snapshot.mcpTools.source, 'local-static');
-  assert.equal(snapshot.mcpTools.items.length, 69);
+  assert.equal(snapshot.mcpTools.items.length, 66);
   assert.equal(snapshot.mcpTools.schemaVersion, '2026-03-27');
   assert.equal(snapshot.mcpTools.version, 'local-runtime-capability-snapshot');
   assert.equal(snapshot.mcpTools.revision, 'repo-mcp-tools');
@@ -204,6 +204,8 @@ test('buildLocalRuntimeCapabilitySnapshot includes shipped widened read helpers 
       localCapabilityTier: 'L0-observe-only',
       localCapabilityRiskTier: 'observe-only',
       capabilityPlaneCapabilityMode: 'packet-grounded-read',
+      dispatchEligibilityDerivedFromCapabilityReadTruth: false,
+      governedRunAuthorizationDerivedFromCapabilityReadTruth: false,
     }),
   );
   assert.deepEqual(
@@ -219,6 +221,8 @@ test('buildLocalRuntimeCapabilitySnapshot includes shipped widened read helpers 
       localCapabilityTier: 'L0-observe-only',
       localCapabilityRiskTier: 'observe-only',
       capabilityPlaneCapabilityMode: 'packet-grounded-read',
+      dispatchEligibilityDerivedFromCapabilityReadTruth: false,
+      governedRunAuthorizationDerivedFromCapabilityReadTruth: false,
     }),
   );
   assert.deepEqual(
@@ -234,6 +238,8 @@ test('buildLocalRuntimeCapabilitySnapshot includes shipped widened read helpers 
       localCapabilityTier: 'L0-observe-only',
       localCapabilityRiskTier: 'observe-only',
       capabilityPlaneCapabilityMode: 'packet-grounded-read',
+      dispatchEligibilityDerivedFromCapabilityReadTruth: false,
+      governedRunAuthorizationDerivedFromCapabilityReadTruth: false,
     }),
   );
   assert.deepEqual(
@@ -312,6 +318,9 @@ test('buildLocalRuntimeCapabilitySnapshot carries shared execution truth without
       },
     ],
   );
-  assert.equal(snapshot.stage3ReleaseGate.status, 'ready');
-  assert.deepEqual(snapshot.stage3ReleaseGate.blockedBy, []);
+  assert.equal(snapshot.stage3ReleaseGate.status, 'blocked');
+  assert.deepEqual(snapshot.stage3ReleaseGate.blockedBy, [
+    'plane-adoption-incomplete',
+    'canonical-route-model-alignment-stale',
+  ]);
 });

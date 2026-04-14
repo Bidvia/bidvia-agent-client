@@ -146,6 +146,8 @@ test('refreshRemoteCapabilityTruth consumes provided frozen core payloads and me
       localCapabilityTier: 'L0-observe-only',
       localCapabilityRiskTier: 'observe-only',
       capabilityPlaneCapabilityMode: 'packet-grounded-read',
+      dispatchEligibilityDerivedFromCapabilityReadTruth: false,
+      governedRunAuthorizationDerivedFromCapabilityReadTruth: false,
     },
   ]);
   assert.equal(refreshed.routeCapabilities.localSnapshot.items.some((capability) => capability.helperKey === 'postHeartbeat'), true);

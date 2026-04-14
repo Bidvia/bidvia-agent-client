@@ -662,6 +662,8 @@ test('capability registry keeps singular capability-profile truth canonical and 
     localCapabilityTier: 'L0-observe-only',
     localCapabilityRiskTier: 'observe-only',
     capabilityPlaneCapabilityMode: 'packet-grounded-read',
+    dispatchEligibilityDerivedFromCapabilityReadTruth: false,
+    governedRunAuthorizationDerivedFromCapabilityReadTruth: false,
   });
 
   assert.equal(getRouteCapability('listAgentCapabilityProfiles'), undefined);
@@ -684,6 +686,8 @@ test('capability registry describes principal-governed reads and canonical parti
     localCapabilityTier: 'L0-observe-only',
     localCapabilityRiskTier: 'observe-only',
     capabilityPlaneCapabilityMode: 'packet-grounded-read',
+    dispatchEligibilityDerivedFromCapabilityReadTruth: false,
+    governedRunAuthorizationDerivedFromCapabilityReadTruth: false,
   });
 
   assert.deepEqual(getRouteCapability('getAgentSummary'), {
@@ -698,6 +702,8 @@ test('capability registry describes principal-governed reads and canonical parti
     localCapabilityTier: 'L0-observe-only',
     localCapabilityRiskTier: 'observe-only',
     capabilityPlaneCapabilityMode: 'packet-grounded-read',
+    dispatchEligibilityDerivedFromCapabilityReadTruth: false,
+    governedRunAuthorizationDerivedFromCapabilityReadTruth: false,
   });
 
   assert.deepEqual(getRouteCapability('listParticipationStates'), {

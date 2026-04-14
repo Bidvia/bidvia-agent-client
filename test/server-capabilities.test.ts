@@ -230,6 +230,8 @@ test('normalizeServerCapabilityPayload classifies widened truth-fetch reads from
       localCapabilityTier: 'L0-observe-only',
       localCapabilityRiskTier: 'observe-only',
       capabilityPlaneCapabilityMode: 'packet-grounded-read',
+      dispatchEligibilityDerivedFromCapabilityReadTruth: false,
+      governedRunAuthorizationDerivedFromCapabilityReadTruth: false,
     },
     {
       helperKey: 'getAgentSummary',
@@ -243,6 +245,8 @@ test('normalizeServerCapabilityPayload classifies widened truth-fetch reads from
       localCapabilityTier: 'L0-observe-only',
       localCapabilityRiskTier: 'observe-only',
       capabilityPlaneCapabilityMode: 'packet-grounded-read',
+      dispatchEligibilityDerivedFromCapabilityReadTruth: false,
+      governedRunAuthorizationDerivedFromCapabilityReadTruth: false,
     },
     {
       helperKey: 'getAgentCapabilityProfile',
@@ -256,6 +260,8 @@ test('normalizeServerCapabilityPayload classifies widened truth-fetch reads from
       localCapabilityTier: 'L0-observe-only',
       localCapabilityRiskTier: 'observe-only',
       capabilityPlaneCapabilityMode: 'packet-grounded-read',
+      dispatchEligibilityDerivedFromCapabilityReadTruth: false,
+      governedRunAuthorizationDerivedFromCapabilityReadTruth: false,
     },
     {
       helperKey: 'listCanonicalSemanticConcepts',
