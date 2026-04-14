@@ -426,6 +426,28 @@ async function main() {
     registrationId: 'areg-registered-ops-validate-1',
   });
   await runRegisteredAgentOperationsScenario(registeredOperationsClient, registeredAgentOperationsPlan);
+  await client.createAccountMembershipInvitation({
+    orgId: 'org-validate-1',
+    inviteeEmail: 'member-validate@example.com',
+    now: '2026-03-25T19:22:00Z',
+  });
+  await client.acceptAccountMembershipInvitation({
+    invitationToken: 'invite-validate-1',
+    now: '2026-03-25T19:22:10Z',
+  });
+  await client.transferAccountMembershipAdmin('membership-binding-validate-1', {
+    targetAccountId: 'account-validate-2',
+    now: '2026-03-25T19:22:20Z',
+  });
+  await client.removeAccountMembership('membership-binding-validate-1', {
+    reason: 'membership-validate-cleanup',
+    now: '2026-03-25T19:22:30Z',
+  });
+  await client.getAccountAgentDispatchAuthority('areg-dispatch-authority-validate-1');
+  await client.createAccountAgentDispatchAuthorityRequest('areg-dispatch-authority-validate-1', {
+    now: '2026-03-25T19:22:40Z',
+    rationale: 'dispatch-authority-review-validate',
+  });
 
   const urls = calls.map((call) => String(call.input));
   assert.deepEqual(urls, [
@@ -473,6 +495,12 @@ async function main() {
     'http://127.0.0.1:8787/runtime/agents/areg-registered-ops-validate-1/sync/download?tenant_id=tenant-a',
     'http://127.0.0.1:8787/runtime/agents/areg-registered-ops-validate-1/evidence-submissions?tenant_id=tenant-a',
     'http://127.0.0.1:8787/runtime/agents/areg-registered-ops-validate-1/proposals?tenant_id=tenant-a',
+    'http://127.0.0.1:8787/runtime/account/memberships/invitations',
+    'http://127.0.0.1:8787/runtime/account/memberships/accept-invitation',
+    'http://127.0.0.1:8787/runtime/account/memberships/membership-binding-validate-1/transfer-admin',
+    'http://127.0.0.1:8787/runtime/account/memberships/membership-binding-validate-1/remove',
+    'http://127.0.0.1:8787/runtime/account/agents/areg-dispatch-authority-validate-1/dispatch-authority',
+    'http://127.0.0.1:8787/runtime/account/agents/areg-dispatch-authority-validate-1/dispatch-authority-requests',
   ]);
 
   const claimHeaders = calls[2]?.init?.headers as Record<string, string>;
@@ -486,6 +514,12 @@ async function main() {
   const lifecycleClaimHeaders = calls[33]?.init?.headers as Record<string, string>;
   const lifecycleHeartbeatHeaders = calls[34]?.init?.headers as Record<string, string>;
   const registeredOperationsHeartbeatHeaders = calls[39]?.init?.headers as Record<string, string>;
+  const membershipInvitationHeaders = calls[44]?.init?.headers as Record<string, string>;
+  const membershipAcceptanceHeaders = calls[45]?.init?.headers as Record<string, string>;
+  const membershipTransferHeaders = calls[46]?.init?.headers as Record<string, string>;
+  const membershipRemovalHeaders = calls[47]?.init?.headers as Record<string, string>;
+  const dispatchAuthorityReadHeaders = calls[48]?.init?.headers as Record<string, string>;
+  const dispatchAuthorityRequestHeaders = calls[49]?.init?.headers as Record<string, string>;
 
   assert.equal(claimHeaders['x-bidvia-session-id'], 'sess-validate-1');
   assert.equal(heartbeatHeaders['x-authorized-tenant-id'], 'tenant-a');
@@ -503,6 +537,12 @@ async function main() {
   assert.equal(lifecycleHeartbeatHeaders['x-bidvia-principal-id'], 'actor-1');
   assert.equal(registeredOperationsHeartbeatHeaders['x-authorized-tenant-id'], 'tenant-a');
   assert.equal(registeredOperationsHeartbeatHeaders['x-bidvia-principal-id'], 'actor-1');
+  assert.equal(membershipInvitationHeaders['x-bidvia-session-id'], 'sess-validate-1');
+  assert.equal(membershipAcceptanceHeaders['x-bidvia-session-id'], 'sess-validate-1');
+  assert.equal(membershipTransferHeaders['x-bidvia-session-id'], 'sess-validate-1');
+  assert.equal(membershipRemovalHeaders['x-bidvia-session-id'], 'sess-validate-1');
+  assert.equal(dispatchAuthorityReadHeaders['x-bidvia-session-id'], 'sess-validate-1');
+  assert.equal(dispatchAuthorityRequestHeaders['x-bidvia-session-id'], 'sess-validate-1');
 
   const claimBody = JSON.parse(String(calls[2]?.init?.body));
   const heartbeatBody = JSON.parse(String(calls[3]?.init?.body));
@@ -593,6 +633,11 @@ async function main() {
   const registeredOperationsUploadSyncBody = JSON.parse(String(calls[40]?.init?.body));
   const registeredOperationsEvidenceBody = JSON.parse(String(calls[42]?.init?.body));
   const registeredOperationsProposalBody = JSON.parse(String(calls[43]?.init?.body));
+  const membershipInvitationBody = JSON.parse(String(calls[44]?.init?.body));
+  const membershipAcceptanceBody = JSON.parse(String(calls[45]?.init?.body));
+  const membershipTransferBody = JSON.parse(String(calls[46]?.init?.body));
+  const membershipRemovalBody = JSON.parse(String(calls[47]?.init?.body));
+  const dispatchAuthorityRequestBody = JSON.parse(String(calls[49]?.init?.body));
   assert.equal(coordinatorCreateConnectionRequestBody.source_match_id, 'match-validate-1');
   assert.equal(coordinatorExportOpportunityPackageBody.render_template_id, 'template-validate-1');
   assert.equal(coordinatorCreateCommercialActionBody.subject_id, 'pkg-validate-1');
@@ -642,6 +687,27 @@ async function main() {
     proposal_ref: 'proposal://registered-agent/1',
     summary: 'registered operations proposal payload',
     now: '2026-03-25T19:21:00Z',
+  });
+  assert.deepEqual(membershipInvitationBody, {
+    org_id: 'org-validate-1',
+    invitee_email: 'member-validate@example.com',
+    now: '2026-03-25T19:22:00Z',
+  });
+  assert.deepEqual(membershipAcceptanceBody, {
+    invitation_token: 'invite-validate-1',
+    now: '2026-03-25T19:22:10Z',
+  });
+  assert.deepEqual(membershipTransferBody, {
+    target_account_id: 'account-validate-2',
+    now: '2026-03-25T19:22:20Z',
+  });
+  assert.deepEqual(membershipRemovalBody, {
+    reason: 'membership-validate-cleanup',
+    now: '2026-03-25T19:22:30Z',
+  });
+  assert.deepEqual(dispatchAuthorityRequestBody, {
+    now: '2026-03-25T19:22:40Z',
+    rationale: 'dispatch-authority-review-validate',
   });
 
   assert.equal(reviewPacket.verificationMode, 'review-safe');
