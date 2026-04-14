@@ -83,8 +83,8 @@ test('buildRegistrationLifecycleScenarioPlan builds the full onboarding and regi
     localStageLabel: 'public-provisional',
     localStageSemantics: 'local-only',
     coreStageIdentifier: null,
-    coreStageSemantics: 'packet-grounded-read',
-    blockedBy: null,
+    coreStageSemantics: 'blocked-pending-packet',
+    blockedBy: 'core-write-semantics-not-frozen',
     transitionRule: null,
   });
   assert.equal(plan.queryProvisionalAgentRef, 'prov-agent-1');

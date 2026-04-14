@@ -70,8 +70,8 @@ test('buildCommercialActionScenarioPlan builds the exact commercial-action conti
     localStageLabel: 'governed-run-execution',
     localStageSemantics: 'local-only',
     coreStageIdentifier: null,
-    coreStageSemantics: 'packet-grounded-read',
-    blockedBy: null,
+    coreStageSemantics: 'blocked-pending-packet',
+    blockedBy: 'core-write-semantics-not-frozen',
     transitionRule: null,
   });
 });

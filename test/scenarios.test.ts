@@ -85,8 +85,8 @@ test('generic scenario builder normalizes refs and route steps', () => {
     localStageLabel: null,
     localStageSemantics: 'local-only',
     coreStageIdentifier: null,
-    coreStageSemantics: 'packet-grounded-read',
-    blockedBy: null,
+    coreStageSemantics: 'blocked-pending-packet',
+    blockedBy: 'core-write-semantics-not-frozen',
     transitionRule: null,
   });
   assert.deepEqual(envelope.expectedRouteChain[0]?.requiredContext, ['tenantId', 'principalId', 'companyId']);
@@ -106,8 +106,8 @@ test('generic scenario builder keeps workflow ids transportable while blocking i
       localStageLabel: 'governed-run-execution',
       localStageSemantics: 'local-only',
       coreStageIdentifier: null,
-      coreStageSemantics: 'packet-grounded-read',
-      blockedBy: null,
+      coreStageSemantics: 'blocked-pending-packet',
+      blockedBy: 'core-write-semantics-not-frozen',
       transitionRule: null,
     },
     expectedRouteChain: [
@@ -121,8 +121,8 @@ test('generic scenario builder keeps workflow ids transportable while blocking i
     localStageLabel: 'governed-run-execution',
     localStageSemantics: 'local-only',
     coreStageIdentifier: null,
-    coreStageSemantics: 'packet-grounded-read',
-    blockedBy: null,
+    coreStageSemantics: 'blocked-pending-packet',
+    blockedBy: 'core-write-semantics-not-frozen',
     transitionRule: null,
   });
 });

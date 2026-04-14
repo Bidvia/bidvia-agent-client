@@ -27,7 +27,10 @@ test('buildRouteContextMatrix separates public provisional onboarding from gover
         labels: string[];
       };
       coreStageSemantics: {
+        payloadPacketStatus: string;
+        blockedBy: string | null;
         packetGroundedStageIdentifiers: string[];
+        transitionRules: string[];
       };
     };
     governedReadPosture: Record<string, unknown>;
@@ -48,11 +51,10 @@ test('buildRouteContextMatrix separates public provisional onboarding from gover
     'governed-run-support',
     'governed-run-execution',
   ]);
-  assert.deepEqual(typedMatrix.workflowStagePlane.coreStageSemantics.packetGroundedStageIdentifiers, [
-    'notification.notification_state',
-    'task.task_state',
-    'latest_participation_state.context_handoff_state',
-  ]);
+  assert.equal(typedMatrix.workflowStagePlane.coreStageSemantics.payloadPacketStatus, 'blocked-pending-packet');
+  assert.equal(typedMatrix.workflowStagePlane.coreStageSemantics.blockedBy, 'core-write-semantics-not-frozen');
+  assert.deepEqual(typedMatrix.workflowStagePlane.coreStageSemantics.packetGroundedStageIdentifiers, []);
+  assert.deepEqual(typedMatrix.workflowStagePlane.coreStageSemantics.transitionRules, []);
 
   assert.deepEqual(typedMatrix.governedReadPosture, {
     accessContextFamily: 'principal-governed-read',
