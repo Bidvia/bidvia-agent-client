@@ -22,16 +22,35 @@ test('V1 release candidate reflects the actual public release state', () => {
   const gate = buildStage3ReleaseGate();
 
   assert.equal(packageJson.version, '1.0.0');
-  assert.equal(gate.status, 'ready');
-  assert.deepEqual(gate.blockedBy, []);
-  assert(gate.waves.every((wave) => wave.status === 'complete'));
+  assert.equal(gate.status, 'blocked');
+  assert.deepEqual(gate.blockedBy, [
+    'plane-adoption-incomplete',
+    'canonical-route-model-alignment-stale',
+  ]);
+  assert.deepEqual(gate.waves, [
+    {
+      wave: 'P0',
+      status: 'blocked',
+      planes: ['identity-session', 'task', 'event-notification'],
+    },
+    {
+      wave: 'P1',
+      status: 'blocked',
+      planes: ['capability', 'workflow-stage'],
+    },
+    {
+      wave: 'P2',
+      status: 'blocked',
+      planes: ['enterprise-integration'],
+    },
+  ]);
 
   assert.match(readme, /current package version is `1\.0\.0`/i);
   assert.match(readme, /`1\.0\.0` package state/i);
-  assert.match(readme, /release-ready public surface/i);
-  assert.match(readme, /npm publication is still a separate final human step/i);
+  assert.doesNotMatch(readme, /release-ready public surface/i);
+  assert.match(readme, /workflow-stage and other packet-incomplete seams remain blocked/i);
 
   assert.match(releaseNotes, /formal `1\.0\.0` package state/i);
-  assert.match(releaseNotes, /Stage 3 release gate is now ready/i);
-  assert.match(releaseNotes, /final `1\.0\.0` publication still requires/i);
+  assert.doesNotMatch(releaseNotes, /Stage 3 release gate is now ready/i);
+  assert.match(releaseNotes, /workflow-stage and other packet-incomplete seams remain blocked/i);
 });

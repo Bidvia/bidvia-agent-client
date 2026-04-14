@@ -2,7 +2,7 @@
 
 ## Version position
 
-This release captures the formal `1.0.0` release of `@bidvia/client`, with the installed CLI surface exposed as `bidvia`.
+This release notes document captures the current `1.0.0` package state of `@bidvia/client`, with the installed CLI surface exposed as `bidvia`.
 
 It strengthens the package as a client-owned SDK, CLI, and local stdio MCP surface for the frozen Bidvia Commercial Universe V1 / Core V12 handoff boundary. It does not turn the package into a hosted runtime, a hosted MCP service, a remote registry participant, or a source of Core-owned truth.
 
@@ -103,9 +103,9 @@ This release does not claim any of the following:
 
 ## Verification status
 
-This formal `1.0.0` package state is documented as a completed shipped package surface with aligned CLI, SDK, MCP, docs, examples, and validation framing. The package remains client-owned where it ships local operator value, and Core-deferred where frozen external truth is still required. The adopted frozen read families are documented as shipped SDK/CLI visibility, not as hosted runtime, platform-auth ownership, or client-owned authority. npm publication remains a separate final human step after this release-ready package state.
+This formal `1.0.0` package state is documented as the current shipped local package surface with aligned CLI, SDK, MCP, docs, examples, and validation framing. The package remains client-owned where it ships local operator value, and Core-deferred where frozen external truth is still required. The adopted frozen read families are documented as shipped SDK/CLI visibility, not as hosted runtime, platform-auth ownership, or client-owned authority. npm publication remains a separate final human step after this blocked Stage 3 gate package state.
 
-Stage 3 release gate is now ready in the current repo state because the actual V1 proof target is complete for the shipped public surface. The final `1.0.0` publication still requires the validator suite below to stay green, and that validator evidence remains part of the formal release packet:
+Stage 3 release gate remains blocked in the current repo state. The final `1.0.0` publication still requires the validator suite below to stay green, and that validator evidence remains part of the formal release packet while workflow-stage and other packet-incomplete seams remain blocked pending Core-frozen payload truth:
 
 ```bash
 npm test
