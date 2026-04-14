@@ -232,8 +232,11 @@ test('runCli prints operator discovery snapshots for CLI route metadata and loca
     },
   ]);
   assert.deepEqual(snapshot.cli.releaseGate, {
-    status: 'ready',
-    blockedBy: [],
+    status: 'blocked',
+    blockedBy: [
+      'plane-adoption-incomplete',
+      'canonical-route-model-alignment-stale',
+    ],
     requiredValidatorCommands: [
       'npm test',
       'npm run typecheck',
@@ -245,17 +248,17 @@ test('runCli prints operator discovery snapshots for CLI route metadata and loca
     waves: [
       {
         wave: 'P0',
-        status: 'complete',
+        status: 'blocked',
         planes: ['identity-session', 'task', 'event-notification'],
       },
       {
         wave: 'P1',
-        status: 'complete',
+        status: 'blocked',
         planes: ['capability', 'workflow-stage'],
       },
       {
         wave: 'P2',
-        status: 'complete',
+        status: 'blocked',
         planes: ['enterprise-integration'],
       },
     ],
@@ -284,6 +287,8 @@ test('runCli prints operator discovery snapshots for CLI route metadata and loca
     localCapabilityRiskTier: 'observe-only',
     contextSemantic: 'principal-governed-read',
     capabilityPlaneCapabilityMode: 'packet-grounded-read',
+    dispatchEligibilityDerivedFromCapabilityReadTruth: false,
+    governedRunAuthorizationDerivedFromCapabilityReadTruth: false,
   });
   assert.deepEqual(snapshot.cli.routeCapabilities.find((entry) => entry.helperKey === 'listCanonicalSemanticLabels'), {
     helperKey: 'listCanonicalSemanticLabels',
@@ -657,8 +662,11 @@ test('runCli prints a route-context matrix that keeps public-first rows ahead of
     operatorGuidance: 'On local docker host, authority and presence reads require principal-governed tenant context. Authority-ladder reads use the same principal-governed posture, while ladder writes remain operator-governed and separate from workspace admin-session routes.',
   });
   assert.deepEqual(snapshot.stage3ReleaseGate, {
-    status: 'ready',
-    blockedBy: [],
+    status: 'blocked',
+    blockedBy: [
+      'plane-adoption-incomplete',
+      'canonical-route-model-alignment-stale',
+    ],
     requiredValidatorCommands: [
       'npm test',
       'npm run typecheck',
@@ -670,17 +678,17 @@ test('runCli prints a route-context matrix that keeps public-first rows ahead of
     waves: [
       {
         wave: 'P0',
-        status: 'complete',
+        status: 'blocked',
         planes: ['identity-session', 'task', 'event-notification'],
       },
       {
         wave: 'P1',
-        status: 'complete',
+        status: 'blocked',
         planes: ['capability', 'workflow-stage'],
       },
       {
         wave: 'P2',
-        status: 'complete',
+        status: 'blocked',
         planes: ['enterprise-integration'],
       },
     ],
@@ -915,8 +923,11 @@ test('runCli prints runtime capability snapshots for the public default and pres
     };
   }>) {
     assert.deepEqual(snapshot.stage3ReleaseGate, {
-      status: 'ready',
-      blockedBy: [],
+      status: 'blocked',
+      blockedBy: [
+        'plane-adoption-incomplete',
+        'canonical-route-model-alignment-stale',
+      ],
       requiredValidatorCommands: [
         'npm test',
         'npm run typecheck',
@@ -928,17 +939,17 @@ test('runCli prints runtime capability snapshots for the public default and pres
       waves: [
         {
           wave: 'P0',
-          status: 'complete',
+          status: 'blocked',
           planes: ['identity-session', 'task', 'event-notification'],
         },
         {
           wave: 'P1',
-          status: 'complete',
+          status: 'blocked',
           planes: ['capability', 'workflow-stage'],
         },
         {
           wave: 'P2',
-          status: 'complete',
+          status: 'blocked',
           planes: ['enterprise-integration'],
         },
       ],

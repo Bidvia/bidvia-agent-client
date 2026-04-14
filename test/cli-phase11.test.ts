@@ -65,7 +65,7 @@ test('launch-topology-smoke prints read-only launch topology json', () => {
   });
 });
 
-test('runtime-capabilities prints a ready Stage 3 release gate summary', () => {
+test('runtime-capabilities prints a blocked Stage 3 release gate summary', () => {
   const tsxCliPath = path.join(process.cwd(), 'node_modules', 'tsx', 'dist', 'cli.mjs');
   const result = spawnSync(process.execPath, [tsxCliPath, 'src/cli.ts', 'runtime-capabilities'], {
     cwd: process.cwd(),
@@ -75,22 +75,25 @@ test('runtime-capabilities prints a ready Stage 3 release gate summary', () => {
 
   assert.equal(result.status, 0, result.stderr || result.stdout);
   const output = JSON.parse(result.stdout);
-  assert.equal(output.stage3ReleaseGate.status, 'ready');
-  assert.deepEqual(output.stage3ReleaseGate.blockedBy, []);
+  assert.equal(output.stage3ReleaseGate.status, 'blocked');
+  assert.deepEqual(output.stage3ReleaseGate.blockedBy, [
+    'plane-adoption-incomplete',
+    'canonical-route-model-alignment-stale',
+  ]);
   assert.deepEqual(output.stage3ReleaseGate.waves, [
     {
       wave: 'P0',
-      status: 'complete',
+      status: 'blocked',
       planes: ['identity-session', 'task', 'event-notification'],
     },
     {
       wave: 'P1',
-      status: 'complete',
+      status: 'blocked',
       planes: ['capability', 'workflow-stage'],
     },
     {
       wave: 'P2',
-      status: 'complete',
+      status: 'blocked',
       planes: ['enterprise-integration'],
     },
   ]);
