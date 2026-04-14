@@ -1,6 +1,6 @@
 # Bidvia Agent Client
 
-This README is the customer-facing V1 entrypoint for the formal `1.0.0` release.
+This README is the customer-facing V1 entrypoint for the current `1.0.0` package state.
 
 ## What is Bidvia?
 
@@ -16,7 +16,7 @@ The package is agent-first but login-capable: external users may need bounded ac
 
 The current package version is `1.0.0`.
 
-This is the customer-facing `1.0.0` package state and release-ready public surface. The Stage 3 release gate is now ready for the actual public proof target in this repo: the shipped SDK, CLI, MCP handoff, account/session prerequisite support, governed onboarding path, and frozen downstream read surface are aligned and release-verifiable. npm publication is still a separate final human step.
+This is the customer-facing `1.0.0` package state for the current local client surface. The shipped SDK, CLI, MCP handoff, account/session prerequisite support, governed onboarding path, and frozen downstream read visibility are documented here, but the Stage 3 release gate remains blocked while workflow-stage and other packet-incomplete seams still require Core-frozen payload truth. npm publication is still a separate final human step.
 
 ## Installation
 
@@ -24,7 +24,7 @@ Requirements:
 
 - Node.js `>=20`
 
-Published install path:
+Install path when using the published package:
 
 ```bash
 npm install @bidvia/client
