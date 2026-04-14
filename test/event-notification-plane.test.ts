@@ -38,16 +38,27 @@ test('event notification plane exposes frozen read visibility and packet-grounde
   assert.equal(plane.notificationReadTruth.payloadPacketStatus, 'packet-grounded');
   assert.equal(plane.executionTruth.payloadPacketStatus, 'packet-grounded');
   assert.equal(plane.executionTruth.remotePayloadSupported, true);
+  assert.deepEqual(
+    [
+      '/runtime/account/agents/:agentId/notifications',
+      plane.readRoute.routePathTemplate,
+    ],
+    [
+      '/runtime/account/agents/:agentId/notifications',
+      '/runtime/account/agents/:agentId/notifications/:notificationId',
+    ],
+  );
   assert.deepEqual(plane.capabilityModes.visibilityOnlyHelperKeys, readHelperKeys);
   assert.deepEqual(plane.capabilityModes.executionHelperKeys, executionHelperKeys);
   assert.deepEqual(plane.executionRoutes.map((route) => route.routePathTemplate), [
-    '/runtime/notifications/deliveries',
-    '/runtime/notifications/:notification_id/acknowledgements',
-    '/runtime/notifications/:notification_id/retry',
-    '/runtime/notifications/:notification_id/expire',
+    '/runtime/account/agents/:agentId/notifications/:notificationId/acknowledgements',
   ]);
   assert.equal(getEventNotificationPlaneCapabilityMode('getNotification'), 'visibility-only');
   assert.equal(getEventNotificationPlaneCapabilityMode('acknowledgeNotification'), 'packet-grounded-execution');
+  assert.deepEqual(executionHelperKeys, ['acknowledgeNotification']);
+  assert.equal(executionHelperKeys.includes('createNotificationDelivery'), false);
+  assert.equal(executionHelperKeys.includes('retryNotification'), false);
+  assert.equal(executionHelperKeys.includes('expireNotification'), false);
   assert.deepEqual(
     plane.executionRoutes.map((route) => ({
       helperKey: route.helperKey,
@@ -86,13 +97,16 @@ test('BidviaClient uses governed read headers for canonical notification visibil
   await client.getNotification('notification-1');
 
   assert.equal(calls.length, 1);
-  assert.equal(String(calls[0]?.input), 'http://127.0.0.1:8787/runtime/notifications/notification-1?tenant_id=tenant-a');
+  assert.equal(
+    String(calls[0]?.input),
+    'http://127.0.0.1:8787/runtime/account/agents/actor-1/notifications/notification-1?tenant_id=tenant-a',
+  );
   assert.equal((calls[0]?.init?.headers as Record<string, string>)['x-authorized-tenant-id'], 'tenant-a');
   assert.equal((calls[0]?.init?.headers as Record<string, string>)['x-bidvia-principal-id'], 'actor-1');
   assert.equal((calls[0]?.init?.headers as Record<string, string>)['x-bidvia-admin-session-id'], 'admin-sess-1');
 });
 
-test('BidviaClient uses operator action headers and frozen payloads for notification execution wrappers', async () => {
+test('BidviaClient uses operator action headers and frozen payloads for canonical notification acknowledgements only', async () => {
   const { calls, fetchStub } = createFetchStub();
   const client = new BidviaClient({
     baseUrl: 'http://127.0.0.1:8787',
@@ -104,59 +118,23 @@ test('BidviaClient uses operator action headers and frozen payloads for notifica
     fetchImpl: fetchStub,
   });
 
-  await client.createNotificationDelivery({
-    registrationId: 'areg-1',
-    taskKind: 'notification-review',
-    taskRef: 'task://notification/1',
-    now: '2026-04-10T00:00:00.000Z',
-    reason: 'notification delivery work opened',
-  });
   await client.acknowledgeNotification('notification-1', {
     registrationId: 'areg-1',
     decision: 'acknowledged',
     now: '2026-04-10T00:01:00.000Z',
     reason: 'worker accepted the notification task',
   });
-  await client.retryNotification('notification-1', {
-    registrationId: 'areg-1',
-    now: '2026-04-10T00:02:00.000Z',
-    nextAttemptAt: '2026-04-10T00:12:00.000Z',
-    reason: 'upstream dependency asked for retry',
-  });
-  await client.expireNotification('notification-1', {
-    registrationId: 'areg-1',
-    now: '2026-04-10T00:03:00.000Z',
-    reason: 'notification became obsolete',
-  });
 
-  assert.equal(calls.length, 4);
-  assert.equal(String(calls[0]?.input), 'http://127.0.0.1:8787/runtime/notifications/deliveries?tenant_id=tenant-a');
-  assert.equal(String(calls[1]?.input), 'http://127.0.0.1:8787/runtime/notifications/notification-1/acknowledgements?tenant_id=tenant-a');
-  assert.equal(String(calls[2]?.input), 'http://127.0.0.1:8787/runtime/notifications/notification-1/retry?tenant_id=tenant-a');
-  assert.equal(String(calls[3]?.input), 'http://127.0.0.1:8787/runtime/notifications/notification-1/expire?tenant_id=tenant-a');
+  assert.equal(calls.length, 1);
+  assert.equal(
+    String(calls[0]?.input),
+    'http://127.0.0.1:8787/runtime/account/agents/actor-1/notifications/notification-1/acknowledgements?tenant_id=tenant-a',
+  );
   assert.equal((calls[0]?.init?.headers as Record<string, string>)['x-authorized-company-id'], 'company-a');
   assert.deepEqual(JSON.parse(String(calls[0]?.init?.body)), {
-    registration_id: 'areg-1',
-    task_kind: 'notification-review',
-    task_ref: 'task://notification/1',
-    now: '2026-04-10T00:00:00.000Z',
-    reason: 'notification delivery work opened',
-  });
-  assert.deepEqual(JSON.parse(String(calls[1]?.init?.body)), {
     registration_id: 'areg-1',
     decision: 'acknowledged',
     now: '2026-04-10T00:01:00.000Z',
     reason: 'worker accepted the notification task',
-  });
-  assert.deepEqual(JSON.parse(String(calls[2]?.init?.body)), {
-    registration_id: 'areg-1',
-    now: '2026-04-10T00:02:00.000Z',
-    next_attempt_at: '2026-04-10T00:12:00.000Z',
-    reason: 'upstream dependency asked for retry',
-  });
-  assert.deepEqual(JSON.parse(String(calls[3]?.init?.body)), {
-    registration_id: 'areg-1',
-    now: '2026-04-10T00:03:00.000Z',
-    reason: 'notification became obsolete',
   });
 });
