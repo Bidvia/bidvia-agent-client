@@ -115,11 +115,12 @@ test('core-plane adoption snapshot stays scoped to frozen Core-facing truth and 
   );
 });
 
-test('stage 3 release waves track the actual V1 proof target without collapsing grounded planes back to blanket defaults', () => {
+test('stage 3 release waves stay blocked until workflow-stage and canonical route alignment are actually satisfied', () => {
   const exports = publicSurface as Record<string, unknown>;
 
   assert.equal(typeof exports.listCorePlaneAdoptionStatuses, 'function');
   assert.equal(typeof exports.listCorePlaneWaveStatuses, 'function');
+  assert.equal(typeof exports.buildStage3ReleaseGate, 'function');
 
   const adoptionStatuses = (exports.listCorePlaneAdoptionStatuses as () => Array<{
     plane: string;
@@ -130,33 +131,47 @@ test('stage 3 release waves track the actual V1 proof target without collapsing 
     status: string;
     planes: string[];
   }>)();
+  const gate = (exports.buildStage3ReleaseGate as () => {
+    status: string;
+    blockedBy: string[];
+  })();
 
   assert.deepEqual(
     adoptionStatuses
-      .filter((status) => ['identity-session', 'task', 'event-notification', 'enterprise-integration'].includes(status.plane))
+      .filter((status) => ['task', 'workflow-stage', 'event-notification', 'enterprise-integration'].includes(status.plane))
       .map((status) => [status.plane, status.payloadPacketStatus]),
     [
-      ['identity-session', 'packet-grounded'],
       ['task', 'packet-grounded'],
+      ['workflow-stage', 'blocked-pending-packet'],
       ['event-notification', 'packet-grounded'],
       ['enterprise-integration', 'packet-grounded'],
     ],
   );
+  assert.deepEqual(
+    Object.fromEntries(waveStatuses.map((wave) => [wave.wave, wave.status])),
+    {
+      P0: 'blocked',
+      P1: 'blocked',
+      P2: 'blocked',
+    },
+  );
   assert.deepEqual(waveStatuses, [
     {
       wave: 'P0',
-      status: 'complete',
+      status: 'blocked',
       planes: ['identity-session', 'task', 'event-notification'],
     },
     {
       wave: 'P1',
-      status: 'complete',
+      status: 'blocked',
       planes: ['capability', 'workflow-stage'],
     },
     {
       wave: 'P2',
-      status: 'complete',
+      status: 'blocked',
       planes: ['enterprise-integration'],
     },
   ]);
+  assert.equal(gate.status, 'blocked');
+  assert.deepEqual(gate.blockedBy, ['plane-adoption-incomplete']);
 });
