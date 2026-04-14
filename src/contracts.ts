@@ -694,6 +694,8 @@ export interface BidviaRouteCapability {
   localCapabilityTier: BidviaLocalCapabilityTier;
   localCapabilityRiskTier: BidviaLocalCapabilityRiskTier;
   capabilityPlaneCapabilityMode?: BidviaCapabilityPlaneCapabilityMode;
+  dispatchEligibilityDerivedFromCapabilityReadTruth?: false;
+  governedRunAuthorizationDerivedFromCapabilityReadTruth?: false;
   taskPlaneCapabilityMode?: BidviaTaskPlaneCapabilityMode;
   eventNotificationPlaneCapabilityMode?: BidviaEventNotificationPlaneCapabilityMode;
   scenarioRouteSteps?: BidviaScenarioRouteStep[];
@@ -907,6 +909,8 @@ export interface BidviaMcpToolDescriptor {
   runnable?: boolean;
   blockedBy?: string | null;
   capabilityPlaneCapabilityMode?: BidviaCapabilityPlaneCapabilityMode;
+  dispatchEligibilityDerivedFromCapabilityReadTruth?: false;
+  governedRunAuthorizationDerivedFromCapabilityReadTruth?: false;
   taskPlaneCapabilityMode?: BidviaTaskPlaneCapabilityMode;
   eventNotificationPlaneCapabilityMode?: BidviaEventNotificationPlaneCapabilityMode;
 }
@@ -1924,8 +1928,8 @@ export interface BidviaWorkflowStageReference {
   localStageLabel: BidviaLocalJourneyStageLabel | null;
   localStageSemantics: 'local-only';
   coreStageIdentifier: null;
-  coreStageSemantics: 'packet-grounded-read';
-  blockedBy: null;
+  coreStageSemantics: 'blocked-pending-packet';
+  blockedBy: 'core-write-semantics-not-frozen';
   transitionRule: null;
 }
 
@@ -1941,8 +1945,8 @@ export interface BidviaWorkflowStagePlaneView {
     notes: string[];
   };
   coreStageSemantics: {
-    payloadPacketStatus: 'packet-grounded';
-    blockedBy: null;
+    payloadPacketStatus: 'blocked-pending-packet';
+    blockedBy: 'core-write-semantics-not-frozen';
     packetGroundedStageIdentifiers: string[];
     transitionRules: string[];
     inventedIdentifiersBlocked: true;
@@ -1969,6 +1973,9 @@ export interface BidviaCapabilityPlaneHelperTruthBoundary {
     'getAgentReadiness' | 'getAgentSummary' | 'getAgentCapabilityProfile'
   >;
   compatibilityOnlyHelperKeys: Array<'refreshRemoteCapabilityTruth'>;
+  dispatchEligibilityDerivedFromReadTruth: false;
+  governedRunAuthorizationDerivedFromReadTruth: false;
+  notes: string[];
 }
 
 export interface BidviaCapabilityPlaneView {
