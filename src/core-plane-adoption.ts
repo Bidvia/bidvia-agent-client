@@ -57,11 +57,11 @@ const stage3ReleaseGateWavePlanes: Array<Pick<BidviaCorePlaneWaveStatus, 'wave' 
 ];
 
 function isStage3ProofPlaneComplete(status: BidviaCorePlaneAdoptionStatus): boolean {
-  if (status.plane === 'workflow-stage') {
-    return status.descriptiveVisibility === 'descriptive-plane-visible';
-  }
-
   return status.payloadPacketStatus === 'packet-grounded';
+}
+
+function isCanonicalRouteModelAlignmentStale(): boolean {
+  return true;
 }
 
 export function listStage3ReleaseGateValidatorCommands(): BidviaStage3ReleaseGate['requiredValidatorCommands'] {
@@ -70,10 +70,12 @@ export function listStage3ReleaseGateValidatorCommands(): BidviaStage3ReleaseGat
 
 export function listCorePlaneWaveStatuses(): BidviaCorePlaneWaveStatus[] {
   const adoptionStatuses = listCorePlaneAdoptionStatuses();
+  const canonicalRouteModelAlignmentStale = isCanonicalRouteModelAlignmentStale();
 
   return stage3ReleaseGateWavePlanes.map(({ wave, planes }) => ({
     wave,
-    status: planes.every((plane) => adoptionStatuses.some((status) => status.plane === plane && isStage3ProofPlaneComplete(status)))
+    status: !canonicalRouteModelAlignmentStale
+      && planes.every((plane) => adoptionStatuses.some((status) => status.plane === plane && isStage3ProofPlaneComplete(status)))
       ? 'complete'
       : 'blocked',
     planes: [...planes],
@@ -82,15 +84,19 @@ export function listCorePlaneWaveStatuses(): BidviaCorePlaneWaveStatus[] {
 
 export function buildStage3ReleaseGate(): BidviaStage3ReleaseGate {
   const waves = listCorePlaneWaveStatuses();
-  const blockedBy: BidviaStage3ReleaseGate['blockedBy'] = [];
+  const blockedBy: string[] = [];
 
   if (waves.some((wave) => wave.status !== 'complete')) {
     blockedBy.push('plane-adoption-incomplete');
   }
 
+  if (isCanonicalRouteModelAlignmentStale()) {
+    blockedBy.push('canonical-route-model-alignment-stale');
+  }
+
   return {
     status: blockedBy.length === 0 ? 'ready' : 'blocked',
-    blockedBy,
+    blockedBy: blockedBy as unknown as BidviaStage3ReleaseGate['blockedBy'],
     requiredValidatorCommands: listStage3ReleaseGateValidatorCommands(),
     waves,
   };

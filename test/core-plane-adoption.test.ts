@@ -115,7 +115,7 @@ test('core-plane adoption snapshot stays scoped to frozen Core-facing truth and 
   );
 });
 
-test('stage 3 release waves stay blocked until workflow-stage and canonical route alignment are actually satisfied', () => {
+test('stage 3 release waves stay blocked until workflow-stage and canonical route/model alignment are actually satisfied', () => {
   const exports = publicSurface as Record<string, unknown>;
 
   assert.equal(typeof exports.listCorePlaneAdoptionStatuses, 'function');
@@ -125,6 +125,8 @@ test('stage 3 release waves stay blocked until workflow-stage and canonical rout
   const adoptionStatuses = (exports.listCorePlaneAdoptionStatuses as () => Array<{
     plane: string;
     payloadPacketStatus: string;
+    descriptiveVisibility: string;
+    executableHelperEligibility: string;
   }>)();
   const waveStatuses = (exports.listCorePlaneWaveStatuses as () => Array<{
     wave: string;
@@ -134,18 +136,29 @@ test('stage 3 release waves stay blocked until workflow-stage and canonical rout
   const gate = (exports.buildStage3ReleaseGate as () => {
     status: string;
     blockedBy: string[];
+    waves: Array<{
+      wave: string;
+      status: string;
+      planes: string[];
+    }>;
   })();
 
   assert.deepEqual(
     adoptionStatuses
       .filter((status) => ['task', 'workflow-stage', 'event-notification', 'enterprise-integration'].includes(status.plane))
-      .map((status) => [status.plane, status.payloadPacketStatus]),
+      .map((status) => [status.plane, status.payloadPacketStatus, status.descriptiveVisibility, status.executableHelperEligibility]),
     [
-      ['task', 'packet-grounded'],
-      ['workflow-stage', 'blocked-pending-packet'],
-      ['event-notification', 'packet-grounded'],
-      ['enterprise-integration', 'packet-grounded'],
+      ['task', 'packet-grounded', 'descriptive-plane-visible', 'packet-grounded-execution'],
+      ['workflow-stage', 'blocked-pending-packet', 'descriptive-plane-visible', 'blocked-pending-packet'],
+      ['event-notification', 'packet-grounded', 'descriptive-plane-visible', 'packet-grounded-execution'],
+      ['enterprise-integration', 'packet-grounded', 'descriptive-plane-visible', 'packet-grounded-execution'],
     ],
+  );
+  assert.deepEqual(
+    adoptionStatuses
+      .filter((status) => status.plane === 'workflow-stage')
+      .map((status) => [status.descriptiveVisibility, status.payloadPacketStatus, status.executableHelperEligibility]),
+    [['descriptive-plane-visible', 'blocked-pending-packet', 'blocked-pending-packet']],
   );
   assert.deepEqual(
     Object.fromEntries(waveStatuses.map((wave) => [wave.wave, wave.status])),
@@ -173,5 +186,16 @@ test('stage 3 release waves stay blocked until workflow-stage and canonical rout
     },
   ]);
   assert.equal(gate.status, 'blocked');
-  assert.deepEqual(gate.blockedBy, ['plane-adoption-incomplete']);
+  assert.deepEqual(gate.blockedBy, [
+    'plane-adoption-incomplete',
+    'canonical-route-model-alignment-stale',
+  ]);
+  assert.deepEqual(
+    gate.waves.map((wave) => [wave.wave, wave.status]),
+    [
+      ['P0', 'blocked'],
+      ['P1', 'blocked'],
+      ['P2', 'blocked'],
+    ],
+  );
 });
