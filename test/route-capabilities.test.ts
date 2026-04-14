@@ -314,6 +314,17 @@ test('capability registry exposes approved truth-fetch helpers as local read-onl
       localCapabilityRiskTier: 'observe-only',
     },
     {
+      helperKey: 'getAccountAgentDispatchAuthority',
+      routePathTemplate: '/runtime/account/agents/:agent_registration_id/dispatch-authority',
+      httpMethod: 'GET',
+      accessContextFamily: 'session',
+      requiredContext: ['tenantId', 'sessionId'],
+      scope: 'read',
+      level: 'atomic-route',
+      localCapabilityTier: 'L0-observe-only',
+      localCapabilityRiskTier: 'observe-only',
+    },
+    {
       helperKey: 'listAccountAgentBindings',
       routePathTemplate: '/runtime/account/agent-bindings',
       httpMethod: 'GET',
@@ -495,6 +506,37 @@ test('capability registry exposes approved truth-fetch helpers as local read-onl
     expectedTruthFetchCapabilities.map((capability) => getRouteCapability(capability.helperKey)),
     expectedTruthFetchCapabilities.map((capability) => withDefaultContextSemantic(capability)),
   );
+});
+
+test('capability registry marks dispatch-authority review as a session-bound account-agent request distinct from role-binding activation', () => {
+  assert.deepEqual(getRouteCapability('createAccountAgentDispatchAuthorityRequest'), {
+    helperKey: 'createAccountAgentDispatchAuthorityRequest',
+    routePathTemplate: '/runtime/account/agents/:agent_registration_id/dispatch-authority-requests',
+    httpMethod: 'POST',
+    accessContextFamily: 'session',
+    contextSemantic: 'session',
+    requiredContext: ['tenantId', 'sessionId'],
+    scope: 'write',
+    level: 'atomic-route',
+    localCapabilityTier: 'L1-review-safe',
+    localCapabilityRiskTier: 'review-safe',
+  });
+
+  const dispatchAuthorityReviewBoundary = {
+    code: 'authority_class_not_dispatchable',
+    permanentlyIneligible: false,
+    reviewFamily: 'dispatch-authority-review',
+  };
+  const activeRoleBindingBoundary = {
+    code: 'active_role_binding_required',
+    blockedOn: 'active-role-binding',
+  };
+
+  assert.equal(dispatchAuthorityReviewBoundary.code, 'authority_class_not_dispatchable');
+  assert.equal(dispatchAuthorityReviewBoundary.permanentlyIneligible, false);
+  assert.equal(dispatchAuthorityReviewBoundary.reviewFamily, 'dispatch-authority-review');
+  assert.equal(activeRoleBindingBoundary.code, 'active_role_binding_required');
+  assert.notEqual(dispatchAuthorityReviewBoundary.reviewFamily, activeRoleBindingBoundary.blockedOn);
 });
 
 test('capability registry exposes shipped widened T2 and T3 truth-fetch helpers as real route capabilities', () => {
