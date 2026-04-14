@@ -111,6 +111,30 @@ const identitySessionOnboardingSupportSteps:
       rationale: 'Support bounded active-org selection when Core requires session-scoped organization resolution before claim or governed-run continuation.',
     },
     {
+      helperKey: 'createAccountMembershipInvitation',
+      routePathTemplate: '/runtime/account/memberships/invitations',
+      requiredContext: ['tenantId', 'sessionId'],
+      rationale: 'Support bounded session-scoped membership invitation creation without widening the client into a general account-admin shell.',
+    },
+    {
+      helperKey: 'acceptAccountMembershipInvitation',
+      routePathTemplate: '/runtime/account/memberships/accept-invitation',
+      requiredContext: ['tenantId', 'sessionId'],
+      rationale: 'Support bounded invitation acceptance within the session-scoped onboarding support surface.',
+    },
+    {
+      helperKey: 'transferAccountMembershipAdmin',
+      routePathTemplate: '/runtime/account/memberships/:membership_binding_id/transfer-admin',
+      requiredContext: ['tenantId', 'sessionId'],
+      rationale: 'Support bounded membership-admin transfer within the identity/session prerequisite surface without claiming broader account management coverage.',
+    },
+    {
+      helperKey: 'removeAccountMembership',
+      routePathTemplate: '/runtime/account/memberships/:membership_binding_id/remove',
+      requiredContext: ['tenantId', 'sessionId'],
+      rationale: 'Support bounded membership removal within the same session-scoped prerequisite surface.',
+    },
+    {
       helperKey: 'patchAgentSelfService',
       routePathTemplate: '/runtime/account/agents/:agentId/self-service',
       requiredContext: ['tenantId', 'sessionId'],

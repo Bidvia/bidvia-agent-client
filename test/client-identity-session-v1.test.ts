@@ -181,10 +181,68 @@ test('BidviaClient exposes a bounded claimed-agent self-service patch surface fo
 
 test('BidviaClient keeps the provisional create->query->claim onboarding chain intact alongside V1 account/session helpers', () => {
   const identitySessionPlane = buildIdentitySessionPlaneView();
+  const supportStepsByHelperKey = new Map<string, unknown>(
+    identitySessionPlane.onboardingSupport.helperSteps.map((step) => [step.helperKey, step]),
+  );
 
   assert.deepEqual(
     identitySessionPlane.canonicalOnboarding.helperSteps.map((step) => step.helperKey),
     ['createProvisionalAgent', 'queryProvisionalAgent', 'claimProvisionalAgent'],
   );
   assert.equal(identitySessionPlane.canonicalOnboarding.label, 'Public provisional onboarding');
+  assert.deepEqual(
+    identitySessionPlane.onboardingSupport.helperSteps.map((step) => step.helperKey),
+    [
+      'signUpPersonalAccount',
+      'signUpEnterpriseAccount',
+      'signIn',
+      'refreshSession',
+      'revokeSession',
+      'getAccountMe',
+      'selectOrg',
+      'createAccountMembershipInvitation',
+      'acceptAccountMembershipInvitation',
+      'transferAccountMembershipAdmin',
+      'removeAccountMembership',
+      'patchAgentSelfService',
+      'getAccountAgentDispatchAuthority',
+      'createAccountAgentDispatchAuthorityRequest',
+    ],
+  );
+  assert.deepEqual(
+    supportStepsByHelperKey.get('createAccountMembershipInvitation'),
+    {
+      helperKey: 'createAccountMembershipInvitation',
+      routePathTemplate: '/runtime/account/memberships/invitations',
+      requiredContext: ['tenantId', 'sessionId'],
+      rationale: 'Support bounded session-scoped membership invitation creation without widening the client into a general account-admin shell.',
+    },
+  );
+  assert.deepEqual(
+    supportStepsByHelperKey.get('acceptAccountMembershipInvitation'),
+    {
+      helperKey: 'acceptAccountMembershipInvitation',
+      routePathTemplate: '/runtime/account/memberships/accept-invitation',
+      requiredContext: ['tenantId', 'sessionId'],
+      rationale: 'Support bounded invitation acceptance within the session-scoped onboarding support surface.',
+    },
+  );
+  assert.deepEqual(
+    supportStepsByHelperKey.get('transferAccountMembershipAdmin'),
+    {
+      helperKey: 'transferAccountMembershipAdmin',
+      routePathTemplate: '/runtime/account/memberships/:membership_binding_id/transfer-admin',
+      requiredContext: ['tenantId', 'sessionId'],
+      rationale: 'Support bounded membership-admin transfer within the identity/session prerequisite surface without claiming broader account management coverage.',
+    },
+  );
+  assert.deepEqual(
+    supportStepsByHelperKey.get('removeAccountMembership'),
+    {
+      helperKey: 'removeAccountMembership',
+      routePathTemplate: '/runtime/account/memberships/:membership_binding_id/remove',
+      requiredContext: ['tenantId', 'sessionId'],
+      rationale: 'Support bounded membership removal within the same session-scoped prerequisite surface.',
+    },
+  );
 });

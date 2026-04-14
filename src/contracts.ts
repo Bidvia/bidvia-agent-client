@@ -178,6 +178,27 @@ export interface BidviaSelectOrgInput {
   orgId: string;
 }
 
+export interface BidviaCreateAccountMembershipInvitationInput {
+  orgId: string;
+  inviteeEmail: string;
+  now: string;
+}
+
+export interface BidviaAcceptAccountMembershipInvitationInput {
+  invitationToken: string;
+  now: string;
+}
+
+export interface BidviaTransferAccountMembershipAdminInput {
+  targetAccountId: string;
+  now: string;
+}
+
+export interface BidviaRemoveAccountMembershipInput {
+  reason: string;
+  now: string;
+}
+
 export interface BidviaAgentSelfServicePatchInput {
   selfDescription?: string;
   capabilityProfile?: Record<string, unknown>;
@@ -1854,6 +1875,10 @@ export interface BidviaIdentitySessionPlaneOnboardingSupportStep {
     | 'revokeSession'
     | 'getAccountMe'
     | 'selectOrg'
+    | 'createAccountMembershipInvitation'
+    | 'acceptAccountMembershipInvitation'
+    | 'transferAccountMembershipAdmin'
+    | 'removeAccountMembership'
     | 'patchAgentSelfService'
     | 'getAccountAgentDispatchAuthority'
     | 'createAccountAgentDispatchAuthorityRequest';
