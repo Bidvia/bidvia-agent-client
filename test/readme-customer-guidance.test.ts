@@ -35,7 +35,7 @@ test('README presents @bidvia/client as a customer-facing V1 entrypoint', () => 
   assert.match(readme, /current package version is `1\.0\.0`/i);
   assert.match(readme, /customer-facing V1 entrypoint/i);
   assert.match(readme, /`1\.0\.0` package state/i);
-  assert.match(readme, /release-ready public surface/i);
+  assert.match(readme, /Stage 3 release gate remains blocked/i);
   assert.match(readme, /npm publication is still a separate final human step/i);
   assert.match(readme, /Node\.js `>=20`/i);
   assert.match(readme, /npm install @bidvia\/client/);
