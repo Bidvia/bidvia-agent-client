@@ -61,6 +61,7 @@ test('public release docs no longer depend on transitional publication wording i
   assert.match(corePlaneGaps, /Capability plane \| packet-grounded-read/i);
   assert.match(corePlaneGaps, /Workflow \/ stage plane \| blocked-pending-packet/i);
   assert.match(corePlaneGaps, /Event \/ notification plane \| packet-grounded-execution/i);
+  assert.match(corePlaneGaps, /Event \/ notification plane \| packet-grounded-execution \| Notification detail reads are payload-grounded and acknowledgement is the only packet-grounded execution helper in this wave\./i);
   assert.match(corePlaneGaps, /Enterprise integration plane \| packet-grounded-read/i);
   assert.match(corePlaneGaps, /helper-level payload matrix/i);
   assert.match(corePlaneGaps, /packet-grounded-execution/i);
