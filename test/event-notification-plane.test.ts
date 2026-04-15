@@ -94,12 +94,15 @@ test('BidviaClient uses governed read headers for canonical notification visibil
     fetchImpl: fetchStub,
   });
 
-  await client.getNotification('notification-1');
+  await client.getNotification({
+    agentRegistrationId: 'areg-1',
+    notificationId: 'notification-1',
+  });
 
   assert.equal(calls.length, 1);
   assert.equal(
     String(calls[0]?.input),
-    'http://127.0.0.1:8787/runtime/account/agents/actor-1/notifications/notification-1?tenant_id=tenant-a',
+    'http://127.0.0.1:8787/runtime/account/agents/areg-1/notifications/notification-1?tenant_id=tenant-a',
   );
   assert.equal((calls[0]?.init?.headers as Record<string, string>)['x-authorized-tenant-id'], 'tenant-a');
   assert.equal((calls[0]?.init?.headers as Record<string, string>)['x-bidvia-principal-id'], 'actor-1');
@@ -118,7 +121,7 @@ test('BidviaClient uses operator action headers and frozen payloads for canonica
     fetchImpl: fetchStub,
   });
 
-  await client.acknowledgeNotification('notification-1', {
+  await client.acknowledgeNotification('areg-1', 'notification-1', {
     registrationId: 'areg-1',
     decision: 'acknowledged',
     now: '2026-04-10T00:01:00.000Z',
@@ -128,7 +131,7 @@ test('BidviaClient uses operator action headers and frozen payloads for canonica
   assert.equal(calls.length, 1);
   assert.equal(
     String(calls[0]?.input),
-    'http://127.0.0.1:8787/runtime/account/agents/actor-1/notifications/notification-1/acknowledgements?tenant_id=tenant-a',
+    'http://127.0.0.1:8787/runtime/account/agents/areg-1/notifications/notification-1/acknowledgements?tenant_id=tenant-a',
   );
   assert.equal((calls[0]?.init?.headers as Record<string, string>)['x-authorized-company-id'], 'company-a');
   assert.deepEqual(JSON.parse(String(calls[0]?.init?.body)), {

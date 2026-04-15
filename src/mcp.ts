@@ -158,7 +158,13 @@ const widenedExecutionDispatchersByCapabilityKey: Record<string, BidviaGenericEx
     );
   },
   acknowledgeNotification(client, input) {
+    const agentRegistrationId = requireExecutionStringInput(
+      input,
+      ['agentRegistrationId', 'registrationId'],
+      'agentRegistrationId is required for governed notification acknowledgement execution',
+    );
     return client.acknowledgeNotification(
+      agentRegistrationId,
       requireExecutionStringInput(
         input,
         ['notificationId'],
@@ -166,7 +172,7 @@ const widenedExecutionDispatchersByCapabilityKey: Record<string, BidviaGenericEx
       ),
       buildExecutionPayload(
         input,
-        ['notificationId'],
+        ['agentRegistrationId', 'notificationId'],
         'notificationId is required for governed notification acknowledgement execution',
       ) as never,
     );
@@ -867,11 +873,18 @@ async function dispatchGovernanceTruthFetchTool(
       outputMode: descriptor.outputMode,
       result: {
         truthFetchResult: await client.getNotification(
-          requireStringInput(
-            input,
-            'notificationId',
-            'notificationId is required for notification reads',
-          ),
+          {
+            agentRegistrationId: requireStringInput(
+              input,
+              'agentRegistrationId',
+              'agentRegistrationId is required for notification reads',
+            ),
+            notificationId: requireStringInput(
+              input,
+              'notificationId',
+              'notificationId is required for notification reads',
+            ),
+          },
         ),
       },
     };

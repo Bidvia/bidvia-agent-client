@@ -965,18 +965,31 @@ export class BidviaClient {
     );
   }
 
-  async getNotification(notificationId: string, requestPolicy?: BidviaClientRequestPolicy): Promise<unknown>;
+  async getNotification(
+    agentRegistrationId: string,
+    notificationId: string,
+    requestPolicy?: BidviaClientRequestPolicy,
+  ): Promise<unknown>;
   async getNotification(
     input: BidviaNotificationIdentifierInput,
     requestPolicy?: BidviaClientRequestPolicy,
   ): Promise<unknown>;
   async getNotification(
-    input: string | BidviaNotificationIdentifierInput,
-    requestPolicy?: BidviaClientRequestPolicy,
+    inputOrAgentRegistrationId: string | BidviaNotificationIdentifierInput,
+    notificationIdOrRequestPolicy?: string | BidviaClientRequestPolicy,
+    maybeRequestPolicy?: BidviaClientRequestPolicy,
   ) {
-    const context = this.resolveRequestContext(requestPolicy);
-    const notificationId = typeof input === 'string' ? input : input.notificationId;
-    const agentRegistrationId = this.requirePrincipalId(context);
+    const context = this.resolveRequestContext(
+      typeof inputOrAgentRegistrationId === 'string'
+        ? maybeRequestPolicy
+        : notificationIdOrRequestPolicy as BidviaClientRequestPolicy | undefined,
+    );
+    const agentRegistrationId = typeof inputOrAgentRegistrationId === 'string'
+      ? inputOrAgentRegistrationId
+      : inputOrAgentRegistrationId.agentRegistrationId;
+    const notificationId = typeof inputOrAgentRegistrationId === 'string'
+      ? notificationIdOrRequestPolicy as string
+      : inputOrAgentRegistrationId.notificationId;
 
     return this.request(
       `/runtime/account/agents/${encodeURIComponent(agentRegistrationId)}/notifications/${encodeURIComponent(notificationId)}?tenant_id=${encodeURIComponent(this.requireTenantId(context))}`,
@@ -984,7 +997,9 @@ export class BidviaClient {
         context,
         method: 'GET',
         headers: this.requireGovernedReadHeaders(context),
-        requestPolicy,
+        requestPolicy: typeof inputOrAgentRegistrationId === 'string'
+          ? maybeRequestPolicy
+          : notificationIdOrRequestPolicy as BidviaClientRequestPolicy | undefined,
       },
     );
   }
@@ -1008,12 +1023,12 @@ export class BidviaClient {
   }
 
   async acknowledgeNotification(
+    agentRegistrationId: string,
     notificationId: string,
     input: BidviaNotificationAcknowledgementWriteInput,
     requestPolicy?: BidviaClientRequestPolicy,
   ) {
     const context = this.resolveRequestContext(requestPolicy);
-    const agentRegistrationId = this.requirePrincipalId(context);
 
     return this.request(
       `/runtime/account/agents/${encodeURIComponent(agentRegistrationId)}/notifications/${encodeURIComponent(notificationId)}/acknowledgements?tenant_id=${encodeURIComponent(this.requireTenantId(context))}`,

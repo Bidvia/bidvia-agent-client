@@ -911,10 +911,10 @@ test('dispatchMcpToolCall exposes widened Task 1 governance read descriptors in 
 test('dispatchMcpToolCall routes notification visibility reads through the shipped SDK helper only', async () => {
   const calls: Array<{ helper: string; input?: unknown }> = [];
   const client = {
-    async getNotification(input: string) {
+    async getNotification(input: { agentRegistrationId: string; notificationId: string }) {
       calls.push({ helper: 'getNotification', input });
       return {
-        notificationId: input,
+        notificationId: input.notificationId,
       };
     },
   };
@@ -932,7 +932,10 @@ test('dispatchMcpToolCall routes notification visibility reads through the shipp
     },
   );
 
-  assert.deepEqual(calls, [{ helper: 'getNotification', input: 'notification-1' }]);
+  assert.deepEqual(calls, [{ helper: 'getNotification', input: {
+    agentRegistrationId: 'areg-1',
+    notificationId: 'notification-1',
+  } }]);
   assert.deepEqual(result.result, {
     truthFetchResult: {
       notificationId: 'notification-1',
@@ -950,9 +953,10 @@ test('dispatchMcpToolCall routes packet-grounded notification execution tools th
         companyId: 'company-runtime',
       },
     },
-    async acknowledgeNotification(notificationId: string, input: Record<string, unknown>) {
-      calls.push({ helper: 'acknowledgeNotification', args: [notificationId, input] });
+    async acknowledgeNotification(agentRegistrationId: string, notificationId: string, input: Record<string, unknown>) {
+      calls.push({ helper: 'acknowledgeNotification', args: [agentRegistrationId, notificationId, input] });
       return {
+        agentRegistrationId,
         notificationId,
         ...input,
       };
@@ -961,11 +965,12 @@ test('dispatchMcpToolCall routes packet-grounded notification execution tools th
 
   const result = await dispatchMcpToolCallWithExecution(
     {
-      toolName: 'acknowledge-notification-execution',
-      arguments: {
-        notificationId: 'notification-1',
-        registrationId: 'areg-1',
-        decision: 'acknowledged',
+        toolName: 'acknowledge-notification-execution',
+        arguments: {
+          agentRegistrationId: 'areg-1',
+          notificationId: 'notification-1',
+          registrationId: 'areg-1',
+          decision: 'acknowledged',
         now: '2026-04-10T00:01:00.000Z',
         reason: 'worker accepted the notification task',
       },
@@ -977,7 +982,7 @@ test('dispatchMcpToolCall routes packet-grounded notification execution tools th
 
   assert.deepEqual(calls, [{
     helper: 'acknowledgeNotification',
-    args: ['notification-1', {
+    args: ['areg-1', 'notification-1', {
       registrationId: 'areg-1',
       decision: 'acknowledged',
       now: '2026-04-10T00:01:00.000Z',
@@ -986,6 +991,7 @@ test('dispatchMcpToolCall routes packet-grounded notification execution tools th
   }]);
   assert.deepEqual(result.result, {
     executionResult: {
+      agentRegistrationId: 'areg-1',
       notificationId: 'notification-1',
       registrationId: 'areg-1',
       decision: 'acknowledged',
