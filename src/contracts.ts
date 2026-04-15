@@ -179,8 +179,8 @@ export interface BidviaSelectOrgInput {
 }
 
 export interface BidviaCreateAccountMembershipInvitationInput {
-  orgId: string;
-  inviteeEmail: string;
+  targetRole: string;
+  expiresAt: string;
   now: string;
 }
 
@@ -190,7 +190,7 @@ export interface BidviaAcceptAccountMembershipInvitationInput {
 }
 
 export interface BidviaTransferAccountMembershipAdminInput {
-  targetAccountId: string;
+  targetMembershipBindingId: string;
   now: string;
 }
 
@@ -215,7 +215,6 @@ export interface BidviaAgentSelfServicePatchInput {
 
 export interface BidviaAccountAgentDispatchAuthorityRequestInput {
   now: string;
-  rationale: string;
 }
 
 export interface BidviaNotificationIdentifierInput {

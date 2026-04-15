@@ -427,8 +427,8 @@ async function main() {
   });
   await runRegisteredAgentOperationsScenario(registeredOperationsClient, registeredAgentOperationsPlan);
   await client.createAccountMembershipInvitation({
-    orgId: 'org-validate-1',
-    inviteeEmail: 'member-validate@example.com',
+    targetRole: 'enterprise_member',
+    expiresAt: '2026-03-26T19:22:00Z',
     now: '2026-03-25T19:22:00Z',
   });
   await client.acceptAccountMembershipInvitation({
@@ -436,7 +436,7 @@ async function main() {
     now: '2026-03-25T19:22:10Z',
   });
   await client.transferAccountMembershipAdmin('membership-binding-validate-1', {
-    targetAccountId: 'account-validate-2',
+    targetMembershipBindingId: 'membership-binding-validate-2',
     now: '2026-03-25T19:22:20Z',
   });
   await client.removeAccountMembership('membership-binding-validate-1', {
@@ -446,7 +446,6 @@ async function main() {
   await client.getAccountAgentDispatchAuthority('areg-dispatch-authority-validate-1');
   await client.createAccountAgentDispatchAuthorityRequest('areg-dispatch-authority-validate-1', {
     now: '2026-03-25T19:22:40Z',
-    rationale: 'dispatch-authority-review-validate',
   });
 
   const urls = calls.map((call) => String(call.input));
@@ -689,8 +688,8 @@ async function main() {
     now: '2026-03-25T19:21:00Z',
   });
   assert.deepEqual(membershipInvitationBody, {
-    org_id: 'org-validate-1',
-    invitee_email: 'member-validate@example.com',
+    target_role: 'enterprise_member',
+    expires_at: '2026-03-26T19:22:00Z',
     now: '2026-03-25T19:22:00Z',
   });
   assert.deepEqual(membershipAcceptanceBody, {
@@ -698,7 +697,7 @@ async function main() {
     now: '2026-03-25T19:22:10Z',
   });
   assert.deepEqual(membershipTransferBody, {
-    target_account_id: 'account-validate-2',
+    target_membership_binding_id: 'membership-binding-validate-2',
     now: '2026-03-25T19:22:20Z',
   });
   assert.deepEqual(membershipRemovalBody, {
@@ -706,8 +705,8 @@ async function main() {
     now: '2026-03-25T19:22:30Z',
   });
   assert.deepEqual(dispatchAuthorityRequestBody, {
+    requested_target: 'bounded_dispatch_authority_activation',
     now: '2026-03-25T19:22:40Z',
-    rationale: 'dispatch-authority-review-validate',
   });
 
   assert.equal(reviewPacket.verificationMode, 'review-safe');

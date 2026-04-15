@@ -321,8 +321,8 @@ export class BidviaClient {
       method: 'POST',
       headers: this.requireSessionHeaders(context),
       body: {
-        org_id: input.orgId,
-        invitee_email: input.inviteeEmail,
+        target_role: input.targetRole,
+        expires_at: input.expiresAt,
         now: input.now,
       },
       requestPolicy,
@@ -359,7 +359,7 @@ export class BidviaClient {
         method: 'POST',
         headers: this.requireSessionHeaders(context),
         body: {
-          target_account_id: input.targetAccountId,
+          target_membership_binding_id: input.targetMembershipBindingId,
           now: input.now,
         },
         requestPolicy,
@@ -576,8 +576,8 @@ export class BidviaClient {
         method: 'POST',
         headers: this.requireSessionHeaders(context),
         body: {
+          requested_target: 'bounded_dispatch_authority_activation',
           now: input.now,
-          rationale: input.rationale,
         },
         requestPolicy,
       },
