@@ -305,7 +305,8 @@ test('agent-state helpers keep identity cache snapshots separate from authority 
   assert.equal(identity.identity.snapshot.source, 'server-derived');
   assert.equal(identity.identity.cache.cacheKey, 'agent-state:identity:agent-1');
   assert.equal(identity.identity.freshness.stale, false);
-  assert.equal(identitySessionPlane.sessionTruth.payloadPacketStatus, 'blocked-pending-packet');
+  assert.equal(identitySessionPlane.sessionTruth.payloadPacketStatus, 'packet-grounded');
+  assert.equal(identitySessionPlane.sessionTruth.blockedBy, null);
   assert.equal(identitySessionPlane.sessionTruth.broaderPlatformLoginClaim, false);
   assert.deepEqual(authority, {
     kind: 'authority',
