@@ -163,15 +163,15 @@ test('stage 3 release waves stay blocked until workflow-stage and canonical rout
   assert.deepEqual(
     Object.fromEntries(waveStatuses.map((wave) => [wave.wave, wave.status])),
     {
-      P0: 'blocked',
+      P0: 'complete',
       P1: 'blocked',
-      P2: 'blocked',
+      P2: 'complete',
     },
   );
   assert.deepEqual(waveStatuses, [
     {
       wave: 'P0',
-      status: 'blocked',
+      status: 'complete',
       planes: ['identity-session', 'task', 'event-notification'],
     },
     {
@@ -181,21 +181,18 @@ test('stage 3 release waves stay blocked until workflow-stage and canonical rout
     },
     {
       wave: 'P2',
-      status: 'blocked',
+      status: 'complete',
       planes: ['enterprise-integration'],
     },
   ]);
   assert.equal(gate.status, 'blocked');
-  assert.deepEqual(gate.blockedBy, [
-    'plane-adoption-incomplete',
-    'canonical-route-model-alignment-stale',
-  ]);
+  assert.deepEqual(gate.blockedBy, ['plane-adoption-incomplete']);
   assert.deepEqual(
     gate.waves.map((wave) => [wave.wave, wave.status]),
     [
-      ['P0', 'blocked'],
+      ['P0', 'complete'],
       ['P1', 'blocked'],
-      ['P2', 'blocked'],
+      ['P2', 'complete'],
     ],
   );
 });
