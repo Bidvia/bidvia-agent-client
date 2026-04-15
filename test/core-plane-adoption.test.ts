@@ -121,6 +121,7 @@ test('stage 3 release waves stay blocked until workflow-stage and canonical rout
   assert.equal(typeof exports.listCorePlaneAdoptionStatuses, 'function');
   assert.equal(typeof exports.listCorePlaneWaveStatuses, 'function');
   assert.equal(typeof exports.buildStage3ReleaseGate, 'function');
+  assert.equal(typeof exports.listCorePayloadContractMatrixEntries, 'function');
 
   const adoptionStatuses = (exports.listCorePlaneAdoptionStatuses as () => Array<{
     plane: string;
@@ -133,6 +134,9 @@ test('stage 3 release waves stay blocked until workflow-stage and canonical rout
     status: string;
     planes: string[];
   }>)();
+  const matrixEntries = (exports.listCorePayloadContractMatrixEntries as () => Array<{
+    stage3RouteModelWave?: string | null;
+  }>)();
   const gate = (exports.buildStage3ReleaseGate as () => {
     status: string;
     blockedBy: string[];
@@ -142,6 +146,13 @@ test('stage 3 release waves stay blocked until workflow-stage and canonical rout
       planes: string[];
     }>;
   })();
+  const coveredWaves = [...new Set(
+    matrixEntries
+      .map((entry) => entry.stage3RouteModelWave)
+      .filter((wave): wave is string => wave !== undefined && wave !== null),
+  )].sort();
+
+  assert.deepEqual(coveredWaves, ['P0', 'P1', 'P2']);
 
   assert.deepEqual(
     adoptionStatuses

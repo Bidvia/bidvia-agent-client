@@ -6,6 +6,7 @@ import type {
 } from './contracts.js';
 import {
   getCorePayloadContractMatrixEntry,
+  listCorePayloadContractMatrixEntries,
   listCorePayloadPlaneAdoptionSummaries,
 } from './core-payload-contract-matrix.js';
 
@@ -62,34 +63,20 @@ function isStage3ProofPlaneComplete(status: BidviaCorePlaneAdoptionStatus): bool
 }
 
 function isCanonicalRouteModelAlignmentStale(): boolean {
-  const requiredHelperRoutes = [
-    ['getAgentReadiness', 'packet-grounded-read', '/runtime/agents/:agent_registration_id/readiness'],
-    ['listAgentRegistrations', 'packet-grounded-read', '/runtime/agents/registrations'],
-    ['getAgentRegistration', 'packet-grounded-read', '/runtime/agents/:agent_registration_id'],
-    ['listAuthorityProfiles', 'packet-grounded-read', '/runtime/authority-profiles'],
-    ['listCapabilityProfiles', 'packet-grounded-read', '/runtime/capability-profiles'],
-    ['getAgentCapabilityProfile', 'packet-grounded-read', '/runtime/agents/:agent_registration_id/capability-profile'],
-    ['getAccountAgentDispatchAuthority', 'packet-grounded-read', '/runtime/account/agents/:agent_registration_id/dispatch-authority'],
-    ['createAccountAgentDispatchAuthorityRequest', 'packet-grounded-execution', '/runtime/account/agents/:agent_registration_id/dispatch-authority-requests'],
-    ['listTaskDispatches', 'packet-grounded-read', '/runtime/account/agents/:agent_registration_id/task-dispatches'],
-    ['getTaskDispatch', 'packet-grounded-read', '/runtime/account/agents/:agent_registration_id/task-dispatches/:task_dispatch_id'],
-    ['createLease', 'packet-grounded-execution', '/runtime/account/agents/:agent_registration_id/leases'],
-    ['createClaim', 'packet-grounded-execution', '/runtime/account/agents/:agent_registration_id/claims'],
-    ['acceptClaim', 'packet-grounded-execution', '/runtime/account/agents/:agent_registration_id/claims/:claim_id/accept'],
-    ['rejectClaim', 'packet-grounded-execution', '/runtime/account/agents/:agent_registration_id/claims/:claim_id/reject'],
-    ['createTaskDispatch', 'packet-grounded-execution', '/runtime/account/agents/:agent_registration_id/task-dispatches'],
-    ['assignTaskDispatch', 'packet-grounded-execution', '/runtime/account/agents/:agent_registration_id/task-dispatches/:task_dispatch_id/assign'],
-    ['suspendTaskDispatch', 'packet-grounded-execution', '/runtime/account/agents/:agent_registration_id/task-dispatches/:task_dispatch_id/suspend'],
-    ['resumeTaskDispatch', 'packet-grounded-execution', '/runtime/account/agents/:agent_registration_id/task-dispatches/:task_dispatch_id/resume'],
-    ['completeTaskDispatch', 'packet-grounded-execution', '/runtime/account/agents/:agent_registration_id/task-dispatches/:task_dispatch_id/complete'],
-    ['failTaskDispatch', 'packet-grounded-execution', '/runtime/account/agents/:agent_registration_id/task-dispatches/:task_dispatch_id/fail'],
-    ['getNotification', 'packet-grounded-read', '/runtime/account/agents/:agent_registration_id/notifications/:notification_id'],
-    ['acknowledgeNotification', 'packet-grounded-execution', '/runtime/account/agents/:agent_registration_id/notifications/:notification_id/acknowledgements'],
-  ] as const;
+  const routeModelCoverageEntries = listCorePayloadContractMatrixEntries().filter(
+    (entry) => entry.stage3RouteModelWave !== undefined,
+  );
+  const coveredWaves = new Set(routeModelCoverageEntries.map((entry) => entry.stage3RouteModelWave));
 
-  return requiredHelperRoutes.some(([helperKey, helperState, routePathTemplate]) => {
-    const entry = getCorePayloadContractMatrixEntry(helperKey);
-    return !entry || entry.helperState !== helperState || entry.routePathTemplate !== routePathTemplate;
+  if (!coveredWaves.has('P0') || !coveredWaves.has('P1') || !coveredWaves.has('P2')) {
+    return true;
+  }
+
+  return routeModelCoverageEntries.some((entry) => {
+    const matrixEntry = getCorePayloadContractMatrixEntry(entry.helperKey);
+    return !matrixEntry
+      || matrixEntry.helperState === 'blocked-pending-packet'
+      || matrixEntry.routePathTemplate === null;
   });
 }
 
