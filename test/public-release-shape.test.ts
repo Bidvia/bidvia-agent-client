@@ -69,7 +69,8 @@ test('public release docs no longer depend on transitional publication wording i
   assert.match(corePlaneGaps, /compatibility-only/i);
   assert.match(corePlaneGaps, /CLI and MCP execution now write local accumulation through the runtime core/i);
   assert.match(corePlaneGaps, /sign-up, sign-in, select-org, and session hygiene/i);
-  assert.match(corePlaneGaps, /notification delivery and acknowledgement helpers are packet-grounded/i);
+  assert.match(corePlaneGaps, /notification detail visibility is packet-grounded-read and acknowledgement is the only packet-grounded-execution helper in this wave/i);
+  assert.match(corePlaneGaps, /notification delivery, retry, and expiry remain compatibility-only/i);
   assert.match(corePlaneGaps, /integration and commercial read helpers are packet-grounded/i);
   assert.match(corePlaneGaps, /workflow-stage remains the only broadly blocked Core-facing plane/i);
   assert.doesNotMatch(corePlaneGaps, /hosted runtime behavior is shipped/i);
@@ -115,9 +116,9 @@ test('public release docs no longer depend on transitional publication wording i
   assert.match(contractBoundary, /account-me/i);
   assert.match(contractBoundary, /session-refresh/i);
   assert.match(contractBoundary, /session-revoke/i);
-  assert.match(contractBoundary, /`GET \/runtime\/account\/agents\/:registration_id\/notifications`/i);
   assert.match(contractBoundary, /`GET \/runtime\/account\/agents\/:registration_id\/notifications\/:notification_id`/i);
   assert.match(contractBoundary, /`POST \/runtime\/account\/agents\/:registration_id\/notifications\/:notification_id\/acknowledgements`/i);
+  assert.doesNotMatch(contractBoundary, /`GET \/runtime\/account\/agents\/:registration_id\/notifications`/i);
   assert.doesNotMatch(contractBoundary, /`GET \/runtime\/notifications\/:notification_id`/i);
   assert.doesNotMatch(contractBoundary, /`POST \/runtime\/notifications\/:notification_id\/acknowledge`/i);
   assert.match(contractBoundary, /agent-first but login-capable/i);

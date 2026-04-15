@@ -122,7 +122,8 @@ What is already real for the client:
 
 Current client adoption state:
 
-- notification delivery and acknowledgement helpers are packet-grounded alongside notification detail visibility
+- notification detail visibility is packet-grounded-read and acknowledgement is the only packet-grounded-execution helper in this wave
+- notification delivery, retry, and expiry remain compatibility-only until Core freezes broader consumer execution packets
 - adopted account-scoped notification acknowledgement remains bounded to the currently frozen downstream route family
 - blocked pending payload packet handling remains in place for execution or replay semantics not yet packet-grounded
 
