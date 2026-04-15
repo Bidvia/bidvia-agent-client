@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 
 import { BidviaClient, exportVerificationBundle } from '../src/client.ts';
 import { buildIdentitySessionPlaneView } from '../src/index.ts';
+import * as publicSurface from '../src/index.ts';
 
 function createFetchStub() {
   const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
@@ -85,7 +86,20 @@ test('BidviaClient uses the frozen provisional->query->claim onboarding contract
   assert.deepEqual(supportStepsByHelperKey.get('removeAccountMembership')?.requiredContext, ['tenantId', 'sessionId']);
   assert.deepEqual(supportStepsByHelperKey.get('getAccountAgentDispatchAuthority')?.requiredContext, ['tenantId', 'sessionId']);
   assert.deepEqual(supportStepsByHelperKey.get('createAccountAgentDispatchAuthorityRequest')?.requiredContext, ['tenantId', 'sessionId']);
-  assert.equal(identitySessionPlane.sessionTruth.payloadPacketStatus, 'blocked-pending-packet');
+  const exports = publicSurface as Record<string, unknown>;
+  const sharedIdentitySessionStatus = (exports.listCorePlaneAdoptionStatuses as () => Array<{
+    plane: string;
+    frozenInCore: boolean;
+    payloadPacketStatus: string;
+    descriptiveVisibility: string;
+    executableHelperEligibility: string;
+    blockedBy: string | null;
+    notes: string[];
+  }>)().find((status) => status.plane === 'identity-session');
+
+  assert.deepEqual(identitySessionPlane.adoptionStatus, sharedIdentitySessionStatus);
+  assert.equal(identitySessionPlane.sessionTruth.payloadPacketStatus, sharedIdentitySessionStatus?.payloadPacketStatus);
+  assert.equal(identitySessionPlane.sessionTruth.blockedBy, sharedIdentitySessionStatus?.blockedBy ?? null);
   assert.equal(String(calls[0]?.input), 'http://127.0.0.1:8787/runtime/agents/provisional');
   assert.equal(String(calls[1]?.input), 'http://127.0.0.1:8787/runtime/agents/provisional?provisional_agent_ref=prov-agent-1');
   assert.equal(String(calls[2]?.input), 'http://127.0.0.1:8787/runtime/agents/provisional/claim');

@@ -7,6 +7,7 @@ import type {
   BidviaIdentitySessionPlaneView,
   BidviaScenarioContextKey,
 } from './contracts.js';
+import { listCorePlaneAdoptionStatuses } from './core-plane-adoption.js';
 import { getCorePlaneExecutionSummary } from './plane-execution-gate.js';
 import { getWorkflowStageLocalSemantics } from './workflow-stage-plane.js';
 
@@ -17,14 +18,22 @@ type BidviaIdentitySessionPlaneProgressInput = {
   registrationIdPresent: boolean;
 };
 
-const identitySessionPlaneAdoptionStatus: BidviaCorePlaneAdoptionStatus = {
-  plane: 'identity-session',
-  frozenInCore: true,
-  payloadPacketStatus: 'blocked-pending-packet',
-  ...getCorePlaneExecutionSummary('identity-session'),
-  blockedBy: 'core-plane-payload-packet-not-yet-frozen',
-  notes: ['Adopt canonical onboarding and governed-read posture without inventing broader session semantics.'],
-};
+function getIdentitySessionPlaneAdoptionStatus(): BidviaCorePlaneAdoptionStatus {
+  const status = listCorePlaneAdoptionStatuses().find((entry) => entry.plane === 'identity-session');
+
+  if (!status) {
+    return {
+      plane: 'identity-session',
+      frozenInCore: true,
+      payloadPacketStatus: 'packet-grounded',
+      ...getCorePlaneExecutionSummary('identity-session'),
+      blockedBy: null,
+      notes: ['Adopt canonical onboarding and governed-read posture without inventing broader session semantics.'],
+    };
+  }
+
+  return status;
+}
 
 const identitySessionGovernedReadPosture: BidviaIdentitySessionPlaneGovernedReadPosture = {
   accessContextFamily: 'principal-governed-read',
@@ -179,6 +188,7 @@ function cloneOnboardingSupportStep(
 }
 
 export function buildIdentitySessionPlaneView(): BidviaIdentitySessionPlaneView {
+  const identitySessionPlaneAdoptionStatus = getIdentitySessionPlaneAdoptionStatus();
   const helperSteps = identitySessionCanonicalOnboardingSteps.map(cloneCanonicalOnboardingStep);
   const onboardingSupportSteps = identitySessionOnboardingSupportSteps.map(cloneOnboardingSupportStep);
   const claim = helperSteps[2]!;
@@ -197,7 +207,7 @@ export function buildIdentitySessionPlaneView(): BidviaIdentitySessionPlaneView 
       payloadPacketStatus: identitySessionPlaneAdoptionStatus.payloadPacketStatus,
       blockedBy: identitySessionPlaneAdoptionStatus.blockedBy,
       notes: [
-        'Treat freshness and invalidation as blocked pending Core packet completion rather than broader login/session truth.',
+        'Treat shipped account and session packets as available without widening into broader platform-login ownership or unstated freshness guarantees.',
         'Governed reads stay honest: tenantId plus principalId are required, with adminSessionId only as an optional companion on some routes.',
         'Account and session helpers are bounded onboarding prerequisites only and do not turn this client into a full account product.',
         'Dispatch-authority reads and requests stay session-bound and account-agent scoped, with review boundaries kept distinct from active role-binding activation.',
