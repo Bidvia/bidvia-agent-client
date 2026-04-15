@@ -115,6 +115,11 @@ test('public release docs no longer depend on transitional publication wording i
   assert.match(contractBoundary, /account-me/i);
   assert.match(contractBoundary, /session-refresh/i);
   assert.match(contractBoundary, /session-revoke/i);
+  assert.match(contractBoundary, /`GET \/runtime\/account\/agents\/:registration_id\/notifications`/i);
+  assert.match(contractBoundary, /`GET \/runtime\/account\/agents\/:registration_id\/notifications\/:notification_id`/i);
+  assert.match(contractBoundary, /`POST \/runtime\/account\/agents\/:registration_id\/notifications\/:notification_id\/acknowledgements`/i);
+  assert.doesNotMatch(contractBoundary, /`GET \/runtime\/notifications\/:notification_id`/i);
+  assert.doesNotMatch(contractBoundary, /`POST \/runtime\/notifications\/:notification_id\/acknowledge`/i);
   assert.match(contractBoundary, /agent-first but login-capable/i);
   assert.match(onboardingGuide, /agent-first but login-capable/i);
   assert.match(onboardingGuide, /bounded account\/session prerequisite support/i);

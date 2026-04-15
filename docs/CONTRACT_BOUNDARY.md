@@ -116,8 +116,9 @@ The current V1 enterprise support family is intentionally mixed:
 - `POST /runtime/account/agents/:registration_id/task-dispatches/:task_dispatch_id/resume`
 - `POST /runtime/account/agents/:registration_id/task-dispatches/:task_dispatch_id/complete`
 - `POST /runtime/account/agents/:registration_id/task-dispatches/:task_dispatch_id/fail`
-- `GET /runtime/notifications/:notification_id`
-- `POST /runtime/notifications/:notification_id/acknowledge`
+- `GET /runtime/account/agents/:registration_id/notifications`
+- `GET /runtime/account/agents/:registration_id/notifications/:notification_id`
+- `POST /runtime/account/agents/:registration_id/notifications/:notification_id/acknowledgements`
 - `POST /runtime/integrations/:integrationCode/onboarding-contract`
 - `POST /runtime/integrations/haisi-wms/login`
 - `GET /runtime/integrations/haisi-wms/warehouses`
