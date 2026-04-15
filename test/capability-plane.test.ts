@@ -22,10 +22,14 @@ test('capability-plane truth separates packet-grounded read helpers from compati
   assert.equal(getCapabilityPlaneCapabilityMode('getAgentReadiness'), 'packet-grounded-read');
   assert.equal(getCapabilityPlaneCapabilityMode('getAgentSummary'), 'packet-grounded-read');
   assert.equal(getCapabilityPlaneCapabilityMode('getAgentCapabilityProfile'), 'packet-grounded-read');
+  assert.equal(getCapabilityPlaneCapabilityMode('listAuthorityProfiles'), 'packet-grounded-read');
+  assert.equal(getCapabilityPlaneCapabilityMode('listCapabilityProfiles'), 'packet-grounded-read');
   assert.equal(getCapabilityPlaneCapabilityMode('refreshRemoteCapabilityTruth'), 'compatibility-only');
   assert.deepEqual(capabilityPlane.helperTruth, {
     packetGroundedReadHelperKeys: [
       'getAgentReadiness',
+      'listAuthorityProfiles',
+      'listCapabilityProfiles',
       'getAgentSummary',
       'getAgentCapabilityProfile',
     ],
@@ -52,6 +56,16 @@ test('capability-plane packet-grounded read truth flows through local discovery 
     governedRunAuthorizationDerivedFromCapabilityReadTruth?: boolean;
   };
   const capabilityProfileEntry = catalog.find((entry) => entry.helperKey === 'getAgentCapabilityProfile') as {
+    capabilityPlaneCapabilityMode?: string;
+    dispatchEligibilityDerivedFromCapabilityReadTruth?: boolean;
+    governedRunAuthorizationDerivedFromCapabilityReadTruth?: boolean;
+  };
+  const authorityProfilesEntry = catalog.find((entry) => entry.helperKey === 'listAuthorityProfiles') as {
+    capabilityPlaneCapabilityMode?: string;
+    dispatchEligibilityDerivedFromCapabilityReadTruth?: boolean;
+    governedRunAuthorizationDerivedFromCapabilityReadTruth?: boolean;
+  };
+  const capabilityProfilesEntry = catalog.find((entry) => entry.helperKey === 'listCapabilityProfiles') as {
     capabilityPlaneCapabilityMode?: string;
     dispatchEligibilityDerivedFromCapabilityReadTruth?: boolean;
     governedRunAuthorizationDerivedFromCapabilityReadTruth?: boolean;
@@ -90,6 +104,12 @@ test('capability-plane packet-grounded read truth flows through local discovery 
   );
   assert.equal(capabilityProfileEntry.dispatchEligibilityDerivedFromCapabilityReadTruth, false);
   assert.equal(capabilityProfileEntry.governedRunAuthorizationDerivedFromCapabilityReadTruth, false);
+  assert.equal(authorityProfilesEntry.capabilityPlaneCapabilityMode, 'packet-grounded-read');
+  assert.equal(authorityProfilesEntry.dispatchEligibilityDerivedFromCapabilityReadTruth, false);
+  assert.equal(authorityProfilesEntry.governedRunAuthorizationDerivedFromCapabilityReadTruth, false);
+  assert.equal(capabilityProfilesEntry.capabilityPlaneCapabilityMode, 'packet-grounded-read');
+  assert.equal(capabilityProfilesEntry.dispatchEligibilityDerivedFromCapabilityReadTruth, false);
+  assert.equal(capabilityProfilesEntry.governedRunAuthorizationDerivedFromCapabilityReadTruth, false);
 
   assert.equal(
     readinessDescriptor.capabilityPlaneCapabilityMode,

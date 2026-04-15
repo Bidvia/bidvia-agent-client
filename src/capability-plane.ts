@@ -26,6 +26,9 @@ import {
   buildStage3ReleaseGate,
   listCorePlaneAdoptionStatuses,
 } from './core-plane-adoption.js';
+import {
+  listCorePayloadContractEntriesForPlane,
+} from './core-payload-contract-matrix.js';
 
 const runtimeCapabilitySnapshotSchemaVersion = '2026-03-27';
 const localRuntimeCapabilitySnapshotVersion = 'local-runtime-capability-snapshot';
@@ -34,12 +37,15 @@ const localStaticFallbackPolicy = 'prefer-local-static-until-server-negotiation'
 const deferredNegotiationFallbackPolicy = 'await-explicit-server-negotiation';
 const serverDerivedFallbackPolicy = 'retain-server-derived-snapshot-until-replaced';
 const localDiscoverySourceOfTruth = 'local-sdk-helpers' as const;
-const capabilityPlanePacketGroundedReadHelperKeys = [
+const capabilityPlanePacketGroundedReadHelperKeys: BidviaCapabilityPlaneView['helperTruth']['packetGroundedReadHelperKeys'] = [
   'getAgentReadiness',
-  'getAgentSummary',
-  'getAgentCapabilityProfile',
-] as const;
-const capabilityPlaneCompatibilityOnlyHelperKeys = ['refreshRemoteCapabilityTruth'] as const;
+  ...listCorePayloadContractEntriesForPlane('capability')
+    .filter((entry) => entry.helperState === 'packet-grounded-read')
+    .map((entry) => entry.helperKey as BidviaCapabilityPlaneView['helperTruth']['packetGroundedReadHelperKeys'][number]),
+];
+const capabilityPlaneCompatibilityOnlyHelperKeys = listCorePayloadContractEntriesForPlane('capability')
+  .filter((entry) => entry.helperState === 'compatibility-only')
+  .map((entry) => entry.helperKey) as Array<'refreshRemoteCapabilityTruth'>;
 
 function buildCapabilityReadTruthSemantics() {
   return {
