@@ -171,6 +171,44 @@ test('core payload contract matrix exposes one authoritative helper truth table 
       blockedBy: null,
     },
   );
+  assert.deepEqual(
+    [
+      'listAgentRegistrations',
+      'getAgentRegistration',
+      'listAuthorityProfiles',
+      'listCapabilityProfiles',
+    ].map((helperKey) => taskEntrySnapshot(helperKey)),
+    [
+      {
+        plane: 'identity-session',
+        helperKey: 'listAgentRegistrations',
+        helperState: 'packet-grounded-read',
+        routePathTemplate: '/runtime/agents/registrations',
+        blockedBy: null,
+      },
+      {
+        plane: 'identity-session',
+        helperKey: 'getAgentRegistration',
+        helperState: 'packet-grounded-read',
+        routePathTemplate: '/runtime/agents/:agent_registration_id',
+        blockedBy: null,
+      },
+      {
+        plane: 'capability',
+        helperKey: 'listAuthorityProfiles',
+        helperState: 'packet-grounded-read',
+        routePathTemplate: '/runtime/authority-profiles',
+        blockedBy: null,
+      },
+      {
+        plane: 'capability',
+        helperKey: 'listCapabilityProfiles',
+        helperState: 'packet-grounded-read',
+        routePathTemplate: '/runtime/capability-profiles',
+        blockedBy: null,
+      },
+    ],
+  );
 });
 
 test('core payload contract matrix marks canonical notification consumption as account-scoped read plus acknowledgement-only execution', () => {

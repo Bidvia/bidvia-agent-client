@@ -42,6 +42,17 @@ const corePayloadContractMatrixEntries: readonly BidviaCorePayloadContractMatrix
     blockedBy: null,
     notes: ['Governed readiness reads are frozen as canonical deep-read payload truth.'],
   },
+  ...[
+    ['listAgentRegistrations', '/runtime/agents/registrations'],
+    ['getAgentRegistration', '/runtime/agents/:agent_registration_id'],
+  ].map(([helperKey, routePathTemplate]): BidviaCorePayloadContractMatrixEntry => ({
+    plane: 'identity-session',
+    helperKey,
+    helperState: 'packet-grounded-read',
+    routePathTemplate,
+    blockedBy: null,
+    notes: ['Governed registration visibility is frozen as canonical identity/session read truth.'],
+  })),
   {
     plane: 'identity-session',
     helperKey: 'getAccountAgentDispatchAuthority',
@@ -113,6 +124,8 @@ const corePayloadContractMatrixEntries: readonly BidviaCorePayloadContractMatrix
     notes: ['Task-dispatch write helpers now derive from the frozen Core account-scoped task route family.'],
   })),
   ...[
+    ['listAuthorityProfiles', '/runtime/authority-profiles'],
+    ['listCapabilityProfiles', '/runtime/capability-profiles'],
     ['getAgentSummary', '/runtime/agents/:agent_registration_id/summary'],
     ['getAgentCapabilityProfile', '/runtime/agents/:agent_registration_id/capability-profile'],
   ].map(([helperKey, routePathTemplate]): BidviaCorePayloadContractMatrixEntry => ({
@@ -244,7 +257,7 @@ function isPacketGroundedHelperState(helperState: BidviaCorePayloadContractMatri
   return helperState === 'packet-grounded-read' || helperState === 'packet-grounded-execution';
 }
 
-function listCorePayloadContractEntriesForPlane(plane: BidviaCorePlaneName): BidviaCorePayloadContractMatrixEntry[] {
+export function listCorePayloadContractEntriesForPlane(plane: BidviaCorePlaneName): BidviaCorePayloadContractMatrixEntry[] {
   return corePayloadContractMatrixEntries.filter((entry) => entry.plane === plane);
 }
 
