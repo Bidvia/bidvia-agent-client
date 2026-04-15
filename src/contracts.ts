@@ -1794,6 +1794,8 @@ export interface BidviaCorePayloadContractMatrixEntry {
   plane: BidviaCorePlaneName;
   helperKey: string;
   helperState: BidviaPlaneExecutionTruth;
+  capabilityPlaneCapabilityMode?: BidviaCapabilityPlaneCapabilityMode;
+  stage3RouteModelWave?: BidviaCorePlaneWaveStatus['wave'];
   routePathTemplate: string | null;
   blockedBy: string | null;
   notes: string[];
