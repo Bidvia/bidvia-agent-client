@@ -15,6 +15,8 @@ test('core payload contract matrix exposes one authoritative helper truth table 
     helperState: string;
     routePathTemplate: string | null;
     blockedBy: string | null;
+    capabilityPlaneCapabilityMode?: string | null;
+    stage3RouteModelWave?: string | null;
   }>)();
 
   const entryByHelperKey = new Map(entries.map((entry) => [entry.helperKey, entry]));
@@ -206,6 +208,74 @@ test('core payload contract matrix exposes one authoritative helper truth table 
         helperState: 'packet-grounded-read',
         routePathTemplate: '/runtime/capability-profiles',
         blockedBy: null,
+      },
+    ],
+  );
+  assert.deepEqual(
+    [
+      'getAgentReadiness',
+      'listAuthorityProfiles',
+      'listCapabilityProfiles',
+      'getAgentSummary',
+      'getAgentCapabilityProfile',
+      'refreshRemoteCapabilityTruth',
+    ].map((helperKey) => entryByHelperKey.get(helperKey) && {
+      helperKey: entryByHelperKey.get(helperKey)?.helperKey,
+      capabilityPlaneCapabilityMode: entryByHelperKey.get(helperKey)?.capabilityPlaneCapabilityMode ?? null,
+    }),
+    [
+      {
+        helperKey: 'getAgentReadiness',
+        capabilityPlaneCapabilityMode: 'packet-grounded-read',
+      },
+      {
+        helperKey: 'listAuthorityProfiles',
+        capabilityPlaneCapabilityMode: 'packet-grounded-read',
+      },
+      {
+        helperKey: 'listCapabilityProfiles',
+        capabilityPlaneCapabilityMode: 'packet-grounded-read',
+      },
+      {
+        helperKey: 'getAgentSummary',
+        capabilityPlaneCapabilityMode: 'packet-grounded-read',
+      },
+      {
+        helperKey: 'getAgentCapabilityProfile',
+        capabilityPlaneCapabilityMode: 'packet-grounded-read',
+      },
+      {
+        helperKey: 'refreshRemoteCapabilityTruth',
+        capabilityPlaneCapabilityMode: 'compatibility-only',
+      },
+    ],
+  );
+  assert.deepEqual(
+    [
+      'getAgentReadiness',
+      'getAgentCapabilityProfile',
+      'submitIntegrationOnboardingContract',
+      'refreshRemoteCapabilityTruth',
+    ].map((helperKey) => entryByHelperKey.get(helperKey) && {
+      helperKey: entryByHelperKey.get(helperKey)?.helperKey,
+      stage3RouteModelWave: entryByHelperKey.get(helperKey)?.stage3RouteModelWave ?? null,
+    }),
+    [
+      {
+        helperKey: 'getAgentReadiness',
+        stage3RouteModelWave: 'P0',
+      },
+      {
+        helperKey: 'getAgentCapabilityProfile',
+        stage3RouteModelWave: 'P1',
+      },
+      {
+        helperKey: 'submitIntegrationOnboardingContract',
+        stage3RouteModelWave: 'P2',
+      },
+      {
+        helperKey: 'refreshRemoteCapabilityTruth',
+        stage3RouteModelWave: null,
       },
     ],
   );
