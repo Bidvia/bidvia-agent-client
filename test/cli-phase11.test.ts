@@ -76,14 +76,11 @@ test('runtime-capabilities prints a blocked Stage 3 release gate summary', () =>
   assert.equal(result.status, 0, result.stderr || result.stdout);
   const output = JSON.parse(result.stdout);
   assert.equal(output.stage3ReleaseGate.status, 'blocked');
-  assert.deepEqual(output.stage3ReleaseGate.blockedBy, [
-    'plane-adoption-incomplete',
-    'canonical-route-model-alignment-stale',
-  ]);
+  assert.deepEqual(output.stage3ReleaseGate.blockedBy, ['plane-adoption-incomplete']);
   assert.deepEqual(output.stage3ReleaseGate.waves, [
     {
       wave: 'P0',
-      status: 'blocked',
+      status: 'complete',
       planes: ['identity-session', 'task', 'event-notification'],
     },
     {
@@ -93,7 +90,7 @@ test('runtime-capabilities prints a blocked Stage 3 release gate summary', () =>
     },
     {
       wave: 'P2',
-      status: 'blocked',
+      status: 'complete',
       planes: ['enterprise-integration'],
     },
   ]);

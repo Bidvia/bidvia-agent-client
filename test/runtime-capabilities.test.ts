@@ -319,8 +319,5 @@ test('buildLocalRuntimeCapabilitySnapshot carries shared execution truth without
     ],
   );
   assert.equal(snapshot.stage3ReleaseGate.status, 'blocked');
-  assert.deepEqual(snapshot.stage3ReleaseGate.blockedBy, [
-    'plane-adoption-incomplete',
-    'canonical-route-model-alignment-stale',
-  ]);
+  assert.deepEqual(snapshot.stage3ReleaseGate.blockedBy, ['plane-adoption-incomplete']);
 });

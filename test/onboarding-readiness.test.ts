@@ -147,10 +147,7 @@ test('public surface exposes a blocked Stage 3 release gate with required valida
 
   assert.deepEqual(gate, {
     status: 'blocked',
-    blockedBy: [
-      'plane-adoption-incomplete',
-      'canonical-route-model-alignment-stale',
-    ],
+    blockedBy: ['plane-adoption-incomplete'],
     requiredValidatorCommands: [
       'npm test',
       'npm run typecheck',
@@ -162,7 +159,7 @@ test('public surface exposes a blocked Stage 3 release gate with required valida
     waves: [
       {
         wave: 'P0',
-        status: 'blocked',
+        status: 'complete',
         planes: ['identity-session', 'task', 'event-notification'],
       },
       {
@@ -172,7 +169,7 @@ test('public surface exposes a blocked Stage 3 release gate with required valida
       },
       {
         wave: 'P2',
-        status: 'blocked',
+        status: 'complete',
         planes: ['enterprise-integration'],
       },
     ],

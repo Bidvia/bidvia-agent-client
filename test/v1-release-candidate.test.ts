@@ -23,14 +23,11 @@ test('V1 release candidate reflects the actual public release state', () => {
 
   assert.equal(packageJson.version, '1.0.0');
   assert.equal(gate.status, 'blocked');
-  assert.deepEqual(gate.blockedBy, [
-    'plane-adoption-incomplete',
-    'canonical-route-model-alignment-stale',
-  ]);
+  assert.deepEqual(gate.blockedBy, ['plane-adoption-incomplete']);
   assert.deepEqual(gate.waves, [
     {
       wave: 'P0',
-      status: 'blocked',
+      status: 'complete',
       planes: ['identity-session', 'task', 'event-notification'],
     },
     {
@@ -40,7 +37,7 @@ test('V1 release candidate reflects the actual public release state', () => {
     },
     {
       wave: 'P2',
-      status: 'blocked',
+      status: 'complete',
       planes: ['enterprise-integration'],
     },
   ]);

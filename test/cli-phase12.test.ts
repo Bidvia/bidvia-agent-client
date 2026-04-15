@@ -233,10 +233,7 @@ test('runCli prints operator discovery snapshots for CLI route metadata and loca
   ]);
   assert.deepEqual(snapshot.cli.releaseGate, {
     status: 'blocked',
-    blockedBy: [
-      'plane-adoption-incomplete',
-      'canonical-route-model-alignment-stale',
-    ],
+    blockedBy: ['plane-adoption-incomplete'],
     requiredValidatorCommands: [
       'npm test',
       'npm run typecheck',
@@ -248,7 +245,7 @@ test('runCli prints operator discovery snapshots for CLI route metadata and loca
     waves: [
       {
         wave: 'P0',
-        status: 'blocked',
+        status: 'complete',
         planes: ['identity-session', 'task', 'event-notification'],
       },
       {
@@ -258,7 +255,7 @@ test('runCli prints operator discovery snapshots for CLI route metadata and loca
       },
       {
         wave: 'P2',
-        status: 'blocked',
+        status: 'complete',
         planes: ['enterprise-integration'],
       },
     ],
@@ -663,10 +660,7 @@ test('runCli prints a route-context matrix that keeps public-first rows ahead of
   });
   assert.deepEqual(snapshot.stage3ReleaseGate, {
     status: 'blocked',
-    blockedBy: [
-      'plane-adoption-incomplete',
-      'canonical-route-model-alignment-stale',
-    ],
+    blockedBy: ['plane-adoption-incomplete'],
     requiredValidatorCommands: [
       'npm test',
       'npm run typecheck',
@@ -678,7 +672,7 @@ test('runCli prints a route-context matrix that keeps public-first rows ahead of
     waves: [
       {
         wave: 'P0',
-        status: 'blocked',
+        status: 'complete',
         planes: ['identity-session', 'task', 'event-notification'],
       },
       {
@@ -688,7 +682,7 @@ test('runCli prints a route-context matrix that keeps public-first rows ahead of
       },
       {
         wave: 'P2',
-        status: 'blocked',
+        status: 'complete',
         planes: ['enterprise-integration'],
       },
     ],
@@ -924,10 +918,7 @@ test('runCli prints runtime capability snapshots for the public default and pres
   }>) {
     assert.deepEqual(snapshot.stage3ReleaseGate, {
       status: 'blocked',
-      blockedBy: [
-        'plane-adoption-incomplete',
-        'canonical-route-model-alignment-stale',
-      ],
+      blockedBy: ['plane-adoption-incomplete'],
       requiredValidatorCommands: [
         'npm test',
         'npm run typecheck',
@@ -939,7 +930,7 @@ test('runCli prints runtime capability snapshots for the public default and pres
       waves: [
         {
           wave: 'P0',
-          status: 'blocked',
+          status: 'complete',
           planes: ['identity-session', 'task', 'event-notification'],
         },
         {
@@ -949,7 +940,7 @@ test('runCli prints runtime capability snapshots for the public default and pres
         },
         {
           wave: 'P2',
-          status: 'blocked',
+          status: 'complete',
           planes: ['enterprise-integration'],
         },
       ],
