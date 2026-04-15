@@ -59,7 +59,6 @@ test('BidviaClient exposes the canonical dispatch-authority read and request hel
     'areg-1',
     {
       now: '2026-04-14T10:00:00Z',
-      rationale: 'request dispatch-authority review',
     },
   ]);
 
@@ -83,4 +82,8 @@ test('BidviaClient exposes the canonical dispatch-authority read and request hel
   assert.equal(calls[1]?.init?.method, 'POST');
   assert.equal((calls[0]?.init?.headers as Record<string, string>)['x-bidvia-session-id'], 'sess-1');
   assert.equal((calls[1]?.init?.headers as Record<string, string>)['x-bidvia-session-id'], 'sess-1');
+  assert.deepEqual(JSON.parse(String(calls[1]?.init?.body)), {
+    requested_target: 'bounded_dispatch_authority_activation',
+    now: '2026-04-14T10:00:00Z',
+  });
 });

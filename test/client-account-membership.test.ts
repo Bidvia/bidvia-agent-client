@@ -32,8 +32,8 @@ test('BidviaClient exposes a bounded session-scoped membership invitation helper
   assert.equal(typeof createAccountMembershipInvitation, 'function');
 
   await Reflect.apply(createAccountMembershipInvitation, client, [{
-    orgId: 'org-2',
-    inviteeEmail: 'member@example.com',
+    targetRole: 'enterprise_admin',
+    expiresAt: '2026-04-16T09:00:00Z',
     now: '2026-04-14T09:00:00Z',
   }]);
 
@@ -42,8 +42,8 @@ test('BidviaClient exposes a bounded session-scoped membership invitation helper
   assert.equal(calls[0]?.init?.method, 'POST');
   assert.equal((calls[0]?.init?.headers as Record<string, string>)['x-bidvia-session-id'], 'sess-1');
   assert.deepEqual(JSON.parse(String(calls[0]?.init?.body)), {
-    org_id: 'org-2',
-    invitee_email: 'member@example.com',
+    target_role: 'enterprise_admin',
+    expires_at: '2026-04-16T09:00:00Z',
     now: '2026-04-14T09:00:00Z',
   });
 });
@@ -94,7 +94,7 @@ test('BidviaClient exposes a bounded session-scoped membership admin transfer he
   assert.equal(typeof transferAccountMembershipAdmin, 'function');
 
   await Reflect.apply(transferAccountMembershipAdmin, client, ['membership-binding-1', {
-    targetAccountId: 'account-2',
+    targetMembershipBindingId: 'membership-binding-2',
     now: '2026-04-14T09:02:00Z',
   }]);
 
@@ -103,7 +103,7 @@ test('BidviaClient exposes a bounded session-scoped membership admin transfer he
   assert.equal(calls[0]?.init?.method, 'POST');
   assert.equal((calls[0]?.init?.headers as Record<string, string>)['x-bidvia-session-id'], 'sess-1');
   assert.deepEqual(JSON.parse(String(calls[0]?.init?.body)), {
-    target_account_id: 'account-2',
+    target_membership_binding_id: 'membership-binding-2',
     now: '2026-04-14T09:02:00Z',
   });
 });
