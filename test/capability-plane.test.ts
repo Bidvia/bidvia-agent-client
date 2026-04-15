@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
+import * as publicSurface from '../src/index.ts';
 import {
   buildCapabilityPlaneView,
   getCapabilityPlaneCapabilityMode,
@@ -9,6 +10,11 @@ import { buildLocalDiscoveryCatalog } from '../src/discovery-catalog.ts';
 import { getMcpToolDescriptor } from '../src/mcp.ts';
 
 test('capability-plane truth separates packet-grounded read helpers from compatibility-only refresh helpers', () => {
+  const exports = publicSurface as Record<string, unknown>;
+  const matrixEntries = (exports.listCorePayloadContractMatrixEntries as () => Array<{
+    helperKey: string;
+    capabilityPlaneCapabilityMode?: string | null;
+  }>)();
   const capabilityPlane = buildCapabilityPlaneView() as unknown as {
     helperTruth?: {
       packetGroundedReadHelperKeys: string[];
@@ -18,6 +24,12 @@ test('capability-plane truth separates packet-grounded read helpers from compati
       notes: string[];
     };
   };
+  const packetGroundedReadHelperKeys = matrixEntries
+    .filter((entry) => entry.capabilityPlaneCapabilityMode === 'packet-grounded-read')
+    .map((entry) => entry.helperKey);
+  const compatibilityOnlyHelperKeys = matrixEntries
+    .filter((entry) => entry.capabilityPlaneCapabilityMode === 'compatibility-only')
+    .map((entry) => entry.helperKey);
 
   assert.equal(getCapabilityPlaneCapabilityMode('getAgentReadiness'), 'packet-grounded-read');
   assert.equal(getCapabilityPlaneCapabilityMode('getAgentSummary'), 'packet-grounded-read');
@@ -26,14 +38,8 @@ test('capability-plane truth separates packet-grounded read helpers from compati
   assert.equal(getCapabilityPlaneCapabilityMode('listCapabilityProfiles'), 'packet-grounded-read');
   assert.equal(getCapabilityPlaneCapabilityMode('refreshRemoteCapabilityTruth'), 'compatibility-only');
   assert.deepEqual(capabilityPlane.helperTruth, {
-    packetGroundedReadHelperKeys: [
-      'getAgentReadiness',
-      'listAuthorityProfiles',
-      'listCapabilityProfiles',
-      'getAgentSummary',
-      'getAgentCapabilityProfile',
-    ],
-    compatibilityOnlyHelperKeys: ['refreshRemoteCapabilityTruth'],
+    packetGroundedReadHelperKeys,
+    compatibilityOnlyHelperKeys,
     dispatchEligibilityDerivedFromReadTruth: false,
     governedRunAuthorizationDerivedFromReadTruth: false,
     notes: [
