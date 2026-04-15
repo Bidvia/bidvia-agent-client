@@ -219,6 +219,7 @@ export interface BidviaAccountAgentDispatchAuthorityRequestInput {
 }
 
 export interface BidviaNotificationIdentifierInput {
+  agentRegistrationId: string;
   notificationId: string;
 }
 
@@ -1970,7 +1971,11 @@ export interface BidviaCapabilityPlaneRemoteTruthBoundary {
 
 export interface BidviaCapabilityPlaneHelperTruthBoundary {
   packetGroundedReadHelperKeys: Array<
-    'getAgentReadiness' | 'getAgentSummary' | 'getAgentCapabilityProfile'
+    'getAgentReadiness'
+    | 'getAgentSummary'
+    | 'listAuthorityProfiles'
+    | 'listCapabilityProfiles'
+    | 'getAgentCapabilityProfile'
   >;
   compatibilityOnlyHelperKeys: Array<'refreshRemoteCapabilityTruth'>;
   dispatchEligibilityDerivedFromReadTruth: false;
