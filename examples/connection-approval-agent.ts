@@ -16,10 +16,10 @@ const scenarioPlan = buildConnectionApprovalScenarioPlan({
     sourceMatchId: 'match-1',
     requesterActorId: 'actor-1',
     requesterCompanyId: 'company-1',
-    riskTier: 'medium',
+    riskTier: 'HIGH',
     policyVersion: 'policy-v1',
     approvalMatrixVersion: 'matrix-v1',
-    actionType: 'buyer_contact_request',
+    actionType: 'CONTACT_SHARE',
     now: '2026-03-25T20:23:00Z',
   },
   approveConnectionRequest: {
