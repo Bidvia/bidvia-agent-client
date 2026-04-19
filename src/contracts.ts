@@ -573,12 +573,20 @@ export interface BidviaCreateConnectionRequestInput {
   sourceMatchId: string;
   requesterActorId: string;
   requesterCompanyId: string;
-  riskTier: string;
+  riskTier: BidviaConnectionRiskTier;
   policyVersion: string;
   approvalMatrixVersion: string;
-  actionType: string;
+  actionType: BidviaConnectionActionType;
   now: string;
 }
+
+export const bidviaConnectionRiskTiers = ['HIGH', 'CRITICAL'] as const;
+
+export type BidviaConnectionRiskTier = (typeof bidviaConnectionRiskTiers)[number];
+
+export const bidviaConnectionActionTypes = ['CONTACT_SHARE'] as const;
+
+export type BidviaConnectionActionType = (typeof bidviaConnectionActionTypes)[number];
 
 export interface BidviaApproveConnectionRequestInput {
   approvalRequestId: string;

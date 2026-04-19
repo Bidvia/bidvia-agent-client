@@ -35,10 +35,10 @@ function createConnectionApprovalScenarioInput(): BidviaConnectionApprovalScenar
       sourceMatchId: 'match-1',
       requesterActorId: 'actor-1',
       requesterCompanyId: 'company-a',
-      riskTier: 'medium',
+      riskTier: 'HIGH',
       policyVersion: 'policy-v1',
       approvalMatrixVersion: 'matrix-v1',
-      actionType: 'buyer_contact_request',
+      actionType: 'CONTACT_SHARE',
       now: '2026-03-25T20:22:00Z',
     },
     approveConnectionRequest: {
@@ -91,6 +91,13 @@ test('buildConnectionApprovalScenarioPlan rejects blank source match ids', () =>
     () => buildConnectionApprovalScenarioPlan(input),
     /sourceMatchId is required for the connection approval scenario plan/,
   );
+});
+
+test('buildConnectionApprovalScenarioPlan keeps proven connection enums explicit', () => {
+  const plan = buildConnectionApprovalScenarioPlan(createConnectionApprovalScenarioInput());
+
+  assert.equal(plan.createConnectionRequestInput.riskTier, 'HIGH');
+  assert.equal(plan.createConnectionRequestInput.actionType, 'CONTACT_SHARE');
 });
 
 test('buildConnectionApprovalScenarioPlan rejects missing approval request ids', () => {
