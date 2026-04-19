@@ -21,7 +21,7 @@ Before you begin runtime validation, choose the correct lane and do not mix them
 
 Fixed proof ids are not assumed in default local docker, self-generated runtime data is the preferred path for business-universe closure, and task-write-ready progression is a distinct surfaced path, not an implied side effect of claim. Use `docs/VALIDATION_LANES.md` when deciding which lane to use next.
 
-This onboarding layer must also explain **where admin/operator context is required**, so agents do not misread proof-lane or operator-assisted steps as if they were ordinary external-user flows.
+This onboarding layer must also explain where admin/operator context is required, so agents do not misread proof-lane or operator-assisted steps as if they were ordinary external-user flows.
 
 Stage 1 of the client-side runtime architecture upgrade is now complete in this repo. That means the CLI and local stdio MCP surfaces share one local runtime core and write local accumulation records for onboarding memory, task execution memory, capability usage memory, and result memory. It does not mean Stage 2 Core plane contracts are complete, and it does not change the rule that Core still owns platform truth.
 
