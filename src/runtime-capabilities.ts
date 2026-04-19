@@ -9,6 +9,7 @@ import {
   buildLocalMcpToolCatalog,
   buildLocalRouteCapabilityCatalog,
 } from './discovery-catalog.js';
+import { buildExecutionGuidanceEntries } from './operator-ergonomics.js';
 
 export function buildLocalRuntimeCapabilitySnapshot(
   options: ResolveBidviaBaseUrlOptions = {},
@@ -24,5 +25,6 @@ export function buildLocalRuntimeCapabilitySnapshot(
     ...snapshot,
     planeAdoption,
     stage3ReleaseGate,
+    executionGuidance: buildExecutionGuidanceEntries(),
   };
 }
