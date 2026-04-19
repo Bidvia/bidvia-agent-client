@@ -145,6 +145,24 @@ test('buildMultiBusinessChainCoordinatorPlan composes shipped slice plans with a
 
   assert.equal(plan.coordinatorId, 'coordinator-1');
   assert.equal(plan.coordinatorLabel, 'industry-to-package-with-commercial-action');
+  assert.deepEqual(plan.industryUniverse.closureGuidance, {
+    lane: 'runtime-generated',
+    fixedFixtureAssumptions: false,
+    prerequisites: [
+      'create supply and demand listings first',
+      'activate both listings',
+      'use the returned activation event id to generate a real persisted match',
+      'continue downstream with the returned match and approval ids',
+    ],
+  });
+  assert.deepEqual(plan.opportunityPackageHandoff.closureGuidance, {
+    lane: 'runtime-generated',
+    fixedFixtureAssumptions: false,
+    prerequisites: [
+      'use a real opportunity id returned by surfaced upstream steps',
+      'do not assume proof fixture ids are available on the default business lane',
+    ],
+  });
   assert.equal(plan.industryUniverse.envelope.scenarioFamily, 'industry-universe');
   assert.equal(plan.connectionApproval.envelope.scenarioFamily, 'connection-approval');
   assert.deepEqual(plan.externalHandoffBoundary, {

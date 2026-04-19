@@ -1,5 +1,6 @@
 import { BidviaClient } from './client.js';
 import type {
+  BidviaClosureGuidance,
   BidviaEnterpriseIntegrationPlaneHelperGroup,
   BidviaExportOpportunityPackageInput,
   BidviaScenarioEnvelope,
@@ -30,6 +31,7 @@ export interface BidviaOpportunityPackageHandoffPlanInput {
 export interface BidviaOpportunityPackageHandoffPlan {
   envelope: BidviaScenarioEnvelope;
   exportOpportunityPackageInput: BidviaExportOpportunityPackageInput;
+  closureGuidance: BidviaClosureGuidance;
 }
 
 function requireNonEmptyId(value: string, fieldName: string): string {
@@ -65,10 +67,26 @@ export function buildOpportunityPackageHandoffPlan(
       recordIds: {
         opportunities: [opportunityId],
       },
+      closureGuidance: {
+        lane: 'runtime-generated',
+        fixedFixtureAssumptions: false,
+        prerequisites: [
+          'use a real opportunity id returned by surfaced upstream steps',
+          'do not assume proof fixture ids are available on the default business lane',
+        ],
+      },
     }),
     exportOpportunityPackageInput: {
       ...input.exportOpportunityPackage,
       opportunityId,
+    },
+    closureGuidance: {
+      lane: 'runtime-generated',
+      fixedFixtureAssumptions: false,
+      prerequisites: [
+        'use a real opportunity id returned by surfaced upstream steps',
+        'do not assume proof fixture ids are available on the default business lane',
+      ],
     },
   };
 }

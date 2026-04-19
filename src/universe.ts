@@ -1,6 +1,7 @@
 import { BidviaClient } from './client.js';
 import type {
   BidviaActivateListingInput,
+  BidviaClosureGuidance,
   BidviaCreateListingInput,
   BidviaGenerateMatchCandidatesInput,
   BidviaScenarioEnvelope,
@@ -33,6 +34,7 @@ export interface BidviaIndustryUniverseScenarioPlan {
   createListingInput: BidviaCreateListingInput;
   activateListingInput: BidviaActivateListingInput;
   generateMatchCandidatesInput: BidviaGenerateMatchCandidatesInput;
+  closureGuidance: BidviaClosureGuidance;
 }
 
 function resolveAlignedListingId(candidate: string | undefined, listingId: string): string {
@@ -80,10 +82,30 @@ export function buildIndustryUniverseScenarioPlan(
         buildScenarioRouteStep('activateListing', ['tenantId', 'principalId', 'companyId']),
         buildScenarioRouteStep('generateMatchCandidates', ['tenantId', 'principalId', 'companyId']),
       ],
+      closureGuidance: {
+        lane: 'runtime-generated',
+        fixedFixtureAssumptions: false,
+        prerequisites: [
+          'create supply and demand listings first',
+          'activate both listings',
+          'use the returned activation event id to generate a real persisted match',
+          'continue downstream with the returned match and approval ids',
+        ],
+      },
     }),
     createListingInput: input.createListing,
     activateListingInput,
     generateMatchCandidatesInput,
+    closureGuidance: {
+      lane: 'runtime-generated',
+      fixedFixtureAssumptions: false,
+      prerequisites: [
+        'create supply and demand listings first',
+        'activate both listings',
+        'use the returned activation event id to generate a real persisted match',
+        'continue downstream with the returned match and approval ids',
+      ],
+    },
   };
 }
 
