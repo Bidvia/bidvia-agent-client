@@ -448,6 +448,7 @@ export function buildReviewPacket(input: BuildReviewPacketInput): BidviaReviewPa
     scenarioFamily: input.bundle.scenarioFamily,
     verificationMode: input.bundle.verificationMode,
     status,
+    closureGuidance: input.scenario.closureGuidance,
     summary: {
       sourceRefCount: input.scenario.sourceRefs.length,
       evidenceRefCount: input.scenario.evidenceRefs.length,

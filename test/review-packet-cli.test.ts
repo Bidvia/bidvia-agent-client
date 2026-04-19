@@ -26,6 +26,16 @@ test('industry-universe-review-packet-preview prints review packet json', () => 
   assert.equal(output.scenarioFamily, 'industry-universe');
   assert.equal(output.verificationMode, 'review-safe');
   assert.equal(output.status, 'pending-review');
+  assert.deepEqual(output.closureGuidance, {
+    lane: 'runtime-generated',
+    fixedFixtureAssumptions: false,
+    prerequisites: [
+      'create supply and demand listings first',
+      'activate both listings',
+      'use the returned activation event id to generate a real persisted match',
+      'continue downstream with the returned match and approval ids',
+    ],
+  });
   assert.equal(output.details.boundary.serverTruthClaimed, false);
   assert.equal(output.details.boundary.adjudicationOutcomeIncluded, false);
   assert.equal(output.details.boundary.localDerivedExplanationIncluded, true);
@@ -89,6 +99,16 @@ test('industry-universe-review-packet-export prints exported review packet json'
   assert.equal(output.scenarioFamily, 'industry-universe');
   assert.equal(output.verificationMode, 'review-safe');
   assert.equal(output.status, 'pending-review');
+  assert.deepEqual(output.closureGuidance, {
+    lane: 'runtime-generated',
+    fixedFixtureAssumptions: false,
+    prerequisites: [
+      'create supply and demand listings first',
+      'activate both listings',
+      'use the returned activation event id to generate a real persisted match',
+      'continue downstream with the returned match and approval ids',
+    ],
+  });
   assert.equal(output.details.boundary.serverTruthClaimed, false);
   assert.equal(output.details.boundary.adjudicationOutcomeIncluded, false);
   assert.equal(output.details.boundary.localDerivedExplanationIncluded, true);
