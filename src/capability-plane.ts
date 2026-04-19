@@ -6,6 +6,7 @@ import type {
   BidviaBlockedCoreCapabilityTruthRefresh,
   BidviaCapabilityPlaneView,
   BidviaCorePlaneAdoptionStatus,
+  BidviaExecutionGuidanceEntry,
   BidviaLocalCapabilityRiskTier,
   BidviaLocalCapabilityTier,
   BidviaLocalRuntimeCapabilitySnapshot,
@@ -29,6 +30,7 @@ import {
 import {
   listCorePayloadContractMatrixEntries,
 } from './core-payload-contract-matrix.js';
+import { buildExecutionGuidanceEntries } from './execution-guidance.js';
 
 const runtimeCapabilitySnapshotSchemaVersion = '2026-03-27';
 const localRuntimeCapabilitySnapshotVersion = 'local-runtime-capability-snapshot';
@@ -237,6 +239,7 @@ export function buildCapabilityPlaneLocalRuntimeSnapshot(
       status: 'deferred',
       serverProvidedCapabilitiesKnown: false,
     },
+    executionGuidance: buildExecutionGuidanceEntries() as BidviaExecutionGuidanceEntry[],
     planeAdoption: listCorePlaneAdoptionStatuses(),
     stage3ReleaseGate: buildStage3ReleaseGate(),
   };
