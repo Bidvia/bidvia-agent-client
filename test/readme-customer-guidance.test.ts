@@ -67,6 +67,13 @@ test('README presents @bidvia/client as a customer-facing V1 entrypoint', () => 
   assert.match(readme, /registrationId/);
   assert.match(readme, /openclaw-mcp-config/);
   assert.match(readme, /openclaw-bundle-export/);
+  assert.match(readme, /default local docker/i);
+  assert.match(readme, /proof-lane/i);
+  assert.match(readme, /seeded/i);
+  assert.match(readme, /runtime-generated/i);
+  assert.match(readme, /fixed proof ids are not assumed/i);
+  assert.match(readme, /self-generated runtime data is the preferred path/i);
+  assert.match(readme, /task-write-ready progression/i);
   assert.match(readme, /downstream contract center/i);
   assert.match(readme, /compatibility-only/i);
   assert.match(readme, /hosted runtime/i);

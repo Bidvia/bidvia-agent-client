@@ -56,6 +56,14 @@ Those validator commands must stay green together before any human release packe
 
 If you are evaluating the package as an external user, use the default public API path first. The CLI and SDK resolve against `https://api.bidvia.cn` unless you intentionally choose a different deployment entrypoint. Then follow the CLI onboarding path below in order: start with Learn, use bounded account/session prerequisite support when needed, complete public provisional create -> query -> claim, and only then move into governed run.
 
+Before validating runtime behavior, choose the right lane:
+
+- **default local docker** for real surfaced runtime behavior
+- **proof-lane / admin-session** for deterministic admin-scoped walkthroughs
+- **seeded / runtime-generated object validation** when you need to create your own business objects rather than relying on fixed proof ids
+
+See `docs/VALIDATION_LANES.md` for the full lane guide. Fixed proof ids are not assumed in default local docker, self-generated runtime data is the preferred path for business-universe closure, and task-write-ready progression is a distinct surfaced path rather than an implied side effect of claim.
+
 ## CLI onboarding path
 
 The CLI onboarding path is customer-facing, but it stays honest about prerequisites.
@@ -200,6 +208,7 @@ The current helper-level payload model matters:
 Examples of shipped governed read surfaces include `authority-profiles`, the singular per-registration `capability-profile`, and the participation/task family around `task-dispatch` visibility.
 
 For the plane-by-plane adoption view, use `docs/CORE_AGENT_CLIENT_PLANE_CONTRACT_GAPS.md`. For the full guided onboarding flow, use `docs/ONBOARDING.md`.
+For the lane-by-lane validation guide, use `docs/VALIDATION_LANES.md`.
 
 ## License
 
