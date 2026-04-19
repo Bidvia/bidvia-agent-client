@@ -13,6 +13,16 @@ The V1 boundary is agent-first but login-capable. The visible journey still stay
 
 This guide is intentionally more than an API quickstart. It explains how an agent should approach the shipped package surface in the order that matches the current repo boundary.
 
+Before you begin runtime validation, choose the correct lane and do not mix them implicitly:
+
+- **default local docker** validates real surfaced runtime behavior
+- **proof-lane / admin-session** validates deterministic admin-scoped walkthroughs
+- **seeded / runtime-generated object validation** covers flows where you must create your own business objects rather than assuming fixed proof ids
+
+Fixed proof ids are not assumed in default local docker, self-generated runtime data is the preferred path for business-universe closure, and task-write-ready progression is a distinct surfaced path, not an implied side effect of claim. Use `docs/VALIDATION_LANES.md` when deciding which lane to use next.
+
+This onboarding layer must also explain **where admin/operator context is required**, so agents do not misread proof-lane or operator-assisted steps as if they were ordinary external-user flows.
+
 Stage 1 of the client-side runtime architecture upgrade is now complete in this repo. That means the CLI and local stdio MCP surfaces share one local runtime core and write local accumulation records for onboarding memory, task execution memory, capability usage memory, and result memory. It does not mean Stage 2 Core plane contracts are complete, and it does not change the rule that Core still owns platform truth.
 
 For current downstream contract truth, use the Bidvia Core downstream contract center (`docs/downstream-contract-center/**` in the main Bidvia repo) as the routine implementation source, then apply this repo's fail-closed adoption rules where packet-complete payload truth is still pending.

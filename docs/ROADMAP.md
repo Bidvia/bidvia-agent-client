@@ -33,6 +33,22 @@ This is meaningful progress, but it is still not the full operating-kit destinat
 
 The current V1 framing is agent-first with bounded login/session prerequisite support. External users may need account/session establishment before they can continue, but the package promise stays centered on the governed agent path rather than on a general account product shell.
 
+## Validation lanes and closure guidance
+
+Client-facing validation should now be explained through explicit lanes rather than a single generic local-dev story:
+
+- **default local docker** validates real surfaced runtime behavior
+- **proof-lane / admin-session** validates deterministic admin-scoped walkthroughs
+- **seeded / runtime-generated object validation** covers closures where agents must create or obtain real runtime objects instead of assuming fixed proof ids
+
+The roadmap should keep three operational rules clear:
+
+1. fixed proof ids are not assumed in default local docker
+2. self-generated runtime data is the preferred path for business-universe closure on the ordinary surfaced lane
+3. task-write-ready progression is a distinct surfaced path, not an implied side effect of claim
+
+This means the client’s long-horizon value is not only helper coverage, but also accurate lane selection, truthful gate explanation, and efficient next-step guidance for agents that should not need Core-source archaeology.
+
 ## Payload-grounded V1 truth model
 
 The current mainline should now be described through the helper-level payload matrix rather than through blanket plane-wide blockage language.
