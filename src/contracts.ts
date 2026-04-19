@@ -1270,6 +1270,15 @@ export interface BidviaDeferredServerCapabilityNegotiation
   serverProvidedCapabilitiesKnown: false;
 }
 
+export interface BidviaExecutionGuidanceEntry {
+  guidanceKey: 'task-write-ready' | 'proof-lane' | 'runtime-generated-closure';
+  lane: 'default-local-docker' | 'proof-lane-admin-session' | 'runtime-generated';
+  appliesWhen: string;
+  signal: string;
+  nextStepOwner: string;
+  nextStepAction: string;
+}
+
 export interface BidviaLocalRuntimeCapabilitySnapshot {
   baseUrl: string;
   environmentMode: BidviaEnvironmentMode;
@@ -1279,6 +1288,7 @@ export interface BidviaLocalRuntimeCapabilitySnapshot {
   deferredServerNegotiation: BidviaDeferredServerCapabilityNegotiation;
   planeAdoption: BidviaCorePlaneAdoptionStatus[];
   stage3ReleaseGate: BidviaStage3ReleaseGate;
+  executionGuidance: BidviaExecutionGuidanceEntry[];
 }
 
 export interface BidviaServerCapabilityPayloadRouteCapability {
