@@ -59,6 +59,7 @@ import {
 import { buildRegistrationLifecycleScenarioPlan } from './registration-lifecycle.js';
 import { buildRegisteredAgentOperationsScenarioPlan } from './registered-agent-operations.js';
 import {
+  buildExecutionGuidanceEntries,
   buildCliExecutionPreflight,
   buildCliMissingContextMessage,
   type BidviaExecutionOperatorPreflight,
@@ -2224,6 +2225,7 @@ function buildOperatorDiscoverySnapshot() {
         memberCount: group.members.length,
       })),
       nextStepHints: buildRouteContextMatrixNextStepHints(),
+      executionGuidance: buildExecutionGuidanceEntries(),
       discoveryCatalog: buildLocalDiscoveryCatalog(),
     },
     mcp: buildLocalMcpProductizationSnapshot(),
