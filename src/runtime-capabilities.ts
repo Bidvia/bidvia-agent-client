@@ -9,7 +9,7 @@ import {
   buildLocalMcpToolCatalog,
   buildLocalRouteCapabilityCatalog,
 } from './discovery-catalog.js';
-import { buildExecutionGuidanceEntries } from './operator-ergonomics.js';
+import { buildExecutionGuidanceEntries } from './execution-guidance.js';
 
 export function buildLocalRuntimeCapabilitySnapshot(
   options: ResolveBidviaBaseUrlOptions = {},

@@ -56,10 +56,10 @@ import {
   buildScenarioVerificationBundle,
   exportScenarioVerificationBundle,
 } from './verification.js';
+import { buildExecutionGuidanceEntries } from './execution-guidance.js';
 import { buildRegistrationLifecycleScenarioPlan } from './registration-lifecycle.js';
 import { buildRegisteredAgentOperationsScenarioPlan } from './registered-agent-operations.js';
 import {
-  buildExecutionGuidanceEntries,
   buildCliExecutionPreflight,
   buildCliMissingContextMessage,
   type BidviaExecutionOperatorPreflight,
