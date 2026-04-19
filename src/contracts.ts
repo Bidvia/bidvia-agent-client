@@ -610,6 +610,7 @@ export interface BidviaConnectionApprovalScenarioPlan {
   envelope: BidviaScenarioEnvelope;
   createConnectionRequestInput: BidviaCreateConnectionRequestInput;
   approveConnectionRequestInput: BidviaApproveConnectionRequestInput;
+  closureGuidance: BidviaClosureGuidance;
 }
 
 export interface BidviaExportOpportunityPackageInput {
@@ -767,6 +768,13 @@ export interface BidviaScenarioEnvelope {
   workflowStage?: BidviaWorkflowStageReference;
   expectedRouteChain: BidviaScenarioRouteStep[];
   recordIds?: BidviaScenarioEnvelopeRecordIds;
+  closureGuidance?: BidviaClosureGuidance;
+}
+
+export interface BidviaClosureGuidance {
+  lane: 'runtime-generated';
+  fixedFixtureAssumptions: false;
+  prerequisites: string[];
 }
 
 export type BidviaVerificationMode = 'review-safe' | 'sandbox' | 'production';
@@ -872,6 +880,7 @@ export interface BidviaReviewPacket {
   verificationMode: BidviaVerificationMode;
   status: BidviaReviewPacketStatus;
   summary: BidviaReviewPacketSummary;
+  closureGuidance?: BidviaClosureGuidance;
   details: BidviaReviewPacketDetail;
   sections: BidviaReviewPacketSection[];
 }

@@ -56,6 +56,16 @@ test('connection scenario contract expresses createConnectionRequest then approv
   );
 
   assert.equal(plan.envelope.scenarioFamily, 'connection-approval');
+  assert.deepEqual(plan.closureGuidance, {
+    lane: 'runtime-generated',
+    fixedFixtureAssumptions: false,
+    prerequisites: [
+      'create supply and demand listings first',
+      'activate both listings',
+      'use the returned activation event id to generate a real persisted match',
+      'continue downstream with the returned match and approval ids',
+    ],
+  });
   assert.deepEqual(
     plan.envelope.expectedRouteChain.map((step) => step.routeKey),
     ['createConnectionRequest', 'approveConnectionRequest'],

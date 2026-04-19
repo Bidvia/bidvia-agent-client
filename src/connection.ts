@@ -70,6 +70,16 @@ export function buildConnectionApprovalScenarioPlan(
         matches: [sourceMatchId],
         approvals: [approvalRequestId],
       },
+      closureGuidance: {
+        lane: 'runtime-generated',
+        fixedFixtureAssumptions: false,
+        prerequisites: [
+          'create supply and demand listings first',
+          'activate both listings',
+          'use the returned activation event id to generate a real persisted match',
+          'continue downstream with the returned match and approval ids',
+        ],
+      },
     }),
     createConnectionRequestInput: {
       ...input.createConnectionRequest,
@@ -78,6 +88,16 @@ export function buildConnectionApprovalScenarioPlan(
     approveConnectionRequestInput: {
       ...input.approveConnectionRequest,
       approvalRequestId,
+    },
+    closureGuidance: {
+      lane: 'runtime-generated',
+      fixedFixtureAssumptions: false,
+      prerequisites: [
+        'create supply and demand listings first',
+        'activate both listings',
+        'use the returned activation event id to generate a real persisted match',
+        'continue downstream with the returned match and approval ids',
+      ],
     },
   };
 }
