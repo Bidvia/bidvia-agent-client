@@ -5,7 +5,7 @@ import type {
   BidviaRouteCapabilityAccessContextFamily,
   BidviaScenarioContextKey,
 } from '../contracts.js';
-import type { BidviaExecutionIdentityContext } from './execution-session.js';
+import type { BidviaExecutionIdentityContext } from './contracts.js';
 
 export type BidviaCapabilityExecutionKind =
   | 'public-provisional'

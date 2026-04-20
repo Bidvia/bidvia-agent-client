@@ -285,6 +285,11 @@ test('runBidviaSurfaceCapability emits the public session and attachment lifecyc
           created: true,
         };
       },
+      async commitRuntimeResult() {
+        return {
+          outcomeRef: 'outcome://dispatch/hook-1',
+        };
+      },
     }) as never,
     execute: async (client: { createProvisionalAgent: () => Promise<unknown> }) => client.createProvisionalAgent(),
     now: () => '2026-04-04T14:00:00.000Z',

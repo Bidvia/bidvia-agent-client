@@ -27,7 +27,7 @@ function requireBundleFile(bundle: CompanionBundle, relativePath: string): Bundl
   return file;
 }
 
-test('buildOpenClawCompanionBundle exports a local Codex-style OpenClaw companion bundle with the official plugin marker around bidvia mcp-server', () => {
+test('buildOpenClawCompanionBundle exports local Codex-style OpenClaw packaging around bidvia mcp-server without presenting a separate runtime surface', () => {
   const exports = publicSurface as Record<string, unknown>;
 
   assert.equal(typeof exports.buildOpenClawCompanionBundle, 'function');
@@ -46,7 +46,7 @@ test('buildOpenClawCompanionBundle exports a local Codex-style OpenClaw companio
   assert.deepEqual(JSON.parse(pluginFile.content), {
     schemaVersion: '1.0',
     name: 'bidvia-openclaw-companion',
-    description: 'Local-first Codex companion bundle for Bidvia OpenClaw MCP handoff.',
+    description: 'Local-first Codex companion bundle for Bidvia OpenClaw packaging around the shared stdio MCP path.',
     mcpConfigPath: '.mcp.json',
     docs: [
       'docs/bidvia-openclaw-local-operator.md',
@@ -82,13 +82,14 @@ test('buildOpenClawCompanionBundle exports a local Codex-style OpenClaw companio
     },
     firstSuccessNextStep: {
       command: 'route-context-matrix',
-      rationale: 'Confirm the required context family for each guided route before enabling local OpenClaw operator execution.',
+      rationale: 'Confirm the required context family for each guided route before wiring OpenClaw config around the shared local stdio MCP runtime path.',
     },
   });
 
   assert.match(bootstrapFile.content, /bidvia mcp-server/);
   assert.match(bootstrapFile.content, /local-only/i);
   assert.match(bootstrapFile.content, /stdio MCP/i);
+  assert.match(bootstrapFile.content, /packaging\/config around that same local runtime path/i);
   assert.match(bootstrapFile.content, /route-context-matrix/);
   assert.match(bootstrapFile.content, /tenantId/i);
   assert.match(bootstrapFile.content, /principalId/i);
@@ -115,7 +116,7 @@ test('writeOpenClawCompanionBundle materializes the official Codex bundle layout
   assert.deepEqual(JSON.parse(readFileSync(path.join(outputDirectory, '.codex-plugin/plugin.json'), 'utf8')), {
     schemaVersion: '1.0',
     name: 'bidvia-openclaw-companion',
-    description: 'Local-first Codex companion bundle for Bidvia OpenClaw MCP handoff.',
+    description: 'Local-first Codex companion bundle for Bidvia OpenClaw packaging around the shared stdio MCP path.',
     mcpConfigPath: '.mcp.json',
     docs: [
       'docs/bidvia-openclaw-local-operator.md',
@@ -150,7 +151,7 @@ test('writeOpenClawCompanionBundle materializes the official Codex bundle layout
     },
     firstSuccessNextStep: {
       command: 'route-context-matrix',
-      rationale: 'Confirm the required context family for each guided route before enabling local OpenClaw operator execution.',
+      rationale: 'Confirm the required context family for each guided route before wiring OpenClaw config around the shared local stdio MCP runtime path.',
     },
   });
   assert.match(
@@ -184,8 +185,8 @@ test('runCli writes the OpenClaw companion bundle to an explicit output director
       'docs/bidvia-openclaw-local-operator.md',
     ],
     operatorNotes: {
-      primaryPath: 'Primary OpenClaw path: export stdio MCP config first, then add the companion bundle when you want bundle/bootstrap packaging around the same local server.',
-      executionBoundary: 'Bundle/bootstrap only: Bidvia execution still runs through the local stdio MCP server at `bidvia mcp-server`.',
+      primaryPath: 'Primary OpenClaw path: export stdio MCP config first, then add the companion bundle when you want packaging around that same local stdio MCP runtime path.',
+      executionBoundary: 'Bundle/bootstrap only: OpenClaw stays config and packaging around the local stdio MCP server at `bidvia mcp-server`, where Bidvia execution actually runs.',
       developmentNote: 'Repo-local fallbacks such as `node dist/mcp-server.js` stay development-only and are not the primary bundle handoff.',
       deferredNativePlugin: 'Native-plugin-first and HTTP MCP paths stay out of scope for this version.',
     },
@@ -193,7 +194,7 @@ test('runCli writes the OpenClaw companion bundle to an explicit output director
   assert.deepEqual(JSON.parse(readFileSync(path.join(bundleDirectory, '.codex-plugin/plugin.json'), 'utf8')), {
     schemaVersion: '1.0',
     name: 'bidvia-openclaw-companion',
-    description: 'Local-first Codex companion bundle for Bidvia OpenClaw MCP handoff.',
+    description: 'Local-first Codex companion bundle for Bidvia OpenClaw packaging around the shared stdio MCP path.',
     mcpConfigPath: '.mcp.json',
     docs: [
       'docs/bidvia-openclaw-local-operator.md',

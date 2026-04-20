@@ -19,6 +19,11 @@ import {
   type BidviaTaskRuntime,
 } from './task-runtime.js';
 import {
+  BidviaRuntimeResultCommitUnavailableError,
+  commitRuntimeOwnedResult,
+} from './result-commit.js';
+import { buildBidviaRuntimeClientPort } from './runtime-client-port.js';
+import {
   buildBlockedCapabilityExecutionResult,
   isBlockedCapabilityExecutionError,
 } from './capability-orchestration.js';
@@ -27,6 +32,10 @@ import {
   type BidviaExecutionHookRegistry,
   type BidviaRuntimeLifecycleEventName,
 } from './hooks.js';
+import {
+  buildBidviaSurfaceJournalFileName,
+  buildBidviaSurfaceSessionRefs,
+} from './surface-session-refs.js';
 
 export interface BidviaSurfaceRuntimeIdentityContext extends BidviaExecutionIdentityContext {}
 
@@ -41,27 +50,6 @@ export interface RunBidviaSurfaceCapabilityInput<T> {
   now: () => string;
   accumulation?: LocalAccumulationIoOptions;
   hooks?: BidviaExecutionHookRegistry;
-}
-
-function sanitizeRefSegment(value: string): string {
-  return value.replace(/[^a-zA-Z0-9-]+/g, '-');
-}
-
-function buildSessionRefs(
-  transport: RunBidviaSurfaceCapabilityInput<unknown>['transport'],
-  helperKey: string,
-  now: string,
-) {
-  const refSuffix = sanitizeRefSegment(`${transport}-${helperKey}-${now}`);
-
-  return {
-    sessionId: `session-${refSuffix}`,
-    sessionRef: `local-session://${refSuffix}`,
-    localTaskRef: `local-task://${refSuffix}`,
-    taskDispatchId: `surface-dispatch://${refSuffix}`,
-    memoryRef: `local-memory://${refSuffix}`,
-    resultRef: `local-result://${refSuffix}`,
-  };
 }
 
 function buildOnboardingFacts(identity: BidviaSurfaceRuntimeIdentityContext, now: string) {
@@ -258,11 +246,17 @@ export function buildBidviaSurfaceRuntimeIdentityContext(
 
 export async function runBidviaSurfaceCapability<T>(input: RunBidviaSurfaceCapabilityInput<T>): Promise<T> {
   const startedAt = input.now();
-  const refs = buildSessionRefs(input.transport, input.helperKey, startedAt);
+  const refs = buildBidviaSurfaceSessionRefs({
+    transport: input.transport,
+    helperKey: input.helperKey,
+    capabilityKey: input.capabilityKey,
+    identity: input.identity,
+    input: input.input,
+  });
   const clientPromise = Promise.resolve(input.createClient());
   const journalPath = path.join(
     resolveLocalAccumulationPath(input.accumulation),
-    `${sanitizeRefSegment(`${refs.localTaskRef}-journal`)}.json`,
+    buildBidviaSurfaceJournalFileName(refs.resumeKey),
   );
   const session = buildExecutionSession({
     sessionId: refs.sessionId,
@@ -302,6 +296,73 @@ export async function runBidviaSurfaceCapability<T>(input: RunBidviaSurfaceCapab
     payload: runtime.getState(),
   });
 
+  async function writeRuntimeAccumulation(recordedAt: string, runtimeInput: {
+    succeeded?: boolean;
+    blocked?: ReturnType<typeof buildBlockedCapabilityExecutionResult>;
+  } = {}): Promise<void> {
+    await writeLocalAccumulation(buildAccumulationFromRuntime({
+      runtime,
+      helperKey: input.helperKey,
+      capabilityKey: input.capabilityKey ?? input.helperKey,
+      identity: input.identity,
+      recordedAt,
+      ...runtimeInput,
+    }), input.accumulation);
+  }
+
+  async function commitResult(detail: string | undefined, terminalState: 'complete' | 'fail') {
+    return runtime.commitStagedResult({
+      commit: async () => commitRuntimeOwnedResult({
+        transport: input.transport,
+        helperKey: input.helperKey,
+        taskDispatchId: refs.taskDispatchId,
+        resultRef: refs.resultRef,
+        kind: 'execution-result',
+        terminalState,
+        ...(detail === undefined ? {} : { detail }),
+        port: buildBidviaRuntimeClientPort(await clientPromise),
+      }),
+    });
+  }
+
+  async function handleExecutionFailure(error: unknown): Promise<never> {
+    const recordedAt = input.now();
+
+    if (isBlockedCapabilityExecutionError(error)) {
+      await writeRuntimeAccumulation(recordedAt, {
+        blocked: buildBlockedCapabilityExecutionResult(error),
+      });
+
+      throw error;
+    }
+
+    const detail = buildSurfaceFailureDetail(error);
+
+    await runtime.stageResult({
+      resultRef: refs.resultRef,
+      kind: 'execution-result',
+      terminalState: 'fail',
+      checkpointRef: `${refs.resultRef}/checkpoint`,
+      detail,
+    });
+
+    try {
+      await commitResult(detail, 'fail');
+    } catch {
+      await writeRuntimeAccumulation(recordedAt, {
+        succeeded: false,
+      });
+
+      throw error;
+    }
+
+    await writeRuntimeAccumulation(recordedAt, {
+      succeeded: false,
+    });
+
+    throw error;
+  }
+
   try {
     await runtime.startExecution();
     await dispatchSurfaceHook(session, refs.taskDispatchId, 'capability-memory-accessed', input.now(), {
@@ -310,73 +371,52 @@ export async function runBidviaSurfaceCapability<T>(input: RunBidviaSurfaceCapab
       payload: session.capabilityMemory,
     });
 
-    const result = await runtime.callCapability({
-      helperKey: input.helperKey,
-      capabilityKey: input.capabilityKey ?? input.helperKey,
-      input: input.input,
-      call: async () => input.execute(await clientPromise),
-    });
+    const result = await (async (): Promise<T> => {
+      try {
+        return await runtime.callCapability({
+          helperKey: input.helperKey,
+          capabilityKey: input.capabilityKey ?? input.helperKey,
+          input: input.input,
+          call: async () => input.execute(await clientPromise),
+        });
+      } catch (error) {
+        return handleExecutionFailure(error);
+      }
+    })();
+
+    const detail = buildSurfaceResultDetail(result);
+
     await runtime.stageResult({
       resultRef: refs.resultRef,
       kind: 'execution-result',
       terminalState: 'complete',
       checkpointRef: `${refs.resultRef}/checkpoint`,
-      detail: buildSurfaceResultDetail(result),
+      detail,
     });
-    await runtime.commitStagedResult({
-      commit: async () => ({
-        outcomeRef: `outcome://${sanitizeRefSegment(`${refs.resultRef}-complete`)}`,
-      }),
-    });
-    const recordedAt = input.now();
 
-    await writeLocalAccumulation(buildAccumulationFromRuntime({
-      runtime,
-      helperKey: input.helperKey,
-      capabilityKey: input.capabilityKey ?? input.helperKey,
-      identity: input.identity,
-      recordedAt,
-      succeeded: true,
-    }), input.accumulation);
+    try {
+      await commitResult(detail, 'complete');
+    } catch (error) {
+      if (error instanceof BidviaRuntimeResultCommitUnavailableError) {
+        await writeRuntimeAccumulation(input.now(), {
+          succeeded: true,
+        });
 
-    return result;
-  } catch (error) {
-    const recordedAt = input.now();
+        return result;
+      }
 
-    if (!isBlockedCapabilityExecutionError(error)) {
-      await runtime.stageResult({
-        resultRef: refs.resultRef,
-        kind: 'execution-result',
-        terminalState: 'fail',
-        checkpointRef: `${refs.resultRef}/checkpoint`,
-        detail: buildSurfaceFailureDetail(error),
+      await writeRuntimeAccumulation(input.now(), {
+        succeeded: true,
       });
-      await runtime.commitStagedResult({
-        commit: async () => ({
-          outcomeRef: `outcome://${sanitizeRefSegment(`${refs.resultRef}-fail`)}`,
-        }),
-      });
-      await writeLocalAccumulation(buildAccumulationFromRuntime({
-        runtime,
-        helperKey: input.helperKey,
-        capabilityKey: input.capabilityKey ?? input.helperKey,
-        identity: input.identity,
-        recordedAt,
-        succeeded: false,
-      }), input.accumulation);
-
       throw error;
     }
 
-    await writeLocalAccumulation(buildAccumulationFromRuntime({
-      runtime,
-      helperKey: input.helperKey,
-      capabilityKey: input.capabilityKey ?? input.helperKey,
-      identity: input.identity,
-      recordedAt,
-      blocked: buildBlockedCapabilityExecutionResult(error),
-    }), input.accumulation);
+    await writeRuntimeAccumulation(input.now(), {
+      succeeded: true,
+    });
 
+    return result;
+  } catch (error) {
     throw error;
   } finally {
     const closedAt = input.now();

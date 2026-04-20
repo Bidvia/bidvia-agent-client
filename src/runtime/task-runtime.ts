@@ -1,10 +1,10 @@
-import type { BidviaClient } from '../client.js';
 import type {
   BidviaExecutionSession,
   BidviaTaskHandleStatus,
-} from './execution-session.js';
+} from './contracts.js';
 import type {
   BidviaLocalPendingResultRef,
+  BidviaLocalTaskProtocolState,
   BidviaLocalTaskJournal,
 } from './task-journal.js';
 import {
@@ -29,129 +29,28 @@ import {
   isBlockedCapabilityExecutionError,
 } from './capability-orchestration.js';
 import type {
+  BidviaTaskRuntimeAcceptInput,
+  BidviaTaskRuntimeCapabilityCallInput,
+  BidviaTaskRuntimeClaimInput,
+  BidviaTaskRuntimeCommitResultInput,
+  BidviaTaskRuntimeCompleteInput,
+  BidviaTaskRuntimeFailInput,
+  BidviaTaskRuntimeLeaseInput,
+  BidviaTaskRuntimePendingResult,
+  BidviaTaskRuntimeReceiveInput,
+  BidviaTaskRuntimeResumeInput,
+  BidviaTaskRuntimeState,
+  BidviaTaskRuntimeStatus,
+  BidviaTaskRuntimeSuspendInput,
+  BidviaTaskRuntimeTimeoutInput,
+  BidviaTaskRuntimeClientPort,
+  BidviaTaskRuntimeStageResultInput,
+  CreateBidviaTaskRuntimeInput,
+} from './contracts.js';
+import type {
   BidviaRuntimeHookEvent,
   BidviaRuntimeHookFailure,
 } from './hooks.js';
-
-type BidviaTaskRuntimeClient = Pick<
-  BidviaClient,
-  | 'createClaim'
-  | 'acceptClaim'
-  | 'createLease'
-  | 'suspendTaskDispatch'
-  | 'resumeTaskDispatch'
-  | 'completeTaskDispatch'
-  | 'failTaskDispatch'
->;
-
-export type BidviaTaskRuntimeStatus =
-  | 'idle'
-  | 'claimed'
-  | 'accepted'
-  | 'leased'
-  | 'executing'
-  | 'suspended'
-  | 'locally-completed'
-  | 'locally-failed'
-  | 'result-committed'
-  | 'completed'
-  | 'failed';
-
-export interface BidviaTaskRuntimePendingResult {
-  resultRef: string;
-  kind: string;
-  terminalState: 'complete' | 'fail';
-  commitState: 'staged' | 'committed';
-  outcomeRef?: string;
-  detail?: string;
-}
-
-export interface BidviaTaskRuntimeState {
-  scope: 'local-task-runtime';
-  sessionRef: string;
-  localTaskRef: string;
-  taskId?: string;
-  taskDispatchId: string;
-  status: BidviaTaskRuntimeStatus;
-  attempt: number;
-  claimId?: string;
-  ackId?: string;
-  leaseId?: string;
-  pendingResult?: BidviaTaskRuntimePendingResult;
-  participation?: unknown;
-}
-
-export interface CreateBidviaTaskRuntimeInput {
-  session: BidviaExecutionSession;
-  taskDispatchId: string;
-  journalPath?: string;
-}
-
-export interface BidviaTaskRuntimeClaimInput {
-  offerId: string;
-  claimRef: string;
-  claimKind: string;
-  summary: string;
-}
-
-export interface BidviaTaskRuntimeReceiveInput {
-  offerId: string;
-  summary: string;
-  leaseExpiresAt?: string;
-  timeoutAt?: string;
-}
-
-export interface BidviaTaskRuntimeAcceptInput {
-  claimId: string;
-  summary: string;
-}
-
-export interface BidviaTaskRuntimeLeaseInput {
-  leaseScope: string;
-  expiresAt: string;
-  summary: string;
-}
-
-export interface BidviaTaskRuntimeSuspendInput {
-  reason: string;
-}
-
-export interface BidviaTaskRuntimeResumeInput {
-  reason: string;
-}
-
-export interface BidviaTaskRuntimeCapabilityCallInput<T> {
-  helperKey?: string;
-  capabilityKey?: string;
-  input?: unknown;
-  call: () => Promise<T>;
-}
-
-export interface BidviaTaskRuntimeStageResultInput {
-  resultRef: string;
-  kind: string;
-  terminalState: 'complete' | 'fail';
-  checkpointRef: string;
-  detail?: string;
-}
-
-export interface BidviaTaskRuntimeCommitResultInput {
-  commit: () => Promise<{ outcomeRef: string }>;
-}
-
-export interface BidviaTaskRuntimeCompleteInput {
-  reason: string;
-}
-
-export interface BidviaTaskRuntimeFailInput {
-  reason: string;
-}
-
-export interface BidviaTaskRuntimeTimeoutInput {
-  timeoutId: string;
-  summary: string;
-  priorLeaseId?: string;
-}
 
 function requireNonEmptyString(value: unknown, fieldName: string): string {
   if (typeof value !== 'string' || value.length === 0) {
@@ -210,6 +109,18 @@ function clonePendingResult(pendingResult: BidviaLocalPendingResultRef | undefin
     ...(pendingResult.outcomeRef === undefined ? {} : { outcomeRef: pendingResult.outcomeRef }),
     ...(pendingResult.detail === undefined ? {} : { detail: pendingResult.detail }),
   } satisfies BidviaTaskRuntimePendingResult;
+}
+
+function cloneProtocolState(protocolState: BidviaLocalTaskProtocolState | undefined): BidviaLocalTaskProtocolState | undefined {
+  if (protocolState === undefined) {
+    return undefined;
+  }
+
+  return {
+    ...(protocolState.claimId === undefined ? {} : { claimId: protocolState.claimId }),
+    ...(protocolState.ackId === undefined ? {} : { ackId: protocolState.ackId }),
+    ...(protocolState.leaseId === undefined ? {} : { leaseId: protocolState.leaseId }),
+  };
 }
 
 function deriveStatusFromJournal(journal: BidviaLocalTaskJournal): BidviaTaskRuntimeStatus {
@@ -306,7 +217,7 @@ function ensureMatchingJournal(session: BidviaExecutionSession, journal: BidviaL
 export class BidviaTaskRuntime {
   private readonly registrationId?: string;
   private readonly taskId?: string;
-  private readonly clientPromise: Promise<BidviaTaskRuntimeClient>;
+  private readonly clientPromise: Promise<BidviaTaskRuntimeClientPort>;
   private readonly capabilityOrchestrator: BidviaCapabilityOrchestrator;
   private state: BidviaTaskRuntimeState;
 
@@ -318,7 +229,7 @@ export class BidviaTaskRuntime {
   ) {
     this.registrationId = session.identity.registrationId;
     this.taskId = session.task.taskId;
-    this.clientPromise = Promise.resolve(session.runtime.dependencies.createClient()) as Promise<BidviaTaskRuntimeClient>;
+    this.clientPromise = Promise.resolve(session.runtime.dependencies.createClient());
     this.capabilityOrchestrator = createCapabilityOrchestrator(session.identity);
     this.state = this.buildState();
   }
@@ -340,6 +251,7 @@ export class BidviaTaskRuntime {
       progressMarkers: this.journal.progressMarkers.map((marker) => ({ ...marker })),
       pendingResultRefs: this.journal.pendingResultRefs.map((pendingResult) => ({ ...pendingResult })),
       recovery: { ...this.journal.recovery },
+      ...(this.journal.protocolState === undefined ? {} : { protocolState: cloneProtocolState(this.journal.protocolState) }),
     };
   }
 
@@ -392,6 +304,10 @@ export class BidviaTaskRuntime {
     const claimId = readStringProperty(response, 'claimId') ?? input.claimRef;
 
     this.state.claimId = claimId;
+    this.journal.protocolState = {
+      ...cloneProtocolState(this.journal.protocolState),
+      claimId,
+    };
     this.state.status = 'claimed';
     this.state.participation = buildTaskClaimShell({
       taskId: this.taskId ?? this.session.task.localTaskRef,
@@ -432,6 +348,11 @@ export class BidviaTaskRuntime {
 
     this.state.claimId = input.claimId;
     this.state.ackId = ackId;
+    this.journal.protocolState = {
+      ...cloneProtocolState(this.journal.protocolState),
+      claimId: input.claimId,
+      ackId,
+    };
     this.state.status = 'accepted';
     this.state.participation = buildTaskAckShell({
       taskId: this.taskId ?? this.session.task.localTaskRef,
@@ -464,6 +385,10 @@ export class BidviaTaskRuntime {
     const leaseId = readStringProperty(response, 'leaseId') ?? `lease://${this.taskDispatchId}`;
 
     this.state.leaseId = leaseId;
+    this.journal.protocolState = {
+      ...cloneProtocolState(this.journal.protocolState),
+      leaseId,
+    };
     this.state.status = 'leased';
     this.state.participation = buildTaskLeaseShell({
       taskId: this.taskId ?? this.session.task.localTaskRef,
@@ -780,6 +705,9 @@ export class BidviaTaskRuntime {
       taskDispatchId: this.taskDispatchId,
       status: deriveStatusFromJournal(this.journal),
       attempt: extractAttempt(this.journal),
+      ...(this.journal.protocolState?.claimId === undefined ? {} : { claimId: this.journal.protocolState.claimId }),
+      ...(this.journal.protocolState?.ackId === undefined ? {} : { ackId: this.journal.protocolState.ackId }),
+      ...(this.journal.protocolState?.leaseId === undefined ? {} : { leaseId: this.journal.protocolState.leaseId }),
       ...(pendingResult === undefined ? {} : { pendingResult }),
     };
   }
@@ -841,3 +769,5 @@ export async function createBidviaTaskRuntime(
 
   return new BidviaTaskRuntime(input.session, input.taskDispatchId, journal, input.journalPath);
 }
+
+export type * from './contracts.js';

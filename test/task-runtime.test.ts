@@ -5,6 +5,11 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 
 import * as publicSurface from '../src/index.ts';
+import {
+  buildExecutionSession as buildExecutionSessionDirect,
+  createBidviaTaskRuntime as createBidviaTaskRuntimeDirect,
+  createExecutionHookRegistry as createExecutionHookRegistryDirect,
+} from '../src/index.ts';
 
 function buildExecutionSession(exports: Record<string, unknown>, createClient: () => Promise<unknown>) {
   const buildExecutionSession = exports.buildExecutionSession as (input: Record<string, unknown>) => Record<string, unknown>;
@@ -222,6 +227,61 @@ test('BidviaTaskRuntime preserves resumable local result state when result commi
   });
 });
 
+test('BidviaTaskRuntime restores protocol-critical claim, ack, and lease ids from the journal on reload', async () => {
+  const exports = publicSurface as Record<string, unknown>;
+
+  const client = {
+    async createClaim() {
+      return { claimId: 'claim-1' };
+    },
+    async acceptClaim() {
+      return { ackId: 'ack-1' };
+    },
+    async createLease() {
+      return { leaseId: 'lease-1' };
+    },
+  };
+
+  const session = buildExecutionSession(exports, async () => client);
+  const createBidviaTaskRuntime = exports.createBidviaTaskRuntime as (input: Record<string, unknown>) => Promise<Record<string, unknown>>;
+  const tempDirectory = mkdtempSync(path.join(tmpdir(), 'bidvia-task-runtime-protocol-state-'));
+  const journalPath = path.join(tempDirectory, 'task-journal.json');
+
+  const runtime = await createBidviaTaskRuntime({
+    session,
+    taskDispatchId: 'dispatch-1',
+    journalPath,
+  });
+
+  await (runtime.claim as (input: Record<string, unknown>) => Promise<unknown>)({
+    offerId: 'offer-1',
+    claimRef: 'claim://local/1',
+    claimKind: 'ownership',
+    summary: 'claim created before restart',
+  });
+  await (runtime.accept as (input: Record<string, unknown>) => Promise<unknown>)({
+    claimId: 'claim-1',
+    summary: 'claim accepted before restart',
+  });
+  await (runtime.renewLease as (input: Record<string, unknown>) => Promise<unknown>)({
+    leaseScope: 'dispatch-window',
+    expiresAt: '2026-04-04T10:05:00.000Z',
+    summary: 'lease renewed before restart',
+  });
+
+  const resumedRuntime = await createBidviaTaskRuntime({
+    session,
+    taskDispatchId: 'dispatch-1',
+    journalPath,
+  });
+  const resumedState = (resumedRuntime.getState as () => Record<string, unknown>)();
+
+  assert.equal(resumedState.status, 'leased');
+  assert.equal(resumedState.claimId, 'claim-1');
+  assert.equal(resumedState.ackId, 'ack-1');
+  assert.equal(resumedState.leaseId, 'lease-1');
+});
+
 test('BidviaTaskRuntime increments attempt numbers only when a new execution attempt starts after timeout retry', async () => {
   const exports = publicSurface as Record<string, unknown>;
 
@@ -294,4 +354,74 @@ test('BidviaTaskRuntime uses the same timeout marker name in progress and recove
 
   assert.equal(journal.progressMarkers.at(-1)?.marker, 'task-timed-out');
   assert.equal(journal.recovery.resumeFromMarker, 'task-timed-out');
+});
+
+test('createBidviaTaskRuntime accepts a minimal runtime-facing task client instead of the full BidviaClient shape', async () => {
+  const session = buildExecutionSessionDirect({
+    sessionId: 'session-envelope-direct-import',
+    identity: {
+      tenantId: 'tenant-a',
+      principalId: 'principal-a',
+      registrationId: 'areg-1',
+      sessionId: 'session-a',
+    },
+    runtime: {
+      sessionRef: 'local-session-direct-import',
+      transport: 'sdk-client',
+      dependencies: {
+        createClient: async () => ({
+          async createClaim() {
+            return { claimId: 'claim-direct-1' };
+          },
+          async acceptClaim() {
+            return { ackId: 'ack-direct-1' };
+          },
+          async createLease() {
+            return { leaseId: 'lease-direct-1' };
+          },
+          async suspendTaskDispatch() {
+            return { suspended: true };
+          },
+          async resumeTaskDispatch() {
+            return { resumed: true };
+          },
+          async completeTaskDispatch() {
+            return { completed: true };
+          },
+          async failTaskDispatch() {
+            return { failed: true };
+          },
+        }),
+        now: () => '2026-04-04T10:00:00.000Z',
+      },
+    },
+    task: {
+      localTaskRef: 'local-task-direct-import',
+      taskId: 'task-direct-import',
+      status: 'idle',
+    },
+    capabilityMemory: {
+      scope: 'local-capability-memory',
+      capabilityKey: 'proposal.write',
+      memoryRef: 'memory-direct-import',
+    },
+    hooks: createExecutionHookRegistryDirect(),
+  });
+  const tempDirectory = mkdtempSync(path.join(tmpdir(), 'bidvia-task-runtime-direct-import-'));
+  const journalPath = path.join(tempDirectory, 'task-journal.json');
+
+  const runtime = await createBidviaTaskRuntimeDirect({
+    session,
+    taskDispatchId: 'dispatch-direct-import',
+    journalPath,
+  });
+
+  await runtime.claim({
+    offerId: 'offer-direct-1',
+    claimRef: 'claim://local/direct-import',
+    claimKind: 'ownership',
+    summary: 'claim through runtime-facing port only',
+  });
+
+  assert.equal(runtime.getState().claimId, 'claim-direct-1');
 });

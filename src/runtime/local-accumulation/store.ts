@@ -2,7 +2,7 @@ import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import path from 'node:path';
 
-import type { BidviaTaskHandleStatus } from '../execution-session.js';
+import type { BidviaTaskHandleStatus } from '../contracts.js';
 
 export interface BidviaLocalOnboardingMemoryFact {
   key: string;

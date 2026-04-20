@@ -27,17 +27,15 @@ const dispatchMcpToolCallWithRuntime = dispatchMcpToolCall as unknown as (
   };
 }>;
 
-test('dispatchMcpToolCall suspend-task-dispatch-execution executes and records committed local runtime memory when context is present', async () => {
+test('dispatchMcpToolCall heartbeat-execution returns helper success when no runtime-owned result commit path exists while preserving staged execution result state', async () => {
   const accumulationPath = buildLocalAccumulationPath('bidvia-mcp-runtime-heartbeat-');
-  let called = false;
 
   const response = await dispatchMcpToolCallWithRuntime(
     {
-      toolName: 'suspend-task-dispatch-execution',
+      toolName: 'heartbeat-execution',
       arguments: {
-        agentRegistrationId: 'areg-runtime',
-        taskDispatchId: 'dispatch-runtime',
         now: '2026-04-04T13:00:00.000Z',
+        expiresAt: '2026-04-04T13:05:00.000Z',
       },
     },
     {
@@ -47,14 +45,12 @@ test('dispatchMcpToolCall suspend-task-dispatch-execution executes and records c
             tenantId: 'tenant-runtime',
             principalId: 'principal-runtime',
             registrationId: 'areg-runtime',
-            companyId: 'company-runtime',
           },
         },
-        async suspendTaskDispatch() {
-          called = true;
+        async postHeartbeat() {
           return {
             ok: true,
-            helperKey: 'suspendTaskDispatch',
+            helperKey: 'postHeartbeat',
           };
         },
       }) as never,
@@ -63,10 +59,9 @@ test('dispatchMcpToolCall suspend-task-dispatch-execution executes and records c
     },
   );
 
-  assert.equal(called, true);
   assert.deepEqual(response.result.executionResult, {
     ok: true,
-    helperKey: 'suspendTaskDispatch',
+    helperKey: 'postHeartbeat',
   });
 
   const accumulation = await readLocalAccumulation({
@@ -74,29 +69,16 @@ test('dispatchMcpToolCall suspend-task-dispatch-execution executes and records c
   });
 
   assert.ok(accumulation);
-  const markers = accumulation.taskExecutionMemory.progressMarkers.map((marker) => marker.marker);
-  assert.equal(markers[0], 'execution-started');
-  assert.equal(markers.includes('result-staged'), true);
-  assert.equal(markers.includes('result-committed'), true);
-  assert.equal(accumulation.capabilityUsageMemory.capabilities[0]?.capabilityKey, 'suspendTaskDispatch');
-  assert.deepEqual(accumulation.capabilityUsageMemory.capabilities[0]?.usage, [{
-    helperKey: 'suspendTaskDispatch',
-    recordedAt: '2026-04-04T13:00:00.000Z',
-    outcome: 'succeeded',
-  }]);
-  assert.deepEqual(accumulation.capabilityUsageMemory.capabilities[0]?.blockedAttempts, []);
-  assert.deepEqual(accumulation.resultMemory.results[0], {
-    resultRef: 'local-result://mcp-suspendTaskDispatch-2026-04-04T13-00-00-000Z',
-    kind: 'execution-result',
-    terminalState: 'complete',
-    commitState: 'committed',
-    outcomeRef: 'outcome://local-result-mcp-suspendTaskDispatch-2026-04-04T13-00-00-000Z-complete',
-    recordedAt: '2026-04-04T13:00:00.000Z',
-    detail: '{"ok":true,"helperKey":"suspendTaskDispatch"}',
-  });
+  assert.equal(accumulation.taskExecutionMemory.progressMarkers[0]?.marker, 'execution-started');
+  assert.equal(accumulation.capabilityUsageMemory.capabilities[0]?.capabilityKey, 'postHeartbeat');
+  assert.equal(accumulation.capabilityUsageMemory.capabilities[0]?.usage[0]?.helperKey, 'postHeartbeat');
+  assert.equal(accumulation.resultMemory.results[0]?.kind, 'execution-result');
+  assert.equal(accumulation.resultMemory.results[0]?.terminalState, 'complete');
+  assert.equal(accumulation.resultMemory.results[0]?.commitState, 'staged');
+  assert.equal(accumulation.resultMemory.results[0]?.outcomeRef, undefined);
 });
 
-test('dispatchMcpToolCall create-provisional-agent-execution preserves the public provisional response while recording onboarding memory and helper-keyed capability usage', async () => {
+test('dispatchMcpToolCall create-provisional-agent-execution returns helper success when no runtime-owned result commit path exists while preserving staged onboarding result state', async () => {
   const accumulationPath = buildLocalAccumulationPath('bidvia-mcp-runtime-provisional-');
 
   const response = await dispatchMcpToolCallWithRuntime(
@@ -144,22 +126,70 @@ test('dispatchMcpToolCall create-provisional-agent-execution preserves the publi
   assert.equal(accumulation.capabilityUsageMemory.capabilities[0]?.capabilityKey, 'createProvisionalAgent');
   assert.equal(accumulation.capabilityUsageMemory.capabilities[0]?.usage[0]?.helperKey, 'createProvisionalAgent');
   assert.equal(accumulation.resultMemory.results[0]?.kind, 'execution-result');
+  assert.equal(accumulation.resultMemory.results[0]?.terminalState, 'complete');
+  assert.equal(accumulation.resultMemory.results[0]?.commitState, 'staged');
+  assert.equal(accumulation.resultMemory.results[0]?.outcomeRef, undefined);
 });
 
-test('dispatchMcpToolCall does not persist synthetic local-client-seam placeholders into onboarding memory facts', async () => {
-  const accumulationPath = buildLocalAccumulationPath('bidvia-mcp-runtime-placeholder-');
+test('dispatchMcpToolCall keeps public provisional execution isolated from stale claimed identity fields', async () => {
+  const accumulationPath = buildLocalAccumulationPath('bidvia-mcp-runtime-provisional-context-');
 
-  const response = await dispatchMcpToolCallWithRuntime(
+  await dispatchMcpToolCallWithRuntime(
     {
       toolName: 'create-provisional-agent-execution',
       arguments: {
-        provisionalAgentRef: 'prov-runtime-placeholder-1',
-        now: '2026-04-04T13:15:00.000Z',
+        provisionalAgentRef: 'prov-runtime-mcp-context-1',
       },
     },
     {
       createExecutionClient: () => ({
+        options: {
+          context: {
+            tenantId: 'tenant-runtime',
+            principalId: 'principal-stale',
+            companyId: 'company-stale',
+            registrationId: 'areg-stale',
+            sessionId: 'session-stale',
+          },
+        },
         async createProvisionalAgent() {
+          return {
+            provisionalAgentRef: 'prov-runtime-mcp-context-1',
+            created: true,
+          };
+        },
+      }) as never,
+      localAccumulationPath: accumulationPath,
+      now: () => '2026-04-04T13:12:00.000Z',
+    },
+  );
+
+  const accumulation = await readLocalAccumulation({
+    path: accumulationPath,
+  });
+
+  assert.ok(accumulation);
+  assert.deepEqual(accumulation.onboardingMemory.facts, [{
+    key: 'tenantId',
+    value: 'tenant-runtime',
+    recordedAt: '2026-04-04T13:12:00.000Z',
+  }]);
+});
+
+test('dispatchMcpToolCall does not persist synthetic local-client-seam placeholders into onboarding memory facts when helper success falls back to staged local result state', async () => {
+  const accumulationPath = buildLocalAccumulationPath('bidvia-mcp-runtime-placeholder-');
+
+  const response = await dispatchMcpToolCallWithRuntime(
+    {
+      toolName: 'heartbeat-execution',
+      arguments: {
+        now: '2026-04-04T13:15:00.000Z',
+        expiresAt: '2026-04-04T13:20:00.000Z',
+      },
+    },
+    {
+      createExecutionClient: () => ({
+        async postHeartbeat() {
           return {
             ok: true,
           };
@@ -180,18 +210,19 @@ test('dispatchMcpToolCall does not persist synthetic local-client-seam placehold
 
   assert.ok(accumulation);
   assert.deepEqual(accumulation.onboardingMemory.facts, []);
+  assert.equal(accumulation.resultMemory.results[0]?.commitState, 'staged');
 });
 
-test('dispatchMcpToolCall records non-blocked execution failures through the runtime result protocol instead of fabricating success memory', async () => {
+test('dispatchMcpToolCall records non-blocked execution failures through the runtime result protocol without fabricating a committed result', async () => {
   const accumulationPath = buildLocalAccumulationPath('bidvia-mcp-runtime-failure-');
 
   await assert.rejects(
     () => dispatchMcpToolCallWithRuntime(
       {
-        toolName: 'create-provisional-agent-execution',
+        toolName: 'heartbeat-execution',
         arguments: {
-          provisionalAgentRef: 'prov-runtime-failure-1',
           now: '2026-04-04T13:20:00.000Z',
+          expiresAt: '2026-04-04T13:25:00.000Z',
         },
       },
       {
@@ -199,17 +230,19 @@ test('dispatchMcpToolCall records non-blocked execution failures through the run
           options: {
             context: {
               tenantId: 'tenant-runtime',
+              principalId: 'principal-runtime',
+              registrationId: 'areg-runtime',
             },
           },
-          async createProvisionalAgent() {
-            throw new Error('provisional create failed');
+          async postHeartbeat() {
+            throw new Error('heartbeat failed');
           },
         }) as never,
         localAccumulationPath: accumulationPath,
         now: () => '2026-04-04T13:20:00.000Z',
       },
     ),
-    /provisional create failed/,
+    /heartbeat failed/,
   );
 
   const accumulation = await readLocalAccumulation({
@@ -219,8 +252,75 @@ test('dispatchMcpToolCall records non-blocked execution failures through the run
   assert.ok(accumulation);
   const markers = accumulation.taskExecutionMemory.progressMarkers.map((marker) => marker.marker);
   assert.equal(markers.includes('execution-started'), true);
-  assert.deepEqual(markers.slice(-2), ['result-staged', 'result-committed']);
+  assert.deepEqual(markers.slice(-1), ['result-staged']);
   assert.equal(accumulation.capabilityUsageMemory.capabilities[0]?.usage.length, 0);
   assert.equal(accumulation.resultMemory.results[0]?.terminalState, 'fail');
-  assert.equal(accumulation.resultMemory.results[0]?.commitState, 'committed');
+  assert.equal(accumulation.resultMemory.results[0]?.commitState, 'staged');
+});
+
+test('dispatchMcpToolCall reruns reuse the same local runtime track for the same tool input', async () => {
+  const accumulationPath = buildLocalAccumulationPath('bidvia-mcp-runtime-resume-');
+
+  const createDependencies = (now: string) => ({
+    createExecutionClient: () => ({
+      options: {
+        context: {
+          tenantId: 'tenant-runtime',
+          principalId: 'principal-runtime',
+          registrationId: 'areg-runtime',
+        },
+      },
+      async postHeartbeat() {
+        return {
+          ok: true,
+          helperKey: 'postHeartbeat',
+        };
+      },
+    }) as never,
+    localAccumulationPath: accumulationPath,
+    now: () => now,
+  });
+
+  await dispatchMcpToolCallWithRuntime(
+    {
+      toolName: 'heartbeat-execution',
+      arguments: {
+        now: '2026-04-04T13:30:00.000Z',
+        expiresAt: '2026-04-04T13:35:00.000Z',
+      },
+    },
+    createDependencies('2026-04-04T13:30:00.000Z'),
+  );
+
+  const firstAccumulation = await readLocalAccumulation({
+    path: accumulationPath,
+  });
+
+  await dispatchMcpToolCallWithRuntime(
+    {
+      toolName: 'heartbeat-execution',
+      arguments: {
+        now: '2026-04-04T13:30:00.000Z',
+        expiresAt: '2026-04-04T13:35:00.000Z',
+      },
+    },
+    createDependencies('2026-04-04T13:31:00.000Z'),
+  );
+
+  const secondAccumulation = await readLocalAccumulation({
+    path: accumulationPath,
+  });
+  const firstExecutionStartCount = firstAccumulation?.taskExecutionMemory.progressMarkers.filter(
+    (marker) => marker.marker === 'execution-started',
+  ).length ?? 0;
+  const secondExecutionStartCount = secondAccumulation?.taskExecutionMemory.progressMarkers.filter(
+    (marker) => marker.marker === 'execution-started',
+  ).length ?? 0;
+
+  assert.ok(firstAccumulation);
+  assert.ok(secondAccumulation);
+  assert.equal(secondAccumulation.taskExecutionMemory.localTaskRef, firstAccumulation.taskExecutionMemory.localTaskRef);
+  assert.equal(secondAccumulation.taskExecutionMemory.taskDispatchId, firstAccumulation.taskExecutionMemory.taskDispatchId);
+  assert.equal(secondAccumulation.onboardingMemory.sessionRef, firstAccumulation.onboardingMemory.sessionRef);
+  assert.equal(secondExecutionStartCount > firstExecutionStartCount, true);
 });

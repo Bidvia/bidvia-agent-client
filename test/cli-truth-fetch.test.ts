@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
+import { BidviaClient } from '../src/client.ts';
 import { runCli } from '../src/cli.ts';
 
 function setEnvVar(name: string, value: string | undefined) {
@@ -461,6 +462,24 @@ test('runCli execution commands pass company, principal-type, and authorized-rol
 
   try {
     const exitCode = await runCli(['heartbeat'], {
+      createClient: () => Object.assign(new BidviaClient({
+        baseUrl: 'http://127.0.0.1:8787',
+        context: {
+          tenantId: 'tenant-a',
+          principalId: 'principal-1',
+          principalType: 'operator',
+          authorizedRole: 'admin',
+          companyId: 'company-a',
+          registrationId: 'areg-1',
+        },
+        fetchImpl: globalThis.fetch,
+      }), {
+        async commitRuntimeResult() {
+          return {
+            outcomeRef: 'outcome://test/runtime-commit',
+          };
+        },
+      }) as never,
       printJson: (value) => {
         printed.push(value);
       },

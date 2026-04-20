@@ -191,6 +191,11 @@ test('local MCP stdio server exposes bounded tool metadata and handles review-sa
           expiresAt: receivedInput.expiresAt,
         };
       },
+      async commitRuntimeResult() {
+        return {
+          outcomeRef: 'outcome://test/runtime-commit',
+        };
+      },
     }) as never,
   });
 
@@ -800,6 +805,11 @@ test('local MCP stdio server dispatches widened Task 2 execution helpers and ret
           ok: true,
           route: 'create-provisional-agent',
           displayName: receivedInput.displayName,
+        };
+      },
+      async commitRuntimeResult() {
+        return {
+          outcomeRef: 'outcome://test/runtime-commit',
         };
       },
     }) as never,

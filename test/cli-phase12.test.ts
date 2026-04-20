@@ -595,7 +595,7 @@ test('runCli prints an OpenClaw MCP config export that stays local stdio first a
       },
       firstSuccessNextStep: {
         command: 'route-context-matrix',
-        rationale: 'Confirm the required context family for each guided route before enabling local OpenClaw operator execution.',
+        rationale: 'Confirm the required context family for each guided route before wiring OpenClaw config around the shared local stdio MCP runtime path.',
       },
     },
     operatorNotes: {

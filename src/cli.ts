@@ -2522,8 +2522,8 @@ export async function runCli(
       outputPath: writeResult.outputPath,
       writtenFiles: writeResult.writtenFiles,
       operatorNotes: {
-        primaryPath: 'Primary OpenClaw path: export stdio MCP config first, then add the companion bundle when you want bundle/bootstrap packaging around the same local server.',
-        executionBoundary: 'Bundle/bootstrap only: Bidvia execution still runs through the local stdio MCP server at `bidvia mcp-server`.',
+        primaryPath: 'Primary OpenClaw path: export stdio MCP config first, then add the companion bundle when you want packaging around that same local stdio MCP runtime path.',
+        executionBoundary: 'Bundle/bootstrap only: OpenClaw stays config and packaging around the local stdio MCP server at `bidvia mcp-server`, where Bidvia execution actually runs.',
         developmentNote: 'Repo-local fallbacks such as `node dist/mcp-server.js` stay development-only and are not the primary bundle handoff.',
         deferredNativePlugin: 'Native-plugin-first and HTTP MCP paths stay out of scope for this version.',
       },

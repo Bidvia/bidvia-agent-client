@@ -2,7 +2,7 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import path from 'node:path';
 
-import type { BidviaTaskHandleStatus } from './execution-session.js';
+import type { BidviaTaskHandleStatus } from './contracts.js';
 
 export interface BidviaLocalTaskJournalAttempt {
   attempt: number;
@@ -33,6 +33,12 @@ export interface BidviaLocalTaskRecoveryMetadata {
   lastCheckpointAt: string;
 }
 
+export interface BidviaLocalTaskProtocolState {
+  claimId?: string;
+  ackId?: string;
+  leaseId?: string;
+}
+
 export interface BidviaLocalTaskJournal {
   scope: 'local-task-journal';
   locality: 'local-only';
@@ -45,6 +51,7 @@ export interface BidviaLocalTaskJournal {
   progressMarkers: BidviaLocalTaskProgressMarker[];
   pendingResultRefs: BidviaLocalPendingResultRef[];
   recovery: BidviaLocalTaskRecoveryMetadata;
+  protocolState?: BidviaLocalTaskProtocolState;
   createdAt: string;
   updatedAt: string;
 }
@@ -146,6 +153,22 @@ function isRecoveryMetadata(value: unknown): value is BidviaLocalTaskRecoveryMet
     && isString(candidate.lastCheckpointAt);
 }
 
+function isProtocolState(value: unknown): value is BidviaLocalTaskProtocolState {
+  if (value === undefined) {
+    return true;
+  }
+
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return false;
+  }
+
+  const candidate = value as Record<string, unknown>;
+
+  return isOptionalString(candidate.claimId)
+    && isOptionalString(candidate.ackId)
+    && isOptionalString(candidate.leaseId);
+}
+
 function isLocalTaskJournal(value: unknown): value is BidviaLocalTaskJournal {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
     return false;
@@ -167,6 +190,7 @@ function isLocalTaskJournal(value: unknown): value is BidviaLocalTaskJournal {
     && Array.isArray(candidate.pendingResultRefs)
     && candidate.pendingResultRefs.every(isPendingResultRef)
     && isRecoveryMetadata(candidate.recovery)
+    && isProtocolState(candidate.protocolState)
     && isString(candidate.createdAt)
     && isString(candidate.updatedAt);
 }
@@ -213,6 +237,15 @@ function buildPersistedLocalTaskJournal(journal: BidviaLocalTaskJournalInput): B
         : { resumeFromMarker: journal.recovery.resumeFromMarker }),
       lastCheckpointAt: journal.recovery.lastCheckpointAt,
     },
+    ...(journal.protocolState === undefined
+      ? {}
+      : {
+          protocolState: {
+            ...(journal.protocolState.claimId === undefined ? {} : { claimId: journal.protocolState.claimId }),
+            ...(journal.protocolState.ackId === undefined ? {} : { ackId: journal.protocolState.ackId }),
+            ...(journal.protocolState.leaseId === undefined ? {} : { leaseId: journal.protocolState.leaseId }),
+          },
+        }),
     createdAt: journal.createdAt,
     updatedAt: journal.updatedAt,
   };
