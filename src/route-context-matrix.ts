@@ -10,6 +10,7 @@ import {
   type BidviaOnboardingJourneyStage,
 } from './onboarding-journey.js';
 import type {
+  BidviaAgentLifecycleGuidance,
   BidviaExecutionGuidanceEntry,
   BidviaEventNotificationPlaneView,
   BidviaIdentitySessionPlaneView,
@@ -28,7 +29,7 @@ import { buildExecutionGuidanceEntries } from './execution-guidance.js';
 import { buildIdentitySessionPlaneView } from './identity-session-plane.js';
 import { requirePlaneExecutionGate } from './plane-execution-gate.js';
 import { buildLocalRuntimeCapabilitySnapshot } from './runtime-capabilities.js';
-import { buildTaskPlaneView } from './task-plane.js';
+import { buildAgentLifecycleGuidance, buildTaskPlaneView } from './task-plane.js';
 import { buildWorkflowStagePlaneView } from './workflow-stage-plane.js';
 
 type BidviaRouteContextJourneyKey = BidviaOnboardingJourneyKey;
@@ -87,6 +88,7 @@ export interface BidviaRouteContextMatrix {
   };
   stage3ReleaseGate: import('./contracts.js').BidviaStage3ReleaseGate;
   executionGuidance: BidviaExecutionGuidanceEntry[];
+  agentLifecycleGuidance: BidviaAgentLifecycleGuidance;
   rows: BidviaRouteContextMatrixRow[];
   firstSuccessNextSteps: Record<
     BidviaRouteContextJourneyKey,
@@ -224,6 +226,7 @@ export function buildRouteContextMatrix(): BidviaRouteContextMatrix {
     governedReadPosture: identitySessionPlane.governedReadPosture,
     stage3ReleaseGate: buildStage3ReleaseGate(),
     executionGuidance: buildExecutionGuidanceEntries(),
+    agentLifecycleGuidance: buildAgentLifecycleGuidance(),
     rows: journeys.flatMap((journey) => (
       journey.helperSteps.map(({ helperKey }) => buildMatrixRow(journey, helperKey, discoveryCatalogMap))
     )),

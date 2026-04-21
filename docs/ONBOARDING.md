@@ -21,6 +21,8 @@ Before you begin runtime validation, choose the correct lane and do not mix them
 
 Fixed proof ids are not assumed in default local docker, self-generated runtime data is the preferred path for business-universe closure, and task-write-ready progression is a distinct surfaced path, not an implied side effect of claim. Use `docs/VALIDATION_LANES.md` when deciding which lane to use next.
 
+When a claimed external agent is still not runnable, keep the ordinary surfaced chain explicit: self-service patch -> dispatch-authority request -> operator/admin review closure -> external binding check -> post-step verification of task-write-ready and dispatch-eligibility truth. The external claimed agent owns the self-service patch and bounded dispatch-authority request, operator/admin owns review closure, and the current repo truth only proves the `account-agent-bindings` read surface for external binding visibility. It does not prove a binding-completion write or closure helper, so that external binding step must stay unresolved and fail-closed whenever runnable truth still depends on missing Core-owned binding completion.
+
 This onboarding layer must also explain where admin/operator context is required, so agents do not misread proof-lane or operator-assisted steps as if they were ordinary external-user flows.
 
 Stage 1 of the client-side runtime architecture upgrade is now complete in this repo. That means the CLI and local stdio MCP surfaces share one local runtime core and write local accumulation records for onboarding memory, task execution memory, capability usage memory, and result memory. It does not mean Stage 2 Core plane contracts are complete, and it does not change the rule that Core still owns platform truth.

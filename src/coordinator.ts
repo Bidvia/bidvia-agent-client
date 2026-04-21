@@ -53,6 +53,9 @@ function buildApprovalOpportunityExternalHandoffBoundary(
     suppliedKnownIds: {
       opportunityId,
     },
+    handoffStepName: 'operator-confirm-opportunity-handoff',
+    handoffOwnerRole: 'operator',
+    checkpointGuidance: 'verify the approvalRequestId and caller-supplied opportunityId before exporting the review-safe package',
   };
 }
 

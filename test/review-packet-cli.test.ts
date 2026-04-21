@@ -57,10 +57,45 @@ test('industry-universe-review-packet-preview prints review packet json', () => 
     'adjudication-outcome-included:false',
     'core-truth-closure:deferred',
   ]);
+  assert.deepEqual(output.details.verification.roleSplit, {
+    user: [
+      'user-create-listing',
+      'user-activate-listing',
+      'user-generate-match-candidates',
+    ],
+    operator: [],
+    admin: [],
+  });
+  assert.deepEqual(output.details.routeDetails[1], {
+    sequence: 2,
+    routeKey: 'activateListing',
+    stepName: 'user-activate-listing',
+    actorRole: 'user',
+    requiredContext: ['tenantId', 'principalId', 'companyId'],
+    completed: false,
+    progressionCheckpoint: {
+      checkpointName: 'verify-activation-before-match-generation',
+      verifyRecordGroups: ['listings'],
+      guidance: 'confirm the activated listing id remains the record carried into match generation on the runtime-generated lane',
+    },
+  });
+  assert.deepEqual(output.details.routeDetails[2], {
+    sequence: 3,
+    routeKey: 'generateMatchCandidates',
+    stepName: 'user-generate-match-candidates',
+    actorRole: 'user',
+    requiredContext: ['tenantId', 'principalId', 'companyId'],
+    completed: false,
+    progressionCheckpoint: {
+      checkpointName: 'verify-match-id-before-connection-approval',
+      verifyRecordGroups: ['matches'],
+      guidance: 'capture the returned match id before continuing into downstream connection approval on the runtime-generated lane',
+    },
+  });
   assert.equal(output.summary.pendingRouteCount, 3);
   assert.equal(
     output.sections[3]?.entries[0],
-    'pending-review:1/3:createListing:requires=tenantId|principalId|companyId',
+    'pending-review:1/3:createListing:user-create-listing:actor=user:requires=tenantId|principalId|companyId',
   );
   assert.equal(output.sections[4]?.entries.includes('next-pending-route:createListing'), true);
   assert.equal(output.sections[4]?.entries.includes('local-derived-explanation:review-packet-status:pending-review'), true);
@@ -130,10 +165,45 @@ test('industry-universe-review-packet-export prints exported review packet json'
     'adjudication-outcome-included:false',
     'core-truth-closure:deferred',
   ]);
+  assert.deepEqual(output.details.verification.roleSplit, {
+    user: [
+      'user-create-listing',
+      'user-activate-listing',
+      'user-generate-match-candidates',
+    ],
+    operator: [],
+    admin: [],
+  });
+  assert.deepEqual(output.details.routeDetails[1], {
+    sequence: 2,
+    routeKey: 'activateListing',
+    stepName: 'user-activate-listing',
+    actorRole: 'user',
+    requiredContext: ['tenantId', 'principalId', 'companyId'],
+    completed: false,
+    progressionCheckpoint: {
+      checkpointName: 'verify-activation-before-match-generation',
+      verifyRecordGroups: ['listings'],
+      guidance: 'confirm the activated listing id remains the record carried into match generation on the runtime-generated lane',
+    },
+  });
+  assert.deepEqual(output.details.routeDetails[2], {
+    sequence: 3,
+    routeKey: 'generateMatchCandidates',
+    stepName: 'user-generate-match-candidates',
+    actorRole: 'user',
+    requiredContext: ['tenantId', 'principalId', 'companyId'],
+    completed: false,
+    progressionCheckpoint: {
+      checkpointName: 'verify-match-id-before-connection-approval',
+      verifyRecordGroups: ['matches'],
+      guidance: 'capture the returned match id before continuing into downstream connection approval on the runtime-generated lane',
+    },
+  });
   assert.equal(output.summary.pendingRouteCount, 3);
   assert.equal(
     output.sections[3]?.entries[0],
-    'pending-review:1/3:createListing:requires=tenantId|principalId|companyId',
+    'pending-review:1/3:createListing:user-create-listing:actor=user:requires=tenantId|principalId|companyId',
   );
   assert.equal(output.sections[4]?.entries.includes('next-pending-route:createListing'), true);
   assert.equal(output.sections[4]?.entries.includes('local-derived-explanation:review-packet-status:pending-review'), true);

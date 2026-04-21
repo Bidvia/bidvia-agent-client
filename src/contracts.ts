@@ -686,9 +686,22 @@ export const bidviaLocalCapabilityRiskTiers = [
 
 export type BidviaLocalCapabilityRiskTier = (typeof bidviaLocalCapabilityRiskTiers)[number];
 
+export const bidviaScenarioActorRoles = ['user', 'operator', 'admin'] as const;
+
+export type BidviaScenarioActorRole = (typeof bidviaScenarioActorRoles)[number];
+
+export interface BidviaScenarioProgressionCheckpoint {
+  checkpointName: string;
+  verifyRecordGroups: BidviaScenarioRecordGroupKey[];
+  guidance: string;
+}
+
 export interface BidviaScenarioRouteStep {
   routeKey: string;
   requiredContext: BidviaScenarioContextKey[];
+  stepName?: string;
+  actorRole?: BidviaScenarioActorRole;
+  progressionCheckpoint?: BidviaScenarioProgressionCheckpoint;
 }
 
 export interface BidviaRouteCapability {
@@ -756,6 +769,8 @@ export interface BidviaScenarioEnvelopeRecordIds {
   packages?: string[];
   commercialActions?: string[];
 }
+
+export type BidviaScenarioRecordGroupKey = keyof BidviaScenarioEnvelopeRecordIds;
 
 export interface BidviaScenarioEnvelope {
   scenarioId: string;
@@ -843,15 +858,19 @@ export interface BidviaReviewPacketVerificationDetail {
   localDerivedExplanation: string[];
   serverOwnedFacts: string[];
   dependencyGatedSeams: string[];
+  roleSplit: Record<BidviaScenarioActorRole, string[]>;
 }
 
-export type BidviaReviewPacketRecordGroupKey = keyof BidviaScenarioEnvelopeRecordIds;
+export type BidviaReviewPacketRecordGroupKey = BidviaScenarioRecordGroupKey;
 
 export interface BidviaReviewPacketRouteDetail {
   sequence: number;
   routeKey: string;
+  stepName?: string;
+  actorRole?: BidviaScenarioActorRole;
   requiredContext: BidviaScenarioContextKey[];
   completed: boolean;
+  progressionCheckpoint?: BidviaScenarioProgressionCheckpoint;
 }
 
 export interface BidviaReviewPacketRecordDetail {
@@ -957,6 +976,9 @@ export interface BidviaApprovalOpportunityExternalHandoffBoundary {
   suppliedKnownIds: {
     opportunityId: string;
   };
+  handoffStepName: string;
+  handoffOwnerRole: 'operator';
+  checkpointGuidance: string;
 }
 
 export interface BidviaMultiBusinessChainCoordinatorPlanInput {
@@ -1294,6 +1316,84 @@ export interface BidviaExecutionGuidanceEntry {
   signal: string;
   nextStepOwner: string;
   nextStepAction: string;
+  checkpoints?: BidviaExecutionGuidanceCheckpoint[];
+}
+
+export interface BidviaExecutionGuidanceCheckpoint {
+  stepKey:
+    | 'self-service-patch'
+    | 'dispatch-authority-request'
+    | 'operator-review-closure'
+    | 'external-binding-completion-unresolved'
+    | 'post-step-truth-check';
+  actor: 'external-claimed-agent' | 'operator-or-admin';
+  lane: BidviaExecutionGuidanceEntry['lane'];
+  surfacedAction: string;
+  verificationCheckpoint: {
+    helperKeys: Array<
+      'getAgentReadiness'
+      | 'getAccountAgentDispatchAuthority'
+      | 'listAccountAgentBindings'
+    >;
+    truthFields: Array<'taskWriteReady' | 'dispatchEligibility'>;
+    guidance: string;
+  };
+  failClosedState: string;
+}
+
+export type BidviaAgentLifecycleLane =
+  | 'default-local-docker'
+  | 'proof-lane-admin-session'
+  | 'runtime-generated';
+
+export type BidviaNotificationAcknowledgementPathStatus =
+  | 'client-side-fixed'
+  | 'client-side-still-broken'
+  | 'upstream/runtime-owned';
+
+export interface BidviaHeartbeatLifecycleGuidance {
+  helperKey: 'postHeartbeat';
+  lane: 'default-local-docker';
+  responsibility: string;
+  doesNotImply: string;
+}
+
+export interface BidviaTaskWakeupLaneGuidance {
+  lane: BidviaAgentLifecycleLane;
+  wakeupPath: string;
+}
+
+export interface BidviaTaskWakeupByLaneGuidance {
+  noDaemonClaim: string;
+  lanes: BidviaTaskWakeupLaneGuidance[];
+}
+
+export interface BidviaResultReportingLifecycleGuidance {
+  helperKeys: Array<
+    'createClaim'
+    | 'createLease'
+    | 'completeTaskDispatch'
+    | 'failTaskDispatch'
+    | 'acknowledgeNotification'
+  >;
+  responsibility: string;
+  failClosedState: string;
+}
+
+export interface BidviaNotificationAcknowledgementPathGuidance {
+  status: BidviaNotificationAcknowledgementPathStatus;
+  helperKey: 'acknowledgeNotification';
+  routePathTemplate: '/runtime/account/agents/:agent_registration_id/notifications/:notification_id/acknowledgements';
+  requiredContext: ['tenantId', 'principalId', 'companyId'];
+  guidance: string;
+}
+
+export interface BidviaAgentLifecycleGuidance {
+  lifecycleBoundary: string;
+  heartbeat: BidviaHeartbeatLifecycleGuidance;
+  taskWakeupByLane: BidviaTaskWakeupByLaneGuidance;
+  resultReporting: BidviaResultReportingLifecycleGuidance;
+  notificationAcknowledgementPath: BidviaNotificationAcknowledgementPathGuidance;
 }
 
 export interface BidviaLocalRuntimeCapabilitySnapshot {
@@ -1306,6 +1406,7 @@ export interface BidviaLocalRuntimeCapabilitySnapshot {
   planeAdoption: BidviaCorePlaneAdoptionStatus[];
   stage3ReleaseGate: BidviaStage3ReleaseGate;
   executionGuidance: BidviaExecutionGuidanceEntry[];
+  agentLifecycleGuidance: BidviaAgentLifecycleGuidance;
 }
 
 export interface BidviaServerCapabilityPayloadRouteCapability {
@@ -2102,6 +2203,10 @@ export interface BidviaTaskPlaneView {
   };
   outcomeTruth: BidviaTaskPlaneGroundedTruth;
   timeoutTruth: BidviaTaskPlaneBlockedTruth;
+  lifecycleGuidance: {
+    wakeupByLane: BidviaTaskWakeupByLaneGuidance;
+    resultReporting: BidviaResultReportingLifecycleGuidance;
+  };
 }
 
 export const bidviaEventNotificationPlaneCapabilityModes = [
@@ -2137,4 +2242,5 @@ export interface BidviaEventNotificationPlaneView {
   notificationReadTruth: BidviaTaskPlaneGroundedTruth;
   executionRoutes: BidviaEventNotificationPlaneExecutionRoute[];
   executionTruth: BidviaTaskPlaneBlockedTruth;
+  acknowledgementPath: BidviaNotificationAcknowledgementPathGuidance;
 }

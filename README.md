@@ -64,6 +64,8 @@ Before validating runtime behavior, choose the right lane:
 
 See `docs/VALIDATION_LANES.md` for the full lane guide. Fixed proof ids are not assumed in default local docker, self-generated runtime data is the preferred path for business-universe closure, and task-write-ready progression is a distinct surfaced path rather than an implied side effect of claim.
 
+For task-write-ready progression, keep the chain explicit on the ordinary surfaced lane: self-service patch -> dispatch-authority request -> operator/admin review closure -> external binding check -> post-step verification of task-write-ready and dispatch-eligibility truth. The external claimed agent owns the self-service patch and bounded dispatch-authority request, operator/admin owns review closure, and the current repo truth only proves the `account-agent-bindings` read surface for external binding visibility, not a binding-completion write or closure helper, so that external binding step stays fail-closed and unresolved unless Core exposes a concrete path.
+
 ## CLI onboarding path
 
 The CLI onboarding path is customer-facing, but it stays honest about prerequisites.

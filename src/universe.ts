@@ -78,9 +78,28 @@ export function buildIndustryUniverseScenarioPlan(
       traceIds: input.traceIds,
       workflowIds: input.workflowIds,
       expectedRouteChain: [
-        buildScenarioRouteStep('createListing', ['tenantId', 'principalId', 'companyId']),
-        buildScenarioRouteStep('activateListing', ['tenantId', 'principalId', 'companyId']),
-        buildScenarioRouteStep('generateMatchCandidates', ['tenantId', 'principalId', 'companyId']),
+        buildScenarioRouteStep('createListing', ['tenantId', 'principalId', 'companyId'], {
+          stepName: 'user-create-listing',
+          actorRole: 'user',
+        }),
+        buildScenarioRouteStep('activateListing', ['tenantId', 'principalId', 'companyId'], {
+          stepName: 'user-activate-listing',
+          actorRole: 'user',
+          progressionCheckpoint: {
+            checkpointName: 'verify-activation-before-match-generation',
+            verifyRecordGroups: ['listings'],
+            guidance: 'confirm the activated listing id remains the record carried into match generation on the runtime-generated lane',
+          },
+        }),
+        buildScenarioRouteStep('generateMatchCandidates', ['tenantId', 'principalId', 'companyId'], {
+          stepName: 'user-generate-match-candidates',
+          actorRole: 'user',
+          progressionCheckpoint: {
+            checkpointName: 'verify-match-id-before-connection-approval',
+            verifyRecordGroups: ['matches'],
+            guidance: 'capture the returned match id before continuing into downstream connection approval on the runtime-generated lane',
+          },
+        }),
       ],
       closureGuidance: {
         lane: 'runtime-generated',

@@ -31,6 +31,7 @@ import {
   listCorePayloadContractMatrixEntries,
 } from './core-payload-contract-matrix.js';
 import { buildExecutionGuidanceEntries } from './execution-guidance.js';
+import { buildAgentLifecycleGuidance } from './task-plane.js';
 
 const runtimeCapabilitySnapshotSchemaVersion = '2026-03-27';
 const localRuntimeCapabilitySnapshotVersion = 'local-runtime-capability-snapshot';
@@ -240,6 +241,7 @@ export function buildCapabilityPlaneLocalRuntimeSnapshot(
       serverProvidedCapabilitiesKnown: false,
     },
     executionGuidance: buildExecutionGuidanceEntries() as BidviaExecutionGuidanceEntry[],
+    agentLifecycleGuidance: buildAgentLifecycleGuidance(),
     planeAdoption: listCorePlaneAdoptionStatuses(),
     stage3ReleaseGate: buildStage3ReleaseGate(),
   };

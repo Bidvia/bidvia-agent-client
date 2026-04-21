@@ -63,8 +63,19 @@ export function buildConnectionApprovalScenarioPlan(
       workflowIds: input.workflowIds,
       workflowStage: buildWorkflowStageReference(input.workflowIds, 'governed-run-execution'),
       expectedRouteChain: [
-        buildScenarioRouteStep('createConnectionRequest', ['tenantId', 'principalId', 'companyId']),
-        buildScenarioRouteStep('approveConnectionRequest', ['tenantId', 'principalId', 'companyId']),
+        buildScenarioRouteStep('createConnectionRequest', ['tenantId', 'principalId', 'companyId'], {
+          stepName: 'user-submit-connection-request',
+          actorRole: 'user',
+        }),
+        buildScenarioRouteStep('approveConnectionRequest', ['tenantId', 'principalId', 'companyId'], {
+          stepName: 'admin-approve-connection-request',
+          actorRole: 'admin',
+          progressionCheckpoint: {
+            checkpointName: 'verify-approval-request-before-opportunity-handoff',
+            verifyRecordGroups: ['approvals'],
+            guidance: 'confirm the approval request id is the one you hand to downstream opportunity and package steps',
+          },
+        }),
       ],
       recordIds: {
         matches: [sourceMatchId],

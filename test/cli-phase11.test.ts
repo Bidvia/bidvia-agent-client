@@ -25,6 +25,9 @@ test('multi-business-chain-verification-wave-preview prints coordinator preview 
     suppliedKnownIds: {
       opportunityId: 'opportunity-cli-1',
     },
+    handoffStepName: 'operator-confirm-opportunity-handoff',
+    handoffOwnerRole: 'operator',
+    checkpointGuidance: 'verify the approvalRequestId and caller-supplied opportunityId before exporting the review-safe package',
   });
 });
 

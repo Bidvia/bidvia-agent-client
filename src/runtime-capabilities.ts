@@ -10,6 +10,7 @@ import {
   buildLocalRouteCapabilityCatalog,
 } from './discovery-catalog.js';
 import { buildExecutionGuidanceEntries } from './execution-guidance.js';
+import { buildAgentLifecycleGuidance } from './task-plane.js';
 
 export function buildLocalRuntimeCapabilitySnapshot(
   options: ResolveBidviaBaseUrlOptions = {},
@@ -26,5 +27,6 @@ export function buildLocalRuntimeCapabilitySnapshot(
     planeAdoption,
     stage3ReleaseGate,
     executionGuidance: buildExecutionGuidanceEntries(),
+    agentLifecycleGuidance: buildAgentLifecycleGuidance(),
   };
 }

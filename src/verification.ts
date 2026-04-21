@@ -28,6 +28,17 @@ function cloneRouteStep(routeStep: BidviaScenarioRouteStep): BidviaScenarioRoute
   return {
     routeKey: routeStep.routeKey,
     requiredContext: [...routeStep.requiredContext],
+    ...(routeStep.stepName === undefined ? {} : { stepName: routeStep.stepName }),
+    ...(routeStep.actorRole === undefined ? {} : { actorRole: routeStep.actorRole }),
+    ...(routeStep.progressionCheckpoint === undefined
+      ? {}
+      : {
+        progressionCheckpoint: {
+          checkpointName: routeStep.progressionCheckpoint.checkpointName,
+          verifyRecordGroups: [...routeStep.progressionCheckpoint.verifyRecordGroups],
+          guidance: routeStep.progressionCheckpoint.guidance,
+        },
+      }),
   };
 }
 
@@ -37,6 +48,10 @@ function cloneRouteChain(routeChain: BidviaScenarioRouteStep[]): BidviaScenarioR
 
 function freezeRouteStep(routeStep: BidviaScenarioRouteStep): BidviaScenarioRouteStep {
   Object.freeze(routeStep.requiredContext);
+  if (routeStep.progressionCheckpoint) {
+    Object.freeze(routeStep.progressionCheckpoint.verifyRecordGroups);
+    Object.freeze(routeStep.progressionCheckpoint);
+  }
   return Object.freeze(routeStep);
 }
 
@@ -71,11 +86,19 @@ function freezeReviewPacketVerificationDetail(
   Object.freeze(detail.localDerivedExplanation);
   Object.freeze(detail.serverOwnedFacts);
   Object.freeze(detail.dependencyGatedSeams);
+  Object.freeze(detail.roleSplit.user);
+  Object.freeze(detail.roleSplit.operator);
+  Object.freeze(detail.roleSplit.admin);
+  Object.freeze(detail.roleSplit);
   return Object.freeze(detail);
 }
 
 function freezeReviewPacketRouteDetail(detail: BidviaReviewPacketRouteDetail): BidviaReviewPacketRouteDetail {
   Object.freeze(detail.requiredContext);
+  if (detail.progressionCheckpoint) {
+    Object.freeze(detail.progressionCheckpoint.verifyRecordGroups);
+    Object.freeze(detail.progressionCheckpoint);
+  }
   return Object.freeze(detail);
 }
 
@@ -101,7 +124,15 @@ function freezeReviewPacket(packet: BidviaReviewPacket): BidviaReviewPacket {
 function sameRouteStep(expectedStep: BidviaScenarioRouteStep, completedRouteStep: BidviaScenarioRouteStep): boolean {
   return expectedStep.routeKey === completedRouteStep.routeKey
     && expectedStep.requiredContext.length === completedRouteStep.requiredContext.length
-    && expectedStep.requiredContext.every((contextKey, index) => contextKey === completedRouteStep.requiredContext[index]);
+    && expectedStep.requiredContext.every((contextKey, index) => contextKey === completedRouteStep.requiredContext[index])
+    && expectedStep.stepName === completedRouteStep.stepName
+    && expectedStep.actorRole === completedRouteStep.actorRole
+    && expectedStep.progressionCheckpoint?.checkpointName === completedRouteStep.progressionCheckpoint?.checkpointName
+    && expectedStep.progressionCheckpoint?.guidance === completedRouteStep.progressionCheckpoint?.guidance
+    && sameStringArray(
+      expectedStep.progressionCheckpoint?.verifyRecordGroups ?? [],
+      completedRouteStep.progressionCheckpoint?.verifyRecordGroups ?? [],
+    );
 }
 
 function sameStringArray(left: string[], right: string[]): boolean {
@@ -187,9 +218,25 @@ function buildRoutesSection(
     title: 'Route coverage',
     entries: expectedRouteChain.map((routeStep, index) => {
       const status = completedRouteKeys.has(routeStep.routeKey) ? 'completed' : 'pending-review';
-      return `${status}:${index + 1}/${totalRouteCount}:${routeStep.routeKey}:requires=${routeStep.requiredContext.join('|')}`;
+      const stepName = routeStep.stepName ?? routeStep.routeKey;
+      const actorRole = routeStep.actorRole ?? 'user';
+      return `${status}:${index + 1}/${totalRouteCount}:${routeStep.routeKey}:${stepName}:actor=${actorRole}:requires=${routeStep.requiredContext.join('|')}`;
     }),
   };
+}
+
+function buildRoleSplit(
+  expectedRouteChain: BidviaScenarioRouteStep[],
+): Record<'user' | 'operator' | 'admin', string[]> {
+  return expectedRouteChain.reduce<Record<'user' | 'operator' | 'admin', string[]>>((roleSplit, routeStep) => {
+    const actorRole = routeStep.actorRole ?? 'user';
+    roleSplit[actorRole].push(routeStep.stepName ?? routeStep.routeKey);
+    return roleSplit;
+  }, {
+    user: [],
+    operator: [],
+    admin: [],
+  });
 }
 
 function buildVerificationSection(params: {
@@ -266,8 +313,19 @@ function buildRouteDetails(
   return expectedRouteChain.map((routeStep, index) => ({
     sequence: index + 1,
     routeKey: routeStep.routeKey,
+    ...(routeStep.stepName === undefined ? {} : { stepName: routeStep.stepName }),
+    ...(routeStep.actorRole === undefined ? {} : { actorRole: routeStep.actorRole }),
     requiredContext: [...routeStep.requiredContext],
     completed: index < completedRouteChain.length,
+    ...(routeStep.progressionCheckpoint === undefined
+      ? {}
+      : {
+        progressionCheckpoint: {
+          checkpointName: routeStep.progressionCheckpoint.checkpointName,
+          verifyRecordGroups: [...routeStep.progressionCheckpoint.verifyRecordGroups],
+          guidance: routeStep.progressionCheckpoint.guidance,
+        },
+      }),
   }));
 }
 
@@ -348,6 +406,7 @@ function buildReviewPacketVerificationDetail(
       'adjudication-outcome-included:false',
       'core-truth-closure:deferred',
     ],
+    roleSplit: buildRoleSplit(expectedRouteChain),
   };
 }
 

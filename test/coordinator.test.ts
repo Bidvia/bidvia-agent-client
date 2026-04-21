@@ -71,10 +71,10 @@ test('buildMultiBusinessChainCoordinatorPlan composes shipped slice plans with a
         sourceMatchId: 'match-1',
         requesterActorId: 'actor-1',
         requesterCompanyId: 'company-1',
-        riskTier: 'medium',
+        riskTier: 'HIGH',
         policyVersion: 'policy-v1',
         approvalMatrixVersion: 'matrix-v1',
-        actionType: 'buyer_contact_request',
+        actionType: 'CONTACT_SHARE',
         now: '2026-03-27T10:03:00Z',
       },
       approveConnectionRequest: {
@@ -173,7 +173,26 @@ test('buildMultiBusinessChainCoordinatorPlan composes shipped slice plans with a
     suppliedKnownIds: {
       opportunityId: 'opportunity-1',
     },
+    handoffStepName: 'operator-confirm-opportunity-handoff',
+    handoffOwnerRole: 'operator',
+    checkpointGuidance: 'verify the approvalRequestId and caller-supplied opportunityId before exporting the review-safe package',
   });
+  assert.deepEqual(
+    plan.opportunityPackageHandoff.envelope.expectedRouteChain.map((step) => ({
+      routeKey: step.routeKey,
+      stepName: step.stepName,
+      actorRole: step.actorRole,
+      checkpointName: step.progressionCheckpoint?.checkpointName ?? null,
+    })),
+    [
+      {
+        routeKey: 'exportOpportunityPackage',
+        stepName: 'operator-export-opportunity-package',
+        actorRole: 'operator',
+        checkpointName: 'verify-package-export-record-before-commercial-action',
+      },
+    ],
+  );
   assert.equal(plan.opportunityPackageHandoff.exportOpportunityPackageInput.opportunityId, 'opportunity-1');
   assert.equal(plan.commercialActionContinuation?.requestCommercialActionApprovalInput.approvalRequestId, 'approval-1');
 });
@@ -493,10 +512,10 @@ test('runMultiBusinessChainCoordinatorPreHandoff surfaces pre-handoff runner fai
         sourceMatchId: 'match-1',
         requesterActorId: 'actor-1',
         requesterCompanyId: 'company-1',
-        riskTier: 'medium',
+        riskTier: 'HIGH',
         policyVersion: 'policy-v1',
         approvalMatrixVersion: 'matrix-v1',
-        actionType: 'buyer_contact_request',
+        actionType: 'CONTACT_SHARE',
         now: '2026-03-27T10:03:00Z',
       },
       approveConnectionRequest: {
@@ -608,10 +627,10 @@ test('runMultiBusinessChainCoordinatorPostHandoff executes package handoff then 
         sourceMatchId: 'match-1',
         requesterActorId: 'actor-1',
         requesterCompanyId: 'company-1',
-        riskTier: 'medium',
+        riskTier: 'HIGH',
         policyVersion: 'policy-v1',
         approvalMatrixVersion: 'matrix-v1',
-        actionType: 'buyer_contact_request',
+        actionType: 'CONTACT_SHARE',
         now: '2026-03-27T10:03:00Z',
       },
       approveConnectionRequest: {
@@ -761,10 +780,10 @@ test('runMultiBusinessChainCoordinatorPostHandoff surfaces package handoff failu
         sourceMatchId: 'match-1',
         requesterActorId: 'actor-1',
         requesterCompanyId: 'company-1',
-        riskTier: 'medium',
+        riskTier: 'HIGH',
         policyVersion: 'policy-v1',
         approvalMatrixVersion: 'matrix-v1',
-        actionType: 'buyer_contact_request',
+        actionType: 'CONTACT_SHARE',
         now: '2026-03-27T10:03:00Z',
       },
       approveConnectionRequest: {

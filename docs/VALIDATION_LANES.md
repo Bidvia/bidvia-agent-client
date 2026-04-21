@@ -54,6 +54,8 @@ A claimed external agent may still be blocked by readiness or authority gates ev
 - a proof-lane/admin-session validation lane
 - or an unresolved Core-owned progression gap
 
+Keep the concrete progression explicit on the ordinary surfaced lane: self-service patch -> dispatch-authority request -> operator/admin review closure -> external binding check -> post-step verification of task-write-ready and dispatch-eligibility truth. The external claimed agent owns the self-service patch and bounded dispatch-authority request, operator/admin owns review closure, and the current repo truth only proves the account-agent binding read surface for visibility and does not prove a binding-completion write or closure helper, so that external binding step remains fail-closed and unresolved when runnable truth still depends on unresolved Core-owned binding completion. If the verification reads still do not confirm runnable truth, remain fail-closed.
+
 ## 5. How to choose a lane
 
 - Use **default local docker** to answer: “Does the real surfaced runtime behavior work with normal user-facing flows?”

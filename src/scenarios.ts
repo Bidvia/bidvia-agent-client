@@ -1,4 +1,6 @@
 import type {
+  BidviaScenarioActorRole,
+  BidviaScenarioProgressionCheckpoint,
   BidviaLocalJourneyStageLabel,
   BidviaScenarioContextKey,
   BidviaScenarioEnvelope,
@@ -11,11 +13,21 @@ export interface BidviaScenarioEnvelopeInput extends Omit<BidviaScenarioEnvelope
   workflowStage?: BidviaWorkflowStageReference;
 }
 
+export interface BidviaScenarioRouteStepGuidance {
+  stepName?: string;
+  actorRole?: BidviaScenarioActorRole;
+  progressionCheckpoint?: BidviaScenarioProgressionCheckpoint;
+}
+
 function uniqueValues<T>(values: T[]): T[] {
   return Array.from(new Set(values));
 }
 
-export function buildScenarioRouteStep(routeKey: string, requiredContext: BidviaScenarioContextKey[]): BidviaScenarioRouteStep {
+export function buildScenarioRouteStep(
+  routeKey: string,
+  requiredContext: BidviaScenarioContextKey[],
+  guidance: BidviaScenarioRouteStepGuidance = {},
+): BidviaScenarioRouteStep {
   const normalizedRouteKey = routeKey.trim();
   if (!normalizedRouteKey) {
     throw new Error('routeKey is required');
@@ -24,6 +36,17 @@ export function buildScenarioRouteStep(routeKey: string, requiredContext: Bidvia
   return {
     routeKey: normalizedRouteKey,
     requiredContext: uniqueValues(requiredContext),
+    ...(guidance.stepName === undefined ? {} : { stepName: guidance.stepName.trim() }),
+    ...(guidance.actorRole === undefined ? {} : { actorRole: guidance.actorRole }),
+    ...(guidance.progressionCheckpoint === undefined
+      ? {}
+      : {
+        progressionCheckpoint: {
+          checkpointName: guidance.progressionCheckpoint.checkpointName.trim(),
+          verifyRecordGroups: uniqueValues(guidance.progressionCheckpoint.verifyRecordGroups),
+          guidance: guidance.progressionCheckpoint.guidance.trim(),
+        },
+      }),
   };
 }
 

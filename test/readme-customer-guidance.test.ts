@@ -74,6 +74,11 @@ test('README presents @bidvia/client as a customer-facing V1 entrypoint', () => 
   assert.match(readme, /fixed proof ids are not assumed/i);
   assert.match(readme, /self-generated runtime data is the preferred path/i);
   assert.match(readme, /task-write-ready progression/i);
+  assert.match(readme, /self-service patch/i);
+  assert.match(readme, /dispatch-authority request/i);
+  assert.match(readme, /operator\/admin review closure/i);
+  assert.match(readme, /external binding/i);
+  assert.match(readme, /task-write-ready and dispatch-eligibility truth/i);
   assert.match(readme, /downstream contract center/i);
   assert.match(readme, /compatibility-only/i);
   assert.match(readme, /hosted runtime/i);

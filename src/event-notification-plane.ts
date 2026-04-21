@@ -2,6 +2,7 @@ import type {
   BidviaCorePlaneAdoptionStatus,
   BidviaEventNotificationPlaneCapabilityMode,
   BidviaEventNotificationPlaneExecutionRoute,
+  BidviaNotificationAcknowledgementPathGuidance,
   BidviaNotificationAcknowledgementWriteInput,
   BidviaNotificationDeliveryWriteInput,
   BidviaNotificationExpirationWriteInput,
@@ -111,6 +112,17 @@ export function buildEventNotificationPlaneView(): BidviaEventNotificationPlaneV
         'Local hooks and journaling remain derived layers, not canonical notification truth.',
       ],
     },
+    acknowledgementPath: buildNotificationAcknowledgementPathGuidance(),
+  };
+}
+
+export function buildNotificationAcknowledgementPathGuidance(): BidviaNotificationAcknowledgementPathGuidance {
+  return {
+    status: 'client-side-fixed',
+    helperKey: 'acknowledgeNotification',
+    routePathTemplate: '/runtime/account/agents/:agent_registration_id/notifications/:notification_id/acknowledgements',
+    requiredContext: ['tenantId', 'principalId', 'companyId'],
+    guidance: 'Current repo proof shows the client uses the canonical account-scoped acknowledgement route and frozen payload fields when the required operator-company context is present. Remaining delivery semantics stay upstream/runtime-owned.',
   };
 }
 

@@ -62,7 +62,15 @@ export function buildOpportunityPackageHandoffPlan(
       workflowIds: input.workflowIds,
       workflowStage: buildWorkflowStageReference(input.workflowIds, 'governed-run-execution'),
       expectedRouteChain: [
-        buildScenarioRouteStep('exportOpportunityPackage', ['tenantId', 'principalId', 'companyId']),
+        buildScenarioRouteStep('exportOpportunityPackage', ['tenantId', 'principalId', 'companyId'], {
+          stepName: 'operator-export-opportunity-package',
+          actorRole: 'operator',
+          progressionCheckpoint: {
+            checkpointName: 'verify-package-export-record-before-commercial-action',
+            verifyRecordGroups: ['opportunities'],
+            guidance: 'confirm the caller-supplied opportunity id is the record exported before moving into downstream commercial action steps',
+          },
+        }),
       ],
       recordIds: {
         opportunities: [opportunityId],

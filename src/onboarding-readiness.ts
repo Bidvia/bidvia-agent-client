@@ -4,7 +4,9 @@ import {
 } from './onboarding-journey.js';
 import { buildIdentitySessionPlaneView } from './identity-session-plane.js';
 import { buildLocalRuntimeCapabilitySnapshot } from './runtime-capabilities.js';
+import { buildExecutionGuidanceEntries } from './execution-guidance.js';
 import type {
+  BidviaExecutionGuidanceCheckpoint,
   BidviaRouteCapability,
   BidviaScenarioContextKey,
 } from './contracts.js';
@@ -15,6 +17,67 @@ interface BidviaGuidedRouteStep {
   accessContextFamily: BidviaRouteCapability['accessContextFamily'];
   contextSemantic: BidviaRouteCapability['contextSemantic'];
   requiredContext: BidviaScenarioContextKey[];
+}
+
+interface BidviaGuidedProgressionCheckpoint extends BidviaExecutionGuidanceCheckpoint {
+  surfacedSteps: BidviaGuidedRouteStep[];
+}
+
+function requireTaskWriteReadyProgression() {
+  const progression = buildExecutionGuidanceEntries().find((entry) => entry.guidanceKey === 'task-write-ready');
+  if (!progression || !progression.checkpoints) {
+    throw new Error('Missing task-write-ready execution guidance');
+  }
+
+  const checkpoints: BidviaGuidedProgressionCheckpoint[] = progression.checkpoints.map((checkpoint) => {
+    switch (checkpoint.stepKey) {
+      case 'self-service-patch':
+        return {
+          ...checkpoint,
+          surfacedSteps: [
+            requireGuidedRouteStep('getAgentReadiness'),
+            requireGuidedRouteStep('getAccountMe'),
+            requireGuidedRouteStep('selectOrg'),
+            requireGuidedRouteStep('patchAgentSelfService'),
+          ],
+        };
+      case 'dispatch-authority-request':
+        return {
+          ...checkpoint,
+          surfacedSteps: [
+            requireGuidedRouteStep('getAccountAgentDispatchAuthority'),
+            requireGuidedRouteStep('createAccountAgentDispatchAuthorityRequest'),
+          ],
+        };
+      case 'operator-review-closure':
+        return {
+          ...checkpoint,
+          surfacedSteps: [
+            requireGuidedRouteStep('getAccountAgentDispatchAuthority'),
+          ],
+        };
+      case 'external-binding-completion-unresolved':
+        return {
+          ...checkpoint,
+          surfacedSteps: [
+            requireGuidedRouteStep('listAccountAgentBindings'),
+          ],
+        };
+      case 'post-step-truth-check':
+        return {
+          ...checkpoint,
+          surfacedSteps: [
+            requireGuidedRouteStep('getAgentReadiness'),
+            requireGuidedRouteStep('getAccountAgentDispatchAuthority'),
+          ],
+        };
+    }
+  });
+
+  return {
+    ...progression,
+    checkpoints,
+  };
 }
 
 function requireGuidedRouteStep(helperKey: string): BidviaGuidedRouteStep {
@@ -45,12 +108,6 @@ function buildPublicDefaults() {
 export function buildOnboardingReadiness() {
   const identitySessionPlane = buildIdentitySessionPlaneView();
   const journey = requireOnboardingJourneyDefinition('public-first-onboarding');
-  const postClaimSupportSteps = [
-    requireGuidedRouteStep('getAgentReadiness'),
-    requireGuidedRouteStep('getAccountMe'),
-    requireGuidedRouteStep('selectOrg'),
-    requireGuidedRouteStep('patchAgentSelfService'),
-  ];
 
   return {
     defaults: buildPublicDefaults(),
@@ -64,7 +121,7 @@ export function buildOnboardingReadiness() {
     },
     postClaimSupport: {
       label: 'Governed-run support',
-      steps: postClaimSupportSteps,
+      progression: requireTaskWriteReadyProgression(),
     },
   };
 }

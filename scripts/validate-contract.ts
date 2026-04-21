@@ -608,6 +608,9 @@ async function main() {
     suppliedKnownIds: {
       opportunityId: 'opportunity-validate-1',
     },
+    handoffStepName: 'operator-confirm-opportunity-handoff',
+    handoffOwnerRole: 'operator',
+    checkpointGuidance: 'verify the approvalRequestId and caller-supplied opportunityId before exporting the review-safe package',
   });
   assert.equal(coordinatorPreHandoff.industryUniverse.completedRouteChain.length, 3);
   assert.equal(coordinatorPreHandoff.connectionApproval.completedRouteChain.length, 2);
@@ -746,7 +749,7 @@ async function main() {
       sectionKey: 'routes',
       title: 'Route coverage',
       entries: industryUniversePlan.envelope.expectedRouteChain.map(
-        (routeStep, index) => `completed:${index + 1}/${industryUniversePlan.envelope.expectedRouteChain.length}:${routeStep.routeKey}:requires=${routeStep.requiredContext.join('|')}`,
+        (routeStep, index) => `completed:${index + 1}/${industryUniversePlan.envelope.expectedRouteChain.length}:${routeStep.routeKey}:${routeStep.stepName ?? routeStep.routeKey}:actor=${routeStep.actorRole ?? 'user'}:requires=${routeStep.requiredContext.join('|')}`,
       ),
     },
     {

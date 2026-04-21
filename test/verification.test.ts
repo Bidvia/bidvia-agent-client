@@ -72,11 +72,22 @@ test('review packet contracts represent reviewer-ready summary and bounded statu
           'adjudication-outcome-included:false',
           'core-truth-closure:deferred',
         ],
+        roleSplit: {
+          user: [
+            'user-create-listing',
+            'user-activate-listing',
+            'user-generate-match-candidates',
+          ],
+          operator: [],
+          admin: [],
+        },
       },
       routeDetails: [
         {
           sequence: 1,
           routeKey: 'createListing',
+          stepName: 'user-create-listing',
+          actorRole: 'user',
           requiredContext: ['tenantId', 'principalId', 'companyId'],
           completed: true,
         },
@@ -109,9 +120,9 @@ test('review packet contracts represent reviewer-ready summary and bounded statu
         sectionKey: 'routes',
         title: 'Route coverage',
         entries: [
-          'completed:1/3:createListing:requires=tenantId|principalId|companyId',
-          'pending-review:2/3:activateListing:requires=tenantId|principalId|companyId',
-          'pending-review:3/3:generateMatchCandidates:requires=tenantId|principalId|companyId',
+          'completed:1/3:createListing:user-create-listing:actor=user:requires=tenantId|principalId|companyId',
+          'pending-review:2/3:activateListing:user-activate-listing:actor=user:requires=tenantId|principalId|companyId',
+          'pending-review:3/3:generateMatchCandidates:user-generate-match-candidates:actor=user:requires=tenantId|principalId|companyId',
         ],
       },
       {
@@ -171,6 +182,15 @@ test('review packet contracts represent reviewer-ready summary and bounded statu
     'adjudication-outcome-included:false',
     'core-truth-closure:deferred',
   ]);
+  assert.deepEqual(packet.details.verification.roleSplit, {
+    user: [
+      'user-create-listing',
+      'user-activate-listing',
+      'user-generate-match-candidates',
+    ],
+    operator: [],
+    admin: [],
+  });
   assert.deepEqual(packet.details.verification.pendingRouteKeys, ['activateListing', 'generateMatchCandidates']);
 });
 
@@ -264,8 +284,32 @@ test('scenario verification bundle carries expected and completed route chains',
   assert.equal(bundle.scenarioFamily, 'industry-universe');
   assert.equal(bundle.verificationMode, 'review-safe');
   assert.deepEqual(
-    bundle.expectedRouteChain.map((step) => step.routeKey),
-    ['createListing', 'activateListing', 'generateMatchCandidates'],
+    bundle.expectedRouteChain.map((step) => ({
+      routeKey: step.routeKey,
+      stepName: step.stepName,
+      actorRole: step.actorRole,
+      verifyRecordGroups: step.progressionCheckpoint?.verifyRecordGroups ?? null,
+    })),
+    [
+      {
+        routeKey: 'createListing',
+        stepName: 'user-create-listing',
+        actorRole: 'user',
+        verifyRecordGroups: null,
+      },
+      {
+        routeKey: 'activateListing',
+        stepName: 'user-activate-listing',
+        actorRole: 'user',
+        verifyRecordGroups: ['listings'],
+      },
+      {
+        routeKey: 'generateMatchCandidates',
+        stepName: 'user-generate-match-candidates',
+        actorRole: 'user',
+        verifyRecordGroups: ['matches'],
+      },
+    ],
   );
   assert.deepEqual(
     bundle.completedRouteChain.map((step) => step.routeKey),
@@ -569,25 +613,50 @@ test('buildReviewPacket derives reviewer-ready sections and complete status from
         'adjudication-outcome-included:false',
         'core-truth-closure:deferred',
       ],
+      roleSplit: {
+        user: [
+          'user-create-listing',
+          'user-activate-listing',
+          'user-generate-match-candidates',
+        ],
+        operator: [],
+        admin: [],
+      },
     },
     routeDetails: [
       {
         sequence: 1,
         routeKey: 'createListing',
+        stepName: 'user-create-listing',
+        actorRole: 'user',
         requiredContext: ['tenantId', 'principalId', 'companyId'],
         completed: true,
       },
       {
         sequence: 2,
         routeKey: 'activateListing',
+        stepName: 'user-activate-listing',
+        actorRole: 'user',
         requiredContext: ['tenantId', 'principalId', 'companyId'],
         completed: true,
+        progressionCheckpoint: {
+          checkpointName: 'verify-activation-before-match-generation',
+          verifyRecordGroups: ['listings'],
+          guidance: 'confirm the activated listing id remains the record carried into match generation on the runtime-generated lane',
+        },
       },
       {
         sequence: 3,
         routeKey: 'generateMatchCandidates',
+        stepName: 'user-generate-match-candidates',
+        actorRole: 'user',
         requiredContext: ['tenantId', 'principalId', 'companyId'],
         completed: true,
+        progressionCheckpoint: {
+          checkpointName: 'verify-match-id-before-connection-approval',
+          verifyRecordGroups: ['matches'],
+          guidance: 'capture the returned match id before continuing into downstream connection approval on the runtime-generated lane',
+        },
       },
     ],
     recordDetails: [
@@ -619,15 +688,15 @@ test('buildReviewPacket derives reviewer-ready sections and complete status from
       title: 'Traceability refs',
       entries: ['trace-1', 'wf-1'],
     },
-    {
-      sectionKey: 'routes',
-      title: 'Route coverage',
-      entries: [
-        'completed:1/3:createListing:requires=tenantId|principalId|companyId',
-        'completed:2/3:activateListing:requires=tenantId|principalId|companyId',
-        'completed:3/3:generateMatchCandidates:requires=tenantId|principalId|companyId',
-      ],
-    },
+      {
+        sectionKey: 'routes',
+        title: 'Route coverage',
+        entries: [
+          'completed:1/3:createListing:user-create-listing:actor=user:requires=tenantId|principalId|companyId',
+          'completed:2/3:activateListing:user-activate-listing:actor=user:requires=tenantId|principalId|companyId',
+          'completed:3/3:generateMatchCandidates:user-generate-match-candidates:actor=user:requires=tenantId|principalId|companyId',
+        ],
+      },
     {
       sectionKey: 'verification',
       title: 'Verification facts',
@@ -661,6 +730,127 @@ test('buildReviewPacket derives reviewer-ready sections and complete status from
       ],
     },
   ]);
+});
+
+test('buildReviewPacket rejects expected route metadata drift between scenario and verification bundle', () => {
+  const plan = buildIndustryUniverseScenarioPlan({
+    scenarioId: 'scenario-industry-universe-1',
+    scenarioLabel: 'industry-universe-soda-ash-light',
+    sourceRefs: ['source://market/soda-ash-light'],
+    evidenceRefs: ['evidence://supply/soda-ash-light'],
+    traceIds: ['trace-1'],
+    workflowIds: ['wf-1'],
+    createListing: {
+      listingId: 'listing-1',
+      listingType: 'supply',
+      category: 'basic inorganic industrial chemical',
+      sku: 'sodium-carbonate-soda-ash-light',
+      quantityValue: '15',
+      quantityUnit: 'tons',
+      regionSummary: 'China -> Vietnam',
+      verificationStatus: 'verified',
+      freshnessTs: '2026-03-25T20:20:00Z',
+      traceId: 'trace-1',
+      idempotencyKey: 'listing-1',
+      now: '2026-03-25T20:20:00Z',
+    },
+    activateListing: {
+      now: '2026-03-25T20:21:00Z',
+    },
+    generateMatchCandidates: {
+      upstreamDecision: 'READY_FOR_ROUTING',
+      requiredEvidenceLevel: 1,
+      detectedEvidenceLevel: 1,
+      workflowRunId: 'wf-1',
+      triggerEventId: 'evt-1',
+      topN: 10,
+      now: '2026-03-25T20:22:00Z',
+    },
+  });
+
+  const bundle = buildScenarioVerificationBundle({
+    scenario: plan.envelope,
+    verificationMode: 'review-safe',
+  });
+  const driftedBundle = {
+    ...bundle,
+    expectedRouteChain: bundle.expectedRouteChain.map((step, index) => index === 1
+      ? {
+        ...step,
+        stepName: 'drifted-step-name',
+      }
+      : step),
+  };
+
+  assert.throws(
+    () => buildReviewPacket({
+      scenario: plan.envelope,
+      bundle: driftedBundle,
+    }),
+    /scenario and verification bundle facts must match/,
+  );
+});
+
+test('buildReviewPacket rejects checkpoint metadata drift between scenario and verification bundle', () => {
+  const plan = buildIndustryUniverseScenarioPlan({
+    scenarioId: 'scenario-industry-universe-1',
+    scenarioLabel: 'industry-universe-soda-ash-light',
+    sourceRefs: ['source://market/soda-ash-light'],
+    evidenceRefs: ['evidence://supply/soda-ash-light'],
+    traceIds: ['trace-1'],
+    workflowIds: ['wf-1'],
+    createListing: {
+      listingId: 'listing-1',
+      listingType: 'supply',
+      category: 'basic inorganic industrial chemical',
+      sku: 'sodium-carbonate-soda-ash-light',
+      quantityValue: '15',
+      quantityUnit: 'tons',
+      regionSummary: 'China -> Vietnam',
+      verificationStatus: 'verified',
+      freshnessTs: '2026-03-25T20:20:00Z',
+      traceId: 'trace-1',
+      idempotencyKey: 'listing-1',
+      now: '2026-03-25T20:20:00Z',
+    },
+    activateListing: {
+      now: '2026-03-25T20:21:00Z',
+    },
+    generateMatchCandidates: {
+      upstreamDecision: 'READY_FOR_ROUTING',
+      requiredEvidenceLevel: 1,
+      detectedEvidenceLevel: 1,
+      workflowRunId: 'wf-1',
+      triggerEventId: 'evt-1',
+      topN: 10,
+      now: '2026-03-25T20:22:00Z',
+    },
+  });
+
+  const bundle = buildScenarioVerificationBundle({
+    scenario: plan.envelope,
+    verificationMode: 'review-safe',
+  });
+  const driftedBundle = {
+    ...bundle,
+    expectedRouteChain: bundle.expectedRouteChain.map((step, index) => index === 2
+      ? {
+        ...step,
+        progressionCheckpoint: {
+          ...step.progressionCheckpoint!,
+          verifyRecordGroups: ['listings'] as Array<'listings'>,
+        },
+      }
+      : step),
+  };
+
+  assert.throws(
+    () => buildReviewPacket({
+      scenario: plan.envelope,
+      bundle: driftedBundle,
+    }),
+    /scenario and verification bundle facts must match/,
+  );
 });
 
 test('buildReviewPacket derives partial and pending-review only from completed route counts', () => {
@@ -784,9 +974,9 @@ test('buildReviewPacket exposes richer route-chain and record-group readback fro
   const recordsSection = packet.sections.find((section) => section.sectionKey === 'records');
 
   assert.deepEqual(routesSection?.entries, [
-    'completed:1/3:createListing:requires=tenantId|principalId|companyId',
-    'pending-review:2/3:activateListing:requires=tenantId|principalId|companyId',
-    'pending-review:3/3:generateMatchCandidates:requires=tenantId|principalId|companyId',
+    'completed:1/3:createListing:user-create-listing:actor=user:requires=tenantId|principalId|companyId',
+    'pending-review:2/3:activateListing:user-activate-listing:actor=user:requires=tenantId|principalId|companyId',
+    'pending-review:3/3:generateMatchCandidates:user-generate-match-candidates:actor=user:requires=tenantId|principalId|companyId',
   ]);
   assert.deepEqual(verificationSection?.entries, [
     'verification-mode:review-safe',

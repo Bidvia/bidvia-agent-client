@@ -70,6 +70,28 @@ test('connection scenario contract expresses createConnectionRequest then approv
     plan.envelope.expectedRouteChain.map((step) => step.routeKey),
     ['createConnectionRequest', 'approveConnectionRequest'],
   );
+  assert.deepEqual(
+    plan.envelope.expectedRouteChain.map((step) => ({
+      routeKey: step.routeKey,
+      stepName: step.stepName,
+      actorRole: step.actorRole,
+      checkpointName: step.progressionCheckpoint?.checkpointName ?? null,
+    })),
+    [
+      {
+        routeKey: 'createConnectionRequest',
+        stepName: 'user-submit-connection-request',
+        actorRole: 'user',
+        checkpointName: null,
+      },
+      {
+        routeKey: 'approveConnectionRequest',
+        stepName: 'admin-approve-connection-request',
+        actorRole: 'admin',
+        checkpointName: 'verify-approval-request-before-opportunity-handoff',
+      },
+    ],
+  );
   assert.deepEqual(plan.envelope.workflowStage, {
     workflowIds: ['wf-1'],
     localStageLabel: 'governed-run-execution',
