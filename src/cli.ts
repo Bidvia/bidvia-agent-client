@@ -1527,6 +1527,20 @@ function buildIdentitySessionExecutionContext(
   };
 }
 
+function buildTruthFetchExecutionContext(
+  env: NodeJS.ProcessEnv,
+  localState: BidviaLocalOnboardingState | null,
+  effectiveContext: ReturnType<typeof buildEffectiveContextSnapshot>,
+) {
+  return {
+    tenantId: effectiveContext.tenantId.value ?? undefined,
+    principalId: effectiveContext.principalId.value ?? undefined,
+    companyId: effectiveContext.companyId.value ?? undefined,
+    registrationId: effectiveContext.registrationId.value ?? undefined,
+    sessionId: readEffectiveSessionId(env, localState),
+  };
+}
+
 function buildPersistedIdentitySessionState(
   command: BidviaCliIdentitySessionCommand,
   result: unknown,
@@ -2764,7 +2778,13 @@ export async function runCli(
   const truthFetchCommand = truthFetchCommandDefinitions[command as BidviaCliTruthFetchCommand];
   if (truthFetchCommand) {
     try {
-      const client = dependencies.createClient();
+      const env = dependencies.resolveProcessEnv();
+      const localStateResult = await readCliLocalOnboardingState(dependencies);
+      const effectiveContext = buildEffectiveContextSnapshot(env, localStateResult.state);
+      const client = dependencies.createClient(
+        env,
+        buildTruthFetchExecutionContext(env, localStateResult.state, effectiveContext),
+      );
       const result = await truthFetchCommand.run(client, parsedArgs);
       dependencies.printJson(result);
       return 0;

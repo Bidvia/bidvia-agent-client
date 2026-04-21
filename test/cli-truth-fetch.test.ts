@@ -437,6 +437,60 @@ test('runCli default client uses session and principal-governed env context for 
   ]);
 });
 
+test('runCli truth-fetch reads fall back to local onboarding state for effective session context', async () => {
+  const printed: unknown[] = [];
+  const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
+  const restoreEnv = [
+    setEnvVar('BIDVIA_BASE_URL', 'http://127.0.0.1:8787'),
+    setEnvVar('BIDVIA_SESSION_ID', undefined),
+    setEnvVar('BIDVIA_TENANT_ID', undefined),
+    setEnvVar('BIDVIA_PRINCIPAL_ID', undefined),
+  ];
+  const previousFetch = globalThis.fetch;
+
+  globalThis.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
+    calls.push({ input, init });
+
+    return new Response(JSON.stringify({ ok: true, path: String(input) }), {
+      status: 200,
+      headers: { 'content-type': 'application/json' },
+    });
+  };
+
+  try {
+    const exitCode = await runCli(['account-agent-bindings'], {
+      readLocalOnboardingState: async () => ({
+        tenantId: 'tenant-local',
+        principalId: 'principal-local',
+        sessionId: 'sess-local',
+        registrationId: 'areg-local',
+        createdAt: '2026-04-01T12:00:00.000Z',
+        updatedAt: '2026-04-01T12:00:00.000Z',
+      }),
+      printJson: (value) => {
+        printed.push(value);
+      },
+      printLine: () => {
+        throw new Error('truth-fetch reads should not print help');
+      },
+    });
+
+    assert.equal(exitCode, 0);
+  } finally {
+    globalThis.fetch = previousFetch;
+    for (const restore of restoreEnv.reverse()) {
+      restore();
+    }
+  }
+
+  assert.equal(calls.length, 1);
+  assert.equal(String(calls[0]?.input), 'http://127.0.0.1:8787/runtime/account/agent-bindings');
+  assert.equal((calls[0]?.init?.headers as Record<string, string>)['x-bidvia-session-id'], 'sess-local');
+  assert.deepEqual(printed, [
+    { ok: true, path: 'http://127.0.0.1:8787/runtime/account/agent-bindings' },
+  ]);
+});
+
 test('runCli execution commands pass company, principal-type, and authorized-role env values into BidviaClient', async () => {
   const printed: unknown[] = [];
   const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
