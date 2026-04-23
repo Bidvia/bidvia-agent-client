@@ -175,6 +175,28 @@ test('core payload contract matrix exposes one authoritative helper truth table 
   );
   assert.deepEqual(
     [
+      'getAccountAgentDispatchAuthority',
+      'createAccountAgentDispatchAuthorityRequest',
+    ].map((helperKey) => taskEntrySnapshot(helperKey)),
+    [
+      {
+        plane: 'identity-session',
+        helperKey: 'getAccountAgentDispatchAuthority',
+        helperState: 'packet-grounded-read',
+        routePathTemplate: '/runtime/account/agents/:agentId/dispatch-authority',
+        blockedBy: null,
+      },
+      {
+        plane: 'identity-session',
+        helperKey: 'createAccountAgentDispatchAuthorityRequest',
+        helperState: 'packet-grounded-execution',
+        routePathTemplate: '/runtime/account/agents/:agentId/dispatch-authority-requests',
+        blockedBy: null,
+      },
+    ],
+  );
+  assert.deepEqual(
+    [
       'listAgentRegistrations',
       'getAgentRegistration',
       'listAuthorityProfiles',

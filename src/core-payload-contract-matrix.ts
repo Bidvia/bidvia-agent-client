@@ -61,7 +61,7 @@ const corePayloadContractMatrixEntries: readonly BidviaCorePayloadContractMatrix
     helperKey: 'getAccountAgentDispatchAuthority',
     helperState: 'packet-grounded-read',
     stage3RouteModelWave: 'P0',
-    routePathTemplate: '/runtime/account/agents/:agent_registration_id/dispatch-authority',
+    routePathTemplate: '/runtime/account/agents/:agentId/dispatch-authority',
     blockedBy: null,
     notes: [
       'Account-agent dispatch-authority visibility is frozen as a bounded session-scoped read and does not imply permanent ineligibility.',
@@ -72,7 +72,7 @@ const corePayloadContractMatrixEntries: readonly BidviaCorePayloadContractMatrix
     helperKey: 'createAccountAgentDispatchAuthorityRequest',
     helperState: 'packet-grounded-execution',
     stage3RouteModelWave: 'P0',
-    routePathTemplate: '/runtime/account/agents/:agent_registration_id/dispatch-authority-requests',
+    routePathTemplate: '/runtime/account/agents/:agentId/dispatch-authority-requests',
     blockedBy: null,
     notes: [
       'Dispatch-authority review requests are bounded session-scoped writes distinct from active role-binding activation or operator execution flows.',

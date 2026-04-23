@@ -118,14 +118,14 @@ test('buildOnboardingReadiness keeps official onboarding focused on public provi
             surfacedSteps: [
               {
                 helperKey: 'getAccountAgentDispatchAuthority',
-                routePathTemplate: '/runtime/account/agents/:agent_registration_id/dispatch-authority',
+                routePathTemplate: '/runtime/account/agents/:agentId/dispatch-authority',
                 accessContextFamily: 'session',
                 contextSemantic: 'session',
                 requiredContext: ['tenantId', 'sessionId'],
               },
               {
                 helperKey: 'createAccountAgentDispatchAuthorityRequest',
-                routePathTemplate: '/runtime/account/agents/:agent_registration_id/dispatch-authority-requests',
+                routePathTemplate: '/runtime/account/agents/:agentId/dispatch-authority-requests',
                 accessContextFamily: 'session',
                 contextSemantic: 'session',
                 requiredContext: ['tenantId', 'sessionId'],
@@ -146,7 +146,7 @@ test('buildOnboardingReadiness keeps official onboarding focused on public provi
             surfacedSteps: [
               {
                 helperKey: 'getAccountAgentDispatchAuthority',
-                routePathTemplate: '/runtime/account/agents/:agent_registration_id/dispatch-authority',
+                routePathTemplate: '/runtime/account/agents/:agentId/dispatch-authority',
                 accessContextFamily: 'session',
                 contextSemantic: 'session',
                 requiredContext: ['tenantId', 'sessionId'],
@@ -195,7 +195,7 @@ test('buildOnboardingReadiness keeps official onboarding focused on public provi
               },
               {
                 helperKey: 'getAccountAgentDispatchAuthority',
-                routePathTemplate: '/runtime/account/agents/:agent_registration_id/dispatch-authority',
+                routePathTemplate: '/runtime/account/agents/:agentId/dispatch-authority',
                 accessContextFamily: 'session',
                 contextSemantic: 'session',
                 requiredContext: ['tenantId', 'sessionId'],

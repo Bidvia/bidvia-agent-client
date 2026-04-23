@@ -54,9 +54,9 @@ test('BidviaClient exposes the canonical dispatch-authority read and request hel
   assert.equal(typeof getAccountAgentDispatchAuthority, 'function');
   assert.equal(typeof createAccountAgentDispatchAuthorityRequest, 'function');
 
-  const dispatchAuthority = await Reflect.apply(getAccountAgentDispatchAuthority, client, ['areg-1']);
+  const dispatchAuthority = await Reflect.apply(getAccountAgentDispatchAuthority, client, ['agent-1']);
   const dispatchAuthorityRequest = await Reflect.apply(createAccountAgentDispatchAuthorityRequest, client, [
-    'areg-1',
+    'agent-1',
     {
       now: '2026-04-14T10:00:00Z',
     },
@@ -72,11 +72,11 @@ test('BidviaClient exposes the canonical dispatch-authority read and request hel
   assert.equal(calls.length, 2);
   assert.equal(
     String(calls[0]?.input),
-    'http://127.0.0.1:8787/runtime/account/agents/areg-1/dispatch-authority',
+    'http://127.0.0.1:8787/runtime/account/agents/agent-1/dispatch-authority',
   );
   assert.equal(
     String(calls[1]?.input),
-    'http://127.0.0.1:8787/runtime/account/agents/areg-1/dispatch-authority-requests',
+    'http://127.0.0.1:8787/runtime/account/agents/agent-1/dispatch-authority-requests',
   );
   assert.equal(calls[0]?.init?.method, 'GET');
   assert.equal(calls[1]?.init?.method, 'POST');

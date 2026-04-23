@@ -18,7 +18,7 @@ function createFetchStub(responseBody: unknown) {
 
 test('BidviaClient account truth-fetch reads use session-bound GET wrappers', async () => {
   const responseBody = {
-    agents: [{ agent_registration_id: 'areg-1' }],
+    agents: [{ agent_id: 'agent-1', agent_registration_id: 'areg-1' }],
     records: [{ record_id: 'record-1' }],
   };
   const { calls, fetchStub } = createFetchStub(responseBody);
@@ -32,7 +32,7 @@ test('BidviaClient account truth-fetch reads use session-bound GET wrappers', as
   });
 
   const accountAgents = await client.listAccountAgents();
-  const accountAgent = await client.getAccountAgent('areg-1');
+  const accountAgent = await client.getAccountAgent('agent-1');
   const accountAgentBindings = await client.listAccountAgentBindings();
   const accountRecords = await client.listAccountRecords();
 
@@ -42,7 +42,7 @@ test('BidviaClient account truth-fetch reads use session-bound GET wrappers', as
   assert.deepEqual(accountRecords, responseBody);
   assert.equal(calls.length, 4);
   assert.equal(String(calls[0]?.input), 'http://127.0.0.1:8787/runtime/account/agents');
-  assert.equal(String(calls[1]?.input), 'http://127.0.0.1:8787/runtime/account/agents/areg-1');
+  assert.equal(String(calls[1]?.input), 'http://127.0.0.1:8787/runtime/account/agents/agent-1');
   assert.equal(String(calls[2]?.input), 'http://127.0.0.1:8787/runtime/account/agent-bindings');
   assert.equal(String(calls[3]?.input), 'http://127.0.0.1:8787/runtime/account/records');
   assert.equal(calls[0]?.init?.method, 'GET');

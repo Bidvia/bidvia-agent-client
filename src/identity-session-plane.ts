@@ -151,13 +151,13 @@ const identitySessionOnboardingSupportSteps:
     },
     {
       helperKey: 'getAccountAgentDispatchAuthority',
-      routePathTemplate: '/runtime/account/agents/:agent_registration_id/dispatch-authority',
+      routePathTemplate: '/runtime/account/agents/:agentId/dispatch-authority',
       requiredContext: ['tenantId', 'sessionId'],
       rationale: 'Read bounded session-scoped dispatch-authority status for a claimed account agent without widening into operator or approval workflow semantics.',
     },
     {
       helperKey: 'createAccountAgentDispatchAuthorityRequest',
-      routePathTemplate: '/runtime/account/agents/:agent_registration_id/dispatch-authority-requests',
+      routePathTemplate: '/runtime/account/agents/:agentId/dispatch-authority-requests',
       requiredContext: ['tenantId', 'sessionId'],
       rationale: 'Request dispatch-authority review through a bounded session-scoped account-agent route distinct from active role-binding activation.',
     },

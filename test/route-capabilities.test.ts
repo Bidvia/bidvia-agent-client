@@ -304,7 +304,7 @@ test('capability registry exposes approved truth-fetch helpers as local read-onl
     },
     {
       helperKey: 'getAccountAgent',
-      routePathTemplate: '/runtime/account/agents/:agent_registration_id',
+      routePathTemplate: '/runtime/account/agents/:agentId',
       httpMethod: 'GET',
       accessContextFamily: 'session',
       requiredContext: ['tenantId', 'sessionId'],
@@ -315,7 +315,7 @@ test('capability registry exposes approved truth-fetch helpers as local read-onl
     },
     {
       helperKey: 'getAccountAgentDispatchAuthority',
-      routePathTemplate: '/runtime/account/agents/:agent_registration_id/dispatch-authority',
+      routePathTemplate: '/runtime/account/agents/:agentId/dispatch-authority',
       httpMethod: 'GET',
       accessContextFamily: 'session',
       requiredContext: ['tenantId', 'sessionId'],
@@ -511,7 +511,7 @@ test('capability registry exposes approved truth-fetch helpers as local read-onl
 test('capability registry marks dispatch-authority review as a session-bound account-agent request distinct from role-binding activation', () => {
   assert.deepEqual(getRouteCapability('createAccountAgentDispatchAuthorityRequest'), {
     helperKey: 'createAccountAgentDispatchAuthorityRequest',
-    routePathTemplate: '/runtime/account/agents/:agent_registration_id/dispatch-authority-requests',
+    routePathTemplate: '/runtime/account/agents/:agentId/dispatch-authority-requests',
     httpMethod: 'POST',
     accessContextFamily: 'session',
     contextSemantic: 'session',

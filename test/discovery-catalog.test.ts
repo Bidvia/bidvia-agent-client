@@ -439,7 +439,7 @@ test('discovery catalog includes the dispatch-authority route family in the down
 
   assert.equal(
     catalog.some(
-      (entry) => entry.routePathTemplate === '/runtime/account/agents/:agent_registration_id/dispatch-authority',
+      (entry) => entry.routePathTemplate === '/runtime/account/agents/:agentId/dispatch-authority',
     ),
     true,
   );
@@ -447,7 +447,7 @@ test('discovery catalog includes the dispatch-authority route family in the down
     catalog.some(
       (entry) =>
         entry.routePathTemplate ===
-        '/runtime/account/agents/:agent_registration_id/dispatch-authority-requests',
+        '/runtime/account/agents/:agentId/dispatch-authority-requests',
     ),
     true,
   );

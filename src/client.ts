@@ -535,10 +535,10 @@ export class BidviaClient implements BidviaTaskRuntimeClientPort {
     });
   }
 
-  async getAccountAgent(agentRegistrationId: string, requestPolicy?: BidviaClientRequestPolicy) {
+  async getAccountAgent(agentId: string, requestPolicy?: BidviaClientRequestPolicy) {
     const context = this.resolveRequestContext(requestPolicy);
     this.requireTenantId(context);
-    return this.request(`/runtime/account/agents/${encodeURIComponent(agentRegistrationId)}`, {
+    return this.request(`/runtime/account/agents/${encodeURIComponent(agentId)}`, {
       context,
       method: 'GET',
       headers: this.requireSessionHeaders(context),
@@ -547,13 +547,13 @@ export class BidviaClient implements BidviaTaskRuntimeClientPort {
   }
 
   async getAccountAgentDispatchAuthority(
-    agentRegistrationId: string,
+    agentId: string,
     requestPolicy?: BidviaClientRequestPolicy,
   ) {
     const context = this.resolveRequestContext(requestPolicy);
     this.requireTenantId(context);
     return this.request(
-      `/runtime/account/agents/${encodeURIComponent(agentRegistrationId)}/dispatch-authority`,
+      `/runtime/account/agents/${encodeURIComponent(agentId)}/dispatch-authority`,
       {
         context,
         method: 'GET',
@@ -564,14 +564,14 @@ export class BidviaClient implements BidviaTaskRuntimeClientPort {
   }
 
   async createAccountAgentDispatchAuthorityRequest(
-    agentRegistrationId: string,
+    agentId: string,
     input: BidviaAccountAgentDispatchAuthorityRequestInput,
     requestPolicy?: BidviaClientRequestPolicy,
   ) {
     const context = this.resolveRequestContext(requestPolicy);
     this.requireTenantId(context);
     return this.request(
-      `/runtime/account/agents/${encodeURIComponent(agentRegistrationId)}/dispatch-authority-requests`,
+      `/runtime/account/agents/${encodeURIComponent(agentId)}/dispatch-authority-requests`,
       {
         context,
         method: 'POST',
