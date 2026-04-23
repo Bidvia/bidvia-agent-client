@@ -80,6 +80,27 @@ function requireTaskWriteReadyProgression() {
   };
 }
 
+function requireExecutionGuidanceEntry(
+  guidanceKey: 'task-write-ready' | 'authorization-projection' | 'proof-lane' | 'runtime-generated-closure',
+) {
+  const guidance = buildExecutionGuidanceEntries().find((entry) => entry.guidanceKey === guidanceKey);
+  if (!guidance) {
+    throw new Error(`Missing execution guidance entry for ${guidanceKey}`);
+  }
+
+  return {
+    ...guidance,
+    ...(guidance.checkpoints === undefined ? {} : { checkpoints: guidance.checkpoints.map((checkpoint) => ({
+      ...checkpoint,
+      verificationCheckpoint: {
+        ...checkpoint.verificationCheckpoint,
+        helperKeys: [...checkpoint.verificationCheckpoint.helperKeys],
+        truthFields: [...checkpoint.verificationCheckpoint.truthFields],
+      },
+    })) }),
+  };
+}
+
 function requireGuidedRouteStep(helperKey: string): BidviaGuidedRouteStep {
   const capability = getRouteCapability(helperKey);
   if (!capability) {
@@ -122,6 +143,7 @@ export function buildOnboardingReadiness() {
     postClaimSupport: {
       label: 'Governed-run support',
       progression: requireTaskWriteReadyProgression(),
+      authorizationProjectionGate: requireExecutionGuidanceEntry('authorization-projection'),
     },
   };
 }

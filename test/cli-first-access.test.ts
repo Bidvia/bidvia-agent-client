@@ -426,10 +426,10 @@ test('runCli doctor captures readiness live-check transport failures inside stru
   assert.deepEqual(snapshot.onboarding.nextCommands.map((entry) => entry.command), [
     'bidvia select-org --input ...',
     'bidvia account-me',
-    'bidvia agent-self-service --agent-id ... --input ...',
+    'bidvia doctor',
     'bidvia context show',
     'bidvia route-context-matrix',
-    'bidvia registration-lifecycle-plan',
+    'bidvia account-agent --agent-id ...',
   ]);
   assertFirstSuccessNextStep(snapshot);
 });

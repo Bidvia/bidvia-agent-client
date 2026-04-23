@@ -1056,8 +1056,8 @@ function buildDoctorOnboardingSnapshot(
           'Confirm the current account and active org context before asking Core or Site operators to bind the acting principal to the requested tenant.',
         ),
         buildStaticFirstAccessCommandHint(
-          'bidvia agent-self-service --agent-id ... --input ...',
-          'Use bounded self-service to configure task dispatch acceptance, accepted scopes, and claimed-agent metadata before expecting task dispatch or governed runtime access to widen.',
+          'bidvia doctor',
+          'Re-run doctor after account/session/org repair so the governed-runtime gate can be checked again against the same claimed continuation.',
         ),
         buildStaticFirstAccessCommandHint(
           'bidvia context show',
@@ -1068,8 +1068,8 @@ function buildDoctorOnboardingSnapshot(
           'Review which governed-read and governed-run routes stay blocked until role binding is active for this tenant.',
         ),
         buildStaticFirstAccessCommandHint(
-          'bidvia registration-lifecycle-plan',
-          'Use the lifecycle plan once role binding is active so the first governed run follows the shipped post-claim path cleanly.',
+          'bidvia account-agent --agent-id ...',
+          'Stay on the canonical account-owned plane while inspecting the current claimed-agent continuation state and do not reinterpret this gate as an operator-route handoff.',
         ),
       ],
       firstSuccessNextStep: buildIdentitySessionPlaneView().canonicalOnboarding.firstSuccessNextStep,

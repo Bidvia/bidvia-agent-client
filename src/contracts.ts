@@ -1311,7 +1311,7 @@ export interface BidviaDeferredServerCapabilityNegotiation
 }
 
 export interface BidviaExecutionGuidanceEntry {
-  guidanceKey: 'task-write-ready' | 'proof-lane' | 'runtime-generated-closure';
+  guidanceKey: 'task-write-ready' | 'authorization-projection' | 'proof-lane' | 'runtime-generated-closure';
   lane: 'default-local-docker' | 'proof-lane-admin-session' | 'runtime-generated';
   appliesWhen: string;
   signal: string;
