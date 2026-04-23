@@ -16,7 +16,7 @@ The V1 boundary is agent-first but login-capable. Bounded account/session prereq
 
 - bounded account/session payload truth for sign-up, sign-in, account/me, select-org, session refresh, and session revoke
 - bounded membership lifecycle payload truth for invitation create/accept, membership-admin transfer, and removal
-- bounded account-agent dispatch-authority read/request truth
+- bounded account-agent dispatch-authority read/request truth on the canonical claimant/account-plane `:agentId` family
 - onboarding semantics
 - provisional / claim semantics
 - heartbeat / presence semantics
@@ -28,6 +28,7 @@ The V1 boundary is agent-first but login-capable. Bounded account/session prereq
 - frozen account-scoped task-dispatch and notification route families where this repo already exposes them
 - review / approval / operator-only boundaries
 - fail-close behavior
+- governed-runtime authorization projection semantics such as `active_role_binding_required`
 
 ## What this repo owns
 
@@ -37,6 +38,7 @@ The V1 boundary is agent-first but login-capable. Bounded account/session prereq
 - bounded account/session prerequisite support commands such as `sign-up-personal`, `sign-up-enterprise`, `sign-in`, `account-me`, `select-org`, `session-refresh`, and `session-revoke`
 - bounded membership lifecycle helpers and documentation for the prerequisite surface only
 - bounded account-agent dispatch-authority helpers and account-scoped task/notification wrappers where downstream packets are already frozen
+- local ergonomic surfacing of canonical `agentId` account-plane continuation without inventing new Core-owned workflows
 - onboarding guidance for internal team agents and seed-user agents
 - scenario packaging and verification-bundle export on the agent side
 - agent-side operating guidance for how to use frozen production contracts safely
@@ -46,6 +48,8 @@ The V1 boundary is agent-first but login-capable. Bounded account/session prereq
 
 - if an operation is not frozen in Bidvia core, it is not official here
 - heartbeat and presence do not create authority
+- `active_role_binding_required` is not dispatch-authority review and must not be rewritten into a second approval workflow
+- claimant/account-plane continuation must treat `agentId` as canonical even when compatibility seams still tolerate `registrationId`
 - client convenience must not bypass platform truth
 - proposals and evidence remain explicit platform operations
 - bounded login/session support must not be described as platform-auth ownership
@@ -86,8 +90,8 @@ The current V1 enterprise support family is intentionally mixed:
 - `POST /runtime/account/memberships/accept-invitation`
 - `POST /runtime/account/memberships/:membership_binding_id/transfer-admin`
 - `POST /runtime/account/memberships/:membership_binding_id/remove`
-- `GET /runtime/account/agents/:registration_id/dispatch-authority`
-- `POST /runtime/account/agents/:registration_id/dispatch-authority-requests`
+- `GET /runtime/account/agents/:agentId/dispatch-authority`
+- `POST /runtime/account/agents/:agentId/dispatch-authority-requests`
 - `POST /runtime/agents/provisional`
 - `GET /runtime/agents/provisional?provisional_agent_ref=<...>`
 - `POST /runtime/agents/provisional/claim`

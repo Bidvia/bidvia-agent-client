@@ -56,10 +56,14 @@ A claimed external agent may still be blocked by readiness or authority gates ev
 
 Keep the concrete progression explicit on the ordinary surfaced lane: self-service patch -> dispatch-authority request -> operator/admin review closure -> external binding check -> post-step verification of task-write-ready and dispatch-eligibility truth. The external claimed agent owns the self-service patch and bounded dispatch-authority request, operator/admin owns review closure, and the current repo truth only proves the account-agent binding read surface for visibility and does not prove a binding-completion write or closure helper, so that external binding step remains fail-closed and unresolved when runnable truth still depends on unresolved Core-owned binding completion. If the verification reads still do not confirm runnable truth, remain fail-closed.
 
+If account-plane continuation is already succeeding but governed reads still return `active_role_binding_required`, keep that gate separate from dispatch-authority review. The safe downstream interpretation is authorization projection / account-session-org repair on the same account-owned plane; if the gate still remains after those repairs, treat it as an unresolved Core-owned projection issue.
+
 ## 5. How to choose a lane
 
 - Use **default local docker** to answer: “Does the real surfaced runtime behavior work with normal user-facing flows?”
 - Use **proof-lane / admin-session** to answer: “Does a deterministic admin-scoped walkthrough still work?”
 - Use **runtime-generated objects** to answer: “Can I close the business-universe chain without relying on fixed fixtures?”
+
+For claimant/account-plane continuation checks in any lane, prefer `agentId` as the canonical account-plane identifier. Treat `registrationId` on that plane as compatibility only.
 
 If a flow needs admin/operator context, say so explicitly. If a flow needs self-generated runtime data instead of fixed ids, say so explicitly. If a flow remains blocked by a Core-owned progression gap, keep that gap visible rather than faking success.

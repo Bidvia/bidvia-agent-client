@@ -64,7 +64,7 @@ Before validating runtime behavior, choose the right lane:
 
 See `docs/VALIDATION_LANES.md` for the full lane guide. Fixed proof ids are not assumed in default local docker, self-generated runtime data is the preferred path for business-universe closure, and task-write-ready progression is a distinct surfaced path rather than an implied side effect of claim.
 
-For task-write-ready progression, keep the chain explicit on the ordinary surfaced lane: self-service patch -> dispatch-authority request -> operator/admin review closure -> external binding check -> post-step verification of task-write-ready and dispatch-eligibility truth. The external claimed agent owns the self-service patch and bounded dispatch-authority request, operator/admin owns review closure, and the current repo truth only proves the `account-agent-bindings` read surface for external binding visibility, not a binding-completion write or closure helper, so that external binding step stays fail-closed and unresolved unless Core exposes a concrete path.
+For task-write-ready progression, keep the chain explicit on the ordinary surfaced lane: self-service patch -> dispatch-authority request -> operator/admin review closure -> external binding check -> post-step verification of task-write-ready and dispatch-eligibility truth. The external claimed agent owns the self-service patch and bounded dispatch-authority request, operator/admin owns review closure, and the current repo truth only proves the `account-agent-bindings` read surface for external binding visibility, not a binding-completion write or closure helper, so that external binding step stays fail-closed and unresolved unless Core exposes a concrete path. If a governed read still returns `active_role_binding_required` after account-plane continuation succeeds, treat that as a separate authorization-projection gate rather than as dispatch-authority review or a hidden claimant-side activation workflow.
 
 ## CLI onboarding path
 
@@ -127,7 +127,7 @@ bidvia registration-lifecycle-plan
 bidvia registered-agent-operations-plan
 ```
 
-Use the route matrix to confirm which context family is required before you execute the next governed step.
+Use the route matrix to confirm which context family is required before you execute the next governed step. For claimant/account-plane continuation, treat `agentId` as the canonical account-plane identifier; any continued use of `registrationId` on that plane is compatibility-only.
 
 ## SDK quick start
 
@@ -161,7 +161,7 @@ The shipped SDK includes:
 
 - bounded account/session prerequisite support
 - bounded membership lifecycle support for invitation create/accept, admin transfer, and removal
-- bounded account-agent dispatch-authority read/request support
+- bounded account-agent dispatch-authority read/request support on the canonical `/runtime/account/agents/:agentId/...` continuation family
 - account-scoped task-dispatch and notification canonical families where the current downstream packets are already adopted
 - provisional create -> query -> claim helpers
 - registration-bound heartbeat, sync, evidence, and proposal helpers
@@ -203,6 +203,7 @@ The current helper-level payload model matters:
 - packet-grounded execution helpers already ship in the identity/session, task, and event-notification surfaces
 - packet-grounded read helpers already ship in the capability and enterprise surfaces
 - identity/session prerequisite support remains bounded even when it now includes membership lifecycle and dispatch-authority helpers
+- claimant/account-plane continuation is canonical on `agentId`, while `registrationId` remains legitimate on registration-bound deep-read and operator/control-plane families only
 - account-scoped task-dispatch and notification helpers only claim the currently adopted downstream route families; they do not imply a general account-admin shell
 - some wrappers remain `compatibility-only`
 - workflow-stage and other packet-incomplete seams remain blocked until Core freezes the missing payloads

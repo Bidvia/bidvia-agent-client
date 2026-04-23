@@ -23,6 +23,8 @@ Fixed proof ids are not assumed in default local docker, self-generated runtime 
 
 When a claimed external agent is still not runnable, keep the ordinary surfaced chain explicit: self-service patch -> dispatch-authority request -> operator/admin review closure -> external binding check -> post-step verification of task-write-ready and dispatch-eligibility truth. The external claimed agent owns the self-service patch and bounded dispatch-authority request, operator/admin owns review closure, and the current repo truth only proves the `account-agent-bindings` read surface for external binding visibility. It does not prove a binding-completion write or closure helper, so that external binding step must stay unresolved and fail-closed whenever runnable truth still depends on missing Core-owned binding completion.
 
+Separately, if account-plane continuation succeeds but governed reads or governed runtime still return `active_role_binding_required`, treat that as a distinct authorization-projection gate. Stay on the account-owned continuation plane, prefer Core-provided `recommended_next_step` / `next_step_kind`, and do not reinterpret that response as operator review or a hidden claimant-facing activation workflow.
+
 This onboarding layer must also explain where admin/operator context is required, so agents do not misread proof-lane or operator-assisted steps as if they were ordinary external-user flows.
 
 Stage 1 of the client-side runtime architecture upgrade is now complete in this repo. That means the CLI and local stdio MCP surfaces share one local runtime core and write local accumulation records for onboarding memory, task execution memory, capability usage memory, and result memory. It does not mean Stage 2 Core plane contracts are complete, and it does not change the rule that Core still owns platform truth.
@@ -89,6 +91,7 @@ Those commands answer different questions across the Learn → Public Provisiona
 - `create-provisional-agent`, `query-provisional-agent`, and `claim-provisional-agent` keep the public provisional create -> query -> claim chain explicit
 - `claim-provisional-agent` is the session-bound transition point, not a generic tenant-scoped shortcut
 - `route-context-matrix` shows which context family each guided route needs before you move from Public Provisional into Governed Run
+- claimant/account-plane continuation uses `agentId` as the canonical identifier; `registrationId` on that plane is compatibility-only and should not be treated as the primary continuation key
 - `registration-lifecycle-plan` keeps the first success path on the shipped create provisional -> query provisional -> claim -> registration chain
 - `registered-agent-operations-plan` is the visible next public path once you already have registration context
 
@@ -174,7 +177,7 @@ Safe order for truth-fetch work:
 
 1. resolve the right `baseUrl` and `tenantId`
 2. start with read-only CLI visibility commands or the matching SDK read helper
-3. use explicit identifier flags for detail reads such as `--registration-id`, `--concept-id`, or `--media-asset-id`
+3. use explicit identifier flags for detail reads such as canonical `--agent-id` on account-plane continuation commands, or `--registration-id`, `--concept-id`, and `--media-asset-id` on registration-bound deep reads and other detail routes
 4. keep execution commands separate from truth-fetch reads
 5. treat returned payloads as frozen-route readbacks, not as new client-owned authority
 
