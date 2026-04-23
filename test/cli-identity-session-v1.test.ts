@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, readFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
@@ -78,6 +78,7 @@ test('runCli sign-in persists minimal local continuation state without writing t
     ], {
       createClient: () => ({
         signIn: async () => ({
+          agentId: 'agent-a',
           tenantId: 'tenant-a',
           principalId: 'principal-a',
           companyId: 'company-a',
@@ -101,6 +102,7 @@ test('runCli sign-in persists minimal local continuation state without writing t
 
     assert.equal(exitCode, 0);
     assert.deepEqual(printed, [{
+      agentId: 'agent-a',
       tenantId: 'tenant-a',
       principalId: 'principal-a',
       companyId: 'company-a',
@@ -111,6 +113,7 @@ test('runCli sign-in persists minimal local continuation state without writing t
     }]);
     assert.deepEqual(JSON.parse(readFileSync(statePath, 'utf8')), {
       tenantId: 'tenant-a',
+      agentId: 'agent-a',
       principalId: 'principal-a',
       companyId: 'company-a',
       sessionId: 'sess-1',
@@ -351,10 +354,10 @@ test('runCli routes account/session continuity commands through the existing cli
   assert.equal(refreshExitCode, 0);
   assert.equal(revokeExitCode, 0);
   assert.deepEqual(createClientContexts, [
-    { tenantId: 'tenant-a', principalId: undefined, companyId: undefined, registrationId: undefined, sessionId: 'sess-1' },
-    { tenantId: 'tenant-a', principalId: undefined, companyId: undefined, registrationId: undefined, sessionId: 'sess-1' },
-    { tenantId: 'tenant-a', principalId: undefined, companyId: undefined, registrationId: undefined, sessionId: 'sess-1' },
-    { tenantId: 'tenant-a', principalId: undefined, companyId: undefined, registrationId: undefined, sessionId: 'sess-1' },
+    { tenantId: 'tenant-a', agentId: undefined, principalId: undefined, companyId: undefined, registrationId: undefined, sessionId: 'sess-1' },
+    { tenantId: 'tenant-a', agentId: undefined, principalId: undefined, companyId: undefined, registrationId: undefined, sessionId: 'sess-1' },
+    { tenantId: 'tenant-a', agentId: undefined, principalId: undefined, companyId: undefined, registrationId: undefined, sessionId: 'sess-1' },
+    { tenantId: 'tenant-a', agentId: undefined, principalId: undefined, companyId: undefined, registrationId: undefined, sessionId: 'sess-1' },
   ]);
   assert.deepEqual(calls, [
     { command: 'account-me' },
@@ -459,6 +462,56 @@ test('runCli agent-self-service accepts --registration-id for claimed registrati
   }]);
 });
 
+test('runCli account-me preserves existing claimed continuation fields when the response omits them', async () => {
+  const tempDirectory = mkdtempSync(path.join(tmpdir(), 'bidvia-cli-account-me-preserve-'));
+  const statePath = path.join(tempDirectory, 'onboarding-state.json');
+  const restoreStatePath = setEnvVar('BIDVIA_STATE_PATH', statePath);
+
+  try {
+    writeFileSync(statePath, JSON.stringify({
+      tenantId: 'tenant-a',
+      agentId: 'agent-claimed',
+      principalId: 'principal-claimed',
+      companyId: 'company-a',
+      registrationId: 'areg-claimed',
+      sessionId: 'sess-1',
+      lastCompletedStep: 'claim-provisional-agent',
+      createdAt: '2026-04-10T10:00:00Z',
+      updatedAt: '2026-04-10T10:00:30Z',
+    }, null, 2), 'utf8');
+
+    const exitCode = await runCli(['account-me'], {
+      createClient: () => ({
+        getAccountMe: async () => ({
+          ok: true,
+          command: 'account-me',
+        }),
+      }) as never,
+      resolveProcessEnv: () => ({
+        BIDVIA_STATE_PATH: statePath,
+      }),
+      now: () => '2026-04-10T10:03:00Z',
+      printJson: () => {},
+      printLine: () => {},
+    });
+
+    assert.equal(exitCode, 0);
+    assert.deepEqual(JSON.parse(readFileSync(statePath, 'utf8')), {
+      tenantId: 'tenant-a',
+      agentId: 'agent-claimed',
+      principalId: 'principal-claimed',
+      companyId: 'company-a',
+      registrationId: 'areg-claimed',
+      sessionId: 'sess-1',
+      lastCompletedStep: 'account-me',
+      createdAt: '2026-04-10T10:00:00Z',
+      updatedAt: '2026-04-10T10:03:00Z',
+    });
+  } finally {
+    restoreStatePath();
+  }
+});
+
 test('runCli agent-self-service rejects participationState values outside Core writable participation subset', async () => {
   const printed: unknown[] = [];
 
@@ -512,6 +565,7 @@ test('runCli identity/session continuation commands can resume from locally pers
       createClientContexts.push(contextOverride);
       return {
         signIn: async () => ({
+          agentId: 'agent-a',
           tenantId: 'tenant-a',
           principalId: 'principal-a',
           sessionId: 'sess-1',
@@ -581,9 +635,9 @@ test('runCli identity/session continuation commands can resume from locally pers
     assert.equal(selectOrgExitCode, 0);
     assert.equal(accountMeExitCode, 0);
     assert.deepEqual(createClientContexts, [
-      { tenantId: undefined, principalId: undefined, companyId: undefined, registrationId: undefined, sessionId: undefined },
-      { tenantId: 'tenant-a', principalId: undefined, companyId: undefined, registrationId: undefined, sessionId: 'sess-1' },
-      { tenantId: 'tenant-a', principalId: undefined, companyId: 'company-b', registrationId: undefined, sessionId: 'sess-1' },
+      { tenantId: undefined, agentId: undefined, principalId: undefined, companyId: undefined, registrationId: undefined, sessionId: undefined },
+      { tenantId: 'tenant-a', agentId: 'agent-a', principalId: undefined, companyId: undefined, registrationId: undefined, sessionId: 'sess-1' },
+      { tenantId: 'tenant-a', agentId: 'agent-a', principalId: undefined, companyId: 'company-b', registrationId: undefined, sessionId: 'sess-1' },
     ]);
     assert.deepEqual(printed, [
       { ok: true, command: 'select-org', orgId: 'org-2', companyId: 'company-b' },

@@ -169,6 +169,7 @@ function createClient(
     baseUrl: resolveBidviaBaseUrlFromEnv(env),
     context: {
       ...(tenantId === undefined ? {} : { tenantId }),
+      agentId: env.BIDVIA_AGENT_ID,
       principalId: env.BIDVIA_PRINCIPAL_ID,
       principalType: env.BIDVIA_PRINCIPAL_TYPE,
       authorizedRole: env.BIDVIA_AUTHORIZED_ROLE,
@@ -583,8 +584,8 @@ const identitySessionRequiredContextByCommand = {
 
 function readOnboardingResultString(
   value: unknown,
-  camelKey: 'tenantId' | 'principalId' | 'companyId' | 'registrationId' | 'sessionId',
-  snakeKey: 'tenant_id' | 'principal_id' | 'company_id' | 'registration_id' | 'session_id',
+  camelKey: 'tenantId' | 'agentId' | 'principalId' | 'companyId' | 'registrationId' | 'sessionId',
+  snakeKey: 'tenant_id' | 'agent_id' | 'principal_id' | 'company_id' | 'registration_id' | 'session_id',
 ): string | undefined {
   if (!value || typeof value !== 'object') {
     return undefined;
@@ -598,7 +599,7 @@ function readOnboardingResultString(
 
 function readOnboardingRegistrationResultString(
   value: unknown,
-  camelKey: 'principalId' | 'companyId' | 'registrationId',
+  camelKey: 'agentId' | 'principalId' | 'companyId' | 'registrationId',
   snakeKeys: readonly string[],
 ): string | undefined {
   if (!value || typeof value !== 'object') {
@@ -621,7 +622,7 @@ function readOnboardingRegistrationResultString(
 
 function readNonEmptyEnvValue(
   env: NodeJS.ProcessEnv,
-  key: 'BIDVIA_TENANT_ID' | 'BIDVIA_PRINCIPAL_ID' | 'BIDVIA_COMPANY_ID' | 'BIDVIA_REGISTRATION_ID' | 'BIDVIA_SESSION_ID' | 'BIDVIA_ADMIN_SESSION_ID',
+  key: 'BIDVIA_TENANT_ID' | 'BIDVIA_AGENT_ID' | 'BIDVIA_PRINCIPAL_ID' | 'BIDVIA_COMPANY_ID' | 'BIDVIA_REGISTRATION_ID' | 'BIDVIA_SESSION_ID' | 'BIDVIA_ADMIN_SESSION_ID',
 ): string | undefined {
   const candidate = env[key];
 
@@ -699,6 +700,7 @@ function buildEffectiveContextSnapshot(
 ) {
   return {
     tenantId: buildContextValueWithSource(readNonEmptyEnvValue(env, 'BIDVIA_TENANT_ID'), localState?.tenantId),
+    agentId: buildContextValueWithSource(readNonEmptyEnvValue(env, 'BIDVIA_AGENT_ID'), localState?.agentId),
     principalId: buildContextValueWithSource(readNonEmptyEnvValue(env, 'BIDVIA_PRINCIPAL_ID'), localState?.principalId),
     companyId: buildContextValueWithSource(readNonEmptyEnvValue(env, 'BIDVIA_COMPANY_ID'), localState?.companyId),
     registrationId: buildContextValueWithSource(readNonEmptyEnvValue(env, 'BIDVIA_REGISTRATION_ID'), localState?.registrationId),
@@ -722,6 +724,7 @@ function buildDoctorReadinessContext(
 ): BidviaDoctorReadinessContext {
   return {
     tenantId: effectiveContext.tenantId.value ?? undefined,
+    agentId: effectiveContext.agentId.value ?? undefined,
     principalId: effectiveContext.principalId.value ?? undefined,
     companyId: effectiveContext.companyId.value ?? undefined,
     registrationId: effectiveContext.registrationId.value ?? undefined,
@@ -1281,6 +1284,7 @@ async function buildWhoamiSnapshot(
     journeyBoundary: buildJourneyBoundarySnapshot(effectiveContext),
     identity: {
       tenantId: effectiveContext.tenantId,
+      agentId: effectiveContext.agentId,
       principalId: effectiveContext.principalId,
       companyId: effectiveContext.companyId,
       registrationId: effectiveContext.registrationId,
@@ -1497,6 +1501,7 @@ function buildOnboardingActionExecutionContext(
   if (command === 'create-provisional-agent' || command === 'query-provisional-agent') {
     return {
       tenantId: effectiveContext.tenantId.value ?? undefined,
+      agentId: undefined,
       principalId: undefined,
       companyId: undefined,
       registrationId: undefined,
@@ -1506,6 +1511,7 @@ function buildOnboardingActionExecutionContext(
 
   return {
     tenantId: effectiveContext.tenantId.value ?? undefined,
+    agentId: effectiveContext.agentId.value ?? undefined,
     principalId: effectiveContext.principalId.value ?? undefined,
     companyId: effectiveContext.companyId.value ?? undefined,
     registrationId: effectiveContext.registrationId.value ?? undefined,
@@ -1520,6 +1526,7 @@ function buildIdentitySessionExecutionContext(
 ) {
   return {
     tenantId: effectiveContext.tenantId.value ?? undefined,
+    agentId: effectiveContext.agentId.value ?? undefined,
     principalId: undefined,
     companyId: effectiveContext.companyId.value ?? undefined,
     registrationId: undefined,
@@ -1534,6 +1541,7 @@ function buildTruthFetchExecutionContext(
 ) {
   return {
     tenantId: effectiveContext.tenantId.value ?? undefined,
+    agentId: effectiveContext.agentId.value ?? undefined,
     principalId: effectiveContext.principalId.value ?? undefined,
     companyId: effectiveContext.companyId.value ?? undefined,
     registrationId: effectiveContext.registrationId.value ?? undefined,
@@ -1551,11 +1559,17 @@ function buildPersistedIdentitySessionState(
   const sessionRecord = (result && typeof result === 'object' && 'session' in (result as Record<string, unknown>))
     ? (result as Record<string, unknown>).session as Record<string, unknown> | undefined
     : undefined;
-  const preserveExistingClaimedContext = command === 'agent-self-service';
+  const preserveExistingClaimedContext = command === 'agent-self-service'
+    || command === 'account-me'
+    || command === 'select-org'
+    || command === 'session-refresh';
   const tenantId = readOnboardingResultString(result, 'tenantId', 'tenant_id')
     ?? readOnboardingResultString(sessionRecord, 'tenantId', 'tenant_id')
     ?? executionContext.tenantId
     ?? existingState?.tenantId;
+  const agentId = readOnboardingResultString(result, 'agentId', 'agent_id')
+    ?? readOnboardingRegistrationResultString(result, 'agentId', ['agent_id'])
+    ?? (preserveExistingClaimedContext ? existingState?.agentId : undefined);
   const principalId = readOnboardingResultString(result, 'principalId', 'principal_id')
     ?? readOnboardingRegistrationResultString(result, 'principalId', ['principal_id'])
     ?? (preserveExistingClaimedContext ? existingState?.principalId : undefined);
@@ -1574,6 +1588,7 @@ function buildPersistedIdentitySessionState(
 
   return {
     ...(tenantId === undefined ? {} : { tenantId }),
+    ...(agentId === undefined ? {} : { agentId }),
     ...(principalId === undefined ? {} : { principalId }),
     ...(companyId === undefined ? {} : { companyId }),
     ...(registrationId === undefined ? {} : { registrationId }),
@@ -1604,6 +1619,9 @@ function buildPersistedOnboardingActionState(
     };
   }
 
+  const claimedAgentId = readOnboardingResultString(result, 'agentId', 'agent_id')
+    ?? readOnboardingRegistrationResultString(result, 'agentId', ['agent_id'])
+    ?? (effectiveContext.agentId.source === 'env' ? effectiveContext.agentId.value ?? undefined : undefined);
   const claimedPrincipalId = readOnboardingResultString(result, 'principalId', 'principal_id')
     ?? readOnboardingRegistrationResultString(result, 'principalId', ['principal_id'])
     ?? (effectiveContext.principalId.source === 'env' ? effectiveContext.principalId.value ?? undefined : undefined);
@@ -1618,6 +1636,7 @@ function buildPersistedOnboardingActionState(
     tenantId: readOnboardingResultString(result, 'tenantId', 'tenant_id')
       ?? executionContext.tenantId
       ?? existingState?.tenantId,
+    ...(claimedAgentId === undefined ? {} : { agentId: claimedAgentId }),
     ...(claimedPrincipalId === undefined ? {} : { principalId: claimedPrincipalId }),
     ...(claimedCompanyId === undefined ? {} : { companyId: claimedCompanyId }),
     ...(claimedRegistrationId === undefined ? {} : { registrationId: claimedRegistrationId }),
@@ -2121,6 +2140,7 @@ function createDefaultCliDependencies(): BidviaCliDependencies {
 
       return {
         tenantId: env.BIDVIA_TENANT_ID,
+        agentId: env.BIDVIA_AGENT_ID,
         principalId: env.BIDVIA_PRINCIPAL_ID,
         principalType: env.BIDVIA_PRINCIPAL_TYPE,
         authorizedRole: env.BIDVIA_AUTHORIZED_ROLE,

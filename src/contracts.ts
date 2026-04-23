@@ -15,6 +15,7 @@ import type {
 
 export interface BidviaClientContext {
   tenantId: string;
+  agentId?: string;
   principalId?: string;
   principalType?: string;
   authorizedRole?: string;

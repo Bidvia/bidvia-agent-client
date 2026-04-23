@@ -114,6 +114,7 @@ test('runCli create-provisional-agent executes with tenant context sourced from 
   assert.equal(exitCode, 0);
   assert.deepEqual(createClientContexts, [{
     tenantId: 'tenant-local',
+    agentId: undefined,
     principalId: undefined,
     companyId: undefined,
     registrationId: undefined,
@@ -207,6 +208,7 @@ test('runCli default onboarding-action client wiring honors injected env baseUrl
     },
     contextOverride: {
       tenantId: 'tenant-local-default-wiring',
+      agentId: undefined,
       principalId: undefined,
       companyId: undefined,
       registrationId: undefined,
@@ -282,12 +284,14 @@ test('runCli create/query strip stale claimed principal/company/registration con
   assert.equal(queryExitCode, 0);
   assert.deepEqual(createClientContexts, [{
     tenantId: 'tenant-strip',
+    agentId: undefined,
     principalId: undefined,
     companyId: undefined,
     registrationId: undefined,
     sessionId: undefined,
   }, {
     tenantId: 'tenant-strip',
+    agentId: undefined,
     principalId: undefined,
     companyId: undefined,
     registrationId: undefined,
@@ -355,6 +359,7 @@ test('runCli writes only non-secret local onboarding state after a successful cl
           claimCalls.push(input);
           return {
             provisionalAgentRef: input.provisionalAgentRef,
+            agentId: 'agent-3',
             registrationId: 'areg-3',
             principalId: 'principal-claimed',
             companyId: 'company-claimed',
@@ -392,6 +397,7 @@ test('runCli writes only non-secret local onboarding state after a successful cl
     }]);
     assert.deepEqual(printed, [{
       provisionalAgentRef: 'prov-agent-3',
+      agentId: 'agent-3',
       registrationId: 'areg-3',
       principalId: 'principal-claimed',
       companyId: 'company-claimed',
@@ -400,6 +406,7 @@ test('runCli writes only non-secret local onboarding state after a successful cl
     }]);
     assert.deepEqual(JSON.parse(readFileSync(statePath, 'utf8')), {
       tenantId: 'tenant-a',
+      agentId: 'agent-3',
       principalId: 'principal-claimed',
       companyId: 'company-claimed',
       registrationId: 'areg-3',
@@ -428,6 +435,7 @@ test('runCli claim-provisional-agent persists nested registration identity field
         provisionalAgentRef: 'prov-agent-claim-nested',
         registration: {
           agent_registration_id: 'areg-nested',
+          agent_id: 'agent-nested',
           principal_id: 'principal-nested',
           tenant_id: 'company-nested',
         },
@@ -452,10 +460,11 @@ test('runCli claim-provisional-agent persists nested registration identity field
   });
 
   assert.equal(exitCode, 0);
-  assert.deepEqual(JSON.parse(readFileSync(statePath, 'utf8')), {
-    tenantId: 'tenant-nested',
-    principalId: 'principal-nested',
-    registrationId: 'areg-nested',
+    assert.deepEqual(JSON.parse(readFileSync(statePath, 'utf8')), {
+      tenantId: 'tenant-nested',
+      agentId: 'agent-nested',
+      principalId: 'principal-nested',
+      registrationId: 'areg-nested',
     lastCompletedStep: 'claim-provisional-agent',
     createdAt: '2026-04-02T12:05:15.000Z',
     updatedAt: '2026-04-02T12:05:15.000Z',
@@ -467,8 +476,9 @@ test('runCli claim-provisional-agent does not persist stale claimed identity fie
   const statePath = path.join(tempDirectory, 'onboarding-state.json');
 
   writeFileSync(statePath, JSON.stringify({
-    tenantId: 'tenant-stale',
-    principalId: 'principal-stale',
+      tenantId: 'tenant-stale',
+      agentId: 'agent-stale',
+      principalId: 'principal-stale',
     companyId: 'company-stale',
     registrationId: 'areg-stale',
     lastCompletedStep: 'claim-provisional-agent',
@@ -593,8 +603,9 @@ test('runCli agent-self-service preserves existing claimed registration context 
   const statePath = path.join(tempDirectory, 'onboarding-state.json');
 
   writeFileSync(statePath, JSON.stringify({
-    tenantId: 'tenant-existing',
-    principalId: 'principal-existing',
+      tenantId: 'tenant-existing',
+      agentId: 'agent-existing',
+      principalId: 'principal-existing',
     companyId: 'company-existing',
     registrationId: 'areg-existing',
     sessionId: 'sess-existing',
@@ -626,9 +637,10 @@ test('runCli agent-self-service preserves existing claimed registration context 
   });
 
   assert.equal(exitCode, 0);
-  assert.deepEqual(JSON.parse(readFileSync(statePath, 'utf8')), {
-    tenantId: 'tenant-existing',
-    principalId: 'principal-existing',
+    assert.deepEqual(JSON.parse(readFileSync(statePath, 'utf8')), {
+      tenantId: 'tenant-existing',
+      agentId: 'agent-existing',
+      principalId: 'principal-existing',
     companyId: 'company-existing',
     registrationId: 'areg-existing',
     sessionId: 'sess-existing',
@@ -997,8 +1009,8 @@ test('runCli claim-provisional-agent can continue from locally persisted sign-in
     assert.equal(signInExitCode, 0);
     assert.equal(claimExitCode, 0);
     assert.deepEqual(createClientContexts, [
-      { tenantId: undefined, principalId: undefined, companyId: undefined, registrationId: undefined, sessionId: undefined },
-      { tenantId: 'tenant-sign-in', principalId: 'principal-sign-in', companyId: undefined, registrationId: undefined, sessionId: 'session-sign-in' },
+      { tenantId: undefined, agentId: undefined, principalId: undefined, companyId: undefined, registrationId: undefined, sessionId: undefined },
+      { tenantId: 'tenant-sign-in', agentId: undefined, principalId: 'principal-sign-in', companyId: undefined, registrationId: undefined, sessionId: 'session-sign-in' },
     ]);
     assert.deepEqual(claimCalls, [{
       provisionalAgentRef: 'prov-agent-claim-from-local-session',
@@ -1122,14 +1134,18 @@ test('runCli prints missing effective context with missing source attribution on
         status: 'not-ready',
       },
     },
-    context: {
-      tenantId: {
-        value: null,
-        source: 'missing',
-      },
-      principalId: {
-        value: null,
-        source: 'missing',
+      context: {
+        tenantId: {
+          value: null,
+          source: 'missing',
+        },
+        agentId: {
+          value: null,
+          source: 'missing',
+        },
+        principalId: {
+          value: null,
+          source: 'missing',
       },
       companyId: {
         value: null,
@@ -1241,6 +1257,10 @@ test('runCli prints effective context with env precedence and local onboarding s
         tenantId: {
           value: 'tenant-env',
           source: 'env',
+        },
+        agentId: {
+          value: null,
+          source: 'missing',
         },
         principalId: {
           value: 'principal-env',
@@ -1368,6 +1388,10 @@ test('runCli prints a local-only whoami summary with env precedence, local-state
           value: 'tenant-env',
           source: 'env',
         },
+        agentId: {
+          value: null,
+          source: 'missing',
+        },
         principalId: {
           value: 'principal-env',
           source: 'env',
@@ -1454,6 +1478,10 @@ test('runCli prints a missing local-only whoami summary when no env or onboardin
     },
     identity: {
       tenantId: {
+        value: null,
+        source: 'missing',
+      },
+      agentId: {
         value: null,
         source: 'missing',
       },

@@ -4,6 +4,7 @@ import path from 'node:path';
 
 export interface BidviaLocalOnboardingState {
   tenantId?: string;
+  agentId?: string;
   principalId?: string;
   companyId?: string;
   registrationId?: string;
@@ -65,6 +66,7 @@ function isBidviaLocalOnboardingState(value: unknown): value is BidviaLocalOnboa
   const candidate = value as Record<string, unknown>;
 
   return isOptionalString(candidate.tenantId)
+    && isOptionalString(candidate.agentId)
     && isOptionalString(candidate.principalId)
     && isOptionalString(candidate.companyId)
     && isOptionalString(candidate.registrationId)
@@ -79,6 +81,7 @@ function buildPersistedLocalOnboardingState(
 ): BidviaLocalOnboardingState {
   return {
     ...(state.tenantId === undefined ? {} : { tenantId: state.tenantId }),
+    ...(state.agentId === undefined ? {} : { agentId: state.agentId }),
     ...(state.principalId === undefined ? {} : { principalId: state.principalId }),
     ...(state.companyId === undefined ? {} : { companyId: state.companyId }),
     ...(state.registrationId === undefined ? {} : { registrationId: state.registrationId }),

@@ -77,6 +77,7 @@ test('writeLocalOnboardingState persists minimal continuation fields while still
   try {
     const result = await writeLocalOnboardingState({
       tenantId: 'tenant-a',
+      agentId: 'agent-a',
       principalId: 'principal-a',
       companyId: 'company-a',
       registrationId: 'areg-1',
@@ -92,6 +93,7 @@ test('writeLocalOnboardingState persists minimal continuation fields while still
     assert.equal(result.path, statePath);
     assert.deepEqual(result.state, {
       tenantId: 'tenant-a',
+      agentId: 'agent-a',
       principalId: 'principal-a',
       companyId: 'company-a',
       registrationId: 'areg-1',
@@ -103,6 +105,7 @@ test('writeLocalOnboardingState persists minimal continuation fields while still
 
     assert.deepEqual(JSON.parse(readFileSync(statePath, 'utf8')), {
       tenantId: 'tenant-a',
+      agentId: 'agent-a',
       principalId: 'principal-a',
       companyId: 'company-a',
       registrationId: 'areg-1',
@@ -116,6 +119,7 @@ test('writeLocalOnboardingState persists minimal continuation fields while still
 
     assert.deepEqual(reloaded, {
       tenantId: 'tenant-a',
+      agentId: 'agent-a',
       principalId: 'principal-a',
       companyId: 'company-a',
       registrationId: 'areg-1',
