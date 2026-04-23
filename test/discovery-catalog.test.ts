@@ -43,6 +43,26 @@ test('buildLocalDiscoveryCatalog returns operator-readable local mappings withou
     ],
   });
 
+  const accountAgentDispatchAuthority = catalog.find((entry) => entry.helperKey === 'getAccountAgentDispatchAuthority');
+  assert.deepEqual(accountAgentDispatchAuthority, {
+    helperKey: 'getAccountAgentDispatchAuthority',
+    routePathTemplate: '/runtime/account/agents/:agentId/dispatch-authority',
+    httpMethod: 'GET',
+    accessContextFamily: 'session',
+    requiredContext: ['tenantId', 'sessionId'],
+    scope: 'read',
+    level: 'atomic-route',
+    localCapabilityTier: 'L0-observe-only',
+    localCapabilityRiskTier: 'observe-only',
+    discoveryKind: 'read',
+    recommendedOutputMode: 'truth-fetch-result',
+    sourceOfTruth: 'local-sdk-helpers',
+    localOnly: true,
+    remoteDiscovery: false,
+    cliCommands: ['account-agent-dispatch-authority'],
+    mcpTools: [],
+  });
+
   const industryUniverse = catalog.find((entry) => entry.helperKey === 'buildIndustryUniverseScenarioPlan');
   assert.deepEqual(industryUniverse, {
     helperKey: 'buildIndustryUniverseScenarioPlan',

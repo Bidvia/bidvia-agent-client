@@ -84,6 +84,7 @@ export interface BidviaLocalMcpProductizationSnapshot {
 const localCliBindings: readonly BidviaLocalDiscoveryCliBinding[] = [
   { command: 'account-agents', helperKey: 'listAccountAgents', recommendedOutputMode: 'truth-fetch-result' },
   { command: 'account-agent', helperKey: 'getAccountAgent', recommendedOutputMode: 'truth-fetch-result' },
+  { command: 'account-agent-dispatch-authority', helperKey: 'getAccountAgentDispatchAuthority', recommendedOutputMode: 'truth-fetch-result' },
   { command: 'account-agent-bindings', helperKey: 'listAccountAgentBindings', recommendedOutputMode: 'truth-fetch-result' },
   { command: 'account-records', helperKey: 'listAccountRecords', recommendedOutputMode: 'truth-fetch-result' },
   { command: 'agent-presence', helperKey: 'getAgentPresence', recommendedOutputMode: 'truth-fetch-result' },

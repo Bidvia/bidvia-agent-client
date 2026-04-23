@@ -52,7 +52,8 @@ test('runCli help lists truth-fetch read-only commands under the advanced govern
     '  sign-up-enterprise --input ...',
     '  account-me',
     '  select-org --input ...',
-    '  agent-self-service --registration-id ... --input ...',
+    '  agent-self-service --agent-id ... --input ...',
+    '  account-agent-dispatch-authority-request --agent-id ...',
     '  session-refresh',
     '  session-revoke',
     'Advanced Integration (OpenClaw / Companion Bundle):',
@@ -79,7 +80,8 @@ test('runCli help lists truth-fetch read-only commands under the advanced govern
     '  operator-discovery',
     'Advanced Governance / Internal Review:',
     '  account-agents',
-    '  account-agent --registration-id ...',
+    '  account-agent --agent-id ...',
+    '  account-agent-dispatch-authority --agent-id ...',
     '  account-agent-bindings',
     '  account-records',
     '  agent-presence --registration-id ...',
@@ -133,7 +135,7 @@ test('runCli help lists truth-fetch read-only commands under the advanced govern
 
 test('runCli returns structured missing required-id failures for truth-fetch detail commands', async () => {
   const cases = [
-    ['account-agent', '--registration-id'],
+    ['account-agent', '--agent-id'],
     ['agent-presence', '--registration-id'],
     ['agent-authority', '--registration-id'],
     ['canonical-semantic-concept', '--concept-id'],
@@ -171,7 +173,7 @@ test('runCli returns structured missing required-id failures for truth-fetch det
 test('runCli returns a structured missing value failure when a required truth-fetch id flag has no value', async () => {
   const printed: unknown[] = [];
 
-  const exitCode = await runCli(['account-agent', '--registration-id'], {
+  const exitCode = await runCli(['account-agent', '--agent-id'], {
     printJson: (value) => {
       printed.push(value);
     },
@@ -185,8 +187,8 @@ test('runCli returns a structured missing value failure when a required truth-fe
     error: {
       code: 'invalid-input',
       command: 'account-agent',
-      message: 'Missing value for --registration-id on account-agent.',
-      details: ['--registration-id'],
+        message: 'Missing value for --agent-id on account-agent.',
+        details: ['--agent-id'],
     },
   }]);
 });
@@ -220,8 +222,11 @@ test('runCli routes truth-fetch commands through the matching SDK method and pri
     async listAccountAgents() {
       return { method: 'listAccountAgents' };
     },
-    async getAccountAgent(registrationId: string) {
-      return { method: 'getAccountAgent', registrationId };
+    async getAccountAgent(agentId: string) {
+      return { method: 'getAccountAgent', agentId };
+    },
+    async getAccountAgentDispatchAuthority(agentId: string) {
+      return { method: 'getAccountAgentDispatchAuthority', agentId };
     },
     async listAccountAgentBindings() {
       return { method: 'listAccountAgentBindings' };
@@ -279,8 +284,12 @@ test('runCli routes truth-fetch commands through the matching SDK method and pri
       expected: { method: 'listAccountAgents' },
     },
     {
-      argv: ['account-agent', '--registration-id', 'areg-1'],
-      expected: { method: 'getAccountAgent', registrationId: 'areg-1' },
+      argv: ['account-agent', '--agent-id', 'agent-1'],
+      expected: { method: 'getAccountAgent', agentId: 'agent-1' },
+    },
+    {
+      argv: ['account-agent-dispatch-authority', '--agent-id', 'agent-1'],
+      expected: { method: 'getAccountAgentDispatchAuthority', agentId: 'agent-1' },
     },
     {
       argv: ['account-agent-bindings'],

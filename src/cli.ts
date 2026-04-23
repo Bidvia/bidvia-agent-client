@@ -284,6 +284,7 @@ interface BidviaDoctorReadinessFailure {
 type BidviaCliTruthFetchCommand =
   | 'account-agents'
   | 'account-agent'
+  | 'account-agent-dispatch-authority'
   | 'account-agent-bindings'
   | 'account-records'
   | 'agent-presence'
@@ -348,6 +349,7 @@ type BidviaCliIdentitySessionCommand =
   | 'account-me'
   | 'select-org'
   | 'agent-self-service'
+  | 'account-agent-dispatch-authority-request'
   | 'session-refresh'
   | 'session-revoke';
 
@@ -409,7 +411,8 @@ const bidviaCliSupportedValueFlags = new Set<BidviaCliSupportedValueFlag>([
 
 const truthFetchVisibilityHelpLines = [
   '  account-agents',
-  '  account-agent --registration-id ...',
+  '  account-agent --agent-id ...',
+  '  account-agent-dispatch-authority --agent-id ...',
   '  account-agent-bindings',
   '  account-records',
   '  agent-presence --registration-id ...',
@@ -456,7 +459,8 @@ const truthFetchVisibilityHelpLines = [
 ] as const;
 
 const truthFetchSupportedFlagsByCommand = {
-  'account-agent': ['--registration-id'],
+  'account-agent': ['--agent-id', '--registration-id'],
+  'account-agent-dispatch-authority': ['--agent-id', '--registration-id'],
   'agent-presence': ['--registration-id'],
   'agent-authority': ['--registration-id'],
   'agent-readiness': ['--registration-id'],
@@ -488,7 +492,6 @@ const truthFetchSupportedFlagsByCommand = {
 } as const satisfies Partial<Record<string, readonly BidviaCliSupportedValueFlag[]>>;
 
 const truthFetchRequiredFlagsByCommand = {
-  'account-agent': ['--registration-id'],
   'agent-presence': ['--registration-id'],
   'agent-authority': ['--registration-id'],
   'agent-readiness': ['--registration-id'],
@@ -542,6 +545,13 @@ const truthFetchCollectionCommands = new Set([
   'attachment-bindings',
 ]);
 
+const canonicalAccountAgentIdentifierCommands = new Set([
+  'account-agent',
+  'account-agent-dispatch-authority',
+  'account-agent-dispatch-authority-request',
+  'agent-self-service',
+]);
+
 const onboardingActionSupportedFlagsByCommand = {
   'create-provisional-agent': ['--provisional-agent-ref'],
   'query-provisional-agent': ['--provisional-agent-ref'],
@@ -555,6 +565,7 @@ const identitySessionSupportedFlagsByCommand = {
   'account-me': [],
   'select-org': ['--input'],
   'agent-self-service': ['--registration-id', '--agent-id', '--input'],
+  'account-agent-dispatch-authority-request': ['--agent-id', '--registration-id'],
   'session-refresh': [],
   'session-revoke': [],
 } as const satisfies Record<BidviaCliIdentitySessionCommand, readonly BidviaCliSupportedValueFlag[]>;
@@ -575,6 +586,7 @@ const identitySessionRequiredContextByCommand = {
   'account-me': ['tenantId', 'sessionId'],
   'select-org': ['tenantId', 'sessionId'],
   'agent-self-service': ['tenantId', 'sessionId'],
+  'account-agent-dispatch-authority-request': ['tenantId', 'sessionId'],
   'session-refresh': ['tenantId', 'sessionId'],
   'session-revoke': ['tenantId', 'sessionId'],
 } as const satisfies Record<
@@ -1044,7 +1056,7 @@ function buildDoctorOnboardingSnapshot(
           'Confirm the current account and active org context before asking Core or Site operators to bind the acting principal to the requested tenant.',
         ),
         buildStaticFirstAccessCommandHint(
-          'bidvia agent-self-service --registration-id ... --input ...',
+          'bidvia agent-self-service --agent-id ... --input ...',
           'Use bounded self-service to configure task dispatch acceptance, accepted scopes, and claimed-agent metadata before expecting task dispatch or governed runtime access to widen.',
         ),
         buildStaticFirstAccessCommandHint(
@@ -1352,6 +1364,15 @@ function readRequiredStringInput(command: string, input: Record<string, unknown>
   return value;
 }
 
+function readCanonicalAccountAgentId(command: string, parsedArgs: BidviaCliParsedArgs): string {
+  const agentId = parsedArgs.flagValues['--agent-id'] ?? parsedArgs.flagValues['--registration-id'];
+  if (!agentId) {
+    throw new Error(`Missing required --agent-id for ${command}.`);
+  }
+
+  return agentId;
+}
+
 const onboardingActionCommandDefinitions = {
   'create-provisional-agent': {
     helperKey: 'createProvisionalAgent',
@@ -1441,12 +1462,9 @@ const identitySessionCommandDefinitions = {
     helperKey: 'patchAgentSelfService',
     run: async (client, parsedArgs) => {
       const input = parseCliJsonInput('agent-self-service', parsedArgs.input);
-      const registrationId = parsedArgs.flagValues['--registration-id'] ?? parsedArgs.flagValues['--agent-id'];
-      if (!registrationId) {
-        throw new Error('agent-self-service requires --registration-id or --agent-id');
-      }
+      const agentId = readCanonicalAccountAgentId('agent-self-service', parsedArgs);
       if (input.participationState !== undefined) {
-        const claimedAgent = await client.getAccountAgent(registrationId);
+        const claimedAgent = await client.getAccountAgent(agentId);
         const writableParticipationStates = claimedAgent
           && typeof claimedAgent === 'object'
           && 'governance_boundary' in (claimedAgent as Record<string, unknown>)
@@ -1460,7 +1478,7 @@ const identitySessionCommandDefinitions = {
           throw new Error(`participationState.state is not currently writable through bounded self-service for this claimed agent|${writableParticipationStates.join(',')}`);
         }
       }
-      return client.patchAgentSelfService(registrationId, {
+      return client.patchAgentSelfService(agentId, {
         now: readRequiredStringInput('agent-self-service', input, 'now'),
         ...(input.selfDescription === undefined ? {} : { selfDescription: input.selfDescription as string }),
         ...(input.capabilityProfile === undefined ? {} : { capabilityProfile: input.capabilityProfile as Record<string, unknown> }),
@@ -1472,6 +1490,13 @@ const identitySessionCommandDefinitions = {
           : { participationState: input.participationState as { state: string; reason?: string } }),
       });
     },
+  },
+  'account-agent-dispatch-authority-request': {
+    helperKey: 'createAccountAgentDispatchAuthorityRequest',
+    run: (client, parsedArgs, now) => client.createAccountAgentDispatchAuthorityRequest(
+      readCanonicalAccountAgentId('account-agent-dispatch-authority-request', parsedArgs),
+      { now },
+    ),
   },
   'session-refresh': {
     helperKey: 'refreshSession',
@@ -1488,6 +1513,7 @@ const identitySessionCommandDefinitions = {
     run: (
       client: BidviaClient,
       parsedArgs: BidviaCliParsedArgs,
+      now: string,
     ) => Promise<unknown>;
   }
 >;
@@ -1652,7 +1678,12 @@ const truthFetchCommandDefinitions: Record<BidviaCliTruthFetchCommand, BidviaCli
     run: (client) => client.listAccountAgents(),
   },
   'account-agent': {
-    run: (client, parsedArgs) => client.getAccountAgent(parsedArgs.flagValues['--registration-id']!),
+    run: (client, parsedArgs) => client.getAccountAgent(readCanonicalAccountAgentId('account-agent', parsedArgs)),
+  },
+  'account-agent-dispatch-authority': {
+    run: (client, parsedArgs) => client.getAccountAgentDispatchAuthority(
+      readCanonicalAccountAgentId('account-agent-dispatch-authority', parsedArgs),
+    ),
   },
   'account-agent-bindings': {
     run: (client) => client.listAccountAgentBindings(),
@@ -2187,7 +2218,8 @@ function printHelp(printLine: (value: string) => void): void {
   printLine('  sign-up-enterprise --input ...');
   printLine('  account-me');
   printLine('  select-org --input ...');
-  printLine('  agent-self-service --registration-id ... --input ...');
+  printLine('  agent-self-service --agent-id ... --input ...');
+  printLine('  account-agent-dispatch-authority-request --agent-id ...');
   printLine('  session-refresh');
   printLine('  session-revoke');
   printLine('Advanced Integration (OpenClaw / Companion Bundle):');
@@ -2396,6 +2428,20 @@ export async function runCli(
   if (command === 'help') {
     printHelp(dependencies.printLine);
     return 0;
+  }
+
+  if (canonicalAccountAgentIdentifierCommands.has(command) && !parsedArgs.flagValues['--agent-id'] && !parsedArgs.flagValues['--registration-id']) {
+    return printStructuredFailure(
+      dependencies,
+      buildStructuredFailure(
+        command,
+        'invalid-input',
+        `Missing required --agent-id for ${command}.`,
+        {
+          details: ['--agent-id'],
+        },
+      ),
+    );
   }
 
   const requiredTruthFetchFlags = truthFetchRequiredFlagsByCommand[
@@ -2615,7 +2661,7 @@ export async function runCli(
 
     try {
       const client = dependencies.createClient(env, executionContext);
-      const result = await identitySessionCommand.run(client, parsedArgs);
+      const result = await identitySessionCommand.run(client, parsedArgs, now);
 
       try {
         await writeLocalOnboardingState(
