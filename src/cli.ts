@@ -268,6 +268,7 @@ interface BidviaReachabilityProbeResult {
 
 interface BidviaDoctorReadinessContext {
   tenantId?: string;
+  agentId?: string;
   principalId?: string;
   companyId?: string;
   registrationId?: string;

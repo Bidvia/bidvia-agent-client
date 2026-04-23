@@ -87,6 +87,8 @@ function collectMissingContext(
 
 function toEnvKey(contextKey: BidviaScenarioContextKey): string {
   switch (contextKey) {
+    case 'agentId':
+      return 'BIDVIA_AGENT_ID';
     case 'registrationId':
       return 'BIDVIA_REGISTRATION_ID';
     case 'principalId':
@@ -104,6 +106,8 @@ function toEnvKey(contextKey: BidviaScenarioContextKey): string {
     case 'companyId':
       return 'BIDVIA_COMPANY_ID';
   }
+
+  return 'BIDVIA_UNKNOWN_CONTEXT';
 }
 
 function buildHints(params: {

@@ -22,7 +22,7 @@ import type {
 export interface BidviaExecutionIdentityContext
   extends Pick<
     BidviaClientContext,
-    'tenantId' | 'principalId' | 'principalType' | 'authorizedRole' | 'registrationId' | 'sessionId' | 'adminSessionId' | 'companyId'
+    'tenantId' | 'agentId' | 'principalId' | 'principalType' | 'authorizedRole' | 'registrationId' | 'sessionId' | 'adminSessionId' | 'companyId'
   > {}
 
 export interface BidviaTaskRuntimeClientPort {

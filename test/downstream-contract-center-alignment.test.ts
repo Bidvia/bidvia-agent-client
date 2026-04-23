@@ -108,19 +108,19 @@ test('dispatch-authority route family is present in local canonical route surfac
   const discoveryRoutes = listDiscoveryRouteTemplates();
 
   assert.ok(
-    capabilityRoutes.includes('/runtime/account/agents/:agent_registration_id/dispatch-authority'),
+    capabilityRoutes.includes('/runtime/account/agents/:agentId/dispatch-authority'),
     'Expected route capability catalog to include canonical dispatch-authority read route',
   );
   assert.ok(
-    capabilityRoutes.includes('/runtime/account/agents/:agent_registration_id/dispatch-authority-requests'),
+    capabilityRoutes.includes('/runtime/account/agents/:agentId/dispatch-authority-requests'),
     'Expected route capability catalog to include canonical dispatch-authority request route',
   );
   assert.ok(
-    discoveryRoutes.includes('/runtime/account/agents/:agent_registration_id/dispatch-authority'),
+    discoveryRoutes.includes('/runtime/account/agents/:agentId/dispatch-authority'),
     'Expected local discovery catalog to include canonical dispatch-authority read route',
   );
   assert.ok(
-    discoveryRoutes.includes('/runtime/account/agents/:agent_registration_id/dispatch-authority-requests'),
+    discoveryRoutes.includes('/runtime/account/agents/:agentId/dispatch-authority-requests'),
     'Expected local discovery catalog to include canonical dispatch-authority request route',
   );
 });

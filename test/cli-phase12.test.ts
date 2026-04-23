@@ -419,6 +419,14 @@ test('runCli prints operator discovery snapshots for CLI route metadata and loca
       ],
     },
     {
+      guidanceKey: 'authorization-projection',
+      lane: 'default-local-docker',
+      appliesWhen: 'account-plane-succeeds-but-governed-runtime-still-denied',
+      signal: 'active_role_binding_required',
+      nextStepOwner: 'enterprise-admin',
+      nextStepAction: 'Keep claimant continuation on the account-owned plane, use only the allowed account/session/org repair actions surfaced by Core, and if the gate still remains after those repairs, treat it as an unresolved Core-owned authorization projection issue rather than inventing a new claimant or operator workflow.',
+    },
+    {
       guidanceKey: 'proof-lane',
       lane: 'proof-lane-admin-session',
       appliesWhen: 'deterministic-proof-validation',
@@ -762,6 +770,14 @@ test('runCli prints public-first onboarding readiness without requiring environm
           failClosedState: 'If the post-step reads do not confirm both truth fields, remain fail-closed and do not treat the subject as runnable.',
         },
       ],
+    },
+    authorizationProjectionGate: {
+      guidanceKey: 'authorization-projection',
+      lane: 'default-local-docker',
+      appliesWhen: 'account-plane-succeeds-but-governed-runtime-still-denied',
+      signal: 'active_role_binding_required',
+      nextStepOwner: 'enterprise-admin',
+      nextStepAction: 'Keep claimant continuation on the account-owned plane, use only the allowed account/session/org repair actions surfaced by Core, and if the gate still remains after those repairs, treat it as an unresolved Core-owned authorization projection issue rather than inventing a new claimant or operator workflow.',
     },
   });
 });
