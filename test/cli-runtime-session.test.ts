@@ -171,8 +171,10 @@ test('cli runtime context helper keeps provisional onboarding execution isolated
     {
       BIDVIA_SESSION_ID: 'session-should-not-leak',
     } as NodeJS.ProcessEnv,
+    null,
     {
       tenantId: { value: 'tenant-runtime', source: 'local-state' },
+      agentId: { value: null, source: 'missing' },
       principalId: { value: 'principal-stale', source: 'local-state' },
       companyId: { value: 'company-stale', source: 'local-state' },
       registrationId: { value: 'areg-stale', source: 'local-state' },
@@ -182,9 +184,40 @@ test('cli runtime context helper keeps provisional onboarding execution isolated
 
   assert.deepEqual(executionContext, {
     tenantId: 'tenant-runtime',
+    agentId: undefined,
     principalId: undefined,
     companyId: undefined,
     registrationId: undefined,
     sessionId: undefined,
+  });
+});
+
+test('cli runtime context helper reuses local session fallback for claim continuation when env is absent', async () => {
+  const { buildCliOnboardingActionExecutionContext } = await import('../src/cli-runtime-context.ts');
+
+  const executionContext = buildCliOnboardingActionExecutionContext(
+    'claim-provisional-agent',
+    {} as NodeJS.ProcessEnv,
+    {
+      tenantId: 'tenant-runtime',
+      sessionId: 'sess-local',
+    },
+    {
+      tenantId: { value: 'tenant-runtime', source: 'local-state' },
+      agentId: { value: 'agent-local', source: 'local-state' },
+      principalId: { value: 'principal-local', source: 'local-state' },
+      companyId: { value: null, source: 'missing' },
+      registrationId: { value: 'areg-local', source: 'local-state' },
+      sessionId: { present: true, source: 'local-state' },
+    },
+  );
+
+  assert.deepEqual(executionContext, {
+    tenantId: 'tenant-runtime',
+    agentId: 'agent-local',
+    principalId: 'principal-local',
+    companyId: undefined,
+    registrationId: 'areg-local',
+    sessionId: 'sess-local',
   });
 });

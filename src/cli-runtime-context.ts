@@ -126,6 +126,37 @@ function buildSecretPresenceWithSource(envValue: string | undefined): BidviaCliS
   };
 }
 
+function buildSecretPresenceWithLocalFallback(
+  envValue: string | undefined,
+  localStateValue?: string,
+): BidviaCliSecretPresenceSnapshot {
+  if (envValue !== undefined) {
+    return {
+      present: true,
+      source: 'env',
+    };
+  }
+
+  if (localStateValue !== undefined) {
+    return {
+      present: true,
+      source: 'local-state',
+    };
+  }
+
+  return {
+    present: false,
+    source: 'missing',
+  };
+}
+
+function readEffectiveSessionId(
+  env: NodeJS.ProcessEnv,
+  localState: BidviaLocalOnboardingState | null,
+): string | undefined {
+  return readNonEmptyEnvValue(env, 'BIDVIA_SESSION_ID') ?? localState?.sessionId;
+}
+
 export function buildCliEffectiveContextSnapshot(
   env: NodeJS.ProcessEnv,
   localState: BidviaLocalOnboardingState | null,
@@ -137,7 +168,7 @@ export function buildCliEffectiveContextSnapshot(
     companyId: buildContextValueWithSource(readNonEmptyEnvValue(env, 'BIDVIA_COMPANY_ID'), localState?.companyId),
     registrationId: buildContextValueWithSource(readNonEmptyEnvValue(env, 'BIDVIA_REGISTRATION_ID'), localState?.registrationId),
     lastCompletedStep: buildContextValueWithSource(undefined, localState?.lastCompletedStep),
-    sessionId: buildSecretPresenceWithSource(readNonEmptyEnvValue(env, 'BIDVIA_SESSION_ID')),
+    sessionId: buildSecretPresenceWithLocalFallback(readNonEmptyEnvValue(env, 'BIDVIA_SESSION_ID'), localState?.sessionId),
     adminSessionId: buildSecretPresenceWithSource(readNonEmptyEnvValue(env, 'BIDVIA_ADMIN_SESSION_ID')),
   };
 }
@@ -145,9 +176,10 @@ export function buildCliEffectiveContextSnapshot(
 export function buildCliOnboardingActionExecutionContext(
   command: BidviaCliOnboardingActionCommand,
   env: NodeJS.ProcessEnv,
+  localState: BidviaLocalOnboardingState | null,
   effectiveContext: Pick<
     BidviaCliEffectiveContextSnapshot,
-    'tenantId' | 'principalId' | 'companyId' | 'registrationId' | 'sessionId'
+    'tenantId' | 'agentId' | 'principalId' | 'companyId' | 'registrationId' | 'sessionId'
   >,
 ): BidviaCliOnboardingActionExecutionContext {
   if (command === 'create-provisional-agent' || command === 'query-provisional-agent') {
@@ -167,9 +199,7 @@ export function buildCliOnboardingActionExecutionContext(
     principalId: effectiveContext.principalId.value ?? undefined,
     companyId: effectiveContext.companyId.value ?? undefined,
     registrationId: effectiveContext.registrationId.value ?? undefined,
-    sessionId: effectiveContext.sessionId.present
-      ? readNonEmptyEnvValue(env, 'BIDVIA_SESSION_ID')
-      : undefined,
+    sessionId: readEffectiveSessionId(env, localState),
   } satisfies BidviaCliOnboardingActionExecutionContext;
 }
 
@@ -179,7 +209,7 @@ export function buildCliPersistedOnboardingActionState(
   existingState: BidviaLocalOnboardingState | null,
   effectiveContext: Pick<
     BidviaCliEffectiveContextSnapshot,
-    'tenantId' | 'principalId' | 'companyId' | 'registrationId'
+    'tenantId' | 'agentId' | 'principalId' | 'companyId' | 'registrationId'
   >,
   executionContext: BidviaCliOnboardingActionExecutionContext,
   now: string,

@@ -233,6 +233,7 @@ export async function runCliRuntimeOnboardingAction(
   const executionContext = buildCliOnboardingActionExecutionContext(
     command as BidviaCliOnboardingActionCommand,
     env,
+    localState,
     effectiveContext,
   );
   const requiredContext = onboardingActionRequiredContextByCommand[
