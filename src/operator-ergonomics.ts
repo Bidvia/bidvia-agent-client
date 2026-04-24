@@ -1,5 +1,7 @@
 import type {
   BidviaClientContext,
+  BidviaExecutionBlockerClass,
+  BidviaExecutionOwnership,
   BidviaMcpToolDescriptor,
   BidviaPlaneExecutionGate,
   BidviaScenarioContextKey,
@@ -21,6 +23,8 @@ export interface BidviaExecutionOperatorPreflight {
   missingContext: BidviaScenarioContextKey[];
   runnable: boolean;
   blockedBy: string | null;
+  blockerClass: BidviaExecutionBlockerClass | null;
+  ownership: BidviaExecutionOwnership;
   hints: string[];
 }
 
@@ -115,6 +119,7 @@ function buildHints(params: {
   executionGate: BidviaPlaneExecutionGate | undefined;
   localCapabilityRiskTier: string;
   missingContext: BidviaScenarioContextKey[];
+  blockerClass: BidviaExecutionBlockerClass | null;
   dryRun: boolean;
 }): string[] {
   const hints: string[] = [];
@@ -136,6 +141,10 @@ function buildHints(params: {
     hints.push(`Set ${envKeys.join(' and ')} before running the real execution command.`);
   }
 
+  if (params.blockerClass) {
+    hints.push(`Blocker class ${params.blockerClass} keeps this command fail-closed until the required execution context is present.`);
+  }
+
   if (params.surface === 'cli' && !params.dryRun) {
     hints.push('Use --dry-run to inspect the local-only payload preview without remote execution.');
   }
@@ -147,6 +156,33 @@ function buildHints(params: {
   return hints;
 }
 
+function deriveOwnership(catalogEntry: BidviaExecutionCatalogEntry): BidviaExecutionOwnership {
+  if (catalogEntry.accessContextFamily === 'operator-company') {
+    return 'operator-admin';
+  }
+
+  if (catalogEntry.executionGate && catalogEntry.executionGate.executionTruth !== 'packet-grounded-execution') {
+    return 'core-runtime';
+  }
+
+  return 'claimant';
+}
+
+function deriveBlockerClass(params: {
+  executionGate: BidviaPlaneExecutionGate | undefined;
+  missingContext: BidviaScenarioContextKey[];
+}): BidviaExecutionBlockerClass | null {
+  if (params.executionGate && params.executionGate.executionTruth !== 'packet-grounded-execution') {
+    return 'blocked-pending-packet';
+  }
+
+  if (params.missingContext.length > 0) {
+    return 'missing-local-context';
+  }
+
+  return null;
+}
+
 function buildPreflight(
   target: string,
   surface: 'cli' | 'mcp',
@@ -155,6 +191,10 @@ function buildPreflight(
   dryRun: boolean,
 ): BidviaExecutionOperatorPreflight {
   const missingContext = collectMissingContext(catalogEntry.requiredContext, context);
+  const blockerClass = deriveBlockerClass({
+    executionGate: catalogEntry.executionGate,
+    missingContext,
+  });
 
   return {
     target,
@@ -169,11 +209,14 @@ function buildPreflight(
     missingContext,
     runnable: catalogEntry.executionGate?.executionTruth === 'packet-grounded-execution',
     blockedBy: catalogEntry.executionGate?.blockedBy ?? null,
+    blockerClass,
+    ownership: deriveOwnership(catalogEntry),
     hints: buildHints({
       surface,
       executionGate: catalogEntry.executionGate,
       localCapabilityRiskTier: catalogEntry.localCapabilityRiskTier,
       missingContext,
+      blockerClass,
       dryRun,
     }),
   };

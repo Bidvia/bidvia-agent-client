@@ -48,6 +48,8 @@ type ExecutionPreflight = {
   missingContext: string[];
   runnable: boolean;
   blockedBy: string | null;
+  blockerClass: string | null;
+  ownership: string;
   hints: string[];
 };
 
@@ -93,9 +95,12 @@ test('runCli heartbeat dry-run emits structured preflight context and risk hints
       missingContext: ['registrationId', 'principalId'],
       runnable: true,
       blockedBy: null,
+      blockerClass: 'missing-local-context',
+      ownership: 'claimant',
       hints: [
         'Dry-run stays local and does not execute the remote registration-bound route.',
         'Set BIDVIA_REGISTRATION_ID and BIDVIA_PRINCIPAL_ID before running the real execution command.',
+        'Blocker class missing-local-context keeps this command fail-closed until the required execution context is present.',
         'Risk tier runtime-execution means the non-dry-run command writes to the remote runtime route.',
       ],
     },
@@ -144,8 +149,11 @@ test('runCli heartbeat fails fast with structured missing-context guidance befor
         missingContext: ['registrationId', 'principalId'],
         runnable: true,
         blockedBy: null,
+        blockerClass: 'missing-local-context',
+        ownership: 'claimant',
         hints: [
           'Set BIDVIA_REGISTRATION_ID and BIDVIA_PRINCIPAL_ID before running the real execution command.',
+          'Blocker class missing-local-context keeps this command fail-closed until the required execution context is present.',
           'Use --dry-run to inspect the local-only payload preview without remote execution.',
           'Risk tier runtime-execution means the non-dry-run command writes to the remote runtime route.',
         ],
@@ -189,6 +197,8 @@ test('dispatchMcpToolCall adds execution preflight metadata and rejects missing 
     missingContext: [],
     runnable: true,
     blockedBy: null,
+    blockerClass: null,
+    ownership: 'claimant',
     hints: [
       'This MCP execution tool uses the existing local execution client seam.',
       'Risk tier runtime-execution means the tool writes to the remote runtime route when context is present.',
@@ -220,6 +230,58 @@ test('buildMcpMissingContextMessage gives OpenClaw agents the next local remedia
     buildMcpMissingContextMessage('create-commercial-action-execution', ['companyId', 'principalId']),
     'MCP tool create-commercial-action-execution is missing required local execution context: companyId, principalId. Use bidvia route-context-matrix to confirm the next Bidvia context family, then set BIDVIA_COMPANY_ID and BIDVIA_PRINCIPAL_ID before retrying this local stdio MCP tool.',
   );
+});
+
+test('CLI and MCP execution diagnostics keep blocker wording and ownership consistent', async () => {
+  const printed: unknown[] = [];
+
+  const exitCode = await runCli(['heartbeat'], {
+    now: () => '2026-03-30T10:00:00Z',
+    printJson: (value: unknown) => {
+      printed.push(value);
+    },
+    printLine: () => {
+      throw new Error('help output should not be used for heartbeat execution');
+    },
+    createClient: () => new BidviaClient({
+      baseUrl: 'http://127.0.0.1:8787',
+      context: createExecutionContext(),
+    }),
+    resolveExecutionContext: () => createExecutionContext(),
+  } as never);
+
+  assert.equal(exitCode, 1);
+  const cliFailure = printed[0] as { error: { preflight: ExecutionPreflight } };
+
+  let mcpFailure: Error | undefined;
+  try {
+    await dispatchMcpToolCallWithExecution(
+      {
+        toolName: 'heartbeat-execution',
+        arguments: {
+          now: '2026-03-30T10:00:00Z',
+          expiresAt: '2026-03-30T10:05:00Z',
+        },
+      },
+      {
+        createExecutionClient: () => new BidviaClient({
+          baseUrl: 'http://127.0.0.1:8787',
+          context: createExecutionContext(),
+        }),
+      },
+    );
+  } catch (error) {
+    mcpFailure = error as Error;
+  }
+
+  assert.equal(cliFailure.error.preflight.blockerClass, 'missing-local-context');
+  assert.equal(cliFailure.error.preflight.ownership, 'claimant');
+  assert.equal(
+    cliFailure.error.preflight.hints.includes('Blocker class missing-local-context keeps this command fail-closed until the required execution context is present.'),
+    true,
+  );
+  assert.ok(mcpFailure);
+  assert.equal(mcpFailure.message.includes('missing required local execution context: registrationId, principalId'), true);
 });
 
 test('buildExecutionGuidanceEntries surfaces task-write-ready and proof-lane next-step guidance without faking Core truth', () => {
