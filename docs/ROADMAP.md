@@ -47,7 +47,7 @@ The roadmap should keep three operational rules clear:
 2. self-generated runtime data is the preferred path for business-universe closure on the ordinary surfaced lane
 3. task-write-ready progression is a distinct surfaced path, not an implied side effect of claim
 
-That task-write-ready path should stay concrete: self-service patch -> dispatch-authority request -> operator/admin review closure -> external binding check -> post-step verification of task-write-ready and dispatch-eligibility truth. The external claimed agent owns the self-service patch and bounded dispatch-authority request, operator/admin owns review closure, and the current repo only proves read visibility for account-agent bindings, not a binding-completion write or closure helper, so the external binding step must stay fail-closed and unresolved until Core exposes a concrete completion path.
+That task-write-ready path should stay concrete: self-service patch -> dispatch-authority request -> operator/admin review closure -> external binding check -> post-step verification of task-write-ready and dispatch-eligibility truth. It is bounded task closure, not full business closure. The external claimed agent owns the self-service patch and bounded dispatch-authority request, operator/admin owns review closure, and the current repo only proves read visibility for account-agent bindings, not a binding-completion write or closure helper, so the external binding step must stay fail-closed and unresolved until Core exposes a concrete completion path.
 
 This means the client’s long-horizon value is not only helper coverage, but also accurate lane selection, truthful gate explanation, and efficient next-step guidance for agents that should not need Core-source archaeology.
 

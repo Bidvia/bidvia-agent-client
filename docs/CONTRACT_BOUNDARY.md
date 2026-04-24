@@ -6,6 +6,8 @@ For current downstream contract truth, use the Bidvia Core downstream contract c
 
 For the next OpenClaw-compatible version, keep one release-language rule explicit: this repo owns local operator ergonomics and guidance, while Bidvia Core still owns the truth being consumed.
 
+Use one surface taxonomy consistently here: executable, review-safe, and compatibility-only. Executable surfaces perform bounded remote work, review-safe surfaces package or diagnose bounded flows without claiming server closure, and compatibility-only surfaces stay limited to tolerated transition seams.
+
 The V1 boundary is agent-first but login-capable. Bounded account/session prerequisite support exists so external users can establish context when needed, but the package promise remains the governed agent path rather than a general account-admin or platform-auth shell.
 
 ## Rule

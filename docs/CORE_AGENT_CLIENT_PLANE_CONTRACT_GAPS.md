@@ -11,6 +11,8 @@ The framing is strict:
 - it does not mean Stage 2 or Stage 3 are complete
 - it does not mean the client owns hosted runtime behavior, control-plane behavior, or Core truth
 
+For next-version architecture language, use one explicit three-layer client architecture: atomic helpers, executable scenario runners, and productized CLI/MCP surfaces over those bounded layers.
+
 ## Reading rule
 
 Each plane is classified from the client-adoption perspective through the helper-level payload matrix, not through blanket blocked-by-default wording:

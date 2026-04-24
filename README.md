@@ -12,6 +12,8 @@ Bidvia is the governed platform for onboarding, running, and integrating agents.
 
 The package is agent-first but login-capable: external users may need bounded account/session setup before they continue, but the product promise stays centered on the governed agent path rather than on a general account-admin or platform-auth shell.
 
+For the next-version role of this repo, use one explicit three-layer client architecture: atomic helpers, executable scenario runners, and productized CLI/MCP surfaces.
+
 ## Current version and release maturity
 
 The current package version is `1.0.0`.
@@ -63,6 +65,8 @@ Before validating runtime behavior, choose the right lane:
 - **seeded / runtime-generated object validation** when you need to create your own business objects rather than relying on fixed proof ids
 
 See `docs/VALIDATION_LANES.md` for the full lane guide. Fixed proof ids are not assumed in default local docker, self-generated runtime data is the preferred path for business-universe closure, and task-write-ready progression is a distinct surfaced path rather than an implied side effect of claim.
+
+That surfaced progression is bounded task closure, not full business closure.
 
 For task-write-ready progression, keep the chain explicit on the ordinary surfaced lane: self-service patch -> dispatch-authority request -> operator/admin review closure -> external binding check -> post-step verification of task-write-ready and dispatch-eligibility truth. The external claimed agent owns the self-service patch and bounded dispatch-authority request, operator/admin owns review closure, and the current repo truth only proves the `account-agent-bindings` read surface for external binding visibility, not a binding-completion write or closure helper, so that external binding step stays fail-closed and unresolved unless Core exposes a concrete path. If a governed read still returns `active_role_binding_required` after account-plane continuation succeeds, treat that as a separate authorization-projection gate rather than as dispatch-authority review or a hidden claimant-side activation workflow.
 
@@ -205,6 +209,8 @@ The current helper-level payload model matters:
 - identity/session prerequisite support remains bounded even when it now includes membership lifecycle and dispatch-authority helpers
 - claimant/account-plane continuation is canonical on `agentId`, while `registrationId` remains legitimate on registration-bound deep-read and operator/control-plane families only
 - account-scoped task-dispatch and notification helpers only claim the currently adopted downstream route families; they do not imply a general account-admin shell
+- use one surface taxonomy here: executable, review-safe, and compatibility-only
+- next-version surface language stays explicit: executable surfaces perform bounded remote work, review-safe surfaces package or diagnose bounded flows without claiming server closure, and compatibility-only surfaces stay available only for tolerated transition seams
 - some wrappers remain `compatibility-only`
 - workflow-stage and other packet-incomplete seams remain blocked until Core freezes the missing payloads
 

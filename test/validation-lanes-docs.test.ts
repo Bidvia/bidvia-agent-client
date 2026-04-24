@@ -30,6 +30,7 @@ function assertTaskWriteReadyProgressionSemantics(text: string, label: string) {
   assert.match(text, /unresolved/i, `${label} must keep the external binding step unresolved.`);
   assert.match(text, /Core/i, `${label} must keep the missing completion path Core-owned.`);
   assert.match(text, new RegExp(failClosed, 'i'), `${label} must keep the progression fail-closed.`);
+  assert.match(text, /bounded task closure, not full business closure/i, `${label} must distinguish bounded task closure from full business closure.`);
 }
 
 test('client docs distinguish local validation lanes and task-write-ready guidance boundaries', () => {
@@ -49,6 +50,7 @@ test('client docs distinguish local validation lanes and task-write-ready guidan
   assert.match(validationLanes, /runtime-generated objects/i);
   assert.match(validationLanes, /task-write-ready progression is a distinct surfaced path/i);
   assert.match(validationLanes, /not an implied side effect of claim/i);
+  assert.match(validationLanes, /executable, review-safe, and compatibility-only/i);
 
   assertTaskWriteReadyProgressionSemantics(readme, readmePath);
   assertTaskWriteReadyProgressionSemantics(onboarding, onboardingPath);

@@ -19,7 +19,7 @@ Before you begin runtime validation, choose the correct lane and do not mix them
 - **proof-lane / admin-session** validates deterministic admin-scoped walkthroughs
 - **seeded / runtime-generated object validation** covers flows where you must create your own business objects rather than assuming fixed proof ids
 
-Fixed proof ids are not assumed in default local docker, self-generated runtime data is the preferred path for business-universe closure, and task-write-ready progression is a distinct surfaced path, not an implied side effect of claim. Use `docs/VALIDATION_LANES.md` when deciding which lane to use next.
+Fixed proof ids are not assumed in default local docker, self-generated runtime data is the preferred path for business-universe closure, and task-write-ready progression is a distinct surfaced path, not an implied side effect of claim. That surfaced path is bounded task closure, not full business closure. Use `docs/VALIDATION_LANES.md` when deciding which lane to use next.
 
 When a claimed external agent is still not runnable, keep the ordinary surfaced chain explicit: self-service patch -> dispatch-authority request -> operator/admin review closure -> external binding check -> post-step verification of task-write-ready and dispatch-eligibility truth. The external claimed agent owns the self-service patch and bounded dispatch-authority request, operator/admin owns review closure, and the current repo truth only proves the `account-agent-bindings` read surface for external binding visibility. It does not prove a binding-completion write or closure helper, so that external binding step must stay unresolved and fail-closed whenever runnable truth still depends on missing Core-owned binding completion.
 
@@ -27,7 +27,7 @@ Separately, if account-plane continuation succeeds but governed reads or governe
 
 This onboarding layer must also explain where admin/operator context is required, so agents do not misread proof-lane or operator-assisted steps as if they were ordinary external-user flows.
 
-Stage 1 of the client-side runtime architecture upgrade is now complete in this repo. That means the CLI and local stdio MCP surfaces share one local runtime core and write local accumulation records for onboarding memory, task execution memory, capability usage memory, and result memory. It does not mean Stage 2 Core plane contracts are complete, and it does not change the rule that Core still owns platform truth.
+Stage 1 of the client-side runtime architecture upgrade is now complete in this repo. That means the CLI and local stdio MCP surfaces share one local runtime core and write local accumulation records for onboarding memory, task execution memory, capability usage memory, and result memory. It does not mean Stage 2 Core plane contracts are complete, and it does not change the rule that Core still owns platform truth. For next-version architecture language, keep one explicit three-layer client architecture in mind: atomic helpers, executable scenario runners, and productized CLI/MCP surfaces over those bounded layers.
 
 For current downstream contract truth, use the Bidvia Core downstream contract center (`docs/downstream-contract-center/**` in the main Bidvia repo) as the routine implementation source, then apply this repo's fail-closed adoption rules where packet-complete payload truth is still pending.
 
@@ -158,7 +158,7 @@ The helper-level payload matrix is the truth model for that boundary. In current
 - `blocked-pending-packet` still applies where workflow-stage or scenario-wrapper payload truth is not yet frozen
 - `compatibility-only` still applies to bounded wrappers that should not be mistaken for the canonical payload-grounded path
 
-In this phase, truth-fetch ships through the SDK and CLI as the widened frozen downstream read surface, with a bounded local stdio MCP seam exposing the currently approved read-only subset. That MCP rollout is phased on purpose: governance-first truth-fetch tools ship first, then business-truth collection and detail tools ship second. In both phases, MCP stays read-only, local stdio only, and a thin wrapper over the shipped SDK helpers.
+In this phase, truth-fetch ships through the SDK and CLI as the widened frozen downstream read surface, with a bounded local stdio MCP seam exposing the currently approved read-only subset. That MCP rollout is phased on purpose: governance-first truth-fetch tools ship first, then business-truth collection and detail tools ship second. The same bounded local stdio MCP seam now includes review-safe and explicit execution tooling, but it remains local stdio only and a thin wrapper over the shipped SDK helpers. Across this guide, keep the surface taxonomy explicit: executable, review-safe, and compatibility-only. Executable surfaces do bounded remote work, review-safe surfaces package or diagnose bounded flows without claiming server closure, and compatibility-only surfaces stay limited to tolerated transition seams.
 
 The honest phase split is:
 
@@ -280,7 +280,7 @@ The same approved reads now also have a phased MCP surface on the local stdio se
 - the SDK and CLI expose the widened governance deep-read family plus the broader business truth-fetch families listed above
 - the MCP seam keeps the currently approved governance-first tools for `account-*`, `agent-presence`, and `agent-authority`
 - the MCP seam also exposes the shipped business-truth collection and detail tools for canonical semantics, pricing, document, media, evidence, and attachment reads
-- the MCP layer stays read-only and forwards to the SDK helpers already shipped in this repo
+- the truth-fetch MCP layer stays read-only, while the broader bounded local stdio MCP seam also exposes review-safe and explicit execution tooling over the same shipped SDK and runner surfaces
 
 Runnable repo-local example:
 
@@ -303,7 +303,7 @@ node dist/cli.js pricing-bases
 node dist/cli.js media-asset --media-asset-id media-1
 ```
 
-This truth-fetch layer stays read-only. The MCP portion stays local stdio only and does not add hosted runtime behavior, hosted MCP, remote registry or remote discovery, platform-auth ownership, login beyond bounded prerequisite support, OAuth, auth implementation, integrated Core capability-truth refresh, full governed notification semantics, broader multi-agent coordination authority, or live negotiation.
+This truth-fetch layer stays read-only. The broader bounded local stdio MCP seam may also expose review-safe and explicit execution tooling, but it still does not add hosted runtime behavior, hosted MCP, remote registry or remote discovery, platform-auth ownership, login beyond bounded prerequisite support, OAuth, auth implementation, integrated Core capability-truth refresh, full governed notification semantics, broader multi-agent coordination authority, or live negotiation.
 
 Keep the deferred boundary explicit when you explain this surface to operators or SDK users:
 

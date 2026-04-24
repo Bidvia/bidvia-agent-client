@@ -2,6 +2,8 @@
 
 This package supports multiple validation modes. Agents should choose the lane that matches the question they are trying to answer, instead of assuming one environment proves everything.
 
+Use one surface taxonomy across these lanes: executable, review-safe, and compatibility-only.
+
 ## 1. Default local docker
 
 Use the default local docker lane when you want to verify real surfaced runtime behavior against a running local Bidvia Core.
@@ -46,6 +48,8 @@ Do **not** assume fixed proof ids are present in default local docker unless you
 ## 4. Task-write-ready progression is its own surfaced path
 
 Task-write-ready progression is a distinct surfaced path, not an implied side effect of claim.
+
+It is bounded task closure, not full business closure.
 
 A claimed external agent may still be blocked by readiness or authority gates even when routes exist. When this happens, the client should surface the gate honestly and explain whether the next step belongs to:
 

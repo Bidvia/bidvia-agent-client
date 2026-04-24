@@ -64,6 +64,8 @@ test('public release docs no longer depend on transitional publication wording i
   assert.match(corePlaneGaps, /Event \/ notification plane \| packet-grounded-execution \| Notification detail reads are payload-grounded and acknowledgement is the only packet-grounded execution helper in this wave\./i);
   assert.match(corePlaneGaps, /Enterprise integration plane \| packet-grounded-read/i);
   assert.match(corePlaneGaps, /helper-level payload matrix/i);
+  assert.match(corePlaneGaps, /three-layer client architecture/i);
+  assert.match(corePlaneGaps, /atomic helpers, executable scenario runners, and productized CLI\/MCP surfaces/i);
   assert.match(corePlaneGaps, /packet-grounded-execution/i);
   assert.match(corePlaneGaps, /packet-grounded-read/i);
   assert.match(corePlaneGaps, /blocked-pending-packet/i);
@@ -123,8 +125,12 @@ test('public release docs no longer depend on transitional publication wording i
   assert.doesNotMatch(contractBoundary, /`GET \/runtime\/notifications\/:notification_id`/i);
   assert.doesNotMatch(contractBoundary, /`POST \/runtime\/notifications\/:notification_id\/acknowledge`/i);
   assert.match(contractBoundary, /agent-first but login-capable/i);
+  assert.match(contractBoundary, /executable, review-safe, and compatibility-only/i);
   assert.match(onboardingGuide, /agent-first but login-capable/i);
   assert.match(onboardingGuide, /bounded account\/session prerequisite support/i);
+  assert.match(onboardingGuide, /bounded task closure, not full business closure/i);
+  assert.match(onboardingGuide, /bounded local stdio MCP seam now includes review-safe and explicit execution tooling/i);
+  assert.doesNotMatch(onboardingGuide, /MCP stays read-only/i);
   assert.match(onboardingGuide, /bidvia sign-in/);
   assert.match(onboardingGuide, /bidvia sign-up-personal/);
   assert.match(onboardingGuide, /bidvia sign-up-enterprise/);
