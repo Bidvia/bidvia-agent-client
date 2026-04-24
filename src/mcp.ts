@@ -29,6 +29,10 @@ import {
 } from './operator-ergonomics.js';
 import type { BidviaLocalMcpProductizationSnapshot } from './discovery-catalog.js';
 import type { BidviaOpportunityPackageHandoffPlanInput } from './handoffs.js';
+import {
+  buildIndustryUniverseScenarioPlan,
+  executeIndustryUniverseScenario,
+} from './universe.js';
 import type { BidviaIndustryUniverseScenarioPlanInput } from './universe.js';
 import type { BidviaClientContext } from './contracts.js';
 import {
@@ -157,6 +161,18 @@ const widenedExecutionDispatchersByCapabilityKey: Record<string, BidviaGenericEx
   createProvisionalAgent(client, input) {
     return client.createProvisionalAgent(
       requireObjectInput(input, 'createProvisionalAgent input is required for MCP execution') as never,
+    );
+  },
+  async executeIndustryUniverseScenario(client, input) {
+    const scenarioInput: unknown = requireObjectInput(
+      input,
+      'industry universe scenario input is required for MCP execution',
+    );
+    return executeIndustryUniverseScenario(
+      client,
+      buildIndustryUniverseScenarioPlan(
+        scenarioInput as BidviaIndustryUniverseScenarioPlanInput,
+      ),
     );
   },
   createNotificationDelivery(client, input) {
@@ -607,6 +623,37 @@ function requireDispatchExecutionClient(
   return dependencies.createExecutionClient();
 }
 
+async function dispatchIndustryUniverseScenarioExecutionTool(
+  descriptor: BidviaMcpToolDescriptor,
+  input: unknown,
+  dependencies: BidviaMcpDispatchDependencies,
+): Promise<BidviaMcpToolCallResponse<BidviaMcpDispatchResult>> {
+  const client = requireDispatchExecutionClient(descriptor, dependencies);
+  const preflight = buildMcpExecutionPreflight(descriptor, client);
+  if (preflight && preflight.missingContext.length > 0) {
+    throw new Error(buildMcpMissingContextMessage(descriptor.toolName, preflight.missingContext));
+  }
+
+  const scenarioInput: unknown = requireObjectInput(
+    input,
+    'industry universe scenario input is required for MCP execution',
+  );
+
+  return {
+    toolName: descriptor.toolName,
+    outputMode: descriptor.outputMode,
+    preflight,
+    result: {
+      executionResult: await executeIndustryUniverseScenario(
+        client,
+        buildIndustryUniverseScenarioPlan(
+          scenarioInput as BidviaIndustryUniverseScenarioPlanInput,
+        ),
+      ),
+    },
+  };
+}
+
 function requireAgentRegistrationId(input: unknown): string {
   if (typeof input !== 'object' || input === null) {
     throw new Error('agentRegistrationId is required for principal-governed agent reads');
@@ -1055,6 +1102,10 @@ export async function dispatchMcpToolCall(
 
   if (descriptor.helperRef.helperKey === 'buildOpportunityPackageHandoffPlan') {
     return dispatchOpportunityPackageHandoffTool(descriptor, request.arguments);
+  }
+
+  if (descriptor.helperRef.helperKey === 'executeIndustryUniverseScenario') {
+    return dispatchIndustryUniverseScenarioExecutionTool(descriptor, request.arguments, dependencies);
   }
 
   if (descriptor.outputMode === 'truth-fetch-result') {

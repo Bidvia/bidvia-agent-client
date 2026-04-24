@@ -123,6 +123,7 @@ const localCliBindings: readonly BidviaLocalDiscoveryCliBinding[] = [
   { command: 'industry-universe-plan', helperKey: 'buildIndustryUniverseScenarioPlan', recommendedOutputMode: 'plan-preview' },
   { command: 'industry-universe-review-packet-preview', helperKey: 'buildIndustryUniverseScenarioPlan', recommendedOutputMode: 'review-packet-preview' },
   { command: 'industry-universe-review-packet-export', helperKey: 'buildIndustryUniverseScenarioPlan', recommendedOutputMode: 'review-packet-export' },
+  { command: 'industry-universe-execution', helperKey: 'executeIndustryUniverseScenario', recommendedOutputMode: 'execution-result' },
   { command: 'connection-approval-plan', helperKey: 'buildConnectionApprovalScenarioPlan', recommendedOutputMode: 'plan-preview' },
   { command: 'connection-approval-review-packet-preview', helperKey: 'buildConnectionApprovalScenarioPlan', recommendedOutputMode: 'review-packet-preview' },
   { command: 'connection-approval-review-packet-export', helperKey: 'buildConnectionApprovalScenarioPlan', recommendedOutputMode: 'review-packet-export' },
@@ -453,6 +454,14 @@ const localMcpBindings: readonly BidviaLocalDiscoveryMcpBinding[] = [
     outputMode: 'review-packet-export',
     helperKey: 'buildIndustryUniverseScenarioPlan',
     capabilityKey: 'buildIndustryUniverseScenarioPlan',
+  },
+  {
+    toolName: 'industry-universe-execution',
+    description: 'Executes the bounded industry universe scenario over the local scenario executor layer.',
+    inputSchemaKey: 'BidviaIndustryUniverseScenarioPlanInput',
+    outputMode: 'execution-result',
+    helperKey: 'executeIndustryUniverseScenario',
+    capabilityKey: 'executeIndustryUniverseScenario',
   },
   {
     toolName: 'connection-approval-plan-preview',

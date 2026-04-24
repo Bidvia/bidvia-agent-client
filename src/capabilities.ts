@@ -1127,6 +1127,31 @@ const bidviaBaseRouteCapabilities: ReadonlyArray<BidviaRouteCapabilityWithOption
     ],
   },
   {
+    helperKey: 'executeIndustryUniverseScenario',
+    routePathTemplate: '/scenarios/industry-universe',
+    httpMethod: 'POST',
+    accessContextFamily: 'scenario',
+    requiredContext: ['tenantId', 'principalId', 'companyId'],
+    scope: 'write',
+    level: 'scenario-helper',
+    localCapabilityTier: 'L3-governed-commercial',
+    localCapabilityRiskTier: 'governed-commercial',
+    scenarioRouteSteps: [
+      {
+        routeKey: 'createListing',
+        requiredContext: ['tenantId', 'principalId', 'companyId'],
+      },
+      {
+        routeKey: 'activateListing',
+        requiredContext: ['tenantId', 'principalId', 'companyId'],
+      },
+      {
+        routeKey: 'generateMatchCandidates',
+        requiredContext: ['tenantId', 'principalId', 'companyId'],
+      },
+    ],
+  },
+  {
     helperKey: 'buildConnectionApprovalScenarioPlan',
     routePathTemplate: '/scenarios/connection-approval',
     httpMethod: 'POST',

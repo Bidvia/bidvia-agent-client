@@ -10,6 +10,7 @@ const expectedMcpServerToolNames = [
   'industry-universe-plan-preview',
   'industry-universe-review-packet-preview',
   'industry-universe-review-packet-export',
+  'industry-universe-execution',
   'connection-approval-plan-preview',
   'connection-approval-review-packet-preview',
   'connection-approval-review-packet-export',
@@ -184,12 +185,29 @@ test('local MCP stdio server exposes bounded tool metadata and handles review-sa
 
   runLocalMcpServerWithDependencies(input, output, {
     createExecutionClient: () => ({
+      options: {
+        context: {
+          tenantId: 'tenant-a',
+          principalId: 'principal-a',
+          companyId: 'company-a',
+          registrationId: 'areg-a',
+        },
+      },
       async postHeartbeat(receivedInput: { expiresAt: string }) {
         return {
           ok: true,
           route: 'heartbeat',
           expiresAt: receivedInput.expiresAt,
         };
+      },
+      async createListing() {
+        return { ok: true, route: 'createListing' };
+      },
+      async activateListing() {
+        return { ok: true, route: 'activateListing' };
+      },
+      async generateMatchCandidates() {
+        return { ok: true, route: 'generateMatchCandidates' };
       },
       async commitRuntimeResult() {
         return {
@@ -331,6 +349,21 @@ test('local MCP stdio server exposes bounded tool metadata and handles review-sa
       route: 'heartbeat',
       expiresAt: '2026-03-29T10:05:00Z',
     });
+
+    input.write(encodeFrame({
+      jsonrpc: '2.0',
+      id: 41,
+      method: 'tools/call',
+      params: {
+        name: 'industry-universe-execution',
+        arguments: createIndustryUniverseArguments(),
+      },
+    }));
+    const scenarioExecutionResponse = await readFrame(output) as { result: { content: Array<{ text: string }> } };
+    const scenarioExecutionPayload = JSON.parse(scenarioExecutionResponse.result.content[0]!.text);
+    assert.equal(scenarioExecutionPayload.toolName, 'industry-universe-execution');
+    assert.equal(scenarioExecutionPayload.outputMode, 'execution-result');
+    assert.equal(scenarioExecutionPayload.result.executionResult.executionResult.status, 'succeeded');
 
     input.write(encodeFrame({
       jsonrpc: '2.0',

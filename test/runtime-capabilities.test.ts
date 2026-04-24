@@ -44,7 +44,7 @@ test('buildLocalRuntimeCapabilitySnapshot defaults to the public china API while
     true,
   );
   assert.equal(snapshot.mcpTools.source, 'local-static');
-  assert.equal(snapshot.mcpTools.items.length, 66);
+  assert.equal(snapshot.mcpTools.items.length, 67);
   assert.equal(snapshot.mcpTools.schemaVersion, '2026-03-27');
   assert.equal(snapshot.mcpTools.version, 'local-runtime-capability-snapshot');
   assert.equal(snapshot.mcpTools.revision, 'repo-mcp-tools');

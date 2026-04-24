@@ -31,6 +31,7 @@ const expectedBidviaMcpToolNames = [
   'industry-universe-plan-preview',
   'industry-universe-review-packet-preview',
   'industry-universe-review-packet-export',
+  'industry-universe-execution',
   'connection-approval-plan-preview',
   'connection-approval-review-packet-preview',
   'connection-approval-review-packet-export',
@@ -241,6 +242,25 @@ test('MCP tool catalog lookup returns descriptive bounded slice metadata', () =>
   });
 
   assert.equal(getMcpToolDescriptor('missing-tool'), undefined);
+
+  assert.deepEqual(getMcpToolDescriptor('industry-universe-execution') as BidviaMcpDescriptorWithContext, {
+    toolName: 'industry-universe-execution',
+    description: 'Executes the bounded industry universe scenario over the local scenario executor layer.',
+    inputSchemaRef: {
+      schemaKey: 'BidviaIndustryUniverseScenarioPlanInput',
+    },
+    outputMode: 'execution-result',
+    helperRef: {
+      helperKey: 'executeIndustryUniverseScenario',
+      capabilityKey: 'executeIndustryUniverseScenario',
+    },
+    localCapabilityTier: 'L3-governed-commercial',
+    localCapabilityRiskTier: 'governed-commercial',
+    accessContextFamily: 'scenario',
+    requiredContext: ['tenantId', 'principalId', 'companyId'],
+    runnable: true,
+    blockedBy: null,
+  });
 });
 
 test('MCP provisional descriptors keep public create query semantics distinct from session-bound claim', () => {
@@ -1521,6 +1541,73 @@ test('dispatchMcpToolCall routes local execution tools through the explicit runt
       provisionalAgentRef: 'prov-explicit-runtime-1',
     },
   });
+
+  const industryUniverseExecution = await dispatchMcpToolCallWithExecution(
+    {
+      toolName: 'industry-universe-execution',
+      arguments: {
+        scenarioId: 'scenario-industry-universe-1',
+        scenarioLabel: 'industry-universe-soda-ash-light',
+        sourceRefs: ['source://market/soda-ash-light'],
+        evidenceRefs: ['evidence://supply/soda-ash-light'],
+        traceIds: ['trace-1'],
+        workflowIds: ['wf-1'],
+        createListing: {
+          listingId: 'listing-1',
+          listingType: 'supply',
+          category: 'basic inorganic industrial chemical',
+          sku: 'sodium-carbonate-soda-ash-light',
+          quantityValue: '15',
+          quantityUnit: 'tons',
+          regionSummary: 'China -> Vietnam',
+          verificationStatus: 'verified',
+          freshnessTs: '2026-03-27T10:00:00Z',
+          traceId: 'trace-1',
+          idempotencyKey: 'listing-1',
+          now: '2026-03-27T10:00:00Z',
+        },
+        activateListing: {
+          now: '2026-03-27T10:01:00Z',
+        },
+        generateMatchCandidates: {
+          upstreamDecision: 'READY_FOR_ROUTING',
+          requiredEvidenceLevel: 1,
+          detectedEvidenceLevel: 1,
+          workflowRunId: 'wf-1',
+          triggerEventId: 'evt-1',
+          topN: 10,
+          now: '2026-03-27T10:02:00Z',
+        },
+      },
+    },
+    {
+      createExecutionClient: () => ({
+        options: {
+          context: {
+            tenantId: 'tenant-a',
+            principalId: 'principal-a',
+            companyId: 'company-a',
+          },
+        },
+        async createListing() {
+          return { ok: true, route: 'createListing' };
+        },
+        async activateListing() {
+          return { ok: true, route: 'activateListing' };
+        },
+        async generateMatchCandidates() {
+          return { ok: true, route: 'generateMatchCandidates' };
+        },
+      }) as never,
+    },
+  );
+
+  assert.equal(industryUniverseExecution.toolName, 'industry-universe-execution');
+  assert.equal(industryUniverseExecution.outputMode, 'execution-result');
+  assert.equal(
+    (industryUniverseExecution.result as { executionResult: { executionResult: { status: string } } }).executionResult.executionResult.status,
+    'succeeded',
+  );
 });
 
 test('dispatchMcpToolCall routes widened Task 2 execution helpers through the shipped local client surface', async () => {

@@ -100,6 +100,33 @@ test('buildLocalDiscoveryCatalog returns operator-readable local mappings withou
     ],
   });
 
+  const industryUniverseExecution = catalog.find((entry) => entry.helperKey === 'executeIndustryUniverseScenario');
+  assert.deepEqual(industryUniverseExecution, {
+    helperKey: 'executeIndustryUniverseScenario',
+    routePathTemplate: '/scenarios/industry-universe',
+    httpMethod: 'POST',
+    accessContextFamily: 'scenario',
+    requiredContext: ['tenantId', 'principalId', 'companyId'],
+    scope: 'write',
+    level: 'scenario-helper',
+    localCapabilityTier: 'L3-governed-commercial',
+    localCapabilityRiskTier: 'governed-commercial',
+    discoveryKind: 'execute',
+    recommendedOutputMode: 'execution-result',
+    sourceOfTruth: 'local-sdk-helpers',
+    localOnly: true,
+    remoteDiscovery: false,
+    runnable: true,
+    blockedBy: null,
+    cliCommands: ['industry-universe-execution'],
+    mcpTools: [
+      {
+        toolName: 'industry-universe-execution',
+        outputMode: 'execution-result',
+      },
+    ],
+  });
+
   const capabilityProfile = catalog.find((entry) => entry.helperKey === 'getAgentCapabilityProfile');
   assert.deepEqual(capabilityProfile, {
     helperKey: 'getAgentCapabilityProfile',
