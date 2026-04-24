@@ -1,4 +1,116 @@
-import type { BidviaExecutionGuidanceEntry } from './contracts.js';
+import type {
+  BidviaClaimantContinuationSurface,
+  BidviaExecutionGuidanceEntry,
+  BidviaPostClaimDecisionRule,
+} from './contracts.js';
+
+const claimantContinuationSurfaces = [
+  {
+    stepKey: 'self-service-patch',
+    actor: 'external-claimed-agent',
+    command: 'agent-self-service --agent-id ... --input ...',
+    recognizedCoreSuggestedNextSteps: ['patch_agent_self_service'],
+    recognizedCoreNextStepKinds: ['self_service_patch'],
+  },
+  {
+    stepKey: 'dispatch-authority-request',
+    actor: 'external-claimed-agent',
+    command: 'account-agent-dispatch-authority-request --agent-id ...',
+    recognizedCoreSuggestedNextSteps: ['create_dispatch_authority_request'],
+    recognizedCoreNextStepKinds: ['dispatch_authority_request'],
+  },
+] as const satisfies BidviaClaimantContinuationSurface[];
+
+const postClaimDecisionTable = [
+  {
+    decisionKey: 'broken-core-suggested-next-step',
+    priority: 300,
+  },
+  {
+    decisionKey: 'supported-claimant-next-step',
+    priority: 200,
+  },
+  {
+    decisionKey: 'authorization-projection-gate',
+    priority: 100,
+  },
+] as const satisfies BidviaPostClaimDecisionRule[];
+
+function normalizePostClaimSignal(value: string | undefined): string | undefined {
+  return typeof value === 'string' && value.length > 0 ? value.toLowerCase() : undefined;
+}
+
+export function buildClaimantContinuationSurfaces(): BidviaClaimantContinuationSurface[] {
+  return claimantContinuationSurfaces.map((continuation) => ({
+    ...continuation,
+    recognizedCoreSuggestedNextSteps: [...continuation.recognizedCoreSuggestedNextSteps],
+    recognizedCoreNextStepKinds: [...continuation.recognizedCoreNextStepKinds],
+  }));
+}
+
+export function buildPostClaimDecisionTable(): BidviaPostClaimDecisionRule[] {
+  return postClaimDecisionTable.map((rule) => ({ ...rule }));
+}
+
+export function resolveCoreSuggestedClaimantContinuation(
+  recommendedNextStep: string | undefined,
+  nextStepKind: string | undefined,
+  requiredActor?: string,
+  canSelfResolve?: boolean,
+): {
+  status: 'none' | 'supported' | 'broken';
+  continuation?: BidviaClaimantContinuationSurface;
+} {
+  const normalizedRecommendedNextStep = normalizePostClaimSignal(recommendedNextStep);
+  const normalizedNextStepKind = normalizePostClaimSignal(nextStepKind);
+
+  if (!normalizedRecommendedNextStep && !normalizedNextStepKind) {
+    return { status: 'none' };
+  }
+
+  const normalizedRequiredActor = normalizePostClaimSignal(requiredActor);
+  const claimantOwnedActor = normalizedRequiredActor === 'user'
+    || normalizedRequiredActor === 'claimant'
+    || normalizedRequiredActor === 'external_claimed_agent'
+    || normalizedRequiredActor === 'external-claimed-agent';
+
+  const continuationBySuggestedStep = normalizedRecommendedNextStep
+    ? claimantContinuationSurfaces.find((continuation) => (continuation.recognizedCoreSuggestedNextSteps as readonly string[])
+      .some((value) => value === normalizedRecommendedNextStep))
+    : undefined;
+  const continuationByStepKind = normalizedNextStepKind
+    ? claimantContinuationSurfaces.find((continuation) => (continuation.recognizedCoreNextStepKinds as readonly string[])
+      .some((value) => value === normalizedNextStepKind))
+    : undefined;
+
+  if (continuationBySuggestedStep && continuationByStepKind) {
+    if (continuationBySuggestedStep.stepKey !== continuationByStepKind.stepKey) {
+      return { status: 'broken' };
+    }
+
+    return claimantOwnedActor && canSelfResolve === true
+      ? { status: 'supported', continuation: { ...continuationBySuggestedStep } }
+      : { status: 'broken' };
+  }
+
+  if (continuationBySuggestedStep && !normalizedNextStepKind) {
+    return claimantOwnedActor && canSelfResolve === true
+      ? { status: 'supported', continuation: { ...continuationBySuggestedStep } }
+      : { status: 'broken' };
+  }
+
+  if (continuationByStepKind && !normalizedRecommendedNextStep) {
+    return claimantOwnedActor && canSelfResolve === true
+      ? { status: 'supported', continuation: { ...continuationByStepKind } }
+      : { status: 'broken' };
+  }
+
+  if (continuationBySuggestedStep || continuationByStepKind) {
+    return { status: 'broken' };
+  }
+
+  return { status: 'none' };
+}
 
 export function buildExecutionGuidanceEntries(): BidviaExecutionGuidanceEntry[] {
   return [

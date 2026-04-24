@@ -218,6 +218,36 @@ test('buildOnboardingReadiness keeps official onboarding focused on public provi
         nextStepOwner: 'enterprise-admin',
         nextStepAction: 'Keep claimant continuation on the account-owned plane, use only the allowed account/session/org repair actions surfaced by Core, and if the gate still remains after those repairs, treat it as an unresolved Core-owned authorization projection issue rather than inventing a new claimant or operator workflow.',
       },
+      claimantContinuations: [
+        {
+          stepKey: 'self-service-patch',
+          actor: 'external-claimed-agent',
+          command: 'agent-self-service --agent-id ... --input ...',
+          recognizedCoreSuggestedNextSteps: ['patch_agent_self_service'],
+          recognizedCoreNextStepKinds: ['self_service_patch'],
+        },
+        {
+          stepKey: 'dispatch-authority-request',
+          actor: 'external-claimed-agent',
+          command: 'account-agent-dispatch-authority-request --agent-id ...',
+          recognizedCoreSuggestedNextSteps: ['create_dispatch_authority_request'],
+          recognizedCoreNextStepKinds: ['dispatch_authority_request'],
+        },
+      ],
+      decisionTable: [
+        {
+          decisionKey: 'broken-core-suggested-next-step',
+          priority: 300,
+        },
+        {
+          decisionKey: 'supported-claimant-next-step',
+          priority: 200,
+        },
+        {
+          decisionKey: 'authorization-projection-gate',
+          priority: 100,
+        },
+      ],
     },
   });
 });
@@ -258,6 +288,80 @@ test('buildOnboardingReadiness keeps the public-first helper chain aligned with 
       && row.helperKey === 'getAgentReadiness'
     )),
     false,
+  );
+});
+
+test('buildOnboardingReadiness surfaces canonical claimant continuations and deterministic post-approval decision precedence', () => {
+  const exports = publicSurface as Record<string, unknown>;
+
+  const readiness = (exports.buildOnboardingReadiness as () => {
+    postClaimSupport: {
+      claimantContinuations: Array<{
+        stepKey: string;
+        actor: string;
+        command: string;
+        recognizedCoreSuggestedNextSteps: string[];
+        recognizedCoreNextStepKinds: string[];
+      }>;
+      decisionTable: Array<{
+        decisionKey: string;
+        priority: number;
+      }>;
+      progression: {
+        checkpoints: Array<{
+          stepKey: string;
+          actor: string;
+          verificationCheckpoint: {
+            truthFields: string[];
+          };
+          failClosedState: string;
+        }>;
+      };
+    };
+  })();
+
+  assert.deepEqual(readiness.postClaimSupport.claimantContinuations, [
+    {
+      stepKey: 'self-service-patch',
+      actor: 'external-claimed-agent',
+      command: 'agent-self-service --agent-id ... --input ...',
+      recognizedCoreSuggestedNextSteps: ['patch_agent_self_service'],
+      recognizedCoreNextStepKinds: ['self_service_patch'],
+    },
+    {
+      stepKey: 'dispatch-authority-request',
+      actor: 'external-claimed-agent',
+      command: 'account-agent-dispatch-authority-request --agent-id ...',
+      recognizedCoreSuggestedNextSteps: ['create_dispatch_authority_request'],
+      recognizedCoreNextStepKinds: ['dispatch_authority_request'],
+    },
+  ]);
+
+  assert.deepEqual(readiness.postClaimSupport.decisionTable, [
+    {
+      decisionKey: 'broken-core-suggested-next-step',
+      priority: 300,
+    },
+    {
+      decisionKey: 'supported-claimant-next-step',
+      priority: 200,
+    },
+    {
+      decisionKey: 'authorization-projection-gate',
+      priority: 100,
+    },
+  ]);
+
+  const externalBindingCheckpoint = readiness.postClaimSupport.progression.checkpoints.find(
+    (checkpoint) => checkpoint.stepKey === 'external-binding-completion-unresolved',
+  );
+
+  assert.equal(externalBindingCheckpoint?.stepKey, 'external-binding-completion-unresolved');
+  assert.equal(externalBindingCheckpoint?.actor, 'operator-or-admin');
+  assert.deepEqual(externalBindingCheckpoint?.verificationCheckpoint.truthFields, []);
+  assert.equal(
+    externalBindingCheckpoint?.failClosedState,
+    'Until Core exposes a concrete binding-completion path and the returned reads confirm runnable truth, keep the subject non-dispatchable.',
   );
 });
 

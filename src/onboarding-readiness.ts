@@ -4,7 +4,11 @@ import {
 } from './onboarding-journey.js';
 import { buildIdentitySessionPlaneView } from './identity-session-plane.js';
 import { buildLocalRuntimeCapabilitySnapshot } from './runtime-capabilities.js';
-import { buildExecutionGuidanceEntries } from './execution-guidance.js';
+import {
+  buildClaimantContinuationSurfaces,
+  buildExecutionGuidanceEntries,
+  buildPostClaimDecisionTable,
+} from './execution-guidance.js';
 import type {
   BidviaExecutionGuidanceCheckpoint,
   BidviaRouteCapability,
@@ -144,6 +148,8 @@ export function buildOnboardingReadiness() {
       label: 'Governed-run support',
       progression: requireTaskWriteReadyProgression(),
       authorizationProjectionGate: requireExecutionGuidanceEntry('authorization-projection'),
+      claimantContinuations: buildClaimantContinuationSurfaces(),
+      decisionTable: buildPostClaimDecisionTable(),
     },
   };
 }
