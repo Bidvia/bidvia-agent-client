@@ -68,6 +68,7 @@ test('runCli help lists truth-fetch read-only commands under the advanced govern
     '  registration-lifecycle-plan',
     '  registered-agent-operations-plan',
     '  mcp-server',
+    '  industry-universe-execution --input ...',
     '  heartbeat [--dry-run]',
     '  sync-upload [--dry-run]',
     '  evidence [--dry-run]',

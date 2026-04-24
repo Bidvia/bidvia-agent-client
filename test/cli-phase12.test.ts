@@ -50,6 +50,7 @@ test('runCli prints grouped help output for the learn, create-claim, run, diagno
     '  registration-lifecycle-plan',
     '  registered-agent-operations-plan',
     '  mcp-server',
+    '  industry-universe-execution --input ...',
     '  heartbeat [--dry-run]',
     '  sync-upload [--dry-run]',
     '  evidence [--dry-run]',
@@ -779,6 +780,36 @@ test('runCli prints public-first onboarding readiness without requiring environm
       nextStepOwner: 'enterprise-admin',
       nextStepAction: 'Keep claimant continuation on the account-owned plane, use only the allowed account/session/org repair actions surfaced by Core, and if the gate still remains after those repairs, treat it as an unresolved Core-owned authorization projection issue rather than inventing a new claimant or operator workflow.',
     },
+    claimantContinuations: [
+      {
+        stepKey: 'self-service-patch',
+        actor: 'external-claimed-agent',
+        command: 'agent-self-service --agent-id ... --input ...',
+        recognizedCoreSuggestedNextSteps: ['patch_agent_self_service'],
+        recognizedCoreNextStepKinds: ['self_service_patch'],
+      },
+      {
+        stepKey: 'dispatch-authority-request',
+        actor: 'external-claimed-agent',
+        command: 'account-agent-dispatch-authority-request --agent-id ...',
+        recognizedCoreSuggestedNextSteps: ['create_dispatch_authority_request'],
+        recognizedCoreNextStepKinds: ['dispatch_authority_request'],
+      },
+    ],
+    decisionTable: [
+      {
+        decisionKey: 'broken-core-suggested-next-step',
+        priority: 300,
+      },
+      {
+        decisionKey: 'supported-claimant-next-step',
+        priority: 200,
+      },
+      {
+        decisionKey: 'authorization-projection-gate',
+        priority: 100,
+      },
+    ],
   });
 });
 
@@ -1267,9 +1298,12 @@ test('runCli dry-runs execution commands with structured output instead of invok
       missingContext: ['registrationId', 'principalId'],
       runnable: true,
       blockedBy: null,
+      blockerClass: 'missing-local-context',
+      ownership: 'claimant',
       hints: [
         'Dry-run stays local and does not execute the remote registration-bound route.',
-          'Set BIDVIA_REGISTRATION_ID and BIDVIA_PRINCIPAL_ID before running the real execution command.',
+        'Set BIDVIA_REGISTRATION_ID and BIDVIA_PRINCIPAL_ID before running the real execution command.',
+        'Blocker class missing-local-context keeps this command fail-closed until the required execution context is present.',
         'Risk tier runtime-execution means the non-dry-run command writes to the remote runtime route.',
       ],
     },
@@ -1278,6 +1312,120 @@ test('runCli dry-runs execution commands with structured output instead of invok
       expiresAt: '2026-03-29T10:05:00.000Z',
     },
   }]);
+});
+
+test('runCli industry-universe execution uses the provided input instead of a built-in fixed scenario payload', async () => {
+  const printed: unknown[] = [];
+  const calls: Array<{ helper: string; listingId?: string; idempotencyKey?: string }> = [];
+
+  const exitCode = await runCli([
+    'industry-universe-execution',
+    '--input',
+    JSON.stringify({
+      scenarioId: 'scenario-industry-universe-user-1',
+      scenarioLabel: 'industry-universe-user-input',
+      sourceRefs: ['source://market/user-1'],
+      evidenceRefs: ['evidence://cli/user-1'],
+      traceIds: ['trace-user-1'],
+      workflowIds: ['wf-user-1'],
+      createListing: {
+        listingId: 'listing-user-1',
+        listingType: 'supply',
+        category: 'basic inorganic industrial chemical',
+        sku: 'sodium-carbonate-user-1',
+        quantityValue: '15',
+        quantityUnit: 'tons',
+        regionSummary: 'China -> Vietnam',
+        verificationStatus: 'verified',
+        freshnessTs: '2026-03-29T10:00:00Z',
+        traceId: 'trace-user-1',
+        idempotencyKey: 'listing-user-1',
+        now: '2026-03-29T10:00:00Z',
+      },
+      activateListing: {
+        now: '2026-03-29T10:01:00Z',
+      },
+      generateMatchCandidates: {
+        upstreamDecision: 'READY_FOR_ROUTING',
+        requiredEvidenceLevel: 1,
+        detectedEvidenceLevel: 1,
+        workflowRunId: 'wf-user-1',
+        triggerEventId: 'evt-user-1',
+        topN: 10,
+        now: '2026-03-29T10:02:00Z',
+      },
+    }),
+  ], {
+    createClient: () => ({
+      async createListing(input: { listingId: string; idempotencyKey: string }) {
+        calls.push({ helper: 'createListing', listingId: input.listingId, idempotencyKey: input.idempotencyKey });
+        return { ok: true, route: 'create-listing' };
+      },
+      async activateListing() {
+        calls.push({ helper: 'activateListing' });
+        return { ok: true, route: 'activate-listing' };
+      },
+      async generateMatchCandidates() {
+        calls.push({ helper: 'generateMatchCandidates' });
+        return { ok: true, route: 'generate-match-candidates' };
+      },
+    }) as never,
+    resolveExecutionContext: () => ({
+      tenantId: 'tenant-a',
+      principalId: 'principal-a',
+      companyId: 'company-a',
+    }),
+    now: () => '2026-03-29T10:00:00Z',
+    printJson: (value) => {
+      printed.push(value);
+    },
+    printLine: () => {
+      throw new Error('industry-universe-execution should not print help lines');
+    },
+  });
+
+  assert.equal(exitCode, 0);
+  assert.deepEqual(calls, [
+    {
+      helper: 'createListing',
+      listingId: 'listing-user-1',
+      idempotencyKey: 'listing-user-1',
+    },
+    {
+      helper: 'activateListing',
+    },
+    {
+      helper: 'generateMatchCandidates',
+    },
+  ]);
+  assert.equal(printed.length, 1);
+  const payload = printed[0] as {
+    verificationBundle: {
+      scenarioFamily: string;
+      verificationMode: string;
+      completedRouteChain: Array<{ routeKey: string }>;
+    };
+    executionResult: {
+      scenarioFamily: string;
+      status: string;
+      closureStage: string;
+      ownership: string;
+    };
+  };
+  assert.equal(payload.verificationBundle.scenarioFamily, 'industry-universe');
+  assert.equal(payload.verificationBundle.verificationMode, 'review-safe');
+  assert.deepEqual(
+    payload.verificationBundle.completedRouteChain.map((detail) => detail.routeKey),
+    [
+      'createListing',
+      'activateListing',
+      'generateMatchCandidates',
+    ],
+  );
+  assert.equal(payload.executionResult.scenarioFamily, 'industry-universe');
+  assert.equal(payload.executionResult.status, 'succeeded');
+  assert.equal(payload.executionResult.closureStage, 'business-closure-deferred');
+  assert.equal(payload.executionResult.ownership, 'claimant');
 });
 
 test('runCli returns a structured actionable invalid-input failure for verification bundle export', async () => {

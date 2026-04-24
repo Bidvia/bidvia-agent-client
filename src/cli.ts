@@ -41,6 +41,10 @@ import {
   type BidviaExecutionAdapter,
   type BidviaRegisteredAgentExecutionCommand,
 } from './adapters.js';
+import {
+  buildIndustryUniverseScenarioPlan,
+  executeIndustryUniverseScenario,
+} from './universe.js';
 import { buildCommercialActionScenarioPlan } from './commercial-action.js';
 import { buildMultiBusinessChainCoordinatorPlan } from './coordinator.js';
 import {
@@ -56,7 +60,10 @@ import {
   buildScenarioVerificationBundle,
   exportScenarioVerificationBundle,
 } from './verification.js';
-import { buildExecutionGuidanceEntries } from './execution-guidance.js';
+import {
+  buildExecutionGuidanceEntries,
+  resolveCoreSuggestedClaimantContinuation,
+} from './execution-guidance.js';
 import { buildRegistrationLifecycleScenarioPlan } from './registration-lifecycle.js';
 import { buildRegisteredAgentOperationsScenarioPlan } from './registered-agent-operations.js';
 import {
@@ -1025,13 +1032,142 @@ function buildDoctorOnboardingSnapshot(
     return undefined;
   })();
 
+  const responseBody = readinessLiveCheck.error?.responseBody && typeof readinessLiveCheck.error.responseBody === 'object'
+    ? readinessLiveCheck.error.responseBody as Record<string, unknown>
+    : null;
+  const authoritativePayload = responseBody && responseBody.error && typeof responseBody.error === 'object'
+    ? responseBody.error as Record<string, unknown>
+    : responseBody;
+  const requiredActor = authoritativePayload && typeof authoritativePayload.required_actor === 'string'
+    ? authoritativePayload.required_actor
+    : undefined;
+  const recommendedNextStep = authoritativePayload && typeof authoritativePayload.recommended_next_step === 'string'
+    ? authoritativePayload.recommended_next_step
+    : undefined;
+  const nextStepKind = authoritativePayload && typeof authoritativePayload.next_step_kind === 'string'
+    ? authoritativePayload.next_step_kind
+    : undefined;
+  const canSelfResolve = authoritativePayload && typeof authoritativePayload.can_self_resolve === 'boolean'
+    ? authoritativePayload.can_self_resolve
+    : undefined;
+  const boundaryMessage = authoritativePayload && typeof authoritativePayload.boundary_message === 'string'
+    ? authoritativePayload.boundary_message
+    : undefined;
+
   if (readinessLiveCheck.status === 'failed' && readinessErrorCode === 'active_role_binding_required') {
-    const responseBody = readinessLiveCheck.error?.responseBody && typeof readinessLiveCheck.error.responseBody === 'object'
-      ? readinessLiveCheck.error.responseBody as Record<string, unknown>
-      : null;
-    const authoritativePayload = responseBody && responseBody.error && typeof responseBody.error === 'object'
-      ? responseBody.error as Record<string, unknown>
-      : responseBody;
+    const resolvedClaimantContinuation = resolveCoreSuggestedClaimantContinuation(
+      recommendedNextStep,
+      nextStepKind,
+      requiredActor,
+      canSelfResolve,
+    );
+
+    if (resolvedClaimantContinuation.status === 'supported' && resolvedClaimantContinuation.continuation) {
+      const continuation = resolvedClaimantContinuation.continuation;
+      const nextCommands = continuation.stepKey === 'self-service-patch'
+        ? [
+            buildStaticFirstAccessCommandHint(
+              'bidvia account-agent --agent-id ...',
+              'Inspect the canonical claimed-agent account-plane state before applying the next claimant-owned continuation step.',
+            ),
+            buildStaticFirstAccessCommandHint(
+              'bidvia agent-self-service --agent-id ... --input ...',
+              'Use the canonical account-plane self-service helper when Core explicitly recommends the claimant-owned self-service continuation.',
+            ),
+            buildStaticFirstAccessCommandHint(
+              'bidvia account-agent-dispatch-authority --agent-id ...',
+              'Re-read the bounded dispatch-authority surface after self-service changes so the next review-owned boundary stays explicit.',
+            ),
+            buildStaticFirstAccessCommandHint(
+              'bidvia doctor',
+              'Re-run doctor after the claimant continuation so the same claimed handoff can be checked again against governed-read truth.',
+            ),
+            buildStaticFirstAccessCommandHint(
+              'bidvia route-context-matrix',
+              'Keep the claimant continuation, later review-owned boundaries, and governed-read verification steps explicit.',
+            ),
+          ]
+        : [
+            buildStaticFirstAccessCommandHint(
+              'bidvia account-agent --agent-id ...',
+              'Inspect the canonical claimed-agent account-plane state before requesting dispatch-authority continuation.',
+            ),
+            buildStaticFirstAccessCommandHint(
+              'bidvia account-agent-dispatch-authority --agent-id ...',
+              'Read the current bounded dispatch-authority state before submitting another claimant-owned request.',
+            ),
+            buildStaticFirstAccessCommandHint(
+              'bidvia account-agent-dispatch-authority-request --agent-id ...',
+              'Use the canonical claimant-owned dispatch-authority request helper when Core explicitly recommends that continuation.',
+            ),
+            buildStaticFirstAccessCommandHint(
+              'bidvia doctor',
+              'Re-run doctor after the claimant continuation so the same claimed handoff can be checked again against governed-read truth.',
+            ),
+            buildStaticFirstAccessCommandHint(
+              'bidvia route-context-matrix',
+              'Keep the claimant continuation, later review-owned boundaries, and governed-read verification steps explicit.',
+            ),
+          ];
+
+      return {
+        journeyKey: 'public-first-onboarding',
+        journeyLabel: 'Public provisional onboarding',
+        currentStage: {
+          key: 'claimant-next-step-available',
+          label: 'Public provisional onboarding is complete locally, and Core returned a supported claimant-owned continuation on the canonical account plane.',
+          blocked: true,
+          blockedOn: continuation.stepKey,
+          lastCompletedStep: effectiveContext.lastCompletedStep.value,
+          ...(requiredActor === undefined ? {} : { requiredActor }),
+          ...(recommendedNextStep === undefined ? {} : { recommendedNextStep }),
+          ...(nextStepKind === undefined ? {} : { nextStepKind }),
+          ...(canSelfResolve === undefined ? {} : { canSelfResolve }),
+          ...(boundaryMessage === undefined ? {} : { boundaryMessage }),
+        },
+        nextCommands,
+        firstSuccessNextStep: buildIdentitySessionPlaneView().canonicalOnboarding.firstSuccessNextStep,
+      };
+    }
+
+    if (resolvedClaimantContinuation.status === 'broken') {
+      return {
+        journeyKey: 'public-first-onboarding',
+        journeyLabel: 'Public provisional onboarding',
+        currentStage: {
+          key: 'core-suggested-next-step-broken',
+          label: 'Public provisional onboarding is complete locally, but the suggested claimant continuation could not be trusted as a runnable downstream path.',
+          blocked: true,
+          blockedOn: 'post-approval-claimant-progression',
+          lastCompletedStep: effectiveContext.lastCompletedStep.value,
+          ...(requiredActor === undefined ? {} : { requiredActor }),
+          ...(recommendedNextStep === undefined ? {} : { recommendedNextStep }),
+          ...(nextStepKind === undefined ? {} : { nextStepKind }),
+          ...(canSelfResolve === undefined ? {} : { canSelfResolve }),
+          ...(boundaryMessage === undefined ? {} : { boundaryMessage }),
+        },
+        nextCommands: [
+          buildStaticFirstAccessCommandHint(
+            'bidvia account-agent --agent-id ...',
+            'Inspect the canonical claimed-agent continuation state first so the broken suggested next step stays evidence-backed rather than inferred.',
+          ),
+          buildStaticFirstAccessCommandHint(
+            'bidvia route-context-matrix',
+            'Confirm which canonical claimant, review-owned, and unresolved boundaries the current repo truth actually ships.',
+          ),
+          buildStaticFirstAccessCommandHint(
+            'bidvia doctor',
+            'Re-run doctor after any legitimate account-plane change so the broken suggested step can be compared against fresh evidence.',
+          ),
+          buildStaticFirstAccessCommandHint(
+            'bidvia context show',
+            'Capture the claimed local identity context that the blocked progression evidence currently depends on.',
+          ),
+        ],
+        firstSuccessNextStep: buildIdentitySessionPlaneView().canonicalOnboarding.firstSuccessNextStep,
+      };
+    }
+
     return {
       journeyKey: 'public-first-onboarding',
       journeyLabel: 'Public provisional onboarding',
@@ -1041,11 +1177,11 @@ function buildDoctorOnboardingSnapshot(
         blocked: true,
         blockedOn: 'active-role-binding',
         lastCompletedStep: effectiveContext.lastCompletedStep.value,
-        ...(authoritativePayload && typeof authoritativePayload.required_actor === 'string' ? { requiredActor: authoritativePayload.required_actor } : {}),
-        ...(authoritativePayload && typeof authoritativePayload.recommended_next_step === 'string' ? { recommendedNextStep: authoritativePayload.recommended_next_step } : {}),
-        ...(authoritativePayload && typeof authoritativePayload.next_step_kind === 'string' ? { nextStepKind: authoritativePayload.next_step_kind } : {}),
-        ...(authoritativePayload && typeof authoritativePayload.can_self_resolve === 'boolean' ? { canSelfResolve: authoritativePayload.can_self_resolve } : {}),
-        ...(authoritativePayload && typeof authoritativePayload.boundary_message === 'string' ? { boundaryMessage: authoritativePayload.boundary_message } : {}),
+        ...(requiredActor === undefined ? {} : { requiredActor }),
+        ...(recommendedNextStep === undefined ? {} : { recommendedNextStep }),
+        ...(nextStepKind === undefined ? {} : { nextStepKind }),
+        ...(canSelfResolve === undefined ? {} : { canSelfResolve }),
+        ...(boundaryMessage === undefined ? {} : { boundaryMessage }),
       },
       nextCommands: [
         buildStaticFirstAccessCommandHint(
@@ -1868,6 +2004,10 @@ function getSupportedValueFlagsForCommand(command: string): readonly BidviaCliSu
     return ['--input'];
   }
 
+  if (command === 'industry-universe-execution') {
+    return ['--input'];
+  }
+
   const identitySessionSupportedFlags = identitySessionSupportedFlagsByCommand[
     command as BidviaCliIdentitySessionCommand
   ];
@@ -2097,6 +2237,10 @@ function buildVerificationBundlePreview(input: BidviaVerificationBundleInput, no
   };
 }
 
+function parseIndustryUniverseCliScenarioInput(input: string | undefined) {
+  return parseCliJsonInput('industry-universe-execution', input);
+}
+
 export interface BidviaCliDependencies {
   createClient: (env?: NodeJS.ProcessEnv, contextOverride?: Partial<BidviaClientContext>) => BidviaClient;
   cliVersion: string;
@@ -2235,6 +2379,7 @@ function printHelp(printLine: (value: string) => void): void {
   printLine('  registration-lifecycle-plan');
   printLine('  registered-agent-operations-plan');
   printLine('  mcp-server');
+  printLine('  industry-universe-execution --input ...');
   printLine('  heartbeat [--dry-run]');
   printLine('  sync-upload [--dry-run]');
   printLine('  evidence [--dry-run]');
@@ -2955,6 +3100,71 @@ export async function runCli(
   }
 
   const now = dependencies.now();
+
+  if (command === 'industry-universe-execution') {
+    const localStateResult = await readCliLocalOnboardingState(dependencies);
+    const localState = localStateResult.state;
+    const baseExecutionContext = dependencies.resolveExecutionContext();
+    const executionContext = {
+      tenantId: baseExecutionContext.tenantId ?? localState?.tenantId,
+      principalId: baseExecutionContext.principalId ?? localState?.principalId,
+      companyId: baseExecutionContext.companyId ?? localState?.companyId,
+      principalType: baseExecutionContext.principalType,
+      authorizedRole: baseExecutionContext.authorizedRole,
+      registrationId: baseExecutionContext.registrationId ?? localState?.registrationId,
+      sessionId: baseExecutionContext.sessionId ?? localState?.sessionId,
+      adminSessionId: baseExecutionContext.adminSessionId,
+    };
+    const preflight = buildCliExecutionPreflight(command, executionContext, parsedArgs.dryRun);
+    let input: Record<string, unknown>;
+
+    try {
+      input = parseIndustryUniverseCliScenarioInput(parsedArgs.input);
+    } catch (error) {
+      return printStructuredFailure(
+        dependencies,
+        buildStructuredFailure(
+          command,
+          'invalid-input',
+          error instanceof Error ? error.message : String(error),
+        ),
+      );
+    }
+
+    if (parsedArgs.dryRun) {
+      dependencies.printJson({
+        command,
+        mode: 'dry-run',
+        scope: 'local-only',
+        preflight,
+        input,
+      });
+      return 0;
+    }
+
+    if (preflight && preflight.missingContext.length > 0) {
+      return printStructuredFailure(
+        dependencies,
+        buildStructuredFailure(
+          command,
+          'missing-context',
+          buildCliMissingContextMessage(command, preflight.missingContext),
+          {
+            details: [...preflight.missingContext],
+            preflight,
+          },
+        ),
+      );
+    }
+
+    const env = dependencies.resolveProcessEnv();
+    const result = await executeIndustryUniverseScenario(
+      dependencies.createClient(env, executionContext),
+      buildIndustryUniverseScenarioPlan(input as unknown as Parameters<typeof buildIndustryUniverseScenarioPlan>[0]),
+    );
+    dependencies.printJson(result);
+    return 0;
+  }
 
   if (command === 'registration-lifecycle-plan') {
     dependencies.printJson({
