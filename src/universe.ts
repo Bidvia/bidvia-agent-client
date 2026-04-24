@@ -5,6 +5,7 @@ import type {
   BidviaCreateListingInput,
   BidviaGenerateMatchCandidatesInput,
   BidviaScenarioEnvelope,
+  BidviaScenarioExecutionResult,
   BidviaScenarioVerificationBundle,
 } from './contracts.js';
 
@@ -14,8 +15,14 @@ import {
 } from './scenarios.js';
 import {
   appendCompletedRouteStep,
+  buildScenarioExecutionResult,
   buildScenarioVerificationBundle,
 } from './verification.js';
+
+export interface BidviaIndustryUniverseScenarioExecutionResult {
+  verificationBundle: BidviaScenarioVerificationBundle;
+  executionResult: BidviaScenarioExecutionResult;
+}
 
 export interface BidviaIndustryUniverseScenarioPlanInput {
   scenarioId: string;
@@ -159,4 +166,40 @@ export async function runIndustryUniverseScenario(
   );
 
   return verificationBundle;
+}
+
+export async function executeIndustryUniverseScenario(
+  client: BidviaClient,
+  plan: BidviaIndustryUniverseScenarioPlan,
+): Promise<BidviaIndustryUniverseScenarioExecutionResult> {
+  const verificationBundle = await runIndustryUniverseScenario(client, plan);
+
+  return {
+    verificationBundle,
+    executionResult: buildScenarioExecutionResult({
+      scenarioId: plan.envelope.scenarioId,
+      scenarioFamily: plan.envelope.scenarioFamily,
+      verificationMode: verificationBundle.verificationMode,
+      status: 'succeeded',
+      closureStage: 'business-closure-deferred',
+      ownership: 'claimant',
+      resumable: true,
+      evidence: {
+        helperKey: 'runIndustryUniverseScenario',
+        routePathTemplate: '/runtime/listings*',
+        actorRole: 'user',
+        contextSummary: {
+          tenantIdPresent: true,
+          principalIdPresent: true,
+          companyIdPresent: true,
+        },
+        requestSummary: {
+          method: 'SCENARIO',
+        },
+        responseSummary: {
+          status: 200,
+        },
+      },
+    }),
+  };
 }

@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import {
   buildCommercialActionEnterpriseBoundary,
   buildCommercialActionScenarioPlan,
+  executeCommercialActionScenario,
   readCommercialActionScenarioReview,
   runCommercialActionScenario,
 } from '../src/commercial-action.ts';
@@ -493,4 +494,82 @@ test('readCommercialActionScenarioReview surfaces read failures directly', async
     () => readCommercialActionScenarioReview(client, plan),
     /receipt read failed/,
   );
+});
+
+test('executeCommercialActionScenario returns verification, review packet, and execution result', async () => {
+  const calls: string[] = [];
+  const client = {
+    async createCommercialAction(input) {
+      calls.push(`create:${input.subjectId}`);
+      return { ok: true };
+    },
+    async policyCheckCommercialAction(input) {
+      calls.push(`policy:${input.commercialActionRequestId}`);
+      return { ok: true };
+    },
+    async requestCommercialActionApproval(input) {
+      calls.push(`approval:${input.approvalRequestId}`);
+      return { ok: true };
+    },
+    async executeCommercialAction(input) {
+      calls.push(`execute:${input.receiptId}`);
+      return { ok: true };
+    },
+  } as Pick<BidviaClient,
+    'createCommercialAction'
+    | 'policyCheckCommercialAction'
+    | 'requestCommercialActionApproval'
+    | 'executeCommercialAction'> as BidviaClient;
+
+  const plan = buildCommercialActionScenarioPlan({
+    scenarioId: 'scenario-commercial-action-1',
+    scenarioLabel: 'commercial-action-package-send',
+    sourceRefs: ['source://package/pkg-1'],
+    evidenceRefs: ['evidence://approval/apr-2'],
+    traceIds: ['trace-1'],
+    workflowIds: ['wf-3'],
+    createCommercialAction: {
+      governedAction: 'OPPORTUNITY_PACKAGE_SEND',
+      subjectType: 'OPPORTUNITY_PACKAGE',
+      subjectId: 'pkg-1',
+      traceId: 'trace-1',
+      workflowId: 'wf-3',
+      now: '2026-03-26T10:00:00Z',
+    },
+    policyCheckCommercialAction: {
+      commercialActionRequestId: 'commercial-action-1',
+      policyVersion: 'policy-v1',
+      outcome: 'PASS',
+      now: '2026-03-26T10:01:00Z',
+    },
+    requestCommercialActionApproval: {
+      commercialActionRequestId: 'commercial-action-1',
+      approvalRequestId: 'apr-2',
+      now: '2026-03-26T10:02:00Z',
+    },
+    executeCommercialAction: {
+      commercialActionRequestId: 'commercial-action-1',
+      approvalRequestId: 'apr-2',
+      receiptId: 'receipt-1',
+      approvalResult: 'APPROVED',
+      resultStatus: 'SUCCEEDED',
+      auditId: 'audit-1',
+      now: '2026-03-26T10:03:00Z',
+    },
+  });
+
+  const result = await executeCommercialActionScenario(client, plan);
+
+  assert.deepEqual(calls, [
+    'create:pkg-1',
+    'policy:commercial-action-1',
+    'approval:apr-2',
+    'execute:receipt-1',
+  ]);
+  assert.equal(result.executionResult.status, 'succeeded');
+  assert.equal(result.executionResult.ownership, 'claimant');
+  assert.equal(result.reviewPacket.status, 'complete');
+  assert.equal(result.reviewPacket.details.verification.closureStage, 'business-closure-deferred');
+  assert.equal(result.reviewPacket.details.verification.ownership, 'claimant');
+  assert.equal(result.reviewPacket.details.verification.resumable, true);
 });

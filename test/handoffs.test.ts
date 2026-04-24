@@ -8,6 +8,7 @@ import { BidviaClient } from '../src/client.ts';
 import {
   buildOpportunityPackageHandoffEnterpriseBoundary,
   buildOpportunityPackageHandoffPlan,
+  executeOpportunityPackageHandoff,
   runOpportunityPackageHandoff,
 } from '../src/handoffs.js';
 
@@ -172,4 +173,25 @@ test('runOpportunityPackageHandoff surfaces exportOpportunityPackage failures wi
     /exportOpportunityPackage failed/,
   );
   assert.equal(calls.length, 1);
+});
+
+test('executeOpportunityPackageHandoff returns verification bundle plus execution result', async () => {
+  const { calls, fetchStub } = createFetchStub();
+  const client = new BidviaClient({
+    baseUrl: 'http://127.0.0.1:8787',
+    context: {
+      tenantId: 'tenant-a',
+      principalId: 'actor-1',
+      companyId: 'company-a',
+    },
+    fetchImpl: fetchStub,
+  });
+  const plan = buildOpportunityPackageHandoffPlan(createOpportunityPackageHandoffInput());
+
+  const result = await executeOpportunityPackageHandoff(client, plan);
+
+  assert.equal(calls.length, 1);
+  assert.deepEqual(result.verificationBundle.completedRouteChain.map((step) => step.routeKey), ['exportOpportunityPackage']);
+  assert.equal(result.executionResult.status, 'succeeded');
+  assert.equal(result.executionResult.ownership, 'operator-admin');
 });

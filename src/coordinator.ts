@@ -4,11 +4,13 @@ import type {
   BidviaCommercialActionScenarioPlan,
   BidviaMultiBusinessChainCoordinatorPlan,
   BidviaMultiBusinessChainCoordinatorPlanInput,
+  BidviaScenarioExecutionResult,
   BidviaScenarioVerificationBundle,
 } from './contracts.js';
 import type { BidviaCommercialActionScenarioResult } from './commercial-action.js';
 import {
   buildCommercialActionScenarioPlan,
+  executeCommercialActionScenario,
   runCommercialActionScenario,
 } from './commercial-action.js';
 import {
@@ -17,12 +19,15 @@ import {
 } from './connection.js';
 import {
   buildOpportunityPackageHandoffPlan,
+  executeOpportunityPackageHandoff,
   runOpportunityPackageHandoff,
 } from './handoffs.js';
 import {
   buildIndustryUniverseScenarioPlan,
+  executeIndustryUniverseScenario,
   runIndustryUniverseScenario,
 } from './universe.js';
+import { buildScenarioExecutionResult } from './verification.js';
 
 export interface BidviaMultiBusinessChainCoordinatorPreHandoffResult {
   industryUniverse: BidviaScenarioVerificationBundle;
@@ -39,6 +44,10 @@ export interface BidviaMultiBusinessChainCoordinatorPostHandoffResult {
 export interface BidviaMultiBusinessChainCoordinatorResult {
   preHandoff: BidviaMultiBusinessChainCoordinatorPreHandoffResult;
   postHandoff: BidviaMultiBusinessChainCoordinatorPostHandoffResult;
+}
+
+export interface BidviaMultiBusinessChainCoordinatorExecutionResult extends BidviaMultiBusinessChainCoordinatorResult {
+  executionResult: BidviaScenarioExecutionResult;
 }
 
 function buildApprovalOpportunityExternalHandoffBoundary(
@@ -209,5 +218,46 @@ export async function runMultiBusinessChainCoordinatorWithExplicitHandoff(
   return {
     preHandoff,
     postHandoff,
+  };
+}
+
+export async function executeMultiBusinessChainCoordinatorWithExplicitHandoff(
+  client: BidviaFullCoordinatorClient,
+  plan: BidviaMultiBusinessChainCoordinatorPlan,
+  externalHandoffBoundary: BidviaApprovalOpportunityExternalHandoffBoundary,
+): Promise<BidviaMultiBusinessChainCoordinatorExecutionResult> {
+  const result = await runMultiBusinessChainCoordinatorWithExplicitHandoff(
+    client,
+    plan,
+    externalHandoffBoundary,
+  );
+
+  return {
+    ...result,
+    executionResult: buildScenarioExecutionResult({
+      scenarioId: plan.coordinatorId,
+      scenarioFamily: 'multi-business-chain',
+      verificationMode: 'review-safe',
+      status: 'succeeded',
+      closureStage: 'business-closure-deferred',
+      ownership: 'core-runtime',
+      resumable: true,
+      evidence: {
+        helperKey: 'runMultiBusinessChainCoordinatorWithExplicitHandoff',
+        routePathTemplate: 'coordinator://industry-to-package-with-commercial-action',
+        actorRole: 'operator',
+        contextSummary: {
+          tenantIdPresent: true,
+          principalIdPresent: true,
+          companyIdPresent: true,
+        },
+        requestSummary: {
+          method: 'SCENARIO',
+        },
+        responseSummary: {
+          status: 200,
+        },
+      },
+    }),
   };
 }

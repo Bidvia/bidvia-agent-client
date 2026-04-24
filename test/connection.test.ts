@@ -7,6 +7,7 @@ import type {
 import { BidviaClient } from '../src/client.ts';
 import {
   buildConnectionApprovalScenarioPlan,
+  executeConnectionApprovalScenario,
   runConnectionApprovalScenario,
 } from '../src/connection.js';
 
@@ -236,4 +237,28 @@ test('runConnectionApprovalScenario surfaces approveConnectionRequest failures w
     /approveConnectionRequest failed/,
   );
   assert.equal(callCount, 2);
+});
+
+test('executeConnectionApprovalScenario returns verification bundle plus execution result', async () => {
+  const { calls, fetchStub } = createFetchStub();
+  const client = new BidviaClient({
+    baseUrl: 'http://127.0.0.1:8787',
+    context: {
+      tenantId: 'tenant-a',
+      principalId: 'actor-1',
+      companyId: 'company-a',
+    },
+    fetchImpl: fetchStub,
+  });
+  const plan = buildConnectionApprovalScenarioPlan(createConnectionApprovalScenarioInput());
+
+  const result = await executeConnectionApprovalScenario(client, plan);
+
+  assert.equal(calls.length, 2);
+  assert.deepEqual(result.verificationBundle.completedRouteChain.map((step) => step.routeKey), [
+    'createConnectionRequest',
+    'approveConnectionRequest',
+  ]);
+  assert.equal(result.executionResult.status, 'succeeded');
+  assert.equal(result.executionResult.ownership, 'claimant');
 });

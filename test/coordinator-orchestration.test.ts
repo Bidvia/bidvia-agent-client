@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import type { BidviaClient } from '../src/client.ts';
 import {
   buildMultiBusinessChainCoordinatorPlan,
+  executeMultiBusinessChainCoordinatorWithExplicitHandoff,
   runMultiBusinessChainCoordinatorWithExplicitHandoff,
 } from '../src/coordinator.ts';
 
@@ -258,4 +259,31 @@ test('runMultiBusinessChainCoordinatorWithExplicitHandoff rejects seam crossing 
     /explicit approval-to-opportunity handoff boundary must match the coordinator plan/,
   );
   assert.deepEqual(calls, []);
+});
+
+test('executeMultiBusinessChainCoordinatorWithExplicitHandoff returns coordinator result plus execution result', async () => {
+  const calls: string[] = [];
+  const client = createFullCoordinatorClient(calls);
+  const plan = createCoordinatorPlan();
+
+  const result = await executeMultiBusinessChainCoordinatorWithExplicitHandoff(
+    client,
+    plan,
+    plan.externalHandoffBoundary,
+  );
+
+  assert.deepEqual(calls, [
+    'createListing:listing-1',
+    'activateListing:listing-1',
+    'generateMatchCandidates:listing-1',
+    'createConnectionRequest:match-1',
+    'approveConnectionRequest:approval-1',
+    'exportOpportunityPackage:opportunity-1',
+    'createCommercialAction:pkg-1',
+    'policyCheckCommercialAction:commercial-action-1',
+    'requestCommercialActionApproval:approval-1',
+    'executeCommercialAction:receipt-1',
+  ]);
+  assert.equal(result.executionResult.status, 'succeeded');
+  assert.equal(result.executionResult.closureStage, 'business-closure-deferred');
 });

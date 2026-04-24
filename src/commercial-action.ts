@@ -1,6 +1,7 @@
 import type { BidviaClient } from './client.js';
 import type {
   BidviaReviewPacket,
+  BidviaScenarioExecutionResult,
   BidviaScenarioVerificationBundle,
   BidviaCommercialActionExecuteInput,
   BidviaCommercialActionPolicyCheckInput,
@@ -16,6 +17,7 @@ import {
 } from './scenarios.js';
 import {
   appendCompletedRouteStep,
+  buildScenarioExecutionResult,
   buildReviewPacket,
   buildScenarioVerificationBundle,
 } from './verification.js';
@@ -24,6 +26,10 @@ import { buildWorkflowStageReference } from './workflow-stage-plane.js';
 export interface BidviaCommercialActionScenarioResult {
   verificationBundle: BidviaScenarioVerificationBundle;
   reviewPacket: BidviaReviewPacket;
+}
+
+export interface BidviaCommercialActionScenarioExecutionResult extends BidviaCommercialActionScenarioResult {
+  executionResult: BidviaScenarioExecutionResult;
 }
 
 export interface BidviaCommercialActionScenarioReview {
@@ -180,6 +186,48 @@ export async function readCommercialActionScenarioReview(
     status: await client.getCommercialActionStatus({ commercialActionRequestId }),
     receipt: await client.getCommercialActionReceipt({ commercialActionRequestId }),
     audit: await client.getCommercialActionAudit({ commercialActionRequestId }),
+  };
+}
+
+export async function executeCommercialActionScenario(
+  client: BidviaClient,
+  plan: BidviaCommercialActionScenarioPlan,
+): Promise<BidviaCommercialActionScenarioExecutionResult> {
+  const result = await runCommercialActionScenario(client, plan);
+  const executionResult = buildScenarioExecutionResult({
+    scenarioId: plan.envelope.scenarioId,
+    scenarioFamily: plan.envelope.scenarioFamily,
+    verificationMode: result.verificationBundle.verificationMode,
+    status: 'succeeded',
+    closureStage: 'business-closure-deferred',
+    ownership: 'claimant',
+    resumable: true,
+    evidence: {
+      helperKey: 'runCommercialActionScenario',
+      routePathTemplate: '/runtime/commercial-actions*',
+      actorRole: 'user',
+      contextSummary: {
+        tenantIdPresent: true,
+        principalIdPresent: true,
+        companyIdPresent: true,
+      },
+      requestSummary: {
+        method: 'SCENARIO',
+      },
+      responseSummary: {
+        status: 200,
+      },
+    },
+  });
+
+  return {
+    verificationBundle: result.verificationBundle,
+    reviewPacket: buildReviewPacket({
+      scenario: plan.envelope,
+      bundle: result.verificationBundle,
+      executionResult,
+    }),
+    executionResult,
   };
 }
 

@@ -4,6 +4,7 @@ import type {
   BidviaConnectionApprovalScenarioPlan,
   BidviaConnectionApprovalScenarioPlanInput,
   BidviaCreateConnectionRequestInput,
+  BidviaScenarioExecutionResult,
   BidviaScenarioVerificationBundle,
 } from './contracts.js';
 
@@ -13,8 +14,14 @@ import {
 } from './scenarios.js';
 import {
   appendCompletedRouteStep,
+  buildScenarioExecutionResult,
   buildScenarioVerificationBundle,
 } from './verification.js';
+
+export interface BidviaConnectionApprovalScenarioExecutionResult {
+  verificationBundle: BidviaScenarioVerificationBundle;
+  executionResult: BidviaScenarioExecutionResult;
+}
 import { buildWorkflowStageReference } from './workflow-stage-plane.js';
 
 function requireNonEmptyId(value: string, fieldName: string): string {
@@ -135,4 +142,40 @@ export async function runConnectionApprovalScenario(
   );
 
   return verificationBundle;
+}
+
+export async function executeConnectionApprovalScenario(
+  client: BidviaClient,
+  plan: BidviaConnectionApprovalScenarioPlan,
+): Promise<BidviaConnectionApprovalScenarioExecutionResult> {
+  const verificationBundle = await runConnectionApprovalScenario(client, plan);
+
+  return {
+    verificationBundle,
+    executionResult: buildScenarioExecutionResult({
+      scenarioId: plan.envelope.scenarioId,
+      scenarioFamily: plan.envelope.scenarioFamily,
+      verificationMode: verificationBundle.verificationMode,
+      status: 'succeeded',
+      closureStage: 'business-closure-deferred',
+      ownership: 'claimant',
+      resumable: true,
+      evidence: {
+        helperKey: 'runConnectionApprovalScenario',
+        routePathTemplate: '/runtime/connection-requests|/runtime/approvals/:approvalRequestId/decision',
+        actorRole: 'user',
+        contextSummary: {
+          tenantIdPresent: true,
+          principalIdPresent: true,
+          companyIdPresent: true,
+        },
+        requestSummary: {
+          method: 'SCENARIO',
+        },
+        responseSummary: {
+          status: 200,
+        },
+      },
+    }),
+  };
 }

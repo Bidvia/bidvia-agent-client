@@ -4,6 +4,7 @@ import type {
   BidviaEnterpriseIntegrationPlaneHelperGroup,
   BidviaExportOpportunityPackageInput,
   BidviaScenarioEnvelope,
+  BidviaScenarioExecutionResult,
   BidviaScenarioVerificationBundle,
 } from './contracts.js';
 import { getEnterpriseIntegrationPlaneHelperGroup } from './enterprise-integration-plane.js';
@@ -14,8 +15,14 @@ import {
 } from './scenarios.js';
 import {
   appendCompletedRouteStep,
+  buildScenarioExecutionResult,
   buildScenarioVerificationBundle,
 } from './verification.js';
+
+export interface BidviaOpportunityPackageHandoffExecutionResult {
+  verificationBundle: BidviaScenarioVerificationBundle;
+  executionResult: BidviaScenarioExecutionResult;
+}
 import { buildWorkflowStageReference } from './workflow-stage-plane.js';
 
 export interface BidviaOpportunityPackageHandoffPlanInput {
@@ -115,6 +122,42 @@ export async function runOpportunityPackageHandoff(
   );
 
   return verificationBundle;
+}
+
+export async function executeOpportunityPackageHandoff(
+  client: BidviaClient,
+  plan: BidviaOpportunityPackageHandoffPlan,
+): Promise<BidviaOpportunityPackageHandoffExecutionResult> {
+  const verificationBundle = await runOpportunityPackageHandoff(client, plan);
+
+  return {
+    verificationBundle,
+    executionResult: buildScenarioExecutionResult({
+      scenarioId: plan.envelope.scenarioId,
+      scenarioFamily: plan.envelope.scenarioFamily,
+      verificationMode: verificationBundle.verificationMode,
+      status: 'succeeded',
+      closureStage: 'business-closure-deferred',
+      ownership: 'operator-admin',
+      resumable: true,
+      evidence: {
+        helperKey: 'runOpportunityPackageHandoff',
+        routePathTemplate: '/runtime/opportunities/:opportunityId/package-export',
+        actorRole: 'operator',
+        contextSummary: {
+          tenantIdPresent: true,
+          principalIdPresent: true,
+          companyIdPresent: true,
+        },
+        requestSummary: {
+          method: 'SCENARIO',
+        },
+        responseSummary: {
+          status: 200,
+        },
+      },
+    }),
+  };
 }
 
 export function buildOpportunityPackageHandoffEnterpriseBoundary(): BidviaEnterpriseIntegrationPlaneHelperGroup {
