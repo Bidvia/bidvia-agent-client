@@ -814,6 +814,85 @@ export interface BidviaScenarioVerificationBundle extends BidviaVerificationBund
   completedRouteChain: BidviaScenarioRouteStep[];
 }
 
+export const bidviaExecutionResultStatuses = ['succeeded', 'blocked', 'failed'] as const;
+
+export type BidviaExecutionResultStatus = (typeof bidviaExecutionResultStatuses)[number];
+
+export const bidviaExecutionBlockerClasses = [
+  'missing-local-context',
+  'claimant-action-required',
+  'operator-action-required',
+  'compatibility-seam-encountered',
+  'core-unresolved-projection',
+  'blocked-pending-packet',
+  'transport-or-server-error',
+] as const;
+
+export type BidviaExecutionBlockerClass = (typeof bidviaExecutionBlockerClasses)[number];
+
+export const bidviaExecutionClosureStages = [
+  'account-plane-continuation',
+  'dispatch-authority-requested',
+  'operator-review-pending',
+  'post-review-claimant-progress',
+  'bounded-task-closure',
+  'business-closure-deferred',
+] as const;
+
+export type BidviaExecutionClosureStage = (typeof bidviaExecutionClosureStages)[number];
+
+export const bidviaExecutionOwnerships = ['claimant', 'operator-admin', 'core-runtime'] as const;
+
+export type BidviaExecutionOwnership = (typeof bidviaExecutionOwnerships)[number];
+
+export interface BidviaScenarioExecutionNextStep {
+  recommendedNextStep?: string;
+  nextStepKind?: string;
+  requiredActor?: string;
+  canSelfResolve?: boolean;
+}
+
+export interface BidviaScenarioExecutionEvidenceContextSummary {
+  tenantIdPresent?: boolean;
+  principalIdPresent?: boolean;
+  registrationIdPresent?: boolean;
+  agentIdPresent?: boolean;
+  companyIdPresent?: boolean;
+  sessionIdPresent?: boolean;
+  adminSessionIdPresent?: boolean;
+}
+
+export interface BidviaScenarioExecutionEvidenceRequestSummary {
+  method: string;
+}
+
+export interface BidviaScenarioExecutionEvidenceResponseSummary {
+  status: number;
+  errorCode?: string;
+}
+
+export interface BidviaScenarioExecutionEvidence {
+  helperKey: string;
+  routePathTemplate: string;
+  actorRole: BidviaScenarioActorRole;
+  contextSummary: BidviaScenarioExecutionEvidenceContextSummary;
+  requestSummary: BidviaScenarioExecutionEvidenceRequestSummary;
+  responseSummary: BidviaScenarioExecutionEvidenceResponseSummary;
+}
+
+export interface BidviaScenarioExecutionResult {
+  scenarioId: string;
+  scenarioFamily: string;
+  verificationMode: BidviaVerificationMode;
+  status: BidviaExecutionResultStatus;
+  blockerClass?: BidviaExecutionBlockerClass;
+  closureStage: BidviaExecutionClosureStage;
+  ownership: BidviaExecutionOwnership;
+  resumable: boolean;
+  nextStep?: BidviaScenarioExecutionNextStep;
+  evidence: BidviaScenarioExecutionEvidence;
+}
+
 export const bidviaReviewPacketStatuses = ['complete', 'partial', 'pending-review'] as const;
 
 export type BidviaReviewPacketStatus = (typeof bidviaReviewPacketStatuses)[number];

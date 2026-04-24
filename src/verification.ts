@@ -1,4 +1,5 @@
 import type {
+  BidviaScenarioExecutionResult,
   BidviaReviewPacketBoundaryDetail,
   BidviaReviewPacketDetail,
   BidviaReviewPacketRecordDetail,
@@ -15,6 +16,12 @@ import type {
   BidviaVerificationBundleRecordIds,
   BidviaVerificationMode,
 } from './contracts.js';
+
+function cloneScenarioExecutionResult(
+  result: BidviaScenarioExecutionResult,
+): BidviaScenarioExecutionResult {
+  return structuredClone(result);
+}
 
 function cloneVerificationBundle<T>(bundle: T): T {
   return structuredClone(bundle);
@@ -64,6 +71,20 @@ function freezeScenarioVerificationBundle(
   Object.freeze(bundle.completedRouteChain);
   Object.freeze(bundle.recordIds);
   return Object.freeze(bundle);
+}
+
+function freezeScenarioExecutionResult(
+  result: BidviaScenarioExecutionResult,
+): BidviaScenarioExecutionResult {
+  Object.freeze(result.evidence.contextSummary);
+  Object.freeze(result.evidence.requestSummary);
+  Object.freeze(result.evidence.responseSummary);
+  Object.freeze(result.evidence);
+  if (result.nextStep) {
+    Object.freeze(result.nextStep);
+  }
+
+  return Object.freeze(result);
 }
 
 function freezeReviewPacketSection(section: BidviaReviewPacketSection): BidviaReviewPacketSection {
@@ -457,6 +478,12 @@ export interface BidviaScenarioReviewResult {
   reviewPacket: BidviaReviewPacket;
 }
 
+export function buildScenarioExecutionResult(
+  input: BidviaScenarioExecutionResult,
+): BidviaScenarioExecutionResult {
+  return freezeScenarioExecutionResult(cloneScenarioExecutionResult(input));
+}
+
 export function buildScenarioVerificationBundle(
   input: BuildScenarioVerificationBundleInput,
 ): BidviaScenarioVerificationBundle {
@@ -571,6 +598,12 @@ export function exportScenarioVerificationBundle(
   bundle: BidviaScenarioVerificationBundle,
 ): BidviaScenarioVerificationBundle {
   return freezeScenarioVerificationBundle(cloneVerificationBundle(bundle));
+}
+
+export function exportScenarioExecutionResult(
+  result: BidviaScenarioExecutionResult,
+): BidviaScenarioExecutionResult {
+  return freezeScenarioExecutionResult(cloneScenarioExecutionResult(result));
 }
 
 export function exportReviewPacket(packet: BidviaReviewPacket): BidviaReviewPacket {

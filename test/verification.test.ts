@@ -14,8 +14,13 @@ import {
 import type {
   BidviaReviewPacket,
   BidviaReviewPacketSection,
+  BidviaScenarioExecutionResult,
 } from '../src/contracts.ts';
 import {
+  bidviaExecutionBlockerClasses,
+  bidviaExecutionClosureStages,
+  bidviaExecutionOwnerships,
+  bidviaExecutionResultStatuses,
   bidviaReviewPacketSectionKeys,
   bidviaReviewPacketStatuses,
 } from '../src/contracts.ts';
@@ -233,6 +238,109 @@ test('review packet section contract supports additive reviewer-facing sections'
     title: 'Recorded ids',
     entries: ['listings:listing-1'],
   });
+});
+
+test('shared execution-state contract exposes bounded statuses, blocker classes, ownership, and closure stages', () => {
+  assert.deepEqual(bidviaExecutionResultStatuses, ['succeeded', 'blocked', 'failed']);
+  assert.deepEqual(bidviaExecutionOwnerships, ['claimant', 'operator-admin', 'core-runtime']);
+  assert.deepEqual(bidviaExecutionClosureStages, [
+    'account-plane-continuation',
+    'dispatch-authority-requested',
+    'operator-review-pending',
+    'post-review-claimant-progress',
+    'bounded-task-closure',
+    'business-closure-deferred',
+  ]);
+  assert.deepEqual(bidviaExecutionBlockerClasses, [
+    'missing-local-context',
+    'claimant-action-required',
+    'operator-action-required',
+    'compatibility-seam-encountered',
+    'core-unresolved-projection',
+    'blocked-pending-packet',
+    'transport-or-server-error',
+  ]);
+});
+
+test('shared scenario execution result export is frozen and keeps evidence plus next-step detail without claiming platform closure', async () => {
+  const exports = await import('../src/index.ts');
+
+  assert.equal(typeof exports.buildScenarioExecutionResult, 'function');
+  assert.equal(typeof exports.exportScenarioExecutionResult, 'function');
+
+  const result = (exports.buildScenarioExecutionResult as (input: BidviaScenarioExecutionResult) => BidviaScenarioExecutionResult)({
+    scenarioId: 'scenario-industry-universe-1',
+    scenarioFamily: 'industry-universe',
+    verificationMode: 'review-safe',
+    status: 'blocked',
+    blockerClass: 'core-unresolved-projection',
+    closureStage: 'post-review-claimant-progress',
+    ownership: 'core-runtime',
+    resumable: false,
+    nextStep: {
+      recommendedNextStep: 'refresh_authorization_context',
+      nextStepKind: 'org_context_authorization_refresh',
+      requiredActor: 'enterprise_admin',
+      canSelfResolve: false,
+    },
+    evidence: {
+      helperKey: 'getAgentReadiness',
+      routePathTemplate: '/runtime/agents/:agent_registration_id/readiness',
+      actorRole: 'user',
+      contextSummary: {
+        tenantIdPresent: true,
+        principalIdPresent: true,
+        registrationIdPresent: true,
+      },
+      requestSummary: {
+        method: 'GET',
+      },
+      responseSummary: {
+        status: 403,
+        errorCode: 'active_role_binding_required',
+      },
+    },
+  });
+
+  assert.deepEqual(result, {
+    scenarioId: 'scenario-industry-universe-1',
+    scenarioFamily: 'industry-universe',
+    verificationMode: 'review-safe',
+    status: 'blocked',
+    blockerClass: 'core-unresolved-projection',
+    closureStage: 'post-review-claimant-progress',
+    ownership: 'core-runtime',
+    resumable: false,
+    nextStep: {
+      recommendedNextStep: 'refresh_authorization_context',
+      nextStepKind: 'org_context_authorization_refresh',
+      requiredActor: 'enterprise_admin',
+      canSelfResolve: false,
+    },
+    evidence: {
+      helperKey: 'getAgentReadiness',
+      routePathTemplate: '/runtime/agents/:agent_registration_id/readiness',
+      actorRole: 'user',
+      contextSummary: {
+        tenantIdPresent: true,
+        principalIdPresent: true,
+        registrationIdPresent: true,
+      },
+      requestSummary: {
+        method: 'GET',
+      },
+      responseSummary: {
+        status: 403,
+        errorCode: 'active_role_binding_required',
+      },
+    },
+  });
+
+  const exported = (exports.exportScenarioExecutionResult as (input: BidviaScenarioExecutionResult) => BidviaScenarioExecutionResult)(result);
+  assert.deepEqual(exported, result);
+  assert.throws(() => {
+    exported.evidence.responseSummary.status = 500;
+  }, /object is not extensible|read only|readonly/i);
 });
 
 test('scenario verification bundle carries expected and completed route chains', () => {
