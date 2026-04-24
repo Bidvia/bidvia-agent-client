@@ -104,6 +104,7 @@ function freezeReviewPacketVerificationDetail(
   Object.freeze(detail.expectedRouteKeys);
   Object.freeze(detail.completedRouteKeys);
   Object.freeze(detail.pendingRouteKeys);
+  Object.freeze(detail.minimumEvidenceFields);
   Object.freeze(detail.localDerivedExplanation);
   Object.freeze(detail.serverOwnedFacts);
   Object.freeze(detail.dependencyGatedSeams);
@@ -111,6 +112,9 @@ function freezeReviewPacketVerificationDetail(
   Object.freeze(detail.roleSplit.operator);
   Object.freeze(detail.roleSplit.admin);
   Object.freeze(detail.roleSplit);
+  if (detail.nextStep) {
+    Object.freeze(detail.nextStep);
+  }
   return Object.freeze(detail);
 }
 
@@ -271,6 +275,7 @@ function buildVerificationSection(params: {
   traceabilityRefCount: number;
   totalRecordCount: number;
   nextPendingRouteKey?: string;
+  executionResult?: BidviaScenarioExecutionResult;
 }): BidviaReviewPacketSection {
   return {
     sectionKey: 'verification',
@@ -289,9 +294,14 @@ function buildVerificationSection(params: {
       `server-owned-facts:scenario-evidence-refs:${params.evidenceRefCount}`,
       `server-owned-facts:traceability-refs:${params.traceabilityRefCount}`,
       `server-owned-facts:recorded-ids:${params.totalRecordCount}`,
+      'minimum-evidence-fields:helperKey|routePathTemplate|actorRole|contextSummary|requestSummary|responseSummary',
       'server-truth-claimed:false',
       'adjudication-outcome-included:false',
       'dependency-gated-seams:core-truth-closure:deferred',
+      ...(params.executionResult?.blockerClass === undefined ? [] : [`execution-blocker-class:${params.executionResult.blockerClass}`]),
+      ...(params.executionResult?.closureStage === undefined ? [] : [`execution-closure-stage:${params.executionResult.closureStage}`]),
+      ...(params.executionResult?.ownership === undefined ? [] : [`execution-ownership:${params.executionResult.ownership}`]),
+      ...(params.executionResult?.resumable === undefined ? [] : [`execution-resumable:${String(params.executionResult.resumable)}`]),
     ],
   };
 }
@@ -402,6 +412,7 @@ function buildReviewPacketVerificationDetail(
   expectedRouteChain: BidviaScenarioRouteStep[],
   completedRouteChain: BidviaScenarioRouteStep[],
   totalRecordCount: number,
+  executionResult?: BidviaScenarioExecutionResult,
 ): BidviaReviewPacketVerificationDetail {
   const expectedRouteKeys = expectedRouteChain.map((routeStep) => routeStep.routeKey);
   const completedRouteKeys = completedRouteChain.map((routeStep) => routeStep.routeKey);
@@ -411,6 +422,14 @@ function buildReviewPacketVerificationDetail(
     completedRouteKeys,
     pendingRouteKeys: expectedRouteKeys.slice(completedRouteKeys.length),
     totalRecordCount,
+    minimumEvidenceFields: [
+      'helperKey',
+      'routePathTemplate',
+      'actorRole',
+      'contextSummary',
+      'requestSummary',
+      'responseSummary',
+    ],
     localDerivedExplanation: [
       'review-packet-status',
       'next-pending-route',
@@ -428,12 +447,18 @@ function buildReviewPacketVerificationDetail(
       'core-truth-closure:deferred',
     ],
     roleSplit: buildRoleSplit(expectedRouteChain),
+    ...(executionResult?.blockerClass === undefined ? {} : { blockerClass: executionResult.blockerClass }),
+    ...(executionResult?.closureStage === undefined ? {} : { closureStage: executionResult.closureStage }),
+    ...(executionResult?.ownership === undefined ? {} : { ownership: executionResult.ownership }),
+    ...(executionResult?.resumable === undefined ? {} : { resumable: executionResult.resumable }),
+    ...(executionResult?.nextStep === undefined ? {} : { nextStep: structuredClone(executionResult.nextStep) }),
   };
 }
 
 function buildReviewPacketDetail(
   scenario: BidviaScenarioEnvelope,
   bundle: BidviaScenarioVerificationBundle,
+  executionResult?: BidviaScenarioExecutionResult,
 ): BidviaReviewPacketDetail {
   const recordDetails = buildRecordDetails(bundle.recordIds);
 
@@ -443,6 +468,7 @@ function buildReviewPacketDetail(
       scenario.expectedRouteChain,
       bundle.completedRouteChain,
       countTotalRecords(recordDetails),
+      executionResult,
     ),
     routeDetails: buildRouteDetails(scenario.expectedRouteChain, bundle.completedRouteChain),
     recordDetails,
@@ -471,6 +497,7 @@ export interface BuildScenarioVerificationBundleInput {
 export interface BuildReviewPacketInput {
   scenario: BidviaScenarioEnvelope;
   bundle: BidviaScenarioVerificationBundle;
+  executionResult?: BidviaScenarioExecutionResult;
 }
 
 export interface BidviaScenarioReviewResult {
@@ -524,7 +551,7 @@ export function buildReviewPacket(input: BuildReviewPacketInput): BidviaReviewPa
   const expectedRouteCount = input.scenario.expectedRouteChain.length;
   const completedRouteCount = input.bundle.completedRouteChain.length;
   const pendingRouteCount = expectedRouteCount - completedRouteCount;
-  const details = buildReviewPacketDetail(input.scenario, input.bundle);
+  const details = buildReviewPacketDetail(input.scenario, input.bundle, input.executionResult);
   const totalRecordCount = countTotalRecords(details.recordDetails);
   const status = deriveReviewPacketStatus(expectedRouteCount, completedRouteCount);
 
@@ -565,6 +592,7 @@ export function buildReviewPacket(input: BuildReviewPacketInput): BidviaReviewPa
         nextPendingRouteKey: input.bundle.completedRouteChain.length < input.scenario.expectedRouteChain.length
           ? input.scenario.expectedRouteChain[input.bundle.completedRouteChain.length]?.routeKey
           : undefined,
+        executionResult: input.executionResult,
       }),
       buildRecordsSection(input.bundle.recordIds),
     ],

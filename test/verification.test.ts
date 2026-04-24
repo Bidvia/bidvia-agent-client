@@ -57,14 +57,22 @@ test('review packet contracts represent reviewer-ready summary and bounded statu
         adjudicationOutcomeIncluded: false,
       },
       verification: {
-        expectedRouteKeys: ['createListing', 'activateListing', 'generateMatchCandidates'],
-        completedRouteKeys: ['createListing'],
-        pendingRouteKeys: ['activateListing', 'generateMatchCandidates'],
-        totalRecordCount: 1,
-        localDerivedExplanation: [
-          'review-packet-status',
-          'next-pending-route',
-          'route-coverage-note',
+      expectedRouteKeys: ['createListing', 'activateListing', 'generateMatchCandidates'],
+      completedRouteKeys: ['createListing'],
+      pendingRouteKeys: ['activateListing', 'generateMatchCandidates'],
+      totalRecordCount: 1,
+      minimumEvidenceFields: [
+        'helperKey',
+        'routePathTemplate',
+        'actorRole',
+        'contextSummary',
+        'requestSummary',
+        'responseSummary',
+      ],
+      localDerivedExplanation: [
+        'review-packet-status',
+        'next-pending-route',
+        'route-coverage-note',
         ],
         serverOwnedFacts: [
           'scenario-source-refs',
@@ -705,6 +713,14 @@ test('buildReviewPacket derives reviewer-ready sections and complete status from
       completedRouteKeys: ['createListing', 'activateListing', 'generateMatchCandidates'],
       pendingRouteKeys: [],
       totalRecordCount: 2,
+      minimumEvidenceFields: [
+        'helperKey',
+        'routePathTemplate',
+        'actorRole',
+        'contextSummary',
+        'requestSummary',
+        'responseSummary',
+      ],
       localDerivedExplanation: [
         'review-packet-status',
         'next-pending-route',
@@ -822,6 +838,7 @@ test('buildReviewPacket derives reviewer-ready sections and complete status from
         'server-owned-facts:scenario-evidence-refs:1',
         'server-owned-facts:traceability-refs:2',
         'server-owned-facts:recorded-ids:2',
+        'minimum-evidence-fields:helperKey|routePathTemplate|actorRole|contextSummary|requestSummary|responseSummary',
         'server-truth-claimed:false',
         'adjudication-outcome-included:false',
         'dependency-gated-seams:core-truth-closure:deferred',
@@ -1100,6 +1117,7 @@ test('buildReviewPacket exposes richer route-chain and record-group readback fro
     'server-owned-facts:scenario-evidence-refs:1',
     'server-owned-facts:traceability-refs:2',
     'server-owned-facts:recorded-ids:3',
+    'minimum-evidence-fields:helperKey|routePathTemplate|actorRole|contextSummary|requestSummary|responseSummary',
     'server-truth-claimed:false',
     'adjudication-outcome-included:false',
     'dependency-gated-seams:core-truth-closure:deferred',
@@ -1111,6 +1129,92 @@ test('buildReviewPacket exposes richer route-chain and record-group readback fro
     'matches:match-1',
     'matches:match-2',
   ]);
+});
+
+test('buildReviewPacket freezes minimum evidence fields in reviewer-facing verification facts', async () => {
+  const exports = await import('../src/index.ts');
+  const buildScenarioExecutionResult = exports.buildScenarioExecutionResult as (input: BidviaScenarioExecutionResult) => BidviaScenarioExecutionResult;
+  const plan = buildIndustryUniverseScenarioPlan({
+    scenarioId: 'scenario-industry-universe-1',
+    scenarioLabel: 'industry-universe-soda-ash-light',
+    sourceRefs: ['source://market/soda-ash-light'],
+    evidenceRefs: ['evidence://supply/soda-ash-light'],
+    traceIds: ['trace-1'],
+    workflowIds: ['wf-1'],
+    createListing: {
+      listingId: 'listing-1',
+      listingType: 'supply',
+      category: 'basic inorganic industrial chemical',
+      sku: 'sodium-carbonate-soda-ash-light',
+      quantityValue: '15',
+      quantityUnit: 'tons',
+      regionSummary: 'China -> Vietnam',
+      verificationStatus: 'verified',
+      freshnessTs: '2026-03-25T20:20:00Z',
+      traceId: 'trace-1',
+      idempotencyKey: 'listing-1',
+      now: '2026-03-25T20:20:00Z',
+    },
+    activateListing: {
+      now: '2026-03-25T20:21:00Z',
+    },
+    generateMatchCandidates: {
+      upstreamDecision: 'READY_FOR_ROUTING',
+      requiredEvidenceLevel: 1,
+      detectedEvidenceLevel: 1,
+      workflowRunId: 'wf-1',
+      triggerEventId: 'evt-1',
+      topN: 10,
+      now: '2026-03-25T20:22:00Z',
+    },
+  });
+
+  const executionResult = buildScenarioExecutionResult({
+    scenarioId: plan.envelope.scenarioId,
+    scenarioFamily: plan.envelope.scenarioFamily,
+    verificationMode: 'review-safe',
+    status: 'blocked',
+    blockerClass: 'core-unresolved-projection',
+    closureStage: 'post-review-claimant-progress',
+    ownership: 'core-runtime',
+    resumable: false,
+    evidence: {
+      helperKey: 'getAgentReadiness',
+      routePathTemplate: '/runtime/agents/:agent_registration_id/readiness',
+      actorRole: 'user',
+      contextSummary: {
+        tenantIdPresent: true,
+        principalIdPresent: true,
+        registrationIdPresent: true,
+      },
+      requestSummary: {
+        method: 'GET',
+      },
+      responseSummary: {
+        status: 403,
+        errorCode: 'active_role_binding_required',
+      },
+    },
+  });
+
+  const packet = buildReviewPacket({
+    scenario: plan.envelope,
+    bundle: buildScenarioVerificationBundle({
+      scenario: plan.envelope,
+      verificationMode: 'review-safe',
+    }),
+    executionResult,
+  } as Parameters<typeof buildReviewPacket>[0]);
+
+  assert.deepEqual(packet.details.verification.minimumEvidenceFields, [
+    'helperKey',
+    'routePathTemplate',
+    'actorRole',
+    'contextSummary',
+    'requestSummary',
+    'responseSummary',
+  ]);
+  assert.equal(packet.sections[4]?.entries.includes('minimum-evidence-fields:helperKey|routePathTemplate|actorRole|contextSummary|requestSummary|responseSummary'), true);
 });
 
 test('buildReviewPacket stays explicitly local and derived without server-owned outcomes', () => {
@@ -1169,6 +1273,104 @@ test('buildReviewPacket stays explicitly local and derived without server-owned 
   assert.equal(packet.sections[4]?.entries.includes('adjudication-outcome-included:false'), true);
   assert.equal(packet.sections[4]?.entries.includes('local-derived-explanation:route-coverage-note:completed-prefix-only'), true);
   assert.equal(packet.sections[4]?.entries.includes('dependency-gated-seams:core-truth-closure:deferred'), true);
+});
+
+test('buildReviewPacket exposes richer blocker and closure details without claiming server-owned outcomes', async () => {
+  const exports = await import('../src/index.ts');
+  const buildScenarioExecutionResult = exports.buildScenarioExecutionResult as (input: BidviaScenarioExecutionResult) => BidviaScenarioExecutionResult;
+  const plan = buildIndustryUniverseScenarioPlan({
+    scenarioId: 'scenario-industry-universe-1',
+    scenarioLabel: 'industry-universe-soda-ash-light',
+    sourceRefs: ['source://market/soda-ash-light'],
+    evidenceRefs: ['evidence://supply/soda-ash-light'],
+    traceIds: ['trace-1'],
+    workflowIds: ['wf-1'],
+    createListing: {
+      listingId: 'listing-1',
+      listingType: 'supply',
+      category: 'basic inorganic industrial chemical',
+      sku: 'sodium-carbonate-soda-ash-light',
+      quantityValue: '15',
+      quantityUnit: 'tons',
+      regionSummary: 'China -> Vietnam',
+      verificationStatus: 'verified',
+      freshnessTs: '2026-03-25T20:20:00Z',
+      traceId: 'trace-1',
+      idempotencyKey: 'listing-1',
+      now: '2026-03-25T20:20:00Z',
+    },
+    activateListing: {
+      now: '2026-03-25T20:21:00Z',
+    },
+    generateMatchCandidates: {
+      upstreamDecision: 'READY_FOR_ROUTING',
+      requiredEvidenceLevel: 1,
+      detectedEvidenceLevel: 1,
+      workflowRunId: 'wf-1',
+      triggerEventId: 'evt-1',
+      topN: 10,
+      now: '2026-03-25T20:22:00Z',
+    },
+  });
+
+  const executionResult = buildScenarioExecutionResult({
+    scenarioId: plan.envelope.scenarioId,
+    scenarioFamily: plan.envelope.scenarioFamily,
+    verificationMode: 'review-safe',
+    status: 'blocked',
+    blockerClass: 'core-unresolved-projection',
+    closureStage: 'post-review-claimant-progress',
+    ownership: 'core-runtime',
+    resumable: false,
+    nextStep: {
+      recommendedNextStep: 'refresh_authorization_context',
+      nextStepKind: 'org_context_authorization_refresh',
+      requiredActor: 'enterprise_admin',
+      canSelfResolve: false,
+    },
+    evidence: {
+      helperKey: 'getAgentReadiness',
+      routePathTemplate: '/runtime/agents/:agent_registration_id/readiness',
+      actorRole: 'user',
+      contextSummary: {
+        tenantIdPresent: true,
+        principalIdPresent: true,
+        registrationIdPresent: true,
+      },
+      requestSummary: {
+        method: 'GET',
+      },
+      responseSummary: {
+        status: 403,
+        errorCode: 'active_role_binding_required',
+      },
+    },
+  });
+
+  const packet = buildReviewPacket({
+    scenario: plan.envelope,
+    bundle: buildScenarioVerificationBundle({
+      scenario: plan.envelope,
+      verificationMode: 'review-safe',
+    }),
+    executionResult,
+  } as Parameters<typeof buildReviewPacket>[0]);
+
+  assert.equal(packet.details.boundary.serverTruthClaimed, false);
+  assert.equal(packet.details.verification.blockerClass, 'core-unresolved-projection');
+  assert.equal(packet.details.verification.closureStage, 'post-review-claimant-progress');
+  assert.equal(packet.details.verification.ownership, 'core-runtime');
+  assert.equal(packet.details.verification.resumable, false);
+  assert.deepEqual(packet.details.verification.nextStep, {
+    recommendedNextStep: 'refresh_authorization_context',
+    nextStepKind: 'org_context_authorization_refresh',
+    requiredActor: 'enterprise_admin',
+    canSelfResolve: false,
+  });
+  assert.equal(packet.sections[4]?.entries.includes('execution-blocker-class:core-unresolved-projection'), true);
+  assert.equal(packet.sections[4]?.entries.includes('execution-closure-stage:post-review-claimant-progress'), true);
+  assert.equal(packet.sections[4]?.entries.includes('execution-ownership:core-runtime'), true);
+  assert.equal(packet.sections[4]?.entries.includes('execution-resumable:false'), true);
 });
 
 test('enterprise integration plane keeps review-safe and discovery visibility bounded to the shipped commercial-universe surface', () => {

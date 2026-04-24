@@ -769,6 +769,7 @@ async function main() {
         `server-owned-facts:scenario-evidence-refs:${industryUniversePlan.envelope.evidenceRefs.length}`,
         `server-owned-facts:traceability-refs:${industryUniversePlan.envelope.traceIds.length + industryUniversePlan.envelope.workflowIds.length}`,
         'server-owned-facts:recorded-ids:2',
+        'minimum-evidence-fields:helperKey|routePathTemplate|actorRole|contextSummary|requestSummary|responseSummary',
         'server-truth-claimed:false',
         'adjudication-outcome-included:false',
         'dependency-gated-seams:core-truth-closure:deferred',

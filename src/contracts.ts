@@ -935,10 +935,23 @@ export interface BidviaReviewPacketVerificationDetail {
   completedRouteKeys: string[];
   pendingRouteKeys: string[];
   totalRecordCount: number;
+  minimumEvidenceFields: Array<
+    'helperKey'
+    | 'routePathTemplate'
+    | 'actorRole'
+    | 'contextSummary'
+    | 'requestSummary'
+    | 'responseSummary'
+  >;
   localDerivedExplanation: string[];
   serverOwnedFacts: string[];
   dependencyGatedSeams: string[];
   roleSplit: Record<BidviaScenarioActorRole, string[]>;
+  blockerClass?: BidviaExecutionBlockerClass;
+  closureStage?: BidviaExecutionClosureStage;
+  ownership?: BidviaExecutionOwnership;
+  resumable?: boolean;
+  nextStep?: BidviaScenarioExecutionNextStep;
 }
 
 export type BidviaReviewPacketRecordGroupKey = BidviaScenarioRecordGroupKey;
@@ -1419,6 +1432,24 @@ export interface BidviaExecutionGuidanceCheckpoint {
     guidance: string;
   };
   failClosedState: string;
+}
+
+export interface BidviaClaimantContinuationSurface {
+  stepKey: 'self-service-patch' | 'dispatch-authority-request';
+  actor: 'external-claimed-agent';
+  command:
+    | 'agent-self-service --agent-id ... --input ...'
+    | 'account-agent-dispatch-authority-request --agent-id ...';
+  recognizedCoreSuggestedNextSteps: string[];
+  recognizedCoreNextStepKinds: string[];
+}
+
+export interface BidviaPostClaimDecisionRule {
+  decisionKey:
+    | 'broken-core-suggested-next-step'
+    | 'supported-claimant-next-step'
+    | 'authorization-projection-gate';
+  priority: number;
 }
 
 export type BidviaAgentLifecycleLane =
