@@ -137,42 +137,6 @@ test('buildRouteContextMatrix separates public provisional onboarding from gover
       presentationTier: 'secondary',
       recommendedOutputMode: 'truth-fetch-result',
     },
-    {
-      journeyKey: 'governed-run',
-      helperKey: 'postHeartbeat',
-      routePathTemplate: '/runtime/agents/:registrationId/heartbeat',
-      routeFamily: 'agent-runtime',
-      journeyStage: 'governed-run-execution',
-      journeyStageSemantics: 'local-only',
-      accessContextFamily: 'registration',
-      contextSemantic: 'registration',
-      requiredContext: ['tenantId', 'registrationId', 'principalId'],
-      operationKind: 'execute',
-      executionTruth: 'packet-grounded-execution',
-      executionBlockedBy: null,
-      localCapabilityRiskTier: 'runtime-execution',
-      relevance: 'governed-run-secondary',
-      presentationTier: 'secondary',
-      recommendedOutputMode: 'execution-result',
-    },
-    {
-      journeyKey: 'governed-run',
-      helperKey: 'createCommercialAction',
-      routePathTemplate: '/runtime/commercial-actions',
-      routeFamily: 'agent-runtime',
-      journeyStage: 'governed-run-execution',
-      journeyStageSemantics: 'local-only',
-      accessContextFamily: 'operator-company',
-      contextSemantic: 'operator-company',
-      requiredContext: ['tenantId', 'principalId', 'companyId'],
-      operationKind: 'execute',
-      executionTruth: 'compatibility-only',
-      executionBlockedBy: null,
-      localCapabilityRiskTier: 'governed-commercial',
-      relevance: 'governed-run-secondary',
-      presentationTier: 'secondary',
-      recommendedOutputMode: 'execution-result',
-    },
   ]);
 
   assert.deepEqual(
@@ -190,7 +154,7 @@ test('buildRouteContextMatrix separates public provisional onboarding from gover
     typedMatrix.rows
       .filter((row) => row.journeyKey === 'governed-run')
       .map((row) => row.helperKey),
-    ['getAgentReadiness', 'postHeartbeat', 'createCommercialAction'],
+    ['getAgentReadiness'],
   );
 
   assert.deepEqual(typedMatrix.firstSuccessNextSteps, {
@@ -201,9 +165,9 @@ test('buildRouteContextMatrix separates public provisional onboarding from gover
       journeyStageSemantics: 'local-only',
     },
     'governed-run': {
-      command: 'registered-agent-operations-plan',
-      rationale: 'Use the post-onboarding operations plan after Governed Run has the required registration context.',
-      journeyStage: 'governed-run-execution',
+      command: 'account-agent --agent-id ...',
+      rationale: 'Use the canonical account-plane claimed-agent detail readback first so post-claim continuation starts from the current account-owned surface instead of older registration-bound operational packaging.',
+      journeyStage: 'governed-run-support',
       journeyStageSemantics: 'local-only',
     },
   });
@@ -235,11 +199,11 @@ test('buildRouteContextMatrix separates public provisional onboarding from gover
       },
       {
         journeyKey: 'governed-run',
-        journeyStage: 'governed-run-execution',
+        journeyStage: 'governed-run-support',
         journeyStageSemantics: 'local-only',
         relevance: 'governed-run-secondary',
-        command: 'registered-agent-operations-plan',
-        rationale: 'Use the post-onboarding operations plan after Governed Run has the required registration context.',
+        command: 'account-agent --agent-id ...',
+        rationale: 'Use the canonical account-plane claimed-agent detail readback first so post-claim continuation starts from the current account-owned surface instead of older registration-bound operational packaging.',
       },
     ],
   );
@@ -390,10 +354,8 @@ test('buildRouteContextMatrix separates public provisional onboarding from gover
     ],
   );
   assert.equal(
-    (
-      typedMatrix.rows.find((row) => row.helperKey === 'postHeartbeat') as { executionTruth: string }
-    ).executionTruth,
-    'packet-grounded-execution',
+    typedMatrix.rows.some((row) => row.helperKey === 'postHeartbeat'),
+    false,
   );
   assert.equal(
     (

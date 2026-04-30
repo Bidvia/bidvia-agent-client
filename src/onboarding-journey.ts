@@ -12,9 +12,7 @@ export type BidviaOnboardingJourneyHelperKey =
   | 'createProvisionalAgent'
   | 'queryProvisionalAgent'
   | 'claimProvisionalAgent'
-  | 'getAgentReadiness'
-  | 'postHeartbeat'
-  | 'createCommercialAction';
+  | 'getAgentReadiness';
 
 export type BidviaOnboardingJourneyRelevance =
   | 'public-first-common'
@@ -59,8 +57,6 @@ const onboardingJourneyCommandHints: Record<BidviaOnboardingJourneyHelperKey, Bi
   queryProvisionalAgent: identitySessionPlaneCommandHints[1]!,
   claimProvisionalAgent: identitySessionPlaneCommandHints[2]!,
   getAgentReadiness: null,
-  postHeartbeat: null,
-  createCommercialAction: null,
 };
 
 const onboardingJourneyDefinitions: readonly BidviaOnboardingJourneyDefinition[] = [
@@ -90,23 +86,13 @@ const onboardingJourneyDefinitions: readonly BidviaOnboardingJourneyDefinition[]
         journeyStage: 'governed-run-support',
         journeyStageSemantics: getWorkflowStageLocalSemantics('governed-run-support'),
       },
-      {
-        helperKey: 'postHeartbeat',
-        journeyStage: 'governed-run-execution',
-        journeyStageSemantics: getWorkflowStageLocalSemantics('governed-run-execution'),
-      },
-      {
-        helperKey: 'createCommercialAction',
-        journeyStage: 'governed-run-execution',
-        journeyStageSemantics: getWorkflowStageLocalSemantics('governed-run-execution'),
-      },
     ],
     relevance: 'governed-run-secondary',
     presentationTier: 'secondary',
     firstSuccessNextStep: {
-      command: 'registered-agent-operations-plan',
-      rationale: 'Use the post-onboarding operations plan after Governed Run has the required registration context.',
-      journeyStage: 'governed-run-execution',
+      command: 'account-agent --agent-id ...',
+      rationale: 'Use the canonical account-plane claimed-agent detail readback first so post-claim continuation starts from the current account-owned surface instead of older registration-bound operational packaging.',
+      journeyStage: 'governed-run-support',
       journeyStageSemantics: 'local-only',
     },
   },
