@@ -1743,7 +1743,7 @@ export class BidviaClient implements BidviaTaskRuntimeClientPort {
     return this.request(`/runtime/commercial-actions/${encodeURIComponent(input.commercialActionRequestId)}/status?tenant_id=${encodeURIComponent(tenantId)}`, {
       context,
       method: 'GET',
-      headers: this.requireAdminSessionHeaders(context),
+      headers: this.requireGovernedReadHeaders(context),
       requestPolicy,
     });
   }
@@ -1816,7 +1816,7 @@ export class BidviaClient implements BidviaTaskRuntimeClientPort {
     return this.request(`/runtime/commercial-actions/${encodeURIComponent(input.commercialActionRequestId)}/receipt?tenant_id=${encodeURIComponent(tenantId)}`, {
       context,
       method: 'GET',
-      headers: this.requireAdminSessionHeaders(context),
+      headers: this.requireGovernedReadHeaders(context),
       requestPolicy,
     });
   }
@@ -1830,7 +1830,7 @@ export class BidviaClient implements BidviaTaskRuntimeClientPort {
     return this.request(`/runtime/commercial-actions/${encodeURIComponent(input.commercialActionRequestId)}/audit?tenant_id=${encodeURIComponent(tenantId)}`, {
       context,
       method: 'GET',
-      headers: this.requireAdminSessionHeaders(context),
+      headers: this.requireGovernedReadHeaders(context),
       requestPolicy,
     });
   }

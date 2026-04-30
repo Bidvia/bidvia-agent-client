@@ -227,13 +227,13 @@ test('BidviaClient uses the frozen registration-bound heartbeat/sync/evidence/pr
   assert.equal((calls[0]?.init?.headers as Record<string, string>)['x-bidvia-principal-id'], 'actor-1');
 });
 
-test('BidviaClient makes admin-session commercial action reads explicit', async () => {
+test('BidviaClient makes commercial action reads explicit under principal-governed headers', async () => {
   const { calls, fetchStub } = createFetchStub();
   const client = new BidviaClient({
     baseUrl: 'http://127.0.0.1:8787',
     context: {
       tenantId: 'tenant-a',
-      adminSessionId: 'admin-sess-1',
+      principalId: 'actor-1',
     },
     fetchImpl: fetchStub,
   });
@@ -241,10 +241,20 @@ test('BidviaClient makes admin-session commercial action reads explicit', async 
   await client.getCommercialActionStatus({
     commercialActionRequestId: 'commercial-action-1',
   });
+  await client.getCommercialActionReceipt({
+    commercialActionRequestId: 'commercial-action-1',
+  });
+  await client.getCommercialActionAudit({
+    commercialActionRequestId: 'commercial-action-1',
+  });
 
-  assert.equal(calls.length, 1);
+  assert.equal(calls.length, 3);
   assert.equal(String(calls[0]?.input), 'http://127.0.0.1:8787/runtime/commercial-actions/commercial-action-1/status?tenant_id=tenant-a');
-  assert.equal((calls[0]?.init?.headers as Record<string, string>)['x-bidvia-admin-session-id'], 'admin-sess-1');
+  assert.equal(String(calls[1]?.input), 'http://127.0.0.1:8787/runtime/commercial-actions/commercial-action-1/receipt?tenant_id=tenant-a');
+  assert.equal(String(calls[2]?.input), 'http://127.0.0.1:8787/runtime/commercial-actions/commercial-action-1/audit?tenant_id=tenant-a');
+  assert.equal((calls[0]?.init?.headers as Record<string, string>)['x-authorized-tenant-id'], 'tenant-a');
+  assert.equal((calls[0]?.init?.headers as Record<string, string>)['x-bidvia-principal-id'], 'actor-1');
+  assert.equal((calls[0]?.init?.headers as Record<string, string>)['x-bidvia-admin-session-id'], undefined);
 });
 
 test('BidviaClient makes commercial action writes explicit under operator principal context', async () => {
