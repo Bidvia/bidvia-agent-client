@@ -737,6 +737,15 @@ function buildRecommendedOutputMode(
     ?? (capability.scope === 'read' ? 'truth-fetch-result' : 'execution-result');
 }
 
+function shouldExposeMcpBinding(binding: BidviaLocalDiscoveryMcpBinding): boolean {
+  if (binding.outputMode !== 'execution-result') {
+    return true;
+  }
+
+  const helperKey = binding.capabilityKey ?? binding.helperKey;
+  return buildExecutionDiscoverability(helperKey).runnable;
+}
+
 function createLocalMcpToolDescriptor(binding: BidviaLocalDiscoveryMcpBinding): BidviaMcpToolDescriptor {
   const capability = getRouteCapabilityFromLocalCatalog(binding.capabilityKey ?? binding.helperKey);
   if (!capability) {
@@ -799,7 +808,9 @@ export function getRouteCapabilityFromLocalCatalog(helperKey: string): BidviaRou
 }
 
 export function buildLocalMcpToolCatalog(): BidviaMcpToolDescriptor[] {
-  return localMcpBindings.map((binding) => createLocalMcpToolDescriptor(binding));
+  return localMcpBindings
+    .filter((binding) => shouldExposeMcpBinding(binding))
+    .map((binding) => createLocalMcpToolDescriptor(binding));
 }
 
 export function getLocalMcpToolDescriptor(toolName: string): BidviaMcpToolDescriptor | undefined {
@@ -813,7 +824,8 @@ export function buildLocalDiscoveryCatalog(): BidviaLocalDiscoveryCatalogEntry[]
   return routeCapabilities.map((capability) => {
     const cliBindings = localCliBindings.filter((binding) => binding.helperKey === capability.helperKey);
     const mcpBindings = localMcpBindings.filter(
-      (binding) => (binding.capabilityKey ?? binding.helperKey) === capability.helperKey,
+      (binding) => shouldExposeMcpBinding(binding)
+        && (binding.capabilityKey ?? binding.helperKey) === capability.helperKey,
     );
     const contextSemantic = capability.contextSemantic !== capability.accessContextFamily
       ? capability.contextSemantic

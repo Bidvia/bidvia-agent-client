@@ -352,13 +352,14 @@ test('buildLocalDiscoveryCatalog returns operator-readable local mappings withou
     runnable: false,
     blockedBy: null,
     cliCommands: [],
-    mcpTools: [
-      {
-        toolName: 'request-commercial-action-approval-execution',
-        outputMode: 'execution-result',
-      },
-    ],
+    mcpTools: [],
   });
+
+  const createCommercialAction = catalog.find((entry) => entry.helperKey === 'createCommercialAction');
+  assert.deepEqual(createCommercialAction?.mcpTools, []);
+
+  const executeCommercialAction = catalog.find((entry) => entry.helperKey === 'executeCommercialAction');
+  assert.deepEqual(executeCommercialAction?.mcpTools, []);
 
   assert.equal(catalog.some((entry) => entry.helperKey === 'listAgentCapabilityProfiles'), false);
   assert.equal(catalog.some((entry) => entry.helperKey === 'listCanonicalSemanticTaxonomyEntries'), false);

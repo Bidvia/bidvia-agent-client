@@ -92,9 +92,6 @@ const expectedBidviaMcpToolNames = [
   'agent-authority-profile-write-execution',
   'agent-authority-ladder-write-execution',
   'agent-capability-profile-write-execution',
-  'create-commercial-action-execution',
-  'request-commercial-action-approval-execution',
-  'execute-commercial-action-execution',
 ] as const;
 
 const expectedBidviaReadToolNames = expectedBidviaMcpToolNames.filter((toolName) => toolName.endsWith('-read'));
@@ -201,6 +198,9 @@ test('MCP tool catalog covers the current bounded preview, truth-fetch, export, 
   assert.equal(bidviaMcpTools.some((tool) => tool.toolName === 'agent-readiness-read'), true);
   assert.equal(bidviaMcpTools.some((tool) => tool.toolName === 'agent-capability-profile-read'), true);
   assert.equal(bidviaMcpTools.some((tool) => tool.toolName === 'create-task-dispatch-execution'), true);
+  assert.equal(bidviaMcpTools.some((tool) => tool.toolName === 'create-commercial-action-execution'), false);
+  assert.equal(bidviaMcpTools.some((tool) => tool.toolName === 'request-commercial-action-approval-execution'), false);
+  assert.equal(bidviaMcpTools.some((tool) => tool.toolName === 'execute-commercial-action-execution'), false);
 });
 
 test('MCP tool catalog lookup returns descriptive bounded slice metadata', () => {
@@ -434,6 +434,12 @@ test('MCP tool catalog export returns stable machine-readable descriptor data', 
     requiredContext: ['tenantId', 'principalId', 'companyId'],
   } as BidviaMcpDescriptorWithContext);
   assert.equal(bidviaMcpTools.some((tool) => tool.toolName === 'mutated-tool'), false);
+});
+
+test('compatibility-only commercial-action helpers are not exposed as execution MCP tools', () => {
+  assert.equal(getMcpToolDescriptor('create-commercial-action-execution'), undefined);
+  assert.equal(getMcpToolDescriptor('request-commercial-action-approval-execution'), undefined);
+  assert.equal(getMcpToolDescriptor('execute-commercial-action-execution'), undefined);
 });
 
 test('governance truth-fetch descriptor contract exposes a read-only MCP output mode', () => {
@@ -1710,7 +1716,7 @@ test('dispatchMcpToolCall routes widened Task 2 execution helpers through the sh
   ]);
 });
 
-test('dispatchMcpToolCall gives widened MCP execution tools precise missing-context remediation', async () => {
+test('dispatchMcpToolCall rejects compatibility-only commercial-action execution tools as unknown', async () => {
   await assert.rejects(
     () => dispatchMcpToolCallWithExecution(
       {
@@ -1729,7 +1735,7 @@ test('dispatchMcpToolCall gives widened MCP execution tools precise missing-cont
         }) as never,
       },
     ),
-    /MCP tool create-commercial-action-execution is missing required local execution context: principalId, companyId\. Use bidvia route-context-matrix to confirm the next Bidvia context family, then set BIDVIA_PRINCIPAL_ID and BIDVIA_COMPANY_ID before retrying this local stdio MCP tool\./,
+    /unknown MCP tool: create-commercial-action-execution/,
   );
 });
 
