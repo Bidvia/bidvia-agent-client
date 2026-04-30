@@ -11,8 +11,8 @@ Read this together with:
 - `docs/VALIDATION_LANES.md`
 - `docs/ROADMAP.md`
 - `docs/CORE_AGENT_CLIENT_PLANE_CONTRACT_GAPS.md`
-- `docs/superpowers/specs/2026-04-30-client-surface-alignment-design.md`
-- `docs/superpowers/plans/2026-04-30-client-surface-alignment-implementation.md`
+- `docs/superpowers/specs/2026-04-30-client-truth-alignment-v3-design.md`
+- `docs/superpowers/plans/2026-04-30-client-truth-alignment-v3-implementation.md`
 
 ## Validation lane and method
 

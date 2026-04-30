@@ -1230,6 +1230,7 @@ test('runCli dry-runs execution commands with structured output instead of invok
   const printed: unknown[] = [];
   let clientCreateCount = 0;
 
+  const restoreTenantId = setEnvVar('BIDVIA_TENANT_ID', undefined);
   const restoreRegistrationId = setEnvVar('BIDVIA_REGISTRATION_ID', undefined);
   const restorePrincipalId = setEnvVar('BIDVIA_PRINCIPAL_ID', undefined);
 
@@ -1299,6 +1300,7 @@ test('runCli dry-runs execution commands with structured output instead of invok
     },
     }]);
   } finally {
+    restoreTenantId();
     restoreRegistrationId();
     restorePrincipalId();
   }
