@@ -79,7 +79,8 @@ test('public release docs no longer depend on transitional publication wording i
   assert.doesNotMatch(corePlaneGaps, /hosted runtime behavior is shipped/i);
 
   for (const document of [onboardingGuide, contractBoundary]) {
-    assert.match(document, /\.sisyphus\/plans\/agent-client-v1-payload-contract-release\.md/);
+    assert.match(document, /docs\/superpowers\/plans\/2026-04-30-client-truth-alignment-v3-implementation\.md/);
+    assert.doesNotMatch(document, /agent-client-v1-payload-contract-release/);
     assert.doesNotMatch(document, /agent-client-next-version-productization/);
   }
 

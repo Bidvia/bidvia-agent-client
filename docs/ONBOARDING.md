@@ -1,6 +1,6 @@
 # Onboarding Guide
 
-This guide supports the current local-first package surface. For current execution sequencing and scope, use `.sisyphus/plans/agent-client-v1-payload-contract-release.md` as the active plan. That current wave rebases the repo onto the latest payload-level Core contract truth and the agent-first-but-login-capable V1 release boundary.
+This guide supports the current local-first package surface. For the current truth-alignment execution wave, use `docs/superpowers/plans/2026-04-30-client-truth-alignment-v3-implementation.md` as the active implementation plan. That current wave keeps the repo aligned to the latest fresh local-docker evidence and the agent-first-but-login-capable V1 release boundary.
 
 ## Goal
 
@@ -21,7 +21,7 @@ Before you begin runtime validation, choose the correct lane and do not mix them
 
 Fixed proof ids are not assumed in default local docker, self-generated runtime data is the preferred path for business-universe closure, and task-write-ready progression is a distinct surfaced path, not an implied side effect of claim. That surfaced path is bounded task closure, not full business closure. Use `docs/VALIDATION_LANES.md` when deciding which lane to use next.
 
-When a claimed external agent is still not runnable, keep the ordinary surfaced chain explicit: self-service patch -> dispatch-authority request -> operator/admin review closure -> external binding check -> post-step verification of task-write-ready and dispatch-eligibility truth. The external claimed agent owns the self-service patch and bounded dispatch-authority request, operator/admin owns review closure, and the current repo truth only proves the `account-agent-bindings` read surface for external binding visibility. It does not prove a binding-completion write or closure helper, so that external binding step must stay unresolved and fail-closed whenever runnable truth still depends on missing Core-owned binding completion.
+When a claimed external agent is still not runnable, keep the ordinary surfaced chain explicit: self-service patch -> dispatch-authority request -> operator/admin review closure -> external binding check -> post-step verification of task-write-ready and dispatch-eligibility truth. The external claimed agent owns the self-service patch and bounded dispatch-authority request, operator/admin owns review closure, and the latest surfaced runtime now proves that claimant/account-scoped and operator/admin binding writes use different body contracts. This repo still only ships the `account-agent-bindings` read surface for external binding visibility and does not yet package a first-class binding-completion helper, so that external binding step must stay fail-closed whenever runnable truth still depends on a missing or unclear Core-owned route/body contract.
 
 Separately, if account-plane continuation succeeds but governed reads or governed runtime still return `active_role_binding_required`, treat that as a distinct authorization-projection gate. Stay on the account-owned continuation plane, prefer Core-provided `recommended_next_step` / `next_step_kind`, and do not reinterpret that response as operator review or a hidden claimant-facing activation workflow.
 
@@ -149,7 +149,7 @@ After that guided path is clear, use the supporting diagnostics and review-safe 
 
 `onboarding-readiness` still exists as a supporting read-only explainer. It is no longer the primary public first-run entry point.
 
-Stage 3 release gate remains blocked in the current repo state for the shipped V1 helper set. Use `route-context-matrix` and `runtime-capabilities` to inspect the blocked gate posture, and keep the remaining distinction clear: the package documents a formal `1.0.0` release boundary, but workflow-stage and other packet-incomplete seams still keep Stage 3 closure blocked until Core freezes the missing truth. The validator suite remains required before any human release packet can describe closure.
+Stage 3 release gate remains blocked in the current repo state for the shipped V1 helper set. Use `route-context-matrix` and `runtime-capabilities` to inspect the blocked gate posture, and keep the remaining distinction clear: the package documents a formal `1.0.0` release boundary, but workflow-stage truth and the remaining route-model adoption seams still keep Stage 3 closure blocked until Core freezes the missing truth. The validator suite remains required before any human release packet can describe closure.
 
 The helper-level payload matrix is the truth model for that boundary. In current repo language:
 

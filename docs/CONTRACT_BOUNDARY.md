@@ -1,6 +1,6 @@
 # Contract Boundary
 
-This boundary reference supports the active execution plan at `.sisyphus/plans/agent-client-v1-payload-contract-release.md`. Read it as release-boundary guidance for the current shipped local-first surface, not as a competing roadmap.
+This boundary reference supports the active truth-alignment execution plan at `docs/superpowers/plans/2026-04-30-client-truth-alignment-v3-implementation.md`. Read it as release-boundary guidance for the current shipped local-first surface, not as a competing roadmap.
 
 For current downstream contract truth, use the Bidvia Core downstream contract center (`docs/downstream-contract-center/**` in the main Bidvia repo) as the frozen routine implementation source.
 
