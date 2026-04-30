@@ -299,6 +299,7 @@ test('runCli default client requires governed principal context for current supp
       printLine: () => {
         throw new Error('truth-fetch reads should not print help');
       },
+      readLocalOnboardingState: async () => null,
     });
 
     const targetBindingsExitCode = await runCli([
@@ -312,6 +313,7 @@ test('runCli default client requires governed principal context for current supp
       printLine: () => {
         throw new Error('truth-fetch reads should not print help');
       },
+      readLocalOnboardingState: async () => null,
     });
 
     assert.equal(fileResourceExitCode, 1);

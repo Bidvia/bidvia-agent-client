@@ -81,6 +81,7 @@ test('runCli heartbeat returns helper success when no runtime-owned result commi
       BIDVIA_REGISTRATION_ID: 'areg-runtime',
       BIDVIA_LOCAL_ACCUMULATION_PATH: accumulationPath,
     }),
+    readLocalOnboardingState: async () => null,
     now: () => '2026-04-04T12:05:00.000Z',
     printJson: (value) => {
       printed.push(value);
@@ -128,6 +129,7 @@ test('runCli reruns reuse the same local runtime track for the same execution co
       BIDVIA_REGISTRATION_ID: 'areg-runtime',
       BIDVIA_LOCAL_ACCUMULATION_PATH: accumulationPath,
     }),
+    readLocalOnboardingState: async () => null,
     now: () => now,
     printJson: (value: unknown) => {
       printed.push(value);
