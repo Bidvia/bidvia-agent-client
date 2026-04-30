@@ -911,7 +911,7 @@ export class BidviaClient implements BidviaTaskRuntimeClientPort {
     return this.request(this.accountTaskPlanePath(agentRegistrationId, '/leases', context), {
       context,
       method: 'POST',
-      headers: this.requireOperatorActionHeaders(context),
+      headers: this.requireAccountTaskPlaneWriteHeaders(context),
       body: buildTaskPlaneLeaseBody(input),
       requestPolicy,
     });
@@ -939,7 +939,7 @@ export class BidviaClient implements BidviaTaskRuntimeClientPort {
     return this.request(this.accountTaskPlanePath(agentRegistrationId, '/task-dispatches', context), {
       context,
       method: 'POST',
-      headers: this.requireOperatorActionHeaders(context),
+      headers: this.requireAccountTaskPlaneWriteHeaders(context),
       body: buildTaskPlaneTaskDispatchBody(input),
       requestPolicy,
     });
@@ -1097,7 +1097,7 @@ export class BidviaClient implements BidviaTaskRuntimeClientPort {
       {
         context,
         method: 'POST',
-        headers: this.requireOperatorActionHeaders(context),
+        headers: this.requireAccountTaskPlaneWriteHeaders(context),
         body: buildTaskPlaneTaskAssignBody(input),
         requestPolicy,
       },
@@ -1120,7 +1120,7 @@ export class BidviaClient implements BidviaTaskRuntimeClientPort {
       {
         context,
         method: 'POST',
-        headers: this.requireOperatorActionHeaders(context),
+        headers: this.requireAccountTaskPlaneWriteHeaders(context),
         body: buildTaskPlaneTaskStatusBody(input),
         requestPolicy,
       },
@@ -1143,7 +1143,7 @@ export class BidviaClient implements BidviaTaskRuntimeClientPort {
       {
         context,
         method: 'POST',
-        headers: this.requireOperatorActionHeaders(context),
+        headers: this.requireAccountTaskPlaneWriteHeaders(context),
         body: buildTaskPlaneTaskStatusBody(input),
         requestPolicy,
       },
@@ -1166,7 +1166,7 @@ export class BidviaClient implements BidviaTaskRuntimeClientPort {
       {
         context,
         method: 'POST',
-        headers: this.requireOperatorActionHeaders(context),
+        headers: this.requireAccountTaskPlaneWriteHeaders(context),
         body: buildTaskPlaneTaskOutcomeBody(input),
         requestPolicy,
       },
@@ -1189,7 +1189,7 @@ export class BidviaClient implements BidviaTaskRuntimeClientPort {
       {
         context,
         method: 'POST',
-        headers: this.requireOperatorActionHeaders(context),
+        headers: this.requireAccountTaskPlaneWriteHeaders(context),
         body: buildTaskPlaneTaskOutcomeBody(input),
         requestPolicy,
       },
@@ -1205,7 +1205,7 @@ export class BidviaClient implements BidviaTaskRuntimeClientPort {
     return this.request(this.accountTaskPlanePath(agentRegistrationId, '/claims', context), {
       context,
       method: 'POST',
-      headers: this.requireOperatorActionHeaders(context),
+      headers: this.requireAccountTaskPlaneWriteHeaders(context),
       body: buildTaskPlaneClaimBody(input),
       requestPolicy,
     });
@@ -1227,7 +1227,7 @@ export class BidviaClient implements BidviaTaskRuntimeClientPort {
       {
         context,
         method: 'POST',
-        headers: this.requireOperatorActionHeaders(context),
+        headers: this.requireAccountTaskPlaneWriteHeaders(context),
         body: buildTaskPlaneClaimAcceptBody(input),
         requestPolicy,
       },
@@ -1250,7 +1250,7 @@ export class BidviaClient implements BidviaTaskRuntimeClientPort {
       {
         context,
         method: 'POST',
-        headers: this.requireOperatorActionHeaders(context),
+        headers: this.requireAccountTaskPlaneWriteHeaders(context),
         body: buildTaskPlaneClaimRejectBody(input),
         requestPolicy,
       },
@@ -1717,7 +1717,8 @@ export class BidviaClient implements BidviaTaskRuntimeClientPort {
     requestPolicy?: BidviaClientRequestPolicy,
   ) {
     const context = this.resolveRequestContext(requestPolicy);
-    return this.request(`/runtime/commercial-actions?tenant_id=${encodeURIComponent(context.tenantId)}`, {
+    const tenantId = this.requireTenantId(context);
+    return this.request(`/runtime/commercial-actions?tenant_id=${encodeURIComponent(tenantId)}`, {
       context,
       method: 'POST',
       headers: this.requireOperatorActionHeaders(context),
@@ -1738,7 +1739,8 @@ export class BidviaClient implements BidviaTaskRuntimeClientPort {
     requestPolicy?: BidviaClientRequestPolicy,
   ) {
     const context = this.resolveRequestContext(requestPolicy);
-    return this.request(`/runtime/commercial-actions/${encodeURIComponent(input.commercialActionRequestId)}/status?tenant_id=${encodeURIComponent(context.tenantId)}`, {
+    const tenantId = this.requireTenantId(context);
+    return this.request(`/runtime/commercial-actions/${encodeURIComponent(input.commercialActionRequestId)}/status?tenant_id=${encodeURIComponent(tenantId)}`, {
       context,
       method: 'GET',
       headers: this.requireAdminSessionHeaders(context),
@@ -1751,7 +1753,8 @@ export class BidviaClient implements BidviaTaskRuntimeClientPort {
     requestPolicy?: BidviaClientRequestPolicy,
   ) {
     const context = this.resolveRequestContext(requestPolicy);
-    return this.request(`/runtime/commercial-actions/${encodeURIComponent(input.commercialActionRequestId)}/policy-check?tenant_id=${encodeURIComponent(context.tenantId)}`, {
+    const tenantId = this.requireTenantId(context);
+    return this.request(`/runtime/commercial-actions/${encodeURIComponent(input.commercialActionRequestId)}/policy-check?tenant_id=${encodeURIComponent(tenantId)}`, {
       context,
       method: 'POST',
       headers: this.requireOperatorActionHeaders(context),
@@ -1769,7 +1772,8 @@ export class BidviaClient implements BidviaTaskRuntimeClientPort {
     requestPolicy?: BidviaClientRequestPolicy,
   ) {
     const context = this.resolveRequestContext(requestPolicy);
-    return this.request(`/runtime/commercial-actions/${encodeURIComponent(input.commercialActionRequestId)}/request-approval?tenant_id=${encodeURIComponent(context.tenantId)}`, {
+    const tenantId = this.requireTenantId(context);
+    return this.request(`/runtime/commercial-actions/${encodeURIComponent(input.commercialActionRequestId)}/request-approval?tenant_id=${encodeURIComponent(tenantId)}`, {
       context,
       method: 'POST',
       headers: this.requireOperatorActionHeaders(context),
@@ -1786,7 +1790,8 @@ export class BidviaClient implements BidviaTaskRuntimeClientPort {
     requestPolicy?: BidviaClientRequestPolicy,
   ) {
     const context = this.resolveRequestContext(requestPolicy);
-    return this.request(`/runtime/commercial-actions/${encodeURIComponent(input.commercialActionRequestId)}/execute?tenant_id=${encodeURIComponent(context.tenantId)}`, {
+    const tenantId = this.requireTenantId(context);
+    return this.request(`/runtime/commercial-actions/${encodeURIComponent(input.commercialActionRequestId)}/execute?tenant_id=${encodeURIComponent(tenantId)}`, {
       context,
       method: 'POST',
       headers: this.requireOperatorActionHeaders(context),
@@ -1807,7 +1812,8 @@ export class BidviaClient implements BidviaTaskRuntimeClientPort {
     requestPolicy?: BidviaClientRequestPolicy,
   ) {
     const context = this.resolveRequestContext(requestPolicy);
-    return this.request(`/runtime/commercial-actions/${encodeURIComponent(input.commercialActionRequestId)}/receipt?tenant_id=${encodeURIComponent(context.tenantId)}`, {
+    const tenantId = this.requireTenantId(context);
+    return this.request(`/runtime/commercial-actions/${encodeURIComponent(input.commercialActionRequestId)}/receipt?tenant_id=${encodeURIComponent(tenantId)}`, {
       context,
       method: 'GET',
       headers: this.requireAdminSessionHeaders(context),
@@ -1820,7 +1826,8 @@ export class BidviaClient implements BidviaTaskRuntimeClientPort {
     requestPolicy?: BidviaClientRequestPolicy,
   ) {
     const context = this.resolveRequestContext(requestPolicy);
-    return this.request(`/runtime/commercial-actions/${encodeURIComponent(input.commercialActionRequestId)}/audit?tenant_id=${encodeURIComponent(context.tenantId)}`, {
+    const tenantId = this.requireTenantId(context);
+    return this.request(`/runtime/commercial-actions/${encodeURIComponent(input.commercialActionRequestId)}/audit?tenant_id=${encodeURIComponent(tenantId)}`, {
       context,
       method: 'GET',
       headers: this.requireAdminSessionHeaders(context),
@@ -1833,7 +1840,8 @@ export class BidviaClient implements BidviaTaskRuntimeClientPort {
     requestPolicy?: BidviaClientRequestPolicy,
   ) {
     const context = this.resolveRequestContext(requestPolicy);
-    return this.request(`/runtime/listings?tenant_id=${encodeURIComponent(context.tenantId)}`, {
+    const tenantId = this.requireTenantId(context);
+    return this.request(`/runtime/listings?tenant_id=${encodeURIComponent(tenantId)}`, {
       context,
       method: 'POST',
       headers: this.requireOperatorActionHeaders(context),
@@ -1862,7 +1870,8 @@ export class BidviaClient implements BidviaTaskRuntimeClientPort {
     requestPolicy?: BidviaClientRequestPolicy,
   ) {
     const context = this.resolveRequestContext(requestPolicy);
-    return this.request(`/runtime/listings/${encodeURIComponent(input.listingId)}/activate?tenant_id=${encodeURIComponent(context.tenantId)}`, {
+    const tenantId = this.requireTenantId(context);
+    return this.request(`/runtime/listings/${encodeURIComponent(input.listingId)}/activate?tenant_id=${encodeURIComponent(tenantId)}`, {
       context,
       method: 'POST',
       headers: this.requireOperatorActionHeaders(context),
@@ -1880,7 +1889,8 @@ export class BidviaClient implements BidviaTaskRuntimeClientPort {
     requestPolicy?: BidviaClientRequestPolicy,
   ) {
     const context = this.resolveRequestContext(requestPolicy);
-    return this.request(`/runtime/listings/${encodeURIComponent(input.listingId)}/match-candidates?tenant_id=${encodeURIComponent(context.tenantId)}`, {
+    const tenantId = this.requireTenantId(context);
+    return this.request(`/runtime/listings/${encodeURIComponent(input.listingId)}/match-candidates?tenant_id=${encodeURIComponent(tenantId)}`, {
       context,
       method: 'POST',
       headers: this.requireOperatorActionHeaders(context),
@@ -1903,7 +1913,8 @@ export class BidviaClient implements BidviaTaskRuntimeClientPort {
     requestPolicy?: BidviaClientRequestPolicy,
   ) {
     const context = this.resolveRequestContext(requestPolicy);
-    return this.request(`/runtime/connection-requests?tenant_id=${encodeURIComponent(context.tenantId)}`, {
+    const tenantId = this.requireTenantId(context);
+    return this.request(`/runtime/connection-requests?tenant_id=${encodeURIComponent(tenantId)}`, {
       context,
       method: 'POST',
       headers: this.requireOperatorActionHeaders(context),
@@ -1926,7 +1937,8 @@ export class BidviaClient implements BidviaTaskRuntimeClientPort {
     requestPolicy?: BidviaClientRequestPolicy,
   ) {
     const context = this.resolveRequestContext(requestPolicy);
-    return this.request(`/runtime/approvals/${encodeURIComponent(input.approvalRequestId)}/decision?tenant_id=${encodeURIComponent(context.tenantId)}`, {
+    const tenantId = this.requireTenantId(context);
+    return this.request(`/runtime/approvals/${encodeURIComponent(input.approvalRequestId)}/decision?tenant_id=${encodeURIComponent(tenantId)}`, {
       context,
       method: 'POST',
       headers: this.requireOperatorActionHeaders(context),
@@ -1944,7 +1956,8 @@ export class BidviaClient implements BidviaTaskRuntimeClientPort {
     requestPolicy?: BidviaClientRequestPolicy,
   ) {
     const context = this.resolveRequestContext(requestPolicy);
-    return this.request(`/runtime/opportunities/${encodeURIComponent(input.opportunityId)}/package-export?tenant_id=${encodeURIComponent(context.tenantId)}`, {
+    const tenantId = this.requireTenantId(context);
+    return this.request(`/runtime/opportunities/${encodeURIComponent(input.opportunityId)}/package-export?tenant_id=${encodeURIComponent(tenantId)}`, {
       context,
       method: 'POST',
       headers: this.requireOperatorActionHeaders(context),
@@ -2056,11 +2069,19 @@ export class BidviaClient implements BidviaTaskRuntimeClientPort {
   private requireOperatorActionHeaders(context: BidviaClientContext) {
     const principalId = this.requirePrincipalId(context);
     const companyId = this.requireCompanyId(context);
+    const tenantId = this.requireTenantId(context);
     return this.appendOptionalPrincipalContextHeaders(context, {
-      'x-authorized-tenant-id': context.tenantId,
+      'x-authorized-tenant-id': tenantId,
       'x-bidvia-principal-id': principalId,
       'x-authorized-company-id': companyId,
     });
+  }
+
+  private requireAccountTaskPlaneWriteHeaders(context: BidviaClientContext) {
+    return {
+      ...this.requireOperatorActionHeaders(context),
+      ...this.requireSessionHeaders(context),
+    };
   }
 
   private appendOptionalPrincipalContextHeaders(
