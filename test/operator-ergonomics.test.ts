@@ -60,25 +60,47 @@ function createExecutionContext(overrides: Partial<BidviaClientContext> = {}): B
   };
 }
 
+function setEnvVar(name: string, value: string | undefined) {
+  const previousValue = process.env[name];
+  if (value === undefined) {
+    delete process.env[name];
+  } else {
+    process.env[name] = value;
+  }
+
+  return () => {
+    if (previousValue === undefined) {
+      delete process.env[name];
+    } else {
+      process.env[name] = previousValue;
+    }
+  };
+}
+
 test('runCli heartbeat dry-run emits structured preflight context and risk hints', async () => {
   const printed: unknown[] = [];
 
-  const exitCode = await runCli(['heartbeat', '--dry-run'], {
-    now: () => '2026-03-30T10:00:00Z',
-    printJson: (value: unknown) => {
-      printed.push(value);
-    },
-    printLine: () => {
-      throw new Error('help output should not be used for heartbeat dry-run');
-    },
-    createClient: () => {
-      throw new Error('dry-run should not create a client');
-    },
-    resolveExecutionContext: () => createExecutionContext(),
-  } as never);
+  const restoreRegistrationId = setEnvVar('BIDVIA_REGISTRATION_ID', undefined);
+  const restorePrincipalId = setEnvVar('BIDVIA_PRINCIPAL_ID', undefined);
 
-  assert.equal(exitCode, 0);
-  assert.deepEqual(printed, [{
+  try {
+    const exitCode = await runCli(['heartbeat', '--dry-run'], {
+      now: () => '2026-03-30T10:00:00Z',
+      printJson: (value: unknown) => {
+        printed.push(value);
+      },
+      printLine: () => {
+        throw new Error('help output should not be used for heartbeat dry-run');
+      },
+      createClient: () => {
+        throw new Error('dry-run should not create a client');
+      },
+      readLocalOnboardingState: async () => null,
+      resolveExecutionContext: () => createExecutionContext(),
+    } as never);
+
+    assert.equal(exitCode, 0);
+    assert.deepEqual(printed, [{
     command: 'heartbeat',
     mode: 'dry-run',
     scope: 'local-only',
@@ -108,29 +130,38 @@ test('runCli heartbeat dry-run emits structured preflight context and risk hints
       now: '2026-03-30T10:00:00Z',
       expiresAt: '2026-03-30T10:05:00.000Z',
     },
-  }]);
+    }]);
+  } finally {
+    restoreRegistrationId();
+    restorePrincipalId();
+  }
 });
 
 test('runCli heartbeat fails fast with structured missing-context guidance before real execution', async () => {
   const printed: unknown[] = [];
 
-  const exitCode = await runCli(['heartbeat'], {
-    now: () => '2026-03-30T10:00:00Z',
-    printJson: (value: unknown) => {
-      printed.push(value);
-    },
-    printLine: () => {
-      throw new Error('help output should not be used for heartbeat execution');
-    },
-    createClient: () => new BidviaClient({
-      baseUrl: 'http://127.0.0.1:8787',
-      context: createExecutionContext(),
-    }),
-    resolveExecutionContext: () => createExecutionContext(),
-  } as never);
+  const restoreRegistrationId = setEnvVar('BIDVIA_REGISTRATION_ID', undefined);
+  const restorePrincipalId = setEnvVar('BIDVIA_PRINCIPAL_ID', undefined);
 
-  assert.equal(exitCode, 1);
-  assert.deepEqual(printed, [{
+  try {
+    const exitCode = await runCli(['heartbeat'], {
+      now: () => '2026-03-30T10:00:00Z',
+      printJson: (value: unknown) => {
+        printed.push(value);
+      },
+      printLine: () => {
+        throw new Error('help output should not be used for heartbeat execution');
+      },
+      createClient: () => new BidviaClient({
+        baseUrl: 'http://127.0.0.1:8787',
+        context: createExecutionContext(),
+      }),
+      readLocalOnboardingState: async () => null,
+      resolveExecutionContext: () => createExecutionContext(),
+    } as never);
+
+    assert.equal(exitCode, 1);
+    assert.deepEqual(printed, [{
     error: {
       code: 'missing-context',
       command: 'heartbeat',
@@ -159,7 +190,11 @@ test('runCli heartbeat fails fast with structured missing-context guidance befor
         ],
       },
     },
-  }]);
+    }]);
+  } finally {
+    restoreRegistrationId();
+    restorePrincipalId();
+  }
 });
 
 test('dispatchMcpToolCall adds execution preflight metadata and rejects missing local context clearly', async () => {
@@ -235,53 +270,62 @@ test('buildMcpMissingContextMessage gives OpenClaw agents the next local remedia
 test('CLI and MCP execution diagnostics keep blocker wording and ownership consistent', async () => {
   const printed: unknown[] = [];
 
-  const exitCode = await runCli(['heartbeat'], {
-    now: () => '2026-03-30T10:00:00Z',
-    printJson: (value: unknown) => {
-      printed.push(value);
-    },
-    printLine: () => {
-      throw new Error('help output should not be used for heartbeat execution');
-    },
-    createClient: () => new BidviaClient({
-      baseUrl: 'http://127.0.0.1:8787',
-      context: createExecutionContext(),
-    }),
-    resolveExecutionContext: () => createExecutionContext(),
-  } as never);
+  const restoreRegistrationId = setEnvVar('BIDVIA_REGISTRATION_ID', undefined);
+  const restorePrincipalId = setEnvVar('BIDVIA_PRINCIPAL_ID', undefined);
 
-  assert.equal(exitCode, 1);
-  const cliFailure = printed[0] as { error: { preflight: ExecutionPreflight } };
-
-  let mcpFailure: Error | undefined;
   try {
-    await dispatchMcpToolCallWithExecution(
-      {
-        toolName: 'heartbeat-execution',
-        arguments: {
-          now: '2026-03-30T10:00:00Z',
-          expiresAt: '2026-03-30T10:05:00Z',
-        },
+    const exitCode = await runCli(['heartbeat'], {
+      now: () => '2026-03-30T10:00:00Z',
+      printJson: (value: unknown) => {
+        printed.push(value);
       },
-      {
-        createExecutionClient: () => new BidviaClient({
-          baseUrl: 'http://127.0.0.1:8787',
-          context: createExecutionContext(),
-        }),
+      printLine: () => {
+        throw new Error('help output should not be used for heartbeat execution');
       },
-    );
-  } catch (error) {
-    mcpFailure = error as Error;
-  }
+      createClient: () => new BidviaClient({
+        baseUrl: 'http://127.0.0.1:8787',
+        context: createExecutionContext(),
+      }),
+      readLocalOnboardingState: async () => null,
+      resolveExecutionContext: () => createExecutionContext(),
+    } as never);
 
-  assert.equal(cliFailure.error.preflight.blockerClass, 'missing-local-context');
-  assert.equal(cliFailure.error.preflight.ownership, 'claimant');
-  assert.equal(
-    cliFailure.error.preflight.hints.includes('Blocker class missing-local-context keeps this command fail-closed until the required execution context is present.'),
-    true,
-  );
-  assert.ok(mcpFailure);
-  assert.equal(mcpFailure.message.includes('missing required local execution context: registrationId, principalId'), true);
+    assert.equal(exitCode, 1);
+    const cliFailure = printed[0] as { error: { preflight: ExecutionPreflight } };
+
+    let mcpFailure: Error | undefined;
+    try {
+      await dispatchMcpToolCallWithExecution(
+        {
+          toolName: 'heartbeat-execution',
+          arguments: {
+            now: '2026-03-30T10:00:00Z',
+            expiresAt: '2026-03-30T10:05:00Z',
+          },
+        },
+        {
+          createExecutionClient: () => new BidviaClient({
+            baseUrl: 'http://127.0.0.1:8787',
+            context: createExecutionContext(),
+          }),
+        },
+      );
+    } catch (error) {
+      mcpFailure = error as Error;
+    }
+
+    assert.equal(cliFailure.error.preflight.blockerClass, 'missing-local-context');
+    assert.equal(cliFailure.error.preflight.ownership, 'claimant');
+    assert.equal(
+      cliFailure.error.preflight.hints.includes('Blocker class missing-local-context keeps this command fail-closed until the required execution context is present.'),
+      true,
+    );
+    assert.ok(mcpFailure);
+    assert.equal(mcpFailure.message.includes('missing required local execution context: registrationId, principalId'), true);
+  } finally {
+    restoreRegistrationId();
+    restorePrincipalId();
+  }
 });
 
 test('buildExecutionGuidanceEntries surfaces task-write-ready and proof-lane next-step guidance without faking Core truth', () => {
@@ -334,13 +378,13 @@ test('buildExecutionGuidanceEntries surfaces task-write-ready and proof-lane nex
           stepKey: 'external-binding-completion-unresolved',
           actor: 'operator-or-admin',
           lane: 'default-local-docker',
-          surfacedAction: 'Inspect the shipped account-agent binding read surface to see whether an external binding already exists. Current repo truth does not prove a binding-completion write or closure helper, so keep this step unresolved and fail-closed instead of inventing completion.',
+          surfacedAction: 'Inspect the shipped account-agent binding read surface to confirm visibility, and only use claimant or operator/admin binding writes when the current Core-owned route/body contract for that lane is explicit. The repo still does not ship a first-class binding-completion helper, so stay fail-closed instead of guessing the write path.',
           verificationCheckpoint: {
             helperKeys: ['listAccountAgentBindings'],
             truthFields: [],
-            guidance: 'Use the account-agent binding read surface only for visibility. Current repo truth does not expose a packet-grounded completion helper or completion truth field for external binding closure.',
+            guidance: 'Use the account-agent binding read surface for visibility and verify returned task-write-ready or dispatch-eligibility truth after any binding write. Current repo truth does not yet package a first-class binding-completion helper, and claimant and operator routes use different body contracts.',
           },
-          failClosedState: 'Until Core exposes a concrete binding-completion path and the returned reads confirm runnable truth, keep the subject non-dispatchable.',
+          failClosedState: 'Until the current lane has an explicit Core-owned binding route/body contract and the returned reads confirm runnable truth, keep the subject non-dispatchable.',
         },
         {
           stepKey: 'post-step-truth-check',

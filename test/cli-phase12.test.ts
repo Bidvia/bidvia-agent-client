@@ -4,6 +4,23 @@ import assert from 'node:assert/strict';
 import type { BidviaHeartbeatInput } from '../src/contracts.ts';
 import { runCli } from '../src/cli.ts';
 
+function setEnvVar(name: string, value: string | undefined) {
+  const previousValue = process.env[name];
+  if (value === undefined) {
+    delete process.env[name];
+  } else {
+    process.env[name] = value;
+  }
+
+  return () => {
+    if (previousValue === undefined) {
+      delete process.env[name];
+    } else {
+      process.env[name] = previousValue;
+    }
+  };
+}
+
 test('runCli prints grouped help output for the learn, create-claim, run, diagnostics, and advanced review journey', async () => {
   const lines: string[] = [];
 
@@ -341,11 +358,11 @@ test('runCli prints operator discovery snapshots for CLI route metadata and loca
     },
     {
       journeyKey: 'governed-run',
-      journeyStage: 'governed-run-execution',
+      journeyStage: 'governed-run-support',
       journeyStageSemantics: 'local-only',
       relevance: 'governed-run-secondary',
-      command: 'registered-agent-operations-plan',
-      rationale: 'Use the post-onboarding operations plan after Governed Run has the required registration context.',
+      command: 'account-agent --agent-id ...',
+      rationale: 'Use the canonical account-plane claimed-agent detail readback first so post-claim continuation starts from the current account-owned surface instead of older registration-bound operational packaging.',
     },
   ]);
   assert.deepEqual(snapshot.cli.executionGuidance, [
@@ -397,13 +414,13 @@ test('runCli prints operator discovery snapshots for CLI route metadata and loca
           stepKey: 'external-binding-completion-unresolved',
           actor: 'operator-or-admin',
           lane: 'default-local-docker',
-          surfacedAction: 'Inspect the shipped account-agent binding read surface to see whether an external binding already exists. Current repo truth does not prove a binding-completion write or closure helper, so keep this step unresolved and fail-closed instead of inventing completion.',
+          surfacedAction: 'Inspect the shipped account-agent binding read surface to confirm visibility, and only use claimant or operator/admin binding writes when the current Core-owned route/body contract for that lane is explicit. The repo still does not ship a first-class binding-completion helper, so stay fail-closed instead of guessing the write path.',
           verificationCheckpoint: {
             helperKeys: ['listAccountAgentBindings'],
             truthFields: [],
-            guidance: 'Use the account-agent binding read surface only for visibility. Current repo truth does not expose a packet-grounded completion helper or completion truth field for external binding closure.',
+            guidance: 'Use the account-agent binding read surface for visibility and verify returned task-write-ready or dispatch-eligibility truth after any binding write. Current repo truth does not yet package a first-class binding-completion helper, and claimant and operator routes use different body contracts.',
           },
-          failClosedState: 'Until Core exposes a concrete binding-completion path and the returned reads confirm runnable truth, keep the subject non-dispatchable.',
+          failClosedState: 'Until the current lane has an explicit Core-owned binding route/body contract and the returned reads confirm runnable truth, keep the subject non-dispatchable.',
         },
         {
           stepKey: 'post-step-truth-check',
@@ -725,7 +742,7 @@ test('runCli prints public-first onboarding readiness without requiring environm
           actor: 'operator-or-admin',
           lane: 'default-local-docker',
           stepKey: 'external-binding-completion-unresolved',
-          surfacedAction: 'Inspect the shipped account-agent binding read surface to see whether an external binding already exists. Current repo truth does not prove a binding-completion write or closure helper, so keep this step unresolved and fail-closed instead of inventing completion.',
+          surfacedAction: 'Inspect the shipped account-agent binding read surface to confirm visibility, and only use claimant or operator/admin binding writes when the current Core-owned route/body contract for that lane is explicit. The repo still does not ship a first-class binding-completion helper, so stay fail-closed instead of guessing the write path.',
           surfacedSteps: [
             {
               helperKey: 'listAccountAgentBindings',
@@ -738,9 +755,9 @@ test('runCli prints public-first onboarding readiness without requiring environm
           verificationCheckpoint: {
             helperKeys: ['listAccountAgentBindings'],
             truthFields: [],
-            guidance: 'Use the account-agent binding read surface only for visibility. Current repo truth does not expose a packet-grounded completion helper or completion truth field for external binding closure.',
+            guidance: 'Use the account-agent binding read surface for visibility and verify returned task-write-ready or dispatch-eligibility truth after any binding write. Current repo truth does not yet package a first-class binding-completion helper, and claimant and operator routes use different body contracts.',
           },
-          failClosedState: 'Until Core exposes a concrete binding-completion path and the returned reads confirm runnable truth, keep the subject non-dispatchable.',
+          failClosedState: 'Until the current lane has an explicit Core-owned binding route/body contract and the returned reads confirm runnable truth, keep the subject non-dispatchable.',
         },
         {
           actor: 'external-claimed-agent',
@@ -1057,42 +1074,6 @@ test('runCli prints a route-context matrix that keeps public-first rows ahead of
       presentationTier: 'secondary',
       recommendedOutputMode: 'truth-fetch-result',
     },
-    {
-      journeyKey: 'governed-run',
-      helperKey: 'postHeartbeat',
-      routePathTemplate: '/runtime/agents/:registrationId/heartbeat',
-      routeFamily: 'agent-runtime',
-      journeyStage: 'governed-run-execution',
-      journeyStageSemantics: 'local-only',
-      accessContextFamily: 'registration',
-      contextSemantic: 'registration',
-      requiredContext: ['tenantId', 'registrationId', 'principalId'],
-      operationKind: 'execute',
-      executionTruth: 'packet-grounded-execution',
-      executionBlockedBy: null,
-      localCapabilityRiskTier: 'runtime-execution',
-      relevance: 'governed-run-secondary',
-      presentationTier: 'secondary',
-      recommendedOutputMode: 'execution-result',
-    },
-    {
-      journeyKey: 'governed-run',
-      helperKey: 'createCommercialAction',
-      routePathTemplate: '/runtime/commercial-actions',
-      routeFamily: 'agent-runtime',
-      journeyStage: 'governed-run-execution',
-      journeyStageSemantics: 'local-only',
-      accessContextFamily: 'operator-company',
-      contextSemantic: 'operator-company',
-      requiredContext: ['tenantId', 'principalId', 'companyId'],
-      operationKind: 'execute',
-      executionTruth: 'compatibility-only',
-      executionBlockedBy: null,
-      localCapabilityRiskTier: 'governed-commercial',
-      relevance: 'governed-run-secondary',
-      presentationTier: 'secondary',
-      recommendedOutputMode: 'execution-result',
-    },
   ]);
   assert.deepEqual(snapshot.firstSuccessNextSteps, {
     'public-first-onboarding': {
@@ -1102,9 +1083,9 @@ test('runCli prints a route-context matrix that keeps public-first rows ahead of
       journeyStageSemantics: 'local-only',
     },
     'governed-run': {
-      command: 'registered-agent-operations-plan',
-      rationale: 'Use the post-onboarding operations plan after Governed Run has the required registration context.',
-      journeyStage: 'governed-run-execution',
+      command: 'account-agent --agent-id ...',
+      rationale: 'Use the canonical account-plane claimed-agent detail readback first so post-claim continuation starts from the current account-owned surface instead of older registration-bound operational packaging.',
+      journeyStage: 'governed-run-support',
       journeyStageSemantics: 'local-only',
     },
   });
@@ -1249,39 +1230,44 @@ test('runCli dry-runs execution commands with structured output instead of invok
   const printed: unknown[] = [];
   let clientCreateCount = 0;
 
-  const exitCode = await runCli(['heartbeat', '--dry-run'], {
-    createClient: () => {
-      clientCreateCount += 1;
-      throw new Error('dry-run should not create a client');
-    },
-    now: () => '2026-03-29T10:00:00Z',
-    printJson: (value) => {
-      printed.push(value);
-    },
-    printLine: () => {
-      throw new Error('dry-run should not print help lines');
-    },
-    executionCommands: {
-      heartbeat: {
-        buildInput: (now) => ({
-          now,
-          expiresAt: '2026-03-29T10:05:00.000Z',
-        }),
-        run: async (_receivedClient, now) => {
-          const input: BidviaHeartbeatInput = {
+  const restoreRegistrationId = setEnvVar('BIDVIA_REGISTRATION_ID', undefined);
+  const restorePrincipalId = setEnvVar('BIDVIA_PRINCIPAL_ID', undefined);
+
+  try {
+    const exitCode = await runCli(['heartbeat', '--dry-run'], {
+      createClient: () => {
+        clientCreateCount += 1;
+        throw new Error('dry-run should not create a client');
+      },
+      now: () => '2026-03-29T10:00:00Z',
+      printJson: (value) => {
+        printed.push(value);
+      },
+      printLine: () => {
+        throw new Error('dry-run should not print help lines');
+      },
+      readLocalOnboardingState: async () => null,
+      executionCommands: {
+        heartbeat: {
+          buildInput: (now) => ({
             now,
             expiresAt: '2026-03-29T10:05:00.000Z',
-          };
+          }),
+          run: async (_receivedClient, now) => {
+            const input: BidviaHeartbeatInput = {
+              now,
+              expiresAt: '2026-03-29T10:05:00.000Z',
+            };
 
-          return input;
+            return input;
+          },
         },
       },
-    },
-  });
+    });
 
-  assert.equal(exitCode, 0);
-  assert.equal(clientCreateCount, 0);
-  assert.deepEqual(printed, [{
+    assert.equal(exitCode, 0);
+    assert.equal(clientCreateCount, 0);
+    assert.deepEqual(printed, [{
     command: 'heartbeat',
     mode: 'dry-run',
     scope: 'local-only',
@@ -1294,24 +1280,28 @@ test('runCli dry-runs execution commands with structured output instead of invok
       accessContextFamily: 'registration',
       localCapabilityTier: 'L2-registration-runtime',
       localCapabilityRiskTier: 'runtime-execution',
-      requiredContext: ['tenantId', 'registrationId', 'principalId'],
-      missingContext: ['registrationId', 'principalId'],
-      runnable: true,
-      blockedBy: null,
-      blockerClass: 'missing-local-context',
-      ownership: 'claimant',
-      hints: [
-        'Dry-run stays local and does not execute the remote registration-bound route.',
-        'Set BIDVIA_REGISTRATION_ID and BIDVIA_PRINCIPAL_ID before running the real execution command.',
-        'Blocker class missing-local-context keeps this command fail-closed until the required execution context is present.',
-        'Risk tier runtime-execution means the non-dry-run command writes to the remote runtime route.',
-      ],
+        requiredContext: ['tenantId', 'registrationId', 'principalId'],
+        missingContext: ['tenantId', 'registrationId', 'principalId'],
+        runnable: true,
+        blockedBy: null,
+        blockerClass: 'missing-local-context',
+        ownership: 'claimant',
+        hints: [
+          'Dry-run stays local and does not execute the remote registration-bound route.',
+          'Set BIDVIA_TENANT_ID and BIDVIA_REGISTRATION_ID and BIDVIA_PRINCIPAL_ID before running the real execution command.',
+          'Blocker class missing-local-context keeps this command fail-closed until the required execution context is present.',
+          'Risk tier runtime-execution means the non-dry-run command writes to the remote runtime route.',
+        ],
     },
     input: {
       now: '2026-03-29T10:00:00Z',
       expiresAt: '2026-03-29T10:05:00.000Z',
     },
-  }]);
+    }]);
+  } finally {
+    restoreRegistrationId();
+    restorePrincipalId();
+  }
 });
 
 test('runCli industry-universe execution uses the provided input instead of a built-in fixed scenario payload', async () => {
