@@ -45,9 +45,9 @@ test('V1 release candidate reflects the actual public release state', () => {
   assert.match(readme, /current package version is `1\.0\.0`/i);
   assert.match(readme, /`1\.0\.0` package state/i);
   assert.doesNotMatch(readme, /release-ready public surface/i);
-  assert.match(readme, /workflow-stage and other packet-incomplete seams remain blocked/i);
+  assert.match(readme, /workflow-stage truth and the remaining route-model adoption seams still require Core-frozen payload truth/i);
 
   assert.match(releaseNotes, /formal `1\.0\.0` package state/i);
   assert.doesNotMatch(releaseNotes, /Stage 3 release gate is now ready/i);
-  assert.match(releaseNotes, /workflow-stage and other packet-incomplete seams remain blocked/i);
+  assert.match(releaseNotes, /workflow-stage truth and the remaining route-model adoption seams still require Core-frozen payload truth/i);
 });

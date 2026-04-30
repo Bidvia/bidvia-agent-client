@@ -18,7 +18,7 @@ For the next-version role of this repo, use one explicit three-layer client arch
 
 The current package version is `1.0.0`.
 
-This is the customer-facing `1.0.0` package state for the current local client surface. The shipped SDK, CLI, MCP handoff, account/session prerequisite support, governed onboarding path, and frozen downstream read visibility are documented here, but the Stage 3 release gate remains blocked while workflow-stage and other packet-incomplete seams still require Core-frozen payload truth. npm publication is still a separate final human step.
+This is the customer-facing `1.0.0` package state for the current local client surface. The shipped SDK, CLI, MCP handoff, account/session prerequisite support, governed onboarding path, and frozen downstream read visibility are documented here, but the Stage 3 release gate remains blocked while workflow-stage truth and the remaining route-model adoption seams still require Core-frozen payload truth. npm publication is still a separate final human step.
 
 ## Installation
 
@@ -68,7 +68,7 @@ See `docs/VALIDATION_LANES.md` for the full lane guide. Fixed proof ids are not 
 
 That surfaced progression is bounded task closure, not full business closure.
 
-For task-write-ready progression, keep the chain explicit on the ordinary surfaced lane: self-service patch -> dispatch-authority request -> operator/admin review closure -> external binding check -> post-step verification of task-write-ready and dispatch-eligibility truth. The external claimed agent owns the self-service patch and bounded dispatch-authority request, operator/admin owns review closure, and the current repo truth only proves the `account-agent-bindings` read surface for external binding visibility, not a binding-completion write or closure helper, so that external binding step stays fail-closed and unresolved unless Core exposes a concrete path. If a governed read still returns `active_role_binding_required` after account-plane continuation succeeds, treat that as a separate authorization-projection gate rather than as dispatch-authority review or a hidden claimant-side activation workflow.
+For task-write-ready progression, keep the chain explicit on the ordinary surfaced lane: self-service patch -> dispatch-authority request -> operator/admin review closure -> external binding check -> post-step verification of task-write-ready and dispatch-eligibility truth. The external claimed agent owns the self-service patch and bounded dispatch-authority request, operator/admin owns review closure, and the latest surfaced runtime now proves that claimant/account-scoped and operator/admin binding writes use different body contracts. This repo still only ships the `account-agent-bindings` read helper plus guidance around that seam, not a first-class binding-completion helper, so keep the step fail-closed unless the current lane has an explicit Core-owned route/body contract. If a governed read still returns `active_role_binding_required` after account-plane continuation succeeds, treat that as a separate authorization-projection gate rather than as dispatch-authority review or a hidden claimant-side activation workflow.
 
 ## CLI onboarding path
 
@@ -212,7 +212,7 @@ The current helper-level payload model matters:
 - use one surface taxonomy here: executable, review-safe, and compatibility-only
 - next-version surface language stays explicit: executable surfaces perform bounded remote work, review-safe surfaces package or diagnose bounded flows without claiming server closure, and compatibility-only surfaces stay available only for tolerated transition seams
 - some wrappers remain `compatibility-only`
-- workflow-stage and other packet-incomplete seams remain blocked until Core freezes the missing payloads
+- workflow-stage and remaining route-model adoption seams stay blocked until Core freezes the missing payloads
 
 Examples of shipped governed read surfaces include `authority-profiles`, the singular per-registration `capability-profile`, and the participation/task family around `task-dispatch` visibility.
 

@@ -13,7 +13,7 @@ function readText(relativePath: string) {
 
 const progressionChain = 'self-service patch -> dispatch-authority request -> operator/admin review closure -> external binding check -> post-step verification of task-write-ready and dispatch-eligibility truth';
 const actorOwnership = 'The external claimed agent owns the self-service patch and bounded dispatch-authority request, operator/admin owns review closure';
-const bindingCaveat = 'binding-completion write or closure helper';
+const bindingCaveat = 'first-class binding-completion helper';
 const failClosed = 'fail-closed';
 const requiredTaskWriteReadyDocs = [
   'README.md',
@@ -27,7 +27,7 @@ function assertTaskWriteReadyProgressionSemantics(text: string, label: string) {
   assert.match(text, new RegExp(actorOwnership.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i'), `${label} must state who owns the external-agent and operator/admin steps.`);
   assert.match(text, /external binding/i, `${label} must keep the external binding step explicit.`);
   assert.match(text, new RegExp(bindingCaveat.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i'), `${label} must say the repo does not prove a binding-completion helper.`);
-  assert.match(text, /unresolved/i, `${label} must keep the external binding step unresolved.`);
+  assert.match(text, /different body contracts/i, `${label} must explain claimant and operator binding bodies diverge.`);
   assert.match(text, /Core/i, `${label} must keep the missing completion path Core-owned.`);
   assert.match(text, new RegExp(failClosed, 'i'), `${label} must keep the progression fail-closed.`);
   assert.match(text, /bounded task closure, not full business closure/i, `${label} must distinguish bounded task closure from full business closure.`);

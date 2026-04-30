@@ -78,6 +78,7 @@ test('README presents @bidvia/client as a customer-facing V1 entrypoint', () => 
   assert.match(readme, /dispatch-authority request/i);
   assert.match(readme, /operator\/admin review closure/i);
   assert.match(readme, /external binding/i);
+  assert.match(readme, /different body contracts/i);
   assert.match(readme, /task-write-ready and dispatch-eligibility truth/i);
   assert.match(readme, /three-layer client architecture/i);
   assert.match(readme, /atomic helpers, executable scenario runners, and productized CLI\/MCP surfaces/i);
