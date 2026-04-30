@@ -1725,7 +1725,8 @@ function buildPersistedIdentitySessionState(
   const preserveExistingClaimedContext = command === 'agent-self-service'
     || command === 'account-me'
     || command === 'select-org'
-    || command === 'session-refresh';
+    || command === 'session-refresh'
+    || command === 'account-agent-dispatch-authority-request';
   const tenantId = readOnboardingResultString(result, 'tenantId', 'tenant_id')
     ?? readOnboardingResultString(sessionRecord, 'tenantId', 'tenant_id')
     ?? executionContext.tenantId
@@ -1783,13 +1784,17 @@ function buildPersistedOnboardingActionState(
   }
 
   const claimedAgentId = readOnboardingResultString(result, 'agentId', 'agent_id')
+      ...(existingState?.agentId === undefined ? {} : { agentId: existingState.agentId }),
+      ...(existingState?.principalId === undefined ? {} : { principalId: existingState.principalId }),
+      ...(existingState?.companyId === undefined ? {} : { companyId: existingState.companyId }),
+      ...(existingState?.registrationId === undefined ? {} : { registrationId: existingState.registrationId }),
     ?? readOnboardingRegistrationResultString(result, 'agentId', ['agent_id'])
     ?? (effectiveContext.agentId.source === 'env' ? effectiveContext.agentId.value ?? undefined : undefined);
   const claimedPrincipalId = readOnboardingResultString(result, 'principalId', 'principal_id')
     ?? readOnboardingRegistrationResultString(result, 'principalId', ['principal_id'])
     ?? (effectiveContext.principalId.source === 'env' ? effectiveContext.principalId.value ?? undefined : undefined);
   const claimedCompanyId = readOnboardingResultString(result, 'companyId', 'company_id')
-    ?? readOnboardingRegistrationResultString(result, 'companyId', ['company_id'])
+    ?? readOnboardingRegistrationResultString(result, 'companyId', ['company_id', 'tenant_id'])
     ?? (effectiveContext.companyId.source === 'env' ? effectiveContext.companyId.value ?? undefined : undefined);
   const claimedRegistrationId = readOnboardingResultString(result, 'registrationId', 'registration_id')
     ?? readOnboardingRegistrationResultString(result, 'registrationId', ['agent_registration_id', 'registration_id'])

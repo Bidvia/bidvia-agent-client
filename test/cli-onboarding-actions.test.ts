@@ -464,6 +464,7 @@ test('runCli claim-provisional-agent persists nested registration identity field
       tenantId: 'tenant-nested',
       agentId: 'agent-nested',
       principalId: 'principal-nested',
+      companyId: 'company-nested',
       registrationId: 'areg-nested',
     lastCompletedStep: 'claim-provisional-agent',
     createdAt: '2026-04-02T12:05:15.000Z',
@@ -650,6 +651,120 @@ test('runCli agent-self-service preserves existing claimed registration context 
   });
 });
 
+test('runCli account-agent-dispatch-authority-request preserves existing claimed continuation context when the response omits claimed identity fields', async () => {
+  const tempDirectory = mkdtempSync(path.join(tmpdir(), 'bidvia-cli-dispatch-authority-state-'));
+  const statePath = path.join(tempDirectory, 'onboarding-state.json');
+
+  writeFileSync(statePath, JSON.stringify({
+    tenantId: 'tenant-existing',
+    agentId: 'agent-existing',
+    principalId: 'principal-existing',
+    companyId: 'company-existing',
+    registrationId: 'areg-existing',
+    sessionId: 'sess-existing',
+    lastCompletedStep: 'claim-provisional-agent',
+    createdAt: '2026-04-11T17:00:00Z',
+    updatedAt: '2026-04-11T17:01:00Z',
+  }, null, 2), 'utf8');
+
+  const printed: unknown[] = [];
+
+  const exitCode = await runCli([
+    'account-agent-dispatch-authority-request',
+    '--agent-id',
+    'agent-existing',
+  ], {
+    createClient: () => ({
+      createAccountAgentDispatchAuthorityRequest: async () => ({
+        request: {
+          dispatch_authority_activation_request_id: 'daar-1',
+          status: 'OPEN',
+        },
+      }),
+    }) as never,
+    resolveProcessEnv: () => ({
+      BIDVIA_STATE_PATH: statePath,
+    }),
+    now: () => '2026-04-11T17:28:00Z',
+    printJson: (value) => {
+      printed.push(value);
+    },
+    printLine: () => {},
+  });
+
+  assert.equal(exitCode, 0);
+  assert.deepEqual(printed, [{
+    request: {
+      dispatch_authority_activation_request_id: 'daar-1',
+      status: 'OPEN',
+    },
+  }]);
+  assert.deepEqual(JSON.parse(readFileSync(statePath, 'utf8')), {
+    tenantId: 'tenant-existing',
+    agentId: 'agent-existing',
+    principalId: 'principal-existing',
+    companyId: 'company-existing',
+    registrationId: 'areg-existing',
+    sessionId: 'sess-existing',
+    lastCompletedStep: 'account-agent-dispatch-authority-request',
+    createdAt: '2026-04-11T17:00:00Z',
+    updatedAt: '2026-04-11T17:28:00Z',
+  });
+});
+
+test('runCli query-provisional-agent preserves existing claimed continuation context when the response omits claimed identity fields', async () => {
+  const tempDirectory = mkdtempSync(path.join(tmpdir(), 'bidvia-cli-query-preserve-'));
+  const statePath = path.join(tempDirectory, 'onboarding-state.json');
+
+  writeFileSync(statePath, JSON.stringify({
+    tenantId: 'tenant-existing',
+    agentId: 'agent-existing',
+    principalId: 'principal-existing',
+    companyId: 'company-existing',
+    registrationId: 'areg-existing',
+    sessionId: 'sess-existing',
+    lastCompletedStep: 'claim-provisional-agent',
+    createdAt: '2026-04-11T17:00:00Z',
+    updatedAt: '2026-04-11T17:01:00Z',
+  }, null, 2), 'utf8');
+
+  const exitCode = await runCli([
+    'query-provisional-agent',
+    '--provisional-agent-ref',
+    'prov-agent-preserve',
+  ], {
+    createClient: () => withRuntimeResultCommit({
+      queryProvisionalAgent: async () => ({
+        provisionalAgentRef: 'prov-agent-preserve',
+        status: 'pending-claim',
+      }),
+    }) as never,
+    resolveProcessEnv: () => ({
+      BIDVIA_TENANT_ID: 'tenant-existing',
+      BIDVIA_STATE_PATH: statePath,
+    }),
+    readLocalOnboardingState: async () => JSON.parse(readFileSync(statePath, 'utf8')) as Record<string, unknown>,
+    now: () => '2026-04-11T17:30:00Z',
+    printJson: () => {},
+    printLine: () => {
+      throw new Error('query-provisional-agent should not print help lines');
+    },
+  });
+
+  assert.equal(exitCode, 0);
+  assert.deepEqual(JSON.parse(readFileSync(statePath, 'utf8')), {
+    tenantId: 'tenant-existing',
+    agentId: 'agent-existing',
+    principalId: 'principal-existing',
+    companyId: 'company-existing',
+    registrationId: 'areg-existing',
+    sessionId: 'sess-existing',
+    lastCompletedStep: 'query-provisional-agent',
+    createdAt: '2026-04-11T17:00:00Z',
+    updatedAt: '2026-04-11T17:30:00Z',
+  });
+});
+
 test('runCli onboarding action writes honor injected BIDVIA_STATE_PATH instead of process env drift', async () => {
   const tempDirectory = mkdtempSync(path.join(tmpdir(), 'bidvia-cli-onboarding-actions-injected-path-'));
   const injectedStatePath = path.join(tempDirectory, 'injected-onboarding-state.json');
@@ -795,6 +910,9 @@ test('runCli create/query rerun after a prior claim preserves governed-run ident
     assert.equal(createExitCode, 0);
     assert.deepEqual(JSON.parse(readFileSync(statePath, 'utf8')), {
       tenantId: 'tenant-reset',
+      principalId: 'principal-claimed',
+      companyId: 'company-claimed',
+      registrationId: 'areg-claimed',
       lastCompletedStep: 'create-provisional-agent',
       createdAt: '2026-04-02T12:00:00.000Z',
       updatedAt: '2026-04-02T12:06:00.000Z',
@@ -818,9 +936,9 @@ test('runCli create/query rerun after a prior claim preserves governed-run ident
 
     assert.equal(onboardExitCode, 0);
     assert.equal((printed[1] as { onboarding: { currentStage: { key: string } } }).onboarding.currentStage.key, 'provisional-claim-pending');
-    assert.equal((printed[1] as { effectiveContext: { registrationId: { value: string | null }, principalId: { value: string | null }, companyId: { value: string | null } } }).effectiveContext.registrationId.value, null);
-    assert.equal((printed[1] as { effectiveContext: { registrationId: { value: string | null }, principalId: { value: string | null }, companyId: { value: string | null } } }).effectiveContext.principalId.value, null);
-    assert.equal((printed[1] as { effectiveContext: { registrationId: { value: string | null }, principalId: { value: string | null }, companyId: { value: string | null } } }).effectiveContext.companyId.value, null);
+    assert.equal((printed[1] as { effectiveContext: { registrationId: { value: string | null }, principalId: { value: string | null }, companyId: { value: string | null } } }).effectiveContext.registrationId.value, 'areg-claimed');
+    assert.equal((printed[1] as { effectiveContext: { registrationId: { value: string | null }, principalId: { value: string | null }, companyId: { value: string | null } } }).effectiveContext.principalId.value, 'principal-claimed');
+    assert.equal((printed[1] as { effectiveContext: { registrationId: { value: string | null }, principalId: { value: string | null }, companyId: { value: string | null } } }).effectiveContext.companyId.value, 'company-claimed');
   } finally {
     restoreStatePath();
   }
