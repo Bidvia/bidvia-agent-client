@@ -295,6 +295,7 @@ test('runCli doctor with readiness live check separates local diagnostics from t
     resolveEnvironmentMode: () => 'production',
     readLocalOnboardingState: async () => ({
       tenantId: 'tenant-local',
+      agentId: 'agent-local',
       principalId: 'principal-local',
       companyId: 'company-local',
       registrationId: 'areg-local',
@@ -348,8 +349,12 @@ test('runCli doctor with readiness live check separates local diagnostics from t
       authority: 'governed',
     },
   });
-  assert.equal(snapshot.onboarding.currentStage.key, 'ready-for-registration-lifecycle');
-  assert.deepEqual(snapshot.onboarding.nextCommands.map((entry) => entry.command), ['bidvia registration-lifecycle-plan']);
+  assert.equal(snapshot.onboarding.currentStage.key, 'ready-for-claimant-execution');
+  assert.deepEqual(snapshot.onboarding.nextCommands.map((entry) => entry.command), [
+    'bidvia account-agent --agent-id ...',
+    'bidvia doctor',
+    'bidvia route-context-matrix',
+  ]);
   assertFirstSuccessNextStep(snapshot);
 });
 
@@ -826,10 +831,10 @@ test('runCli onboard rerun after claim skips provisional actions and points to r
   assert.equal(snapshot.localOnboardingState?.present, true);
   assert.deepEqual(snapshot.effectiveContext?.principalId, { value: 'principal-local', source: 'local-state' });
   assert.deepEqual(snapshot.effectiveContext?.registrationId, { value: 'areg-local', source: 'local-state' });
-  assert.equal(snapshot.onboarding.currentStage.key, 'ready-for-registration-lifecycle');
+  assert.equal(snapshot.onboarding.currentStage.key, 'ready-for-claimant-execution');
   assert.deepEqual(snapshot.onboarding.nextCommands.map((entry) => entry.command), [
     'bidvia doctor',
-    'bidvia registration-lifecycle-plan',
+    'bidvia account-agent --agent-id ...',
   ]);
   assertFirstSuccessNextStep(snapshot);
 });

@@ -975,8 +975,8 @@ function buildFirstAccessOnboardingSnapshot(
     journeyKey: journey.journeyKey,
     journeyLabel: journey.label,
     currentStage: {
-      key: 'ready-for-registration-lifecycle',
-      label: 'Public provisional onboarding is complete locally, and the next bounded command can move into governed run.',
+      key: 'ready-for-claimant-execution',
+      label: 'Public provisional onboarding is complete locally, and claimant execution can continue from the canonical account-owned surface.',
       blocked: false,
       blockedOn: null,
       lastCompletedStep: onboardingProgress.lastCompletedStep,
@@ -988,14 +988,22 @@ function buildFirstAccessOnboardingSnapshot(
           'Confirm local diagnostics and optional readiness checks before moving into runtime work.',
         ),
         buildStaticFirstAccessCommandHint(
-          `bidvia ${journey.firstSuccessNextStep.command}`,
-          journey.firstSuccessNextStep.rationale,
+          'bidvia account-agent --agent-id ...',
+          'Use the canonical account-plane claimed-agent detail readback first so post-claim continuation starts from the current account-owned surface instead of older registration-bound operational packaging.',
         ),
       ]
       : [
         buildStaticFirstAccessCommandHint(
-          `bidvia ${journey.firstSuccessNextStep.command}`,
-          journey.firstSuccessNextStep.rationale,
+          'bidvia account-agent --agent-id ...',
+          'Use the canonical account-plane claimed-agent detail readback first so post-claim continuation starts from the current account-owned surface instead of older registration-bound operational packaging.',
+        ),
+        buildStaticFirstAccessCommandHint(
+          'bidvia doctor',
+          'Re-run doctor after claimant execution changes so current account-plane truth and deeper runtime truth stay explicitly separated.',
+        ),
+        buildStaticFirstAccessCommandHint(
+          'bidvia route-context-matrix',
+          'Keep claimant execution, operator-owned continuation, and deeper proof/readback boundaries explicit before moving beyond the current account-owned package.',
         ),
       ],
     firstSuccessNextStep: journey.firstSuccessNextStep,
@@ -1776,6 +1784,10 @@ function buildPersistedOnboardingActionState(
       tenantId: readOnboardingResultString(result, 'tenantId', 'tenant_id')
         ?? executionContext.tenantId
         ?? existingState?.tenantId,
+      ...(existingState?.agentId === undefined ? {} : { agentId: existingState.agentId }),
+      ...(existingState?.principalId === undefined ? {} : { principalId: existingState.principalId }),
+      ...(existingState?.companyId === undefined ? {} : { companyId: existingState.companyId }),
+      ...(existingState?.registrationId === undefined ? {} : { registrationId: existingState.registrationId }),
       ...(existingState?.sessionId === undefined ? {} : { sessionId: existingState.sessionId }),
       lastCompletedStep: command,
       createdAt: existingState?.createdAt ?? now,
@@ -1784,10 +1796,6 @@ function buildPersistedOnboardingActionState(
   }
 
   const claimedAgentId = readOnboardingResultString(result, 'agentId', 'agent_id')
-      ...(existingState?.agentId === undefined ? {} : { agentId: existingState.agentId }),
-      ...(existingState?.principalId === undefined ? {} : { principalId: existingState.principalId }),
-      ...(existingState?.companyId === undefined ? {} : { companyId: existingState.companyId }),
-      ...(existingState?.registrationId === undefined ? {} : { registrationId: existingState.registrationId }),
     ?? readOnboardingRegistrationResultString(result, 'agentId', ['agent_id'])
     ?? (effectiveContext.agentId.source === 'env' ? effectiveContext.agentId.value ?? undefined : undefined);
   const claimedPrincipalId = readOnboardingResultString(result, 'principalId', 'principal_id')
