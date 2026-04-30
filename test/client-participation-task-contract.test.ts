@@ -44,7 +44,7 @@ test('BidviaClient uses governed read headers for canonical participation-state 
   assert.equal((calls[0]?.init?.headers as Record<string, string>)['x-bidvia-admin-session-id'], 'admin-sess-1');
 });
 
-test('BidviaClient uses operator action headers and frozen payloads for canonical participation-state and account-scoped task POST wrappers', async () => {
+test('BidviaClient uses operator action, claimant session headers, and frozen payloads for canonical participation-state and account-scoped task POST wrappers', async () => {
   const { calls, fetchStub } = createFetchStub();
   const client = new BidviaClient({
     baseUrl: 'http://127.0.0.1:8787',
@@ -52,6 +52,7 @@ test('BidviaClient uses operator action headers and frozen payloads for canonica
       tenantId: 'tenant-a',
       principalId: 'actor-1',
       companyId: 'company-a',
+      sessionId: 'sess-1',
     },
     fetchImpl: fetchStub,
   });
@@ -130,6 +131,7 @@ test('BidviaClient uses operator action headers and frozen payloads for canonica
   assert.equal(String(calls[9]?.input), 'http://127.0.0.1:8787/runtime/account/agents/areg-1/claims/claim-1/accept?tenant_id=tenant-a');
   assert.equal(String(calls[10]?.input), 'http://127.0.0.1:8787/runtime/account/agents/areg-1/claims/claim-1/reject?tenant_id=tenant-a');
   assert.equal((calls[0]?.init?.headers as Record<string, string>)['x-authorized-company-id'], 'company-a');
+  assert.equal((calls[1]?.init?.headers as Record<string, string>)['x-bidvia-session-id'], 'sess-1');
   assert.deepEqual(JSON.parse(String(calls[0]?.init?.body)), {
     state: 'ACTIVE',
     reason: 'handoff accepted',
