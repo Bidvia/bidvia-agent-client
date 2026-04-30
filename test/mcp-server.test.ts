@@ -71,9 +71,6 @@ const expectedMcpServerToolNames = [
   'agent-authority-profile-write-execution',
   'agent-authority-ladder-write-execution',
   'agent-capability-profile-write-execution',
-  'create-commercial-action-execution',
-  'request-commercial-action-approval-execution',
-  'execute-commercial-action-execution',
 ] as const;
 
 const runLocalMcpServerWithDependencies = runLocalMcpServer as unknown as (
@@ -887,7 +884,7 @@ test('local MCP stdio server dispatches widened Task 2 execution helpers and ret
       id: 502,
       error: {
         code: -32000,
-        message: 'MCP tool create-commercial-action-execution is missing required local execution context: principalId, companyId. Use bidvia route-context-matrix to confirm the next Bidvia context family, then set BIDVIA_PRINCIPAL_ID and BIDVIA_COMPANY_ID before retrying this local stdio MCP tool.',
+        message: 'unknown MCP tool: create-commercial-action-execution',
       },
     });
   } finally {
