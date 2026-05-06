@@ -25,6 +25,15 @@ test('public release docs no longer depend on transitional publication wording i
   const releaseChecklist = readText('docs/INTERNAL_RELEASE_CHECKLIST.md');
   const releaseNotes = readText('docs/RELEASE_NOTES_LOCAL_ONLY_NEXT_VERSION.md');
   const openClawExample = readText('examples/openclaw-gateway-bidvia-setup.md');
+  const integrationCapabilityDiscoveryContract = readText(
+    '.sisyphus/evidence/contract-snapshots/2026-05-01/agent-client/integration-capability-discovery-contract.md',
+  );
+  const enterpriseIntegrationPlaneContract = readText(
+    '.sisyphus/evidence/contract-snapshots/2026-05-01/agent-client/enterprise-integration-plane-contract.md',
+  );
+  const canonicalRouteAndStatusContract = readText(
+    '.sisyphus/evidence/contract-snapshots/2026-05-01/shared/canonical-route-and-status-contract.md',
+  );
 
   for (const document of [readme, onboardingDoc, smokeDoc]) {
     assert.doesNotMatch(document, /once the final (public )?publish gate is open/i);
@@ -120,13 +129,26 @@ test('public release docs no longer depend on transitional publication wording i
   assert.match(contractBoundary, /account-me/i);
   assert.match(contractBoundary, /session-refresh/i);
   assert.match(contractBoundary, /session-revoke/i);
-  assert.match(contractBoundary, /`GET \/runtime\/account\/agents\/:registration_id\/notifications\/:notification_id`/i);
-  assert.match(contractBoundary, /`POST \/runtime\/account\/agents\/:registration_id\/notifications\/:notification_id\/acknowledgements`/i);
+  assert.match(contractBoundary, /`GET \/runtime\/account\/agents\/:agentId\/notifications\/:notification_id`/i);
+  assert.match(contractBoundary, /`POST \/runtime\/account\/agents\/:agentId\/notifications\/:notification_id\/acknowledgements`/i);
+  assert.match(contractBoundary, /`GET \/runtime\/account\/integration-capabilities`/i);
+  assert.match(contractBoundary, /`GET \/runtime\/account\/agents\/:agentId\/integrations\/:integrationCode\/eligibility`/i);
+  assert.doesNotMatch(contractBoundary, /`POST \/runtime\/account\/agents\/:agentId\/integrations\/:integrationCode\/inbound`/i);
+  assert.match(contractBoundary, /compatibility-only support seams/i);
   assert.doesNotMatch(contractBoundary, /`GET \/runtime\/account\/agents\/:registration_id\/notifications`/i);
   assert.doesNotMatch(contractBoundary, /`GET \/runtime\/notifications\/:notification_id`/i);
   assert.doesNotMatch(contractBoundary, /`POST \/runtime\/notifications\/:notification_id\/acknowledge`/i);
   assert.match(contractBoundary, /agent-first but login-capable/i);
   assert.match(contractBoundary, /executable, review-safe, and compatibility-only/i);
+  assert.match(integrationCapabilityDiscoveryContract, /`GET \/runtime\/account\/integration-capabilities`/i);
+  assert.match(integrationCapabilityDiscoveryContract, /`GET \/runtime\/account\/agents\/:agentId\/integrations\/:integrationCode\/eligibility`/i);
+  assert.doesNotMatch(integrationCapabilityDiscoveryContract, /`POST \/runtime\/account\/agents\/:agentId\/integrations\/:integrationCode\/inbound`/i);
+  assert.match(enterpriseIntegrationPlaneContract, /`GET \/runtime\/account\/integration-capabilities`/i);
+  assert.match(enterpriseIntegrationPlaneContract, /`GET \/runtime\/account\/agents\/:agentId\/integrations\/:integrationCode\/eligibility`/i);
+  assert.doesNotMatch(enterpriseIntegrationPlaneContract, /`POST \/runtime\/account\/agents\/:agentId\/integrations\/:integrationCode\/inbound`/i);
+  assert.match(canonicalRouteAndStatusContract, /`GET \/runtime\/account\/integration-capabilities`/i);
+  assert.match(canonicalRouteAndStatusContract, /`GET \/runtime\/account\/agents\/:agentId\/integrations\/:integrationCode\/eligibility`/i);
+  assert.doesNotMatch(canonicalRouteAndStatusContract, /`POST \/runtime\/account\/agents\/:agentId\/integrations\/:integrationCode\/inbound`/i);
   assert.match(onboardingGuide, /agent-first but login-capable/i);
   assert.match(onboardingGuide, /bounded account\/session prerequisite support/i);
   assert.match(onboardingGuide, /bounded task closure, not full business closure/i);

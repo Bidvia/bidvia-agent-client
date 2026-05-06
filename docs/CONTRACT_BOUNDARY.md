@@ -79,7 +79,10 @@ The V1 boundary is agent-first but login-capable. Bounded account/session prereq
 The current V1 enterprise support family is intentionally mixed:
 
 - enterprise visibility and readback remain the primary packet-grounded enterprise truth already exposed elsewhere in the repo
-- the canonical integration support family below is also frozen and shipped, but it remains bounded support for governed integration entry and does not make the whole enterprise plane a general write-first surface
+- the canonical integration ownership slice is the account integration capability directory plus bounded account-agent eligibility truth
+- the bounded inbound invocation path is canonical ownership metadata, but this client keeps it fail-closed until Core freezes an open-client request body
+- legacy onboarding-contract and provider-shaped Haisi routes remain compatibility-only support seams rather than the outward V14 product root
+- the account-plane external binding seam now ships as a bounded first-class client helper, but still remains fail-closed unless the current lane has an explicit Core-owned route/body contract and the returned reads confirm runnable truth
 
 - `POST /runtime/accounts/personal/sign-up`
 - `POST /runtime/accounts/enterprise/sign-up`
@@ -94,6 +97,10 @@ The current V1 enterprise support family is intentionally mixed:
 - `POST /runtime/account/memberships/:membership_binding_id/remove`
 - `GET /runtime/account/agents/:agentId/dispatch-authority`
 - `POST /runtime/account/agents/:agentId/dispatch-authority-requests`
+- `POST /runtime/account/agents/:agentId/external-account-bindings`
+- `GET /runtime/account/agent-bindings`
+- `GET /runtime/account/integration-capabilities`
+- `GET /runtime/account/agents/:agentId/integrations/:integrationCode/eligibility`
 - `POST /runtime/agents/provisional`
 - `GET /runtime/agents/provisional?provisional_agent_ref=<...>`
 - `POST /runtime/agents/provisional/claim`
@@ -114,16 +121,19 @@ The current V1 enterprise support family is intentionally mixed:
 - `GET /runtime/agents/:registration_id/task-dispatches`
 - `GET /runtime/agents/:registration_id/task-dispatches/:task_dispatch_id`
 - `POST /runtime/agents/:registration_id/task-dispatches`
-- `GET /runtime/account/agents/:registration_id/task-dispatches`
-- `GET /runtime/account/agents/:registration_id/task-dispatches/:task_dispatch_id`
-- `POST /runtime/account/agents/:registration_id/task-dispatches`
-- `POST /runtime/account/agents/:registration_id/task-dispatches/:task_dispatch_id/assign`
-- `POST /runtime/account/agents/:registration_id/task-dispatches/:task_dispatch_id/suspend`
-- `POST /runtime/account/agents/:registration_id/task-dispatches/:task_dispatch_id/resume`
-- `POST /runtime/account/agents/:registration_id/task-dispatches/:task_dispatch_id/complete`
-- `POST /runtime/account/agents/:registration_id/task-dispatches/:task_dispatch_id/fail`
-- `GET /runtime/account/agents/:registration_id/notifications/:notification_id`
-- `POST /runtime/account/agents/:registration_id/notifications/:notification_id/acknowledgements`
+- `GET /runtime/account/agents/:agentId/task-dispatches`
+- `GET /runtime/account/agents/:agentId/task-dispatches/:task_dispatch_id`
+- `POST /runtime/account/agents/:agentId/task-dispatches`
+- `POST /runtime/account/agents/:agentId/task-dispatches/:task_dispatch_id/assign`
+- `POST /runtime/account/agents/:agentId/task-dispatches/:task_dispatch_id/suspend`
+- `POST /runtime/account/agents/:agentId/task-dispatches/:task_dispatch_id/resume`
+- `POST /runtime/account/agents/:agentId/task-dispatches/:task_dispatch_id/complete`
+- `POST /runtime/account/agents/:agentId/task-dispatches/:task_dispatch_id/fail`
+- `GET /runtime/account/agents/:agentId/notifications/:notification_id`
+- `POST /runtime/account/agents/:agentId/notifications/:notification_id/acknowledgements`
+
+Compatibility-only enterprise integration seams:
+
 - `POST /runtime/integrations/:integrationCode/onboarding-contract`
 - `POST /runtime/integrations/haisi-wms/login`
 - `GET /runtime/integrations/haisi-wms/warehouses`

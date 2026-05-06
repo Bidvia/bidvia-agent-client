@@ -60,10 +60,11 @@ function requireTaskWriteReadyProgression() {
             requireGuidedRouteStep('getAccountAgentDispatchAuthority'),
           ],
         };
-      case 'external-binding-completion-unresolved':
+      case 'external-binding-completion':
         return {
           ...checkpoint,
           surfacedSteps: [
+            requireGuidedRouteStep('createAccountAgentExternalBinding'),
             requireGuidedRouteStep('listAccountAgentBindings'),
           ],
         };

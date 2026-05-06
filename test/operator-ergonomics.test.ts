@@ -375,14 +375,14 @@ test('buildExecutionGuidanceEntries surfaces task-write-ready and proof-lane nex
           failClosedState: 'If operator/admin closure is absent or unresolved, keep the subject non-dispatchable.',
         },
         {
-          stepKey: 'external-binding-completion-unresolved',
+          stepKey: 'external-binding-completion',
           actor: 'operator-or-admin',
           lane: 'default-local-docker',
-          surfacedAction: 'Inspect the shipped account-agent binding read surface to confirm visibility, and only use claimant or operator/admin binding writes when the current Core-owned route/body contract for that lane is explicit. The repo still does not ship a first-class binding-completion helper, so stay fail-closed instead of guessing the write path.',
+          surfacedAction: 'Use the shipped first-class account-plane external binding write helper together with the account-agent binding read surface when the current Core-owned route/body contract for that lane is explicit, then verify returned task-write-ready and dispatch-eligibility truth before treating the subject as runnable.',
           verificationCheckpoint: {
-            helperKeys: ['listAccountAgentBindings'],
+            helperKeys: ['createAccountAgentExternalBinding', 'listAccountAgentBindings'],
             truthFields: [],
-            guidance: 'Use the account-agent binding read surface for visibility and verify returned task-write-ready or dispatch-eligibility truth after any binding write. Current repo truth does not yet package a first-class binding-completion helper, and claimant and operator routes use different body contracts.',
+            guidance: 'Use the shipped external binding write helper plus the account-agent binding read surface for visibility, and verify returned task-write-ready or dispatch-eligibility truth after any binding write. Claimant and operator routes still use different body contracts, so remain fail-closed when the current lane lacks an explicit Core-owned route/body contract.',
           },
           failClosedState: 'Until the current lane has an explicit Core-owned binding route/body contract and the returned reads confirm runnable truth, keep the subject non-dispatchable.',
         },

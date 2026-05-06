@@ -49,7 +49,7 @@ test('runtime capability snapshot and route context matrix surface the same hone
     notificationAcknowledgementPath: {
       status: 'client-side-fixed',
       helperKey: 'acknowledgeNotification',
-      routePathTemplate: '/runtime/account/agents/:agent_registration_id/notifications/:notification_id/acknowledgements',
+      routePathTemplate: '/runtime/account/agents/:agentId/notifications/:notification_id/acknowledgements',
       requiredContext: ['tenantId', 'principalId', 'companyId'],
       guidance: 'Current repo proof shows the client uses the canonical account-scoped acknowledgement route and frozen payload fields when the required operator-company context is present. Remaining delivery semantics stay upstream/runtime-owned.',
     },
@@ -94,7 +94,7 @@ test('task and event-notification plane views expose the lifecycle seams without
   assert.deepEqual(eventNotificationPlane.acknowledgementPath, {
     status: 'client-side-fixed',
     helperKey: 'acknowledgeNotification',
-    routePathTemplate: '/runtime/account/agents/:agent_registration_id/notifications/:notification_id/acknowledgements',
+    routePathTemplate: '/runtime/account/agents/:agentId/notifications/:notification_id/acknowledgements',
     requiredContext: ['tenantId', 'principalId', 'companyId'],
     guidance: 'Current repo proof shows the client uses the canonical account-scoped acknowledgement route and frozen payload fields when the required operator-company context is present. Remaining delivery semantics stay upstream/runtime-owned.',
   });
