@@ -1,0 +1,170 @@
+{
+  "schemaVersion": "2026-05-06",
+  "generatedAt": "2026-05-06T09:05:35Z",
+  "baseUrl": "http://127.0.0.1:8787",
+  "lane": "default-local-docker",
+  "summary": {
+    "status": "bounded-claimant-dispatch-ready-proven",
+    "notes": [
+      "Fresh local-docker live rerun succeeded through admin invitation issuance, claimant onboarding, provisional claim, dispatch-authority review closure, external binding, self-service repair, and final eligible dispatch-authority readback.",
+      "Deeper commercial-universe continuation beyond dispatch-ready was not exercised in this rerun."
+    ]
+  },
+  "runtime": {
+    "healthz": {
+      "status": "ok",
+      "runtime_identity_state": "identity_unset",
+      "release_closure_state": "terminal-envelope-bounded"
+    },
+    "readyz": {
+      "status": "ready",
+      "readiness_mode": "local-db-minimum"
+    }
+  },
+  "returnedIds": {
+    "adminSessionId": "admin-session-659ce12c-19b3-440d-afd9-c4c7ee3f2ea7",
+    "invitationId": "invite-ca32e13d-dc47-4a0a-99ad-38aa08b9fa0c",
+    "accountId": "acct-a6e9a957-343e-49b6-8e9b-3352b378491f",
+    "sessionId": "sess-c568541c-bce7-4c45-926e-4e8933c9ba40",
+    "provisionalAgentId": "prov-8fbca3ff-421c-4d0e-ae96-d4b941657adb",
+    "provisionalAgentRef": "prov-task9-1778057398",
+    "agentId": "prov-task9-1778057398",
+    "registrationId": "areg-b027e8a0-990e-440b-b78b-28faf98455a7",
+    "principalId": "claimed:prov-task9-1778057398",
+    "dispatchAuthorityActivationRequestId": "daar-da5a7048-250c-4cb8-a5a1-20e3eafb11e1",
+    "authorityProfileId": "authp-1778057757835",
+    "externalAccountBindingId": "eab-1778057993962-5112ba61-7a4c-48bb-bf99-de297dbec273",
+    "capabilityProfileId": "capp-1778058335441-1b2cf502-55d3-414e-a950-b8a5bada5f0a",
+    "participationStateId": "pstate-1778058335441-c778ec10-f5ec-4c47-804f-96120d43ca5e"
+  },
+  "steps": [
+    {
+      "stepKey": "refresh-active-installed-client",
+      "status": "passed",
+      "notes": [
+        "The active user-level bidvia installation initially remained on a stale command surface after ordinary npm global reinstall attempts.",
+        "The final active install was aligned by overwriting the user-level installed dist/ tree with the current worktree build output."
+      ]
+    },
+    {
+      "stepKey": "admin-sign-in",
+      "status": "passed",
+      "route": "POST /runtime/admin/sessions/sign-in",
+      "httpStatus": 200
+    },
+    {
+      "stepKey": "admin-issue-enterprise-invitation",
+      "status": "passed",
+      "route": "POST /runtime/admin/invitations/issue",
+      "httpStatus": 200,
+      "returned": {
+        "invitation_type": "ENTERPRISE_ACCOUNT",
+        "status": "ACTIVE"
+      }
+    },
+    {
+      "stepKey": "enterprise-sign-up",
+      "status": "passed",
+      "command": "bidvia sign-up-enterprise"
+    },
+    {
+      "stepKey": "enterprise-sign-in",
+      "status": "passed",
+      "command": "bidvia sign-in"
+    },
+    {
+      "stepKey": "account-me",
+      "status": "passed",
+      "command": "bidvia account-me",
+      "returned": {
+        "membershipRole": "enterprise_admin",
+        "agentOnboardingAllowed": true
+      }
+    },
+    {
+      "stepKey": "provisional-create-query-claim",
+      "status": "passed",
+      "commands": [
+        "bidvia create-provisional-agent",
+        "bidvia query-provisional-agent",
+        "bidvia claim-provisional-agent"
+      ],
+      "returned": {
+        "recommended_next_step": "use_account_agent_surface",
+        "official_runtime_surface": "/runtime/account/agents/:agentId"
+      }
+    },
+    {
+      "stepKey": "dispatch-authority-request",
+      "status": "passed",
+      "command": "bidvia account-agent-dispatch-authority-request",
+      "returned": {
+        "status": "OPEN"
+      }
+    },
+    {
+      "stepKey": "operator-review-closure",
+      "status": "passed",
+      "route": "POST /operator/dispatch-authority-requests/:requestId/decision",
+      "httpStatus": 200,
+      "returned": {
+        "status": "APPROVED",
+        "authorized_action_scopes": [
+          "EXTERNAL_WRITE"
+        ]
+      }
+    },
+    {
+      "stepKey": "external-account-binding",
+      "status": "passed",
+      "route": "POST /runtime/account/agents/:agentId/external-account-bindings",
+      "httpStatus": 200,
+      "returned": {
+        "surface_status": "account_scoped_binding_completed",
+        "binding_status": "active"
+      }
+    },
+    {
+      "stepKey": "claimant-self-service-repair",
+      "status": "passed",
+      "command": "bidvia agent-self-service",
+      "returned": {
+        "surface_status": "account_scope_detail",
+        "participation_state": "commercial-authority-bound"
+      }
+    },
+    {
+      "stepKey": "installed-client-camelcase-capability-profile-proof",
+      "status": "passed",
+      "command": "bidvia agent-self-service",
+      "returned": {
+        "capability_profile_id": "capp-1778059746106-b2d19251-6279-40d0-b386-96141f156335",
+        "dispatch_eligibility_allowed": true
+      }
+    },
+    {
+      "stepKey": "final-dispatch-authority-readback",
+      "status": "passed",
+      "command": "bidvia account-agent-dispatch-authority",
+      "returned": {
+        "dispatchEligibility": {
+          "state": "eligible",
+          "allowed": true,
+          "readiness_state": "active",
+          "recommended_next_step": "dispatch_ready",
+          "next_step_kind": "dispatch_authorized"
+        }
+      }
+    }
+  ],
+  "knownFindings": [
+    {
+      "kind": "client-serialization-drift-fixed-in-worktree",
+      "details": "Self-service capabilityProfile nested fields only succeeded once the client-side wire-format mapping was aligned to Core snake_case semantics."
+    },
+    {
+      "kind": "user-level-installed-cli-prefix-divergence-recovered",
+      "details": "The active user-level bidvia path initially remained stale after npm reinstall because the actual command path and npm global prefix diverged. The active install was ultimately realigned by replacing the user-level installed dist tree with the current worktree build output."
+    }
+  ]
+}

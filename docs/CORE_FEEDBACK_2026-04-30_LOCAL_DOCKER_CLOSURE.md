@@ -23,6 +23,74 @@ The certification run used the following posture:
 - **object strategy:** fresh runtime-generated objects wherever possible
 - **goal:** determine whether the current surfaced runtime proves bounded claimant progression only, or the deeper commercial-universe continuation and closure path required for scale-growth claims
 
+## 2026-05-06 harness refresh
+
+The current execution program added a repeatable machine-readable validation harness at:
+
+- `scripts/verify-client-bounded-matrix.ts`
+
+It was executed against local docker with:
+
+- base URL: `http://127.0.0.1:8787`
+- evidence file: `.sisyphus/evidence/client-bounded-matrix-20260506T161741.json`
+
+This refresh proves two narrower things:
+
+1. the client now has a repo-local, machine-readable bounded-matrix harness that can be rerun without inventing new contract semantics;
+2. the current shell can verify local runtime baseline truth honestly even when fresh multi-actor claimant/admin context is not injected.
+
+The 2026-05-06 harness run produced the following machine-readable result:
+
+- `runtime-baseline` -> `passed`
+- `platform-managed-onboarding` -> `blocked`
+- `dispatch-ready-progression` -> `blocked`
+- `role-collaboration-handoff` -> `blocked`
+- `continuous-task-governed-work-closure` -> `blocked`
+- `commercial-and-integration-readback` -> `blocked`
+
+The blocked scenarios were not treated as failures. They were recorded as blocked because the current shell did not provide the actor context required for fresh claimant/admin execution:
+
+- claimant context missing: `BIDVIA_TENANT_ID`, `BIDVIA_SESSION_ID`, `BIDVIA_AGENT_ID`
+- admin context missing: `BIDVIA_TENANT_ID`, `BIDVIA_ADMIN_SESSION_ID`
+
+This means the harness refresh does **not** supersede the 2026-04-30 fresh multi-actor certification findings below. Instead, it adds a durable client-owned verification entrypoint and preserves honest blocked outcomes when the local shell cannot yet supply the required actor prerequisites.
+
+## 2026-05-06 fresh live rerun after admin bootstrap recovery
+
+After the initial harness refresh, the execution program continued by locating the maintained local-docker admin bootstrap path from the Bidvia main repo, signing in with the seeded local-docker super-admin, issuing a fresh enterprise-account invitation, and rerunning the claimant continuation chain against `http://127.0.0.1:8787`.
+
+Machine-readable evidence for that rerun is now recorded at:
+
+- `.sisyphus/evidence/client-live-rerun-20260506T090535Z.json`
+
+This rerun proved the following bounded live chain on the ordinary surfaced lane:
+
+1. admin sign-in succeeded;
+2. admin invitation issuance succeeded;
+3. enterprise account sign-up / sign-in / account-me succeeded;
+4. provisional create -> query -> claim succeeded;
+5. claimant dispatch-authority request succeeded;
+6. operator/admin review closure succeeded with `APPROVED` request truth and an active authority profile carrying `EXTERNAL_WRITE`;
+7. claimant external-account binding succeeded;
+8. claimant self-service repair succeeded after aligning the capability-profile write payload to the current Core wire contract;
+9. the active installed `bidvia` command path was refreshed and then successfully replayed the claimant self-service repair using camelCase `capabilityProfile` input while the client handled the nested Core wire-format translation;
+10. final claimant dispatch-authority readback returned:
+   - `dispatch_eligibility.allowed = true`
+   - `dispatch_eligibility.state = eligible`
+   - `dispatch_eligibility.readiness_state = active`
+   - `recommended_next_step = dispatch_ready`
+   - `next_step_kind = dispatch_authorized`
+
+One environment-specific issue was also observed and recovered during this rerun:
+
+- the active user-level `bidvia` command path initially remained stale after ordinary npm reinstall attempts because the actual command path and npm global prefix diverged;
+- the final active install was realigned by replacing the user-level installed `dist/` tree with the current worktree build output;
+- after that realignment, the installed command path successfully accepted the repaired claimant self-service payload and returned the eligible dispatch-authority readback above.
+
+This means the current local-docker environment now proves more than the earlier blocked harness-only state. It proves fresh admin bootstrap, fresh claimant onboarding, and fresh account-plane dispatch-ready continuation on the ordinary surfaced lane.
+
+It still does **not** convert the deeper operator-matching / opportunity-emergence / end-state / proof-closure seam into a certified surfaced loop. Those boundaries remain explicit and fail-closed unless new route-level evidence is collected.
+
 ## What is now proven on the ordinary surfaced lane
 
 The following route families are now fresh-proven on the default local-docker lane.
