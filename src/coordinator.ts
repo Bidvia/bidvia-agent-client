@@ -77,6 +77,16 @@ function requireNonEmptyBoundaryId(value: string | undefined, fieldName: string)
   return normalizedValue;
 }
 
+function requireFirstRecordId(
+  bundle: BidviaScenarioVerificationBundle,
+  recordGroup: keyof BidviaScenarioVerificationBundle['recordIds'],
+  fieldName: string,
+): string {
+  const recordIds = bundle.recordIds[recordGroup];
+  const firstRecordId = Array.isArray(recordIds) ? recordIds[0] : undefined;
+  return requireNonEmptyBoundaryId(firstRecordId, fieldName);
+}
+
 function requireMatchingExplicitApprovalOpportunityBoundary(
   externalHandoffBoundary: BidviaApprovalOpportunityExternalHandoffBoundary,
   plan: BidviaMultiBusinessChainCoordinatorPlan,
@@ -160,11 +170,19 @@ export async function runMultiBusinessChainCoordinatorPreHandoff(
 ): Promise<BidviaMultiBusinessChainCoordinatorPreHandoffResult> {
   const industryUniverse = await runIndustryUniverseScenario(client as BidviaClient, plan.industryUniverse);
   const connectionApproval = await runConnectionApprovalScenario(client as BidviaClient, plan.connectionApproval);
+  const approvalRequestId = requireFirstRecordId(
+    connectionApproval,
+    'approvals',
+    'approvalRequestId',
+  );
 
   return {
     industryUniverse,
     connectionApproval,
-    externalHandoffBoundary: plan.externalHandoffBoundary,
+    externalHandoffBoundary: {
+      ...plan.externalHandoffBoundary,
+      approvalRequestId,
+    },
   };
 }
 
@@ -212,7 +230,10 @@ export async function runMultiBusinessChainCoordinatorWithExplicitHandoff(
   const postHandoff = await runMultiBusinessChainCoordinatorPostHandoff(
     client,
     plan,
-    validatedExternalHandoffBoundary,
+    {
+      ...validatedExternalHandoffBoundary,
+      approvalRequestId: preHandoff.externalHandoffBoundary.approvalRequestId,
+    },
   );
 
   return {

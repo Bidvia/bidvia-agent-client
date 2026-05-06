@@ -170,6 +170,74 @@ test('runIndustryUniverseScenario executes listing activate match in order', asy
   });
 });
 
+test('runIndustryUniverseScenario carries returned listing and match ids into downstream steps and verification records', async () => {
+  const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
+  const responses = [
+    { listing: { listing_id: 'listing-runtime-1' } },
+    { activation: { listing_id: 'listing-runtime-1', trigger_event_id: 'evt-runtime-1' } },
+    { matches: [{ match_id: 'match-runtime-1' }] },
+  ];
+  const fetchStub: typeof fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
+    calls.push({ input, init });
+    return new Response(JSON.stringify(responses[calls.length - 1] ?? { ok: true }), {
+      status: 200,
+      headers: { 'content-type': 'application/json' },
+    });
+  };
+  const client = new BidviaClient({
+    baseUrl: 'http://127.0.0.1:8787',
+    context: {
+      tenantId: 'tenant-a',
+      principalId: 'actor-1',
+      companyId: 'company-a',
+    },
+    fetchImpl: fetchStub,
+  });
+  const plan = buildIndustryUniverseScenarioPlan({
+    scenarioId: 'scenario-industry-universe-1',
+    scenarioLabel: 'industry-universe-soda-ash-light',
+    sourceRefs: ['source://market/soda-ash-light'],
+    evidenceRefs: ['evidence://supply/soda-ash-light'],
+    traceIds: ['trace-1'],
+    workflowIds: ['wf-1'],
+    createListing: {
+      listingId: 'listing-seeded-1',
+      listingType: 'supply',
+      category: 'basic inorganic industrial chemical',
+      sku: 'sodium-carbonate-soda-ash-light',
+      quantityValue: '15',
+      quantityUnit: 'tons',
+      regionSummary: 'China -> Vietnam',
+      verificationStatus: 'verified',
+      freshnessTs: '2026-03-25T20:20:00Z',
+      traceId: 'trace-1',
+      idempotencyKey: 'listing-seeded-1',
+      now: '2026-03-25T20:20:00Z',
+    },
+    activateListing: {
+      now: '2026-03-25T20:21:00Z',
+    },
+    generateMatchCandidates: {
+      upstreamDecision: 'READY_FOR_ROUTING',
+      requiredEvidenceLevel: 1,
+      detectedEvidenceLevel: 1,
+      workflowRunId: 'wf-1',
+      triggerEventId: 'evt-seeded-1',
+      topN: 10,
+      now: '2026-03-25T20:22:00Z',
+    },
+  });
+
+  const bundle = await runIndustryUniverseScenario(client, plan);
+
+  assert.equal(String(calls[1]?.input), 'http://127.0.0.1:8787/runtime/listings/listing-runtime-1/activate?tenant_id=tenant-a');
+  assert.equal(String(calls[2]?.input), 'http://127.0.0.1:8787/runtime/listings/listing-runtime-1/match-candidates?tenant_id=tenant-a');
+  assert.deepEqual(bundle.recordIds, {
+    listings: ['listing-runtime-1'],
+    matches: ['match-runtime-1'],
+  });
+});
+
 test('runIndustryUniverseScenario surfaces createListing failures without swallowing', async () => {
   const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
   const fetchStub: typeof fetch = async (input: RequestInfo | URL, init?: RequestInit) => {

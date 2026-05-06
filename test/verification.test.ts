@@ -1381,6 +1381,8 @@ test('enterprise integration plane keeps review-safe and discovery visibility bo
   assert.equal(plane.visibilityBoundary.broaderSystemAuthorityClaimed, false);
   assert.deepEqual(plane.packetTruthBoundary.packetCompleteFieldFamilies, [
     'identity-mapping-fields',
+    'account-integration-capability-read-models',
+    'account-agent-invocation-eligibility-read-models',
     'attachment-document-media-evidence-visibility',
   ]);
   assert.equal(plane.packetTruthBoundary.inventedPacketFieldsBlocked, true);

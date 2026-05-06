@@ -41,6 +41,43 @@ export interface BidviaOpportunityPackageHandoffPlan {
   closureGuidance: BidviaClosureGuidance;
 }
 
+function asRecord(value: unknown): Record<string, unknown> | undefined {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return undefined;
+  }
+
+  return value as Record<string, unknown>;
+}
+
+function readString(value: unknown): string | undefined {
+  return typeof value === 'string' && value.length > 0 ? value : undefined;
+}
+
+function extractPackageId(value: unknown): string | undefined {
+  const record = asRecord(value);
+  if (!record) {
+    return undefined;
+  }
+
+  return readString(record.package_id)
+    ?? readString(asRecord(record.package)?.package_id)
+    ?? readString(record.packageId)
+    ?? readString(asRecord(record.package)?.packageId);
+}
+
+function rebuildVerificationBundle(
+  plan: BidviaOpportunityPackageHandoffPlan,
+  verificationBundle: BidviaScenarioVerificationBundle,
+  recordIds: BidviaScenarioVerificationBundle['recordIds'],
+): BidviaScenarioVerificationBundle {
+  return buildScenarioVerificationBundle({
+    scenario: plan.envelope,
+    verificationMode: verificationBundle.verificationMode,
+    completedRouteChain: verificationBundle.completedRouteChain,
+    recordIds,
+  });
+}
+
 function requireNonEmptyId(value: string, fieldName: string): string {
   const trimmedValue = value.trim();
   if (!trimmedValue) {
@@ -115,7 +152,15 @@ export async function runOpportunityPackageHandoff(
     verificationMode: 'review-safe',
   });
 
-  await client.exportOpportunityPackage(plan.exportOpportunityPackageInput);
+  const exportOpportunityPackageResult = await client.exportOpportunityPackage(plan.exportOpportunityPackageInput);
+  const packageId = extractPackageId(exportOpportunityPackageResult);
+  const nextRecordIds: BidviaScenarioVerificationBundle['recordIds'] = {
+    ...verificationBundle.recordIds,
+  };
+  if (packageId) {
+    nextRecordIds.packages = [packageId];
+  }
+  verificationBundle = rebuildVerificationBundle(plan, verificationBundle, nextRecordIds);
   verificationBundle = appendCompletedRouteStep(
     verificationBundle,
     plan.envelope.expectedRouteChain[0]!,

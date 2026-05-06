@@ -303,6 +303,83 @@ test('runCommercialActionScenario executes the four-step commercial-action write
   assert.equal(result.reviewPacket.summary.completedRouteCount, 4);
 });
 
+test('runCommercialActionScenario prefers returned commercial action request ids for downstream writes and verification records', async () => {
+  const calls: string[] = [];
+  const client = {
+    async createCommercialAction(input) {
+      calls.push(`create:${input.subjectId}`);
+      return { commercial_action_request_id: 'commercial-action-runtime-1' };
+    },
+    async policyCheckCommercialAction(input) {
+      calls.push(`policy:${input.commercialActionRequestId}`);
+      return { ok: true };
+    },
+    async requestCommercialActionApproval(input) {
+      calls.push(`approval:${input.commercialActionRequestId}:${input.approvalRequestId}`);
+      return { ok: true };
+    },
+    async executeCommercialAction(input) {
+      calls.push(`execute:${input.commercialActionRequestId}:${input.receiptId}`);
+      return { ok: true };
+    },
+  } as Pick<BidviaClient,
+    'createCommercialAction'
+    | 'policyCheckCommercialAction'
+    | 'requestCommercialActionApproval'
+    | 'executeCommercialAction'> as BidviaClient;
+
+  const plan = buildCommercialActionScenarioPlan({
+    scenarioId: 'scenario-commercial-action-1',
+    scenarioLabel: 'commercial-action-package-send',
+    sourceRefs: ['source://package/pkg-1'],
+    evidenceRefs: ['evidence://approval/apr-2'],
+    traceIds: ['trace-1'],
+    workflowIds: ['wf-3'],
+    createCommercialAction: {
+      governedAction: 'OPPORTUNITY_PACKAGE_SEND',
+      subjectType: 'OPPORTUNITY_PACKAGE',
+      subjectId: 'pkg-1',
+      traceId: 'trace-1',
+      workflowId: 'wf-3',
+      now: '2026-03-26T10:00:00Z',
+    },
+    policyCheckCommercialAction: {
+      commercialActionRequestId: 'commercial-action-1',
+      policyVersion: 'policy-v1',
+      outcome: 'PASS',
+      now: '2026-03-26T10:01:00Z',
+    },
+    requestCommercialActionApproval: {
+      commercialActionRequestId: 'commercial-action-1',
+      approvalRequestId: 'apr-2',
+      now: '2026-03-26T10:02:00Z',
+    },
+    executeCommercialAction: {
+      commercialActionRequestId: 'commercial-action-1',
+      approvalRequestId: 'apr-2',
+      receiptId: 'receipt-1',
+      approvalResult: 'APPROVED',
+      resultStatus: 'SUCCEEDED',
+      auditId: 'audit-1',
+      now: '2026-03-26T10:03:00Z',
+    },
+  });
+
+  const result = await runCommercialActionScenario(client, plan);
+
+  assert.deepEqual(calls, [
+    'create:pkg-1',
+    'policy:commercial-action-runtime-1',
+    'approval:commercial-action-runtime-1:apr-2',
+    'execute:commercial-action-runtime-1:receipt-1',
+  ]);
+  assert.deepEqual(result.verificationBundle.recordIds, {
+    commercialActions: ['commercial-action-runtime-1'],
+    approvals: ['apr-2'],
+    receipts: ['receipt-1'],
+  });
+});
+
 test('runCommercialActionScenario surfaces write-step failures directly', async () => {
   const client = {
     async createCommercialAction() {
@@ -429,6 +506,91 @@ test('readCommercialActionScenarioReview reads status, receipt, and audit in ord
     'status:commercial-action-1',
     'receipt:commercial-action-1',
     'audit:commercial-action-1',
+  ]);
+  assert.deepEqual(result, {
+    status: { status: 'SUCCEEDED' },
+    receipt: { receiptId: 'receipt-1' },
+    audit: { auditId: 'audit-1' },
+  });
+});
+
+test('readCommercialActionScenarioReview prefers the runtime commercial action id captured in the verification bundle', async () => {
+  const calls: string[] = [];
+  const client = {
+    async getCommercialActionStatus(input) {
+      calls.push(`status:${input.commercialActionRequestId}`);
+      return { status: 'SUCCEEDED' };
+    },
+    async getCommercialActionReceipt(input) {
+      calls.push(`receipt:${input.commercialActionRequestId}`);
+      return { receiptId: 'receipt-1' };
+    },
+    async getCommercialActionAudit(input) {
+      calls.push(`audit:${input.commercialActionRequestId}`);
+      return { auditId: 'audit-1' };
+    },
+  } as Pick<BidviaClient,
+    'getCommercialActionStatus'
+    | 'getCommercialActionReceipt'
+    | 'getCommercialActionAudit'> as BidviaClient;
+
+  const plan = buildCommercialActionScenarioPlan({
+    scenarioId: 'scenario-commercial-action-1',
+    scenarioLabel: 'commercial-action-package-send',
+    sourceRefs: ['source://package/pkg-1'],
+    evidenceRefs: ['evidence://approval/apr-2'],
+    traceIds: ['trace-1'],
+    workflowIds: ['wf-3'],
+    createCommercialAction: {
+      governedAction: 'OPPORTUNITY_PACKAGE_SEND',
+      subjectType: 'OPPORTUNITY_PACKAGE',
+      subjectId: 'pkg-1',
+      traceId: 'trace-1',
+      workflowId: 'wf-3',
+      now: '2026-03-26T10:00:00Z',
+    },
+    policyCheckCommercialAction: {
+      commercialActionRequestId: 'commercial-action-1',
+      policyVersion: 'policy-v1',
+      outcome: 'PASS',
+      now: '2026-03-26T10:01:00Z',
+    },
+    requestCommercialActionApproval: {
+      commercialActionRequestId: 'commercial-action-1',
+      approvalRequestId: 'apr-2',
+      now: '2026-03-26T10:02:00Z',
+    },
+    executeCommercialAction: {
+      commercialActionRequestId: 'commercial-action-1',
+      approvalRequestId: 'apr-2',
+      receiptId: 'receipt-1',
+      approvalResult: 'APPROVED',
+      resultStatus: 'SUCCEEDED',
+      auditId: 'audit-1',
+      now: '2026-03-26T10:03:00Z',
+    },
+  });
+
+  const result = await readCommercialActionScenarioReview(client, plan, {
+    scenarioId: plan.envelope.scenarioId,
+    scenarioLabel: plan.envelope.scenarioLabel,
+    scenarioFamily: plan.envelope.scenarioFamily,
+    sourceRefs: plan.envelope.sourceRefs,
+    evidenceRefs: plan.envelope.evidenceRefs,
+    traceIds: plan.envelope.traceIds,
+    workflowIds: plan.envelope.workflowIds,
+    recordIds: {
+      commercialActions: ['commercial-action-runtime-1'],
+    },
+    verificationMode: 'review-safe',
+    expectedRouteChain: plan.envelope.expectedRouteChain,
+    completedRouteChain: plan.envelope.expectedRouteChain,
+  });
+
+  assert.deepEqual(calls, [
+    'status:commercial-action-runtime-1',
+    'receipt:commercial-action-runtime-1',
+    'audit:commercial-action-runtime-1',
   ]);
   assert.deepEqual(result, {
     status: { status: 'SUCCEEDED' },

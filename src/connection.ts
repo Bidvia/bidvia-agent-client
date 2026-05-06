@@ -24,6 +24,43 @@ export interface BidviaConnectionApprovalScenarioExecutionResult {
 }
 import { buildWorkflowStageReference } from './workflow-stage-plane.js';
 
+function asRecord(value: unknown): Record<string, unknown> | undefined {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return undefined;
+  }
+
+  return value as Record<string, unknown>;
+}
+
+function readString(value: unknown): string | undefined {
+  return typeof value === 'string' && value.length > 0 ? value : undefined;
+}
+
+function extractApprovalRequestId(value: unknown): string | undefined {
+  const record = asRecord(value);
+  if (!record) {
+    return undefined;
+  }
+
+  return readString(record.approval_request_id)
+    ?? readString(asRecord(record.decision)?.approval_request_id)
+    ?? readString(record.approvalRequestId)
+    ?? readString(asRecord(record.decision)?.approvalRequestId);
+}
+
+function rebuildVerificationBundle(
+  plan: BidviaConnectionApprovalScenarioPlan,
+  verificationBundle: BidviaScenarioVerificationBundle,
+  recordIds: BidviaScenarioVerificationBundle['recordIds'],
+): BidviaScenarioVerificationBundle {
+  return buildScenarioVerificationBundle({
+    scenario: plan.envelope,
+    verificationMode: verificationBundle.verificationMode,
+    completedRouteChain: verificationBundle.completedRouteChain,
+    recordIds,
+  });
+}
+
 function requireNonEmptyId(value: string, fieldName: string): string {
   const trimmedValue = value.trim();
   if (!trimmedValue) {
@@ -129,13 +166,23 @@ export async function runConnectionApprovalScenario(
     verificationMode: 'review-safe',
   });
 
-  await client.createConnectionRequest(plan.createConnectionRequestInput);
+  let approvalRequestId = plan.approveConnectionRequestInput.approvalRequestId;
+
+  const createConnectionRequestResult = await client.createConnectionRequest(plan.createConnectionRequestInput);
+  approvalRequestId = extractApprovalRequestId(createConnectionRequestResult) ?? approvalRequestId;
+  verificationBundle = rebuildVerificationBundle(plan, verificationBundle, {
+    matches: [plan.createConnectionRequestInput.sourceMatchId],
+    approvals: [approvalRequestId],
+  });
   verificationBundle = appendCompletedRouteStep(
     verificationBundle,
     plan.envelope.expectedRouteChain[0]!,
   );
 
-  await client.approveConnectionRequest(plan.approveConnectionRequestInput);
+  await client.approveConnectionRequest({
+    ...plan.approveConnectionRequestInput,
+    approvalRequestId,
+  });
   verificationBundle = appendCompletedRouteStep(
     verificationBundle,
     plan.envelope.expectedRouteChain[1]!,

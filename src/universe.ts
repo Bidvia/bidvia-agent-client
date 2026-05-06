@@ -44,6 +44,71 @@ export interface BidviaIndustryUniverseScenarioPlan {
   closureGuidance: BidviaClosureGuidance;
 }
 
+function asRecord(value: unknown): Record<string, unknown> | undefined {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return undefined;
+  }
+
+  return value as Record<string, unknown>;
+}
+
+function readString(value: unknown): string | undefined {
+  return typeof value === 'string' && value.length > 0 ? value : undefined;
+}
+
+function extractListingId(value: unknown): string | undefined {
+  const record = asRecord(value);
+  if (!record) {
+    return undefined;
+  }
+
+  return readString(record.listing_id)
+    ?? readString(asRecord(record.listing)?.listing_id)
+    ?? readString(record.listingId)
+    ?? readString(asRecord(record.listing)?.listingId);
+}
+
+function extractTriggerEventId(value: unknown): string | undefined {
+  const record = asRecord(value);
+  if (!record) {
+    return undefined;
+  }
+
+  return readString(record.trigger_event_id)
+    ?? readString(asRecord(record.activation)?.trigger_event_id)
+    ?? readString(record.triggerEventId)
+    ?? readString(asRecord(record.activation)?.triggerEventId);
+}
+
+function extractMatchIds(value: unknown): string[] {
+  const record = asRecord(value);
+  if (!record) {
+    return [];
+  }
+
+  const matches = record.matches;
+  if (!Array.isArray(matches)) {
+    return [];
+  }
+
+  return matches
+    .map((match) => readString(asRecord(match)?.match_id) ?? readString(asRecord(match)?.matchId))
+    .filter((matchId): matchId is string => matchId !== undefined);
+}
+
+function rebuildVerificationBundle(
+  plan: BidviaIndustryUniverseScenarioPlan,
+  verificationBundle: BidviaScenarioVerificationBundle,
+  recordIds: BidviaScenarioVerificationBundle['recordIds'],
+): BidviaScenarioVerificationBundle {
+  return buildScenarioVerificationBundle({
+    scenario: plan.envelope,
+    verificationMode: verificationBundle.verificationMode,
+    completedRouteChain: verificationBundle.completedRouteChain,
+    recordIds,
+  });
+}
+
 function resolveAlignedListingId(candidate: string | undefined, listingId: string): string {
   if (!candidate) {
     return listingId;
@@ -142,24 +207,47 @@ export async function runIndustryUniverseScenario(
   let verificationBundle = buildScenarioVerificationBundle({
     scenario: plan.envelope,
     verificationMode: 'review-safe',
-    recordIds: {
-      listings: [plan.createListingInput.listingId],
-    },
+    recordIds: {},
   });
 
-  await client.createListing(plan.createListingInput);
+  let listingId = plan.createListingInput.listingId;
+  let triggerEventId = plan.generateMatchCandidatesInput.triggerEventId;
+
+  const createListingResult = await client.createListing(plan.createListingInput);
+  listingId = extractListingId(createListingResult) ?? listingId;
+  verificationBundle = rebuildVerificationBundle(plan, verificationBundle, {
+    listings: [listingId],
+  });
   verificationBundle = appendCompletedRouteStep(
     verificationBundle,
     plan.envelope.expectedRouteChain[0]!,
   );
 
-  await client.activateListing(plan.activateListingInput);
+  const activateListingResult = await client.activateListing({
+    ...plan.activateListingInput,
+    listingId,
+  });
+  triggerEventId = extractTriggerEventId(activateListingResult) ?? triggerEventId;
   verificationBundle = appendCompletedRouteStep(
     verificationBundle,
     plan.envelope.expectedRouteChain[1]!,
   );
 
-  await client.generateMatchCandidates(plan.generateMatchCandidatesInput);
+  const generateMatchCandidatesResult = await client.generateMatchCandidates({
+    ...plan.generateMatchCandidatesInput,
+    listingId,
+    triggerEventId,
+  });
+  const matchIds = extractMatchIds(generateMatchCandidatesResult);
+  const nextRecordIds: BidviaScenarioVerificationBundle['recordIds'] = {
+    ...verificationBundle.recordIds,
+  };
+  if (matchIds.length > 0) {
+    nextRecordIds.matches = matchIds;
+  }
+  verificationBundle = rebuildVerificationBundle(plan, verificationBundle, {
+    ...nextRecordIds,
+  });
   verificationBundle = appendCompletedRouteStep(
     verificationBundle,
     plan.envelope.expectedRouteChain[2]!,

@@ -149,6 +149,37 @@ test('runOpportunityPackageHandoff calls only exportOpportunityPackage and retur
   });
 });
 
+test('runOpportunityPackageHandoff records returned package ids without widening caller-known opportunity truth', async () => {
+  const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
+  const fetchStub: typeof fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
+    calls.push({ input, init });
+    return new Response(JSON.stringify({ package_id: 'pkg-runtime-1' }), {
+      status: 200,
+      headers: { 'content-type': 'application/json' },
+    });
+  };
+  const client = new BidviaClient({
+    baseUrl: 'http://127.0.0.1:8787',
+    context: {
+      tenantId: 'tenant-a',
+      principalId: 'actor-1',
+      companyId: 'company-a',
+    },
+    fetchImpl: fetchStub,
+  });
+  const plan = buildOpportunityPackageHandoffPlan(
+    createOpportunityPackageHandoffInput(),
+  );
+
+  const bundle = await runOpportunityPackageHandoff(client, plan);
+
+  assert.equal(calls.length, 1);
+  assert.deepEqual(bundle.recordIds, {
+    opportunities: ['opportunity-1'],
+    packages: ['pkg-runtime-1'],
+  });
+});
+
 test('runOpportunityPackageHandoff surfaces exportOpportunityPackage failures without swallowing', async () => {
   const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
   const fetchStub: typeof fetch = async (input: RequestInfo | URL, init?: RequestInit) => {

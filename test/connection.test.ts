@@ -179,6 +179,44 @@ test('runConnectionApprovalScenario executes createConnectionRequest then approv
   });
 });
 
+test('runConnectionApprovalScenario prefers returned approval request ids for downstream approval and verification records', async () => {
+  const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
+  const responses = [
+    { approval_request_id: 'approval-runtime-1' },
+    { decision: { approval_request_id: 'approval-runtime-1' } },
+  ];
+  const fetchStub: typeof fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
+    calls.push({ input, init });
+    return new Response(JSON.stringify(responses[calls.length - 1] ?? { ok: true }), {
+      status: 200,
+      headers: { 'content-type': 'application/json' },
+    });
+  };
+  const client = new BidviaClient({
+    baseUrl: 'http://127.0.0.1:8787',
+    context: {
+      tenantId: 'tenant-a',
+      principalId: 'actor-1',
+      companyId: 'company-a',
+    },
+    fetchImpl: fetchStub,
+  });
+  const plan = buildConnectionApprovalScenarioPlan(
+    createConnectionApprovalScenarioInput(),
+  );
+
+  const bundle = await runConnectionApprovalScenario(client, plan);
+
+  assert.equal(
+    String(calls[1]?.input),
+    'http://127.0.0.1:8787/runtime/approvals/approval-runtime-1/decision?tenant_id=tenant-a',
+  );
+  assert.deepEqual(bundle.recordIds, {
+    matches: ['match-1'],
+    approvals: ['approval-runtime-1'],
+  });
+});
+
 test('runConnectionApprovalScenario surfaces createConnectionRequest failures without swallowing', async () => {
   const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
   const fetchStub: typeof fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
