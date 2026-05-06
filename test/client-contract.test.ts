@@ -199,6 +199,30 @@ test('BidviaClient accepts object-shaped provisional query input for onboarding 
   assert.equal(String(calls[0]?.input), 'http://127.0.0.1:8787/runtime/agents/provisional?provisional_agent_ref=prov-agent-2');
 });
 
+test('BidviaClient uses the canonical account integration capability discovery and eligibility routes', async () => {
+  const { calls, fetchStub } = createFetchStub();
+  const client = new BidviaClient({
+    baseUrl: 'http://127.0.0.1:8787',
+    context: {
+      tenantId: 'tenant-a',
+      sessionId: 'sess-1',
+    },
+    fetchImpl: fetchStub,
+  });
+
+  await client.listAccountIntegrationCapabilities();
+  await client.getAccountAgentIntegrationEligibility('agent-7', 'haisi-wms');
+
+  assert.equal(calls.length, 2);
+  assert.equal(String(calls[0]?.input), 'http://127.0.0.1:8787/runtime/account/integration-capabilities');
+  assert.equal(
+    String(calls[1]?.input),
+    'http://127.0.0.1:8787/runtime/account/agents/agent-7/integrations/haisi-wms/eligibility',
+  );
+  assert.equal((calls[0]?.init?.headers as Record<string, string>)['x-bidvia-session-id'], 'sess-1');
+  assert.equal((calls[1]?.init?.headers as Record<string, string>)['x-bidvia-session-id'], 'sess-1');
+});
+
 test('BidviaClient uses the frozen registration-bound heartbeat/sync/evidence/proposal contract', async () => {
   const { calls, fetchStub } = createFetchStub();
   const client = new BidviaClient({
@@ -498,6 +522,77 @@ test('BidviaClient supports the first business-chain helper slice for listing ac
   assert.equal(String(calls[1]?.input), 'http://127.0.0.1:8787/runtime/listings/listing-1/activate?tenant_id=tenant-a');
   assert.equal(String(calls[2]?.input), 'http://127.0.0.1:8787/runtime/listings/listing-1/match-candidates?tenant_id=tenant-a');
   assert.equal((calls[2]?.init?.headers as Record<string, string>)['x-authorized-company-id'], 'company-a');
+});
+
+test('BidviaClient supports the claimant account-owned execution and first business-entry helper slice', async () => {
+  const { calls, fetchStub } = createFetchStub();
+  const client = new BidviaClient({
+    baseUrl: 'http://127.0.0.1:8787',
+    context: {
+      tenantId: 'tenant-a',
+      sessionId: 'sess-1',
+    },
+    fetchImpl: fetchStub,
+  });
+
+  await client.postAccountAgentExecutionPresence('agent-1', {
+    now: '2026-05-01T12:10:00Z',
+    expiresAt: '2026-05-01T12:15:00Z',
+  });
+  await client.getAccountAgentExecutionStatus('agent-1');
+  await client.uploadAccountAgentExecutionSync('agent-1', {
+    cursorRef: 'cursor-1',
+    objectCount: 3,
+    now: '2026-05-01T12:11:00Z',
+  });
+  await client.downloadAccountAgentExecutionSync('agent-1');
+  await client.submitAccountAgentExecutionEvidence('agent-1', {
+    evidenceRef: 'evidence://1',
+    evidenceKind: 'provider_receipt',
+    summary: 'receipt evidence',
+    now: '2026-05-01T12:12:00Z',
+  });
+  await client.submitAccountAgentExecutionProposal('agent-1', {
+    proposalType: 'template_change',
+    proposalRef: 'proposal://1',
+    summary: 'template change',
+    now: '2026-05-01T12:13:00Z',
+  });
+  await client.createAccountAgentExecutionListing('agent-1', {
+    listingId: 'listing-1',
+    listingType: 'supply',
+    category: 'basic inorganic industrial chemical',
+    sku: 'sodium-carbonate-soda-ash-light',
+    quantityValue: '15',
+    quantityUnit: 'tons',
+    regionSummary: 'China -> Vietnam',
+    verificationStatus: 'verified',
+    freshnessTs: '2026-05-01T12:20:00Z',
+    traceId: 'trace-1',
+    idempotencyKey: 'listing-1',
+    now: '2026-05-01T12:20:00Z',
+  });
+  await client.activateAccountAgentExecutionListing('agent-1', 'listing-1', {
+    verificationStatus: 'verified',
+    now: '2026-05-01T12:21:00Z',
+  });
+  await client.getAccountAgentExecutionListingStatus('agent-1', 'listing-1');
+  await client.getAccountAgentExecutionListingMaterializationStatus('agent-1', 'listing-1');
+
+  assert.equal(calls.length, 10);
+  assert.equal(String(calls[0]?.input), 'http://127.0.0.1:8787/runtime/account/agents/agent-1/execution/presence?tenant_id=tenant-a');
+  assert.equal(String(calls[1]?.input), 'http://127.0.0.1:8787/runtime/account/agents/agent-1/execution/status?tenant_id=tenant-a');
+  assert.equal(String(calls[2]?.input), 'http://127.0.0.1:8787/runtime/account/agents/agent-1/execution/sync/upload?tenant_id=tenant-a');
+  assert.equal(String(calls[3]?.input), 'http://127.0.0.1:8787/runtime/account/agents/agent-1/execution/sync/download?tenant_id=tenant-a');
+  assert.equal(String(calls[4]?.input), 'http://127.0.0.1:8787/runtime/account/agents/agent-1/execution/evidence-submissions?tenant_id=tenant-a');
+  assert.equal(String(calls[5]?.input), 'http://127.0.0.1:8787/runtime/account/agents/agent-1/execution/proposals?tenant_id=tenant-a');
+  assert.equal(String(calls[6]?.input), 'http://127.0.0.1:8787/runtime/account/agents/agent-1/execution/listings?tenant_id=tenant-a');
+  assert.equal(String(calls[7]?.input), 'http://127.0.0.1:8787/runtime/account/agents/agent-1/execution/listings/listing-1/activate?tenant_id=tenant-a');
+  assert.equal(String(calls[8]?.input), 'http://127.0.0.1:8787/runtime/account/agents/agent-1/execution/listings/listing-1/status?tenant_id=tenant-a');
+  assert.equal(String(calls[9]?.input), 'http://127.0.0.1:8787/runtime/account/agents/agent-1/execution/listings/listing-1/materialization-status?tenant_id=tenant-a');
+  for (const call of calls) {
+    assert.equal((call.init?.headers as Record<string, string>)['x-bidvia-session-id'], 'sess-1');
+  }
 });
 
 test('BidviaClient supports the connection, approval, and opportunity helper slice proven in production wave-2', async () => {

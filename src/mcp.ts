@@ -181,13 +181,9 @@ const widenedExecutionDispatchersByCapabilityKey: Record<string, BidviaGenericEx
     );
   },
   acknowledgeNotification(client, input) {
-    const agentRegistrationId = requireExecutionStringInput(
-      input,
-      ['agentRegistrationId', 'registrationId'],
-      'agentRegistrationId is required for governed notification acknowledgement execution',
-    );
+    const agentId = requireAccountAgentId(input);
     return client.acknowledgeNotification(
-      agentRegistrationId,
+      agentId,
       requireExecutionStringInput(
         input,
         ['notificationId'],
@@ -195,8 +191,8 @@ const widenedExecutionDispatchersByCapabilityKey: Record<string, BidviaGenericEx
       ),
       buildExecutionPayload(
         input,
-        ['agentRegistrationId', 'notificationId'],
-        'notificationId is required for governed notification acknowledgement execution',
+        ['agentId', 'agentRegistrationId', 'notificationId'],
+        'agentId is required for governed notification acknowledgement execution',
       ) as never,
     );
   },
@@ -233,6 +229,108 @@ const widenedExecutionDispatchersByCapabilityKey: Record<string, BidviaGenericEx
       requireObjectInput(input, 'claimProvisionalAgent input is required for MCP execution') as never,
     );
   },
+  postAccountAgentExecutionPresence(client, input) {
+    return client.postAccountAgentExecutionPresence(
+      requireAccountAgentId(input),
+      buildExecutionPayload(
+        input,
+        ['agentId', 'agentRegistrationId', 'registrationId'],
+        'agentId is required for claimant execution presence',
+      ) as never,
+    );
+  },
+  uploadAccountAgentExecutionSync(client, input) {
+    return client.uploadAccountAgentExecutionSync(
+      requireAccountAgentId(input),
+      buildExecutionPayload(
+        input,
+        ['agentId', 'agentRegistrationId', 'registrationId'],
+        'agentId is required for claimant execution sync upload',
+      ) as never,
+    );
+  },
+  downloadAccountAgentExecutionSync(client, input) {
+    return client.downloadAccountAgentExecutionSync(requireAccountAgentId(input));
+  },
+  submitAccountAgentExecutionEvidence(client, input) {
+    return client.submitAccountAgentExecutionEvidence(
+      requireAccountAgentId(input),
+      buildExecutionPayload(
+        input,
+        ['agentId', 'agentRegistrationId', 'registrationId'],
+        'agentId is required for claimant execution evidence submission',
+      ) as never,
+    );
+  },
+  submitAccountAgentExecutionProposal(client, input) {
+    return client.submitAccountAgentExecutionProposal(
+      requireAccountAgentId(input),
+      buildExecutionPayload(
+        input,
+        ['agentId', 'agentRegistrationId', 'registrationId'],
+        'agentId is required for claimant execution proposal submission',
+      ) as never,
+    );
+  },
+  createAccountAgentExecutionListing(client, input) {
+    return client.createAccountAgentExecutionListing(
+      requireAccountAgentId(input),
+      buildExecutionPayload(
+        input,
+        ['agentId', 'agentRegistrationId', 'registrationId'],
+        'agentId is required for claimant execution listing creation',
+      ) as never,
+    );
+  },
+  activateAccountAgentExecutionListing(client, input) {
+    return client.activateAccountAgentExecutionListing(
+      requireAccountAgentId(input),
+      requireExecutionStringInput(
+        input,
+        ['listingId'],
+        'listingId is required for claimant execution listing activation',
+      ),
+      buildExecutionPayload(
+        input,
+        ['agentId', 'agentRegistrationId', 'registrationId', 'listingId'],
+        'agentId and listingId are required for claimant execution listing activation',
+      ) as never,
+    );
+  },
+  refreshAccountAgentAuthorization(client, input) {
+    return client.refreshAccountAgentAuthorization(
+      requireAccountAgentId(input),
+      buildExecutionPayload(
+        input,
+        ['agentId', 'agentRegistrationId', 'registrationId'],
+        'agentId is required for canonical account-plane authorization refresh execution',
+      ) as never,
+    );
+  },
+  createAccountAgentExternalBinding(client, input) {
+    return client.createAccountAgentExternalBinding(
+      requireAccountAgentId(input),
+      buildExecutionPayload(
+        input,
+        ['agentId', 'agentRegistrationId', 'registrationId'],
+        'agentId is required for canonical account-plane external binding execution',
+      ) as never,
+    );
+  },
+  decideDispatchAuthorityRequest(client, input) {
+    return client.decideDispatchAuthorityRequest(
+      requireExecutionStringInput(
+        input,
+        ['requestId'],
+        'requestId is required for operator dispatch-authority decision execution',
+      ),
+      buildExecutionPayload(
+        input,
+        ['requestId'],
+        'requestId is required for operator dispatch-authority decision execution',
+      ) as never,
+    );
+  },
   downloadSync(client) {
     return client.downloadSync();
   },
@@ -248,27 +346,27 @@ const widenedExecutionDispatchersByCapabilityKey: Record<string, BidviaGenericEx
   },
   createLease(client, input) {
     return client.createLease(
-      requireAgentRegistrationId(input),
+      requireAccountAgentId(input),
       buildExecutionPayload(
         input,
-        ['agentRegistrationId', 'registrationId'],
-        'agentRegistrationId is required for governed lease execution',
+        ['agentId', 'agentRegistrationId', 'registrationId'],
+        'agentId is required for canonical account-plane governed lease execution',
       ) as never,
     );
   },
   createTaskDispatch(client, input) {
     return client.createTaskDispatch(
-      requireAgentRegistrationId(input),
+      requireAccountAgentId(input),
       buildExecutionPayload(
         input,
-        ['agentRegistrationId', 'registrationId'],
-        'agentRegistrationId is required for governed task dispatch execution',
+        ['agentId', 'agentRegistrationId', 'registrationId'],
+        'agentId is required for canonical account-plane governed task dispatch execution',
       ) as never,
     );
   },
   assignTaskDispatch(client, input) {
     return client.assignTaskDispatch(
-      requireAgentRegistrationId(input),
+      requireAccountAgentId(input),
       requireExecutionStringInput(
         input,
         ['taskDispatchId'],
@@ -276,14 +374,14 @@ const widenedExecutionDispatchersByCapabilityKey: Record<string, BidviaGenericEx
       ),
       buildExecutionPayload(
         input,
-        ['agentRegistrationId', 'registrationId', 'taskDispatchId'],
-        'agentRegistrationId and taskDispatchId are required for governed task dispatch assignment execution',
+        ['agentId', 'agentRegistrationId', 'registrationId', 'taskDispatchId'],
+        'agentId and taskDispatchId are required for canonical account-plane governed task dispatch assignment execution',
       ) as never,
     );
   },
   suspendTaskDispatch(client, input) {
     return client.suspendTaskDispatch(
-      requireAgentRegistrationId(input),
+      requireAccountAgentId(input),
       requireExecutionStringInput(
         input,
         ['taskDispatchId'],
@@ -291,14 +389,14 @@ const widenedExecutionDispatchersByCapabilityKey: Record<string, BidviaGenericEx
       ),
       buildExecutionPayload(
         input,
-        ['agentRegistrationId', 'registrationId', 'taskDispatchId'],
-        'agentRegistrationId and taskDispatchId are required for governed task dispatch suspension execution',
+        ['agentId', 'agentRegistrationId', 'registrationId', 'taskDispatchId'],
+        'agentId and taskDispatchId are required for canonical account-plane governed task dispatch suspension execution',
       ) as never,
     );
   },
   resumeTaskDispatch(client, input) {
     return client.resumeTaskDispatch(
-      requireAgentRegistrationId(input),
+      requireAccountAgentId(input),
       requireExecutionStringInput(
         input,
         ['taskDispatchId'],
@@ -306,14 +404,14 @@ const widenedExecutionDispatchersByCapabilityKey: Record<string, BidviaGenericEx
       ),
       buildExecutionPayload(
         input,
-        ['agentRegistrationId', 'registrationId', 'taskDispatchId'],
-        'agentRegistrationId and taskDispatchId are required for governed task dispatch resume execution',
+        ['agentId', 'agentRegistrationId', 'registrationId', 'taskDispatchId'],
+        'agentId and taskDispatchId are required for canonical account-plane governed task dispatch resume execution',
       ) as never,
     );
   },
   completeTaskDispatch(client, input) {
     return client.completeTaskDispatch(
-      requireAgentRegistrationId(input),
+      requireAccountAgentId(input),
       requireExecutionStringInput(
         input,
         ['taskDispatchId'],
@@ -321,14 +419,14 @@ const widenedExecutionDispatchersByCapabilityKey: Record<string, BidviaGenericEx
       ),
       buildExecutionPayload(
         input,
-        ['agentRegistrationId', 'registrationId', 'taskDispatchId'],
-        'agentRegistrationId and taskDispatchId are required for governed task dispatch completion execution',
+        ['agentId', 'agentRegistrationId', 'registrationId', 'taskDispatchId'],
+        'agentId and taskDispatchId are required for canonical account-plane governed task dispatch completion execution',
       ) as never,
     );
   },
   failTaskDispatch(client, input) {
     return client.failTaskDispatch(
-      requireAgentRegistrationId(input),
+      requireAccountAgentId(input),
       requireExecutionStringInput(
         input,
         ['taskDispatchId'],
@@ -336,40 +434,40 @@ const widenedExecutionDispatchersByCapabilityKey: Record<string, BidviaGenericEx
       ),
       buildExecutionPayload(
         input,
-        ['agentRegistrationId', 'registrationId', 'taskDispatchId'],
-        'agentRegistrationId and taskDispatchId are required for governed task dispatch failure execution',
+        ['agentId', 'agentRegistrationId', 'registrationId', 'taskDispatchId'],
+        'agentId and taskDispatchId are required for canonical account-plane governed task dispatch failure execution',
       ) as never,
     );
   },
   createClaim(client, input) {
     return client.createClaim(
-      requireAgentRegistrationId(input),
+      requireAccountAgentId(input),
       buildExecutionPayload(
         input,
-        ['agentRegistrationId', 'registrationId'],
-        'agentRegistrationId is required for governed claim execution',
+        ['agentId', 'agentRegistrationId', 'registrationId'],
+        'agentId is required for canonical account-plane governed claim execution',
       ) as never,
     );
   },
   acceptClaim(client, input) {
     return client.acceptClaim(
-      requireAgentRegistrationId(input),
+      requireAccountAgentId(input),
       requireExecutionStringInput(input, ['claimId'], 'claimId is required for governed claim acceptance execution'),
       buildExecutionPayload(
         input,
-        ['agentRegistrationId', 'registrationId', 'claimId'],
-        'agentRegistrationId and claimId are required for governed claim acceptance execution',
+        ['agentId', 'agentRegistrationId', 'registrationId', 'claimId'],
+        'agentId and claimId are required for canonical account-plane governed claim acceptance execution',
       ) as never,
     );
   },
   rejectClaim(client, input) {
     return client.rejectClaim(
-      requireAgentRegistrationId(input),
+      requireAccountAgentId(input),
       requireExecutionStringInput(input, ['claimId'], 'claimId is required for governed claim rejection execution'),
       buildExecutionPayload(
         input,
-        ['agentRegistrationId', 'registrationId', 'claimId'],
-        'agentRegistrationId and claimId are required for governed claim rejection execution',
+        ['agentId', 'agentRegistrationId', 'registrationId', 'claimId'],
+        'agentId and claimId are required for canonical account-plane governed claim rejection execution',
       ) as never,
     );
   },
@@ -674,6 +772,29 @@ function requireAgentRegistrationId(input: unknown): string {
   return registrationId;
 }
 
+function requireAccountAgentId(input: unknown): string {
+  if (typeof input !== 'object' || input === null) {
+    throw new Error('agentId is required for canonical account-plane operations; agentRegistrationId remains compatibility-only');
+  }
+
+  const agentId =
+    ('agentId' in input && typeof input.agentId === 'string'
+      ? input.agentId
+      : undefined) ??
+    ('agentRegistrationId' in input && typeof input.agentRegistrationId === 'string'
+      ? input.agentRegistrationId
+      : undefined) ??
+    ('registrationId' in input && typeof input.registrationId === 'string'
+      ? input.registrationId
+      : undefined);
+
+  if (!agentId) {
+    throw new Error('agentId is required for canonical account-plane operations; agentRegistrationId remains compatibility-only');
+  }
+
+  return agentId;
+}
+
 function requireStringInput(input: unknown, fieldName: string, errorMessage: string): string {
   if (typeof input !== 'object' || input === null) {
     throw new Error(errorMessage);
@@ -703,6 +824,82 @@ async function dispatchGovernanceTruthFetchTool(
       outputMode: descriptor.outputMode,
       result: {
         truthFetchResult: await client.listAccountAgents(),
+      },
+    };
+  }
+
+  if (descriptor.helperRef.helperKey === 'getAccountAgentClosureStatus') {
+    return {
+      toolName: descriptor.toolName,
+      outputMode: descriptor.outputMode,
+      result: {
+        truthFetchResult: await client.getAccountAgentClosureStatus(requireAccountAgentId(input)),
+      },
+    };
+  }
+
+  if (descriptor.helperRef.helperKey === 'getAccountAgentExecutionStatus') {
+    return {
+      toolName: descriptor.toolName,
+      outputMode: descriptor.outputMode,
+      result: {
+        truthFetchResult: await client.getAccountAgentExecutionStatus(requireAccountAgentId(input)),
+      },
+    };
+  }
+
+  if (descriptor.helperRef.helperKey === 'getAccountAgentExecutionListingStatus') {
+    const agentId = requireAccountAgentId(input);
+    return {
+      toolName: descriptor.toolName,
+      outputMode: descriptor.outputMode,
+      result: {
+        truthFetchResult: await client.getAccountAgentExecutionListingStatus(
+          agentId,
+          requireStringInput(input, 'listingId', 'listingId is required for claimant execution listing status reads'),
+        ),
+      },
+    };
+  }
+
+  if (descriptor.helperRef.helperKey === 'getAccountAgentExecutionListingMaterializationStatus') {
+    const agentId = requireAccountAgentId(input);
+    return {
+      toolName: descriptor.toolName,
+      outputMode: descriptor.outputMode,
+      result: {
+        truthFetchResult: await client.getAccountAgentExecutionListingMaterializationStatus(
+          agentId,
+          requireStringInput(input, 'listingId', 'listingId is required for claimant execution materialization-status reads'),
+        ),
+      },
+    };
+  }
+
+  if (descriptor.helperRef.helperKey === 'listAccountIntegrationCapabilities') {
+    return {
+      toolName: descriptor.toolName,
+      outputMode: descriptor.outputMode,
+      result: {
+        truthFetchResult: await client.listAccountIntegrationCapabilities(),
+      },
+    };
+  }
+
+  if (descriptor.helperRef.helperKey === 'getAccountAgentIntegrationEligibility') {
+    const agentId = requireAccountAgentId(input);
+    return {
+      toolName: descriptor.toolName,
+      outputMode: descriptor.outputMode,
+      result: {
+        truthFetchResult: await client.getAccountAgentIntegrationEligibility(
+          agentId,
+          requireStringInput(
+            input,
+            'integrationCode',
+            'integrationCode is required for account-agent integration eligibility reads',
+          ),
+        ),
       },
     };
   }
@@ -922,17 +1119,24 @@ async function dispatchGovernanceTruthFetchTool(
   }
 
   if (descriptor.helperRef.helperKey === 'getNotification') {
+    const inputObject = requireObjectInput(input, 'notification read input is required') as Record<string, unknown>;
+    const agentIdCandidate = inputObject.agentId;
+    const compatibilityRegistrationIdCandidate = inputObject.agentRegistrationId;
+    const agentId = typeof agentIdCandidate === 'string' && agentIdCandidate.length > 0
+      ? agentIdCandidate
+      : typeof compatibilityRegistrationIdCandidate === 'string' && compatibilityRegistrationIdCandidate.length > 0
+        ? compatibilityRegistrationIdCandidate
+        : (() => {
+            throw new Error('agentId is required for notification reads; agentRegistrationId remains compatibility-only');
+          })();
+
     return {
       toolName: descriptor.toolName,
       outputMode: descriptor.outputMode,
       result: {
         truthFetchResult: await client.getNotification(
           {
-            agentRegistrationId: requireStringInput(
-              input,
-              'agentRegistrationId',
-              'agentRegistrationId is required for notification reads',
-            ),
+            agentId,
             notificationId: requireStringInput(
               input,
               'notificationId',
@@ -944,9 +1148,8 @@ async function dispatchGovernanceTruthFetchTool(
     };
   }
 
-  const registrationId = requireAgentRegistrationId(input);
-
   if (descriptor.helperRef.helperKey === 'getAgentReadiness') {
+    const registrationId = requireAgentRegistrationId(input);
     return {
       toolName: descriptor.toolName,
       outputMode: descriptor.outputMode,
@@ -957,6 +1160,7 @@ async function dispatchGovernanceTruthFetchTool(
   }
 
   if (descriptor.helperRef.helperKey === 'getAgentSummary') {
+    const registrationId = requireAgentRegistrationId(input);
     return {
       toolName: descriptor.toolName,
       outputMode: descriptor.outputMode,
@@ -967,6 +1171,7 @@ async function dispatchGovernanceTruthFetchTool(
   }
 
   if (descriptor.helperRef.helperKey === 'getAgentRegistration') {
+    const registrationId = requireAgentRegistrationId(input);
     return {
       toolName: descriptor.toolName,
       outputMode: descriptor.outputMode,
@@ -977,6 +1182,7 @@ async function dispatchGovernanceTruthFetchTool(
   }
 
   if (descriptor.helperRef.helperKey === 'getAgentAuthorityProfile') {
+    const registrationId = requireAgentRegistrationId(input);
     return {
       toolName: descriptor.toolName,
       outputMode: descriptor.outputMode,
@@ -987,6 +1193,7 @@ async function dispatchGovernanceTruthFetchTool(
   }
 
   if (descriptor.helperRef.helperKey === 'getAgentAuthorityLadder') {
+    const registrationId = requireAgentRegistrationId(input);
     return {
       toolName: descriptor.toolName,
       outputMode: descriptor.outputMode,
@@ -997,6 +1204,7 @@ async function dispatchGovernanceTruthFetchTool(
   }
 
   if (descriptor.helperRef.helperKey === 'getAgentCapabilityProfile') {
+    const registrationId = requireAgentRegistrationId(input);
     return {
       toolName: descriptor.toolName,
       outputMode: descriptor.outputMode,
@@ -1007,6 +1215,7 @@ async function dispatchGovernanceTruthFetchTool(
   }
 
   if (descriptor.helperRef.helperKey === 'listParticipationStates') {
+    const registrationId = requireAgentRegistrationId(input);
     return {
       toolName: descriptor.toolName,
       outputMode: descriptor.outputMode,
@@ -1017,6 +1226,7 @@ async function dispatchGovernanceTruthFetchTool(
   }
 
   if (descriptor.helperRef.helperKey === 'getParticipationState') {
+    const registrationId = requireAgentRegistrationId(input);
     return {
       toolName: descriptor.toolName,
       outputMode: descriptor.outputMode,
@@ -1034,22 +1244,24 @@ async function dispatchGovernanceTruthFetchTool(
   }
 
   if (descriptor.helperRef.helperKey === 'listTaskDispatches') {
+    const agentId = requireAccountAgentId(input);
     return {
       toolName: descriptor.toolName,
       outputMode: descriptor.outputMode,
       result: {
-        truthFetchResult: await client.listTaskDispatches(registrationId),
+        truthFetchResult: await client.listTaskDispatches(agentId),
       },
     };
   }
 
   if (descriptor.helperRef.helperKey === 'getTaskDispatch') {
+    const agentId = requireAccountAgentId(input);
     return {
       toolName: descriptor.toolName,
       outputMode: descriptor.outputMode,
       result: {
         truthFetchResult: await client.getTaskDispatch(
-          registrationId,
+          agentId,
           requireStringInput(
             input,
             'taskDispatchId',
@@ -1060,7 +1272,26 @@ async function dispatchGovernanceTruthFetchTool(
     };
   }
 
+  if (descriptor.helperRef.helperKey === 'getAccountAgentGovernedWorkClosure') {
+    const agentId = requireAccountAgentId(input);
+    return {
+      toolName: descriptor.toolName,
+      outputMode: descriptor.outputMode,
+      result: {
+        truthFetchResult: await client.getAccountAgentGovernedWorkClosure(
+          agentId,
+          requireStringInput(
+            input,
+            'taskDispatchId',
+            'taskDispatchId is required for governed-work-closure reads',
+          ),
+        ),
+      },
+    };
+  }
+
   if (descriptor.helperRef.helperKey === 'getAgentPresence') {
+    const registrationId = requireAgentRegistrationId(input);
     return {
       toolName: descriptor.toolName,
       outputMode: descriptor.outputMode,
@@ -1071,6 +1302,7 @@ async function dispatchGovernanceTruthFetchTool(
   }
 
   if (descriptor.helperRef.helperKey === 'getAgentAuthority') {
+    const registrationId = requireAgentRegistrationId(input);
     return {
       toolName: descriptor.toolName,
       outputMode: descriptor.outputMode,
@@ -1105,7 +1337,7 @@ export async function dispatchMcpToolCall(
   }
 
   if (descriptor.helperRef.helperKey === 'executeIndustryUniverseScenario') {
-    return dispatchIndustryUniverseScenarioExecutionTool(descriptor, request.arguments, dependencies);
+    return dispatchRegisteredAgentExecutionTool(descriptor, request.arguments, dependencies);
   }
 
   if (descriptor.outputMode === 'truth-fetch-result') {

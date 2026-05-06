@@ -1127,7 +1127,7 @@ test('runCli claim-provisional-agent can continue from locally persisted sign-in
     assert.equal(signInExitCode, 0);
     assert.equal(claimExitCode, 0);
     assert.deepEqual(createClientContexts, [
-      { tenantId: undefined, agentId: undefined, principalId: undefined, companyId: undefined, registrationId: undefined, sessionId: undefined },
+      { tenantId: undefined, agentId: undefined, principalId: undefined, companyId: undefined, registrationId: undefined, sessionId: undefined, adminSessionId: undefined },
       { tenantId: 'tenant-sign-in', agentId: undefined, principalId: 'principal-sign-in', companyId: undefined, registrationId: undefined, sessionId: 'session-sign-in' },
     ]);
     assert.deepEqual(claimCalls, [{

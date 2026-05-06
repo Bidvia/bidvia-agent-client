@@ -88,7 +88,7 @@ export function buildEventNotificationPlaneView(): BidviaEventNotificationPlaneV
     },
     readRoute: {
       helperKey: 'getNotification',
-      routePathTemplate: readRouteEntry.routePathTemplate as '/runtime/account/agents/:agent_registration_id/notifications/:notification_id',
+      routePathTemplate: readRouteEntry.routePathTemplate as '/runtime/account/agents/:agentId/notifications/:notification_id',
       httpMethod: 'GET',
       requiredContext: ['tenantId', 'principalId'],
     },
@@ -120,7 +120,7 @@ export function buildNotificationAcknowledgementPathGuidance(): BidviaNotificati
   return {
     status: 'client-side-fixed',
     helperKey: 'acknowledgeNotification',
-    routePathTemplate: '/runtime/account/agents/:agent_registration_id/notifications/:notification_id/acknowledgements',
+    routePathTemplate: '/runtime/account/agents/:agentId/notifications/:notification_id/acknowledgements',
     requiredContext: ['tenantId', 'principalId', 'companyId'],
     guidance: 'Current repo proof shows the client uses the canonical account-scoped acknowledgement route and frozen payload fields when the required operator-company context is present. Remaining delivery semantics stay upstream/runtime-owned.',
   };

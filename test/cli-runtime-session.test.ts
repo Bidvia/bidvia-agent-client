@@ -165,6 +165,88 @@ test('runCli reruns reuse the same local runtime track for the same execution co
   assert.equal(secondExecutionStartCount > firstExecutionStartCount, true);
 });
 
+test('runCli industry-universe-execution uses the shared runtime execution path and records local accumulation evidence', async () => {
+  const printed: unknown[] = [];
+  const accumulationPath = buildLocalAccumulationPath('bidvia-cli-runtime-industry-universe-');
+
+  const exitCode = await runCli([
+    'industry-universe-execution',
+    '--input',
+    JSON.stringify({
+      scenarioId: 'scenario-industry-universe-runtime-1',
+      scenarioLabel: 'industry-universe-runtime-input',
+      sourceRefs: ['source://market/runtime-1'],
+      evidenceRefs: ['evidence://cli/runtime-1'],
+      traceIds: ['trace-runtime-1'],
+      workflowIds: ['wf-runtime-1'],
+      createListing: {
+        listingId: 'listing-runtime-1',
+        listingType: 'supply',
+        category: 'basic inorganic industrial chemical',
+        sku: 'sodium-carbonate-runtime-1',
+        quantityValue: '15',
+        quantityUnit: 'tons',
+        regionSummary: 'China -> Vietnam',
+        verificationStatus: 'verified',
+        freshnessTs: '2026-04-04T12:20:00Z',
+        traceId: 'trace-runtime-1',
+        idempotencyKey: 'listing-runtime-1',
+        now: '2026-04-04T12:20:00Z',
+      },
+      activateListing: {
+        now: '2026-04-04T12:21:00Z',
+      },
+      generateMatchCandidates: {
+        upstreamDecision: 'READY_FOR_ROUTING',
+        requiredEvidenceLevel: 1,
+        detectedEvidenceLevel: 1,
+        workflowRunId: 'wf-runtime-1',
+        triggerEventId: 'evt-runtime-1',
+        topN: 10,
+        now: '2026-04-04T12:22:00Z',
+      },
+    }),
+  ], {
+    createClient: () => ({
+      async createListing() {
+        return { ok: true, helper: 'createListing' };
+      },
+      async activateListing() {
+        return { ok: true, helper: 'activateListing' };
+      },
+      async generateMatchCandidates() {
+        return { ok: true, helper: 'generateMatchCandidates' };
+      },
+    }) as never,
+    resolveProcessEnv: () => ({
+      BIDVIA_TENANT_ID: 'tenant-runtime',
+      BIDVIA_PRINCIPAL_ID: 'principal-runtime',
+      BIDVIA_COMPANY_ID: 'company-runtime',
+      BIDVIA_LOCAL_ACCUMULATION_PATH: accumulationPath,
+    }),
+    readLocalOnboardingState: async () => null,
+    now: () => '2026-04-04T12:20:00.000Z',
+    printJson: (value) => {
+      printed.push(value);
+    },
+    printLine: () => {
+      throw new Error('industry-universe-execution should not print help lines');
+    },
+  });
+
+  assert.equal(exitCode, 0);
+  assert.equal(printed.length, 1);
+
+  const accumulation = await readLocalAccumulation({
+    path: accumulationPath,
+  });
+
+  assert.ok(accumulation);
+  assert.equal(accumulation.taskExecutionMemory.scope, 'local-task-execution-memory');
+  assert.equal(accumulation.capabilityUsageMemory.capabilities.length > 0, true);
+  assert.equal(accumulation.resultMemory.results.length > 0, true);
+});
+
 test('cli runtime context helper keeps provisional onboarding execution isolated from stale claimed identity fields', async () => {
   const { buildCliOnboardingActionExecutionContext } = await import('../src/cli-runtime-context.ts');
 
@@ -221,5 +303,51 @@ test('cli runtime context helper reuses local session fallback for claim continu
     companyId: undefined,
     registrationId: 'areg-local',
     sessionId: 'sess-local',
+  });
+});
+
+test('cli runtime context helper preserves existing sessionId when claim persistence records claimed identity fields', async () => {
+  const { buildCliPersistedOnboardingActionState } = await import('../src/cli-runtime-context.ts');
+
+  const persistedState = buildCliPersistedOnboardingActionState(
+    'claim-provisional-agent',
+    {
+      registration: {
+        agent_registration_id: 'areg-runtime',
+        agent_id: 'agent-runtime',
+        principal_id: 'principal-runtime',
+        tenant_id: 'company-runtime',
+      },
+    },
+    {
+      tenantId: 'tenant-runtime',
+      sessionId: 'sess-existing',
+      createdAt: '2026-04-04T12:25:00.000Z',
+      updatedAt: '2026-04-04T12:26:00.000Z',
+    },
+    {
+      tenantId: { value: 'tenant-runtime', source: 'env' },
+      agentId: { value: null, source: 'missing' },
+      principalId: { value: null, source: 'missing' },
+      companyId: { value: null, source: 'missing' },
+      registrationId: { value: null, source: 'missing' },
+    },
+    {
+      tenantId: 'tenant-runtime',
+      sessionId: 'sess-existing',
+    },
+    '2026-04-04T12:30:00.000Z',
+  );
+
+  assert.deepEqual(persistedState, {
+    tenantId: 'tenant-runtime',
+    agentId: 'agent-runtime',
+    principalId: 'principal-runtime',
+    companyId: 'company-runtime',
+    registrationId: 'areg-runtime',
+    sessionId: 'sess-existing',
+    lastCompletedStep: 'claim-provisional-agent',
+    createdAt: '2026-04-04T12:25:00.000Z',
+    updatedAt: '2026-04-04T12:30:00.000Z',
   });
 });

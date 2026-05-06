@@ -9,8 +9,36 @@ import type {
 
 const enterpriseIntegrationPlaneHelperGroups: readonly BidviaEnterpriseIntegrationPlaneHelperGroup[] = [
   {
-    groupKey: 'core-integration-routes',
-    label: 'Canonical Core enterprise integration routes',
+    groupKey: 'integration-ownership-slice',
+    label: 'Canonical account integration ownership slice',
+    helperKeys: [
+      'listAccountIntegrationCapabilities',
+      'getAccountAgentIntegrationEligibility',
+    ],
+    clientMethods: [
+      'listAccountIntegrationCapabilities',
+      'getAccountAgentIntegrationEligibility',
+    ],
+    cliCommands: [
+      'account-integration-capabilities',
+      'account-agent-integration-eligibility',
+    ],
+    discoveryHelperKeys: [
+      'listAccountIntegrationCapabilities',
+      'getAccountAgentIntegrationEligibility',
+    ],
+    broaderEnterpriseAuthorityClaimed: false,
+    broaderSystemAuthorityClaimed: false,
+    payloadPacketStatus: 'blocked-pending-packet',
+    blockedBy: 'core-plane-payload-packet-not-yet-frozen',
+    notes: [
+      'The V14 canonical integration trunk is the account integration capability directory plus bounded account-agent eligibility truth.',
+      'The bounded inbound invocation route remains canonical ownership metadata but stays fail-closed here until Core freezes an open-client request body.',
+    ],
+  },
+  {
+    groupKey: 'compatibility-provider-routes',
+    label: 'Compatibility-only provider onboarding seams',
     helperKeys: [
       'submitIntegrationOnboardingContract',
       'logInHaisiWms',
@@ -34,7 +62,7 @@ const enterpriseIntegrationPlaneHelperGroups: readonly BidviaEnterpriseIntegrati
     broaderSystemAuthorityClaimed: false,
     payloadPacketStatus: 'blocked-pending-packet',
     blockedBy: 'core-plane-payload-packet-not-yet-frozen',
-    notes: ['The enterprise plane is anchored to the Core-owned integration route family and visibility boundaries.'],
+    notes: ['Legacy onboarding-contract and provider-shaped Haisi seams remain compatibility-only support surfaces rather than the canonical V14 product root.'],
   },
   {
     groupKey: 'asset-evidence-family',
@@ -231,11 +259,13 @@ export function buildEnterpriseIntegrationPlaneView(): BidviaEnterpriseIntegrati
       blockedBy: null,
       packetCompleteFieldFamilies: [
         'identity-mapping-fields',
+        'account-integration-capability-read-models',
+        'account-agent-invocation-eligibility-read-models',
         'attachment-document-media-evidence-visibility',
       ],
       inventedPacketFieldsBlocked: true,
       notes: [
-        'Enterprise packet truth now derives from the frozen Core visibility and identity-mapping payload fields.',
+        'Enterprise packet truth now derives from the frozen Core visibility, identity-mapping, and bounded account integration ownership payload fields.',
       ],
     },
     helperGroups: listEnterpriseIntegrationPlaneHelperGroups(),

@@ -78,11 +78,19 @@ function inferExecutionKind(helperKey: string): BidviaCapabilityExecutionKind {
     return 'session-bound';
   }
 
+  if (capability.accessContextFamily === 'admin-session' && capability.scope === 'write') {
+    return 'governed-write';
+  }
+
   if (capability.accessContextFamily === 'registration' && capability.scope === 'write') {
     return 'runtime-write';
   }
 
   if (capability.accessContextFamily === 'operator-company' && capability.scope === 'write') {
+    return 'governed-write';
+  }
+
+  if (capability.accessContextFamily === 'scenario' && capability.scope === 'write') {
     return 'governed-write';
   }
 

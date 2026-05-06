@@ -191,6 +191,7 @@ test('runCli routes the V1 sign-up and sign-in commands through the existing cli
     '{"email":"person@example.com","password":"secret-1","invitationToken":"invite-token-123","displayName":"Ada Lovelace","now":"2026-04-10T10:00:00Z"}',
   ], {
     createClient,
+    readLocalOnboardingState: async () => null,
     printJson: (value) => {
       printed.push(value);
     },
@@ -204,6 +205,7 @@ test('runCli routes the V1 sign-up and sign-in commands through the existing cli
     '{"email":"ops@example.com","password":"secret-2","invitationToken":"invite-token-456","companyName":"Bidvia Labs","now":"2026-04-10T10:01:00Z"}',
   ], {
     createClient,
+    readLocalOnboardingState: async () => null,
     printJson: (value) => {
       printed.push(value);
     },
@@ -217,6 +219,7 @@ test('runCli routes the V1 sign-up and sign-in commands through the existing cli
     '{"email":"person@example.com","password":"secret-1","now":"2026-04-10T10:02:00Z"}',
   ], {
     createClient,
+    readLocalOnboardingState: async () => null,
     printJson: (value) => {
       printed.push(value);
     },
@@ -291,9 +294,11 @@ test('runCli routes account/session continuity commands through the existing cli
       },
     } as never;
   }) as never;
+  const readLocalOnboardingState = async () => null;
 
   const accountMeExitCode = await runCli(['account-me'], {
     createClient,
+    readLocalOnboardingState,
     resolveProcessEnv: () => ({
       BIDVIA_TENANT_ID: 'tenant-a',
       BIDVIA_SESSION_ID: 'sess-1',
@@ -311,6 +316,7 @@ test('runCli routes account/session continuity commands through the existing cli
     '{"orgId":"org-2"}',
   ], {
     createClient,
+    readLocalOnboardingState,
     resolveProcessEnv: () => ({
       BIDVIA_TENANT_ID: 'tenant-a',
       BIDVIA_SESSION_ID: 'sess-1',
@@ -324,6 +330,7 @@ test('runCli routes account/session continuity commands through the existing cli
   });
   const refreshExitCode = await runCli(['session-refresh'], {
     createClient,
+    readLocalOnboardingState,
     resolveProcessEnv: () => ({
       BIDVIA_TENANT_ID: 'tenant-a',
       BIDVIA_SESSION_ID: 'sess-1',
@@ -337,6 +344,7 @@ test('runCli routes account/session continuity commands through the existing cli
   });
   const revokeExitCode = await runCli(['session-revoke'], {
     createClient,
+    readLocalOnboardingState,
     resolveProcessEnv: () => ({
       BIDVIA_TENANT_ID: 'tenant-a',
       BIDVIA_SESSION_ID: 'sess-1',
@@ -354,10 +362,10 @@ test('runCli routes account/session continuity commands through the existing cli
   assert.equal(refreshExitCode, 0);
   assert.equal(revokeExitCode, 0);
   assert.deepEqual(createClientContexts, [
-    { tenantId: 'tenant-a', agentId: undefined, principalId: undefined, companyId: undefined, registrationId: undefined, sessionId: 'sess-1' },
-    { tenantId: 'tenant-a', agentId: undefined, principalId: undefined, companyId: undefined, registrationId: undefined, sessionId: 'sess-1' },
-    { tenantId: 'tenant-a', agentId: undefined, principalId: undefined, companyId: undefined, registrationId: undefined, sessionId: 'sess-1' },
-    { tenantId: 'tenant-a', agentId: undefined, principalId: undefined, companyId: undefined, registrationId: undefined, sessionId: 'sess-1' },
+    { tenantId: 'tenant-a', agentId: undefined, principalId: undefined, companyId: undefined, registrationId: undefined, sessionId: 'sess-1', adminSessionId: undefined },
+    { tenantId: 'tenant-a', agentId: undefined, principalId: undefined, companyId: undefined, registrationId: undefined, sessionId: 'sess-1', adminSessionId: undefined },
+    { tenantId: 'tenant-a', agentId: undefined, principalId: undefined, companyId: undefined, registrationId: undefined, sessionId: 'sess-1', adminSessionId: undefined },
+    { tenantId: 'tenant-a', agentId: undefined, principalId: undefined, companyId: undefined, registrationId: undefined, sessionId: 'sess-1', adminSessionId: undefined },
   ]);
   assert.deepEqual(calls, [
     { command: 'account-me' },
@@ -395,6 +403,7 @@ test('runCli routes bounded claimed-agent self-service patch commands through th
         return { ok: true, command: 'agent-self-service' };
       },
     }) as never,
+    readLocalOnboardingState: async () => null,
     resolveProcessEnv: () => ({
       BIDVIA_TENANT_ID: 'tenant-a',
       BIDVIA_SESSION_ID: 'sess-1',
@@ -635,9 +644,9 @@ test('runCli identity/session continuation commands can resume from locally pers
     assert.equal(selectOrgExitCode, 0);
     assert.equal(accountMeExitCode, 0);
     assert.deepEqual(createClientContexts, [
-      { tenantId: undefined, agentId: undefined, principalId: undefined, companyId: undefined, registrationId: undefined, sessionId: undefined },
-      { tenantId: 'tenant-a', agentId: 'agent-a', principalId: undefined, companyId: undefined, registrationId: undefined, sessionId: 'sess-1' },
-      { tenantId: 'tenant-a', agentId: 'agent-a', principalId: undefined, companyId: 'company-b', registrationId: undefined, sessionId: 'sess-1' },
+      { tenantId: undefined, agentId: undefined, principalId: undefined, companyId: undefined, registrationId: undefined, sessionId: undefined, adminSessionId: undefined },
+      { tenantId: 'tenant-a', agentId: 'agent-a', principalId: undefined, companyId: undefined, registrationId: undefined, sessionId: 'sess-1', adminSessionId: undefined },
+      { tenantId: 'tenant-a', agentId: 'agent-a', principalId: undefined, companyId: 'company-b', registrationId: undefined, sessionId: 'sess-1', adminSessionId: undefined },
     ]);
     assert.deepEqual(printed, [
       { ok: true, command: 'select-org', orgId: 'org-2', companyId: 'company-b' },

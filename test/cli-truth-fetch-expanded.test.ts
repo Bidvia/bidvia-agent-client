@@ -41,8 +41,9 @@ test('runCli help lists the expanded truth-fetch family commands under the visib
   assert(lines.includes('  agent-capability-profile --registration-id ...'));
   assert(lines.includes('  participation-states --registration-id ...'));
   assert(lines.includes('  participation-state --registration-id ... --participation-state-id ...'));
-  assert(lines.includes('  task-dispatches --registration-id ...'));
-  assert(lines.includes('  task-dispatch --registration-id ... --task-dispatch-id ...'));
+  assert(lines.includes('  task-dispatches --agent-id ... [--registration-id compatibility-only]'));
+  assert(lines.includes('  task-dispatch --agent-id ... --task-dispatch-id ... [--registration-id compatibility-only]'));
+  assert(lines.includes('  governed-work-closure --agent-id ... --task-dispatch-id ... [--registration-id compatibility-only]'));
   assert(lines.includes('  canonical-semantic-labels'));
   assert(lines.includes('  canonical-semantic-label --label-id ...'));
   assert(lines.includes('  canonical-semantic-mappings'));

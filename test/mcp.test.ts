@@ -1,5 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { mkdtempSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
 
 import type {
   BidviaReviewPacket,
@@ -20,6 +23,11 @@ import {
   getMcpToolDescriptor,
 } from '../src/mcp.ts';
 import type { BidviaIndustryUniverseScenarioPlan } from '../src/universe.ts';
+import { readLocalAccumulation } from '../src/runtime/local-accumulation/store.ts';
+
+function buildLocalAccumulationPath(prefix: string): string {
+  return path.join(mkdtempSync(path.join(tmpdir(), prefix)), 'local-accumulation');
+}
 
 type BidviaMcpDescriptorWithContext = BidviaMcpToolDescriptor & {
   accessContextFamily: string;
@@ -59,7 +67,13 @@ const expectedBidviaMcpToolNames = [
   'sync-upload-execution',
   'evidence-execution',
   'proposal-execution',
+  'account-integration-capabilities-read',
+  'account-agent-integration-eligibility-read',
   'query-provisional-agent-read',
+  'account-agent-closure-status-read',
+  'account-agent-execution-status-read',
+  'account-agent-execution-listing-status-read',
+  'account-agent-execution-materialization-status-read',
   'agent-readiness-read',
   'agent-summary-read',
   'agent-registrations-read',
@@ -74,9 +88,20 @@ const expectedBidviaMcpToolNames = [
   'task-dispatches-read',
   'task-dispatch-read',
   'notification-read',
+  'governed-work-closure-read',
   'acknowledge-notification-execution',
   'create-provisional-agent-execution',
   'claim-provisional-agent-execution',
+  'account-agent-execution-presence-execution',
+  'account-agent-execution-sync-upload-execution',
+  'account-agent-execution-sync-download-execution',
+  'account-agent-execution-evidence-execution',
+  'account-agent-execution-proposal-execution',
+  'account-agent-execution-listing-create-execution',
+  'account-agent-execution-listing-activate-execution',
+  'account-agent-authorization-refresh-execution',
+  'account-agent-external-binding-execution',
+  'operator-dispatch-authority-decision-execution',
   'download-sync-execution',
   'create-participation-state-execution',
   'create-lease-execution',
@@ -99,6 +124,7 @@ const expectedBidviaReadToolNames = expectedBidviaMcpToolNames.filter((toolName)
 const dispatchMcpToolCallWithExecution = dispatchMcpToolCall as unknown as (
   request: BidviaMcpToolCallRequest,
   dependencies?: {
+    localAccumulationPath?: string;
     createExecutionClient?: () => unknown;
   },
 ) => Promise<BidviaMcpToolCallResponse>;
@@ -937,7 +963,7 @@ test('dispatchMcpToolCall exposes widened Task 1 governance read descriptors in 
 test('dispatchMcpToolCall routes notification visibility reads through the shipped SDK helper only', async () => {
   const calls: Array<{ helper: string; input?: unknown }> = [];
   const client = {
-    async getNotification(input: { agentRegistrationId: string; notificationId: string }) {
+    async getNotification(input: { agentId?: string; agentRegistrationId?: string; notificationId: string }) {
       calls.push({ helper: 'getNotification', input });
       return {
         notificationId: input.notificationId,
@@ -950,7 +976,7 @@ test('dispatchMcpToolCall routes notification visibility reads through the shipp
       toolName: 'notification-read',
       arguments: {
         notificationId: 'notification-1',
-        agentRegistrationId: 'areg-1',
+        agentId: 'agent-1',
       },
     },
     {
@@ -959,12 +985,64 @@ test('dispatchMcpToolCall routes notification visibility reads through the shipp
   );
 
   assert.deepEqual(calls, [{ helper: 'getNotification', input: {
-    agentRegistrationId: 'areg-1',
+    agentId: 'agent-1',
     notificationId: 'notification-1',
   } }]);
   assert.deepEqual(result.result, {
     truthFetchResult: {
       notificationId: 'notification-1',
+    },
+  });
+});
+
+test('dispatchMcpToolCall routes account-plane lease execution with canonical agentId input', async () => {
+  const calls: Array<{ helper: string; args: unknown[] }> = [];
+  const client = {
+    options: {
+      context: {
+        tenantId: 'tenant-runtime',
+        principalId: 'principal-runtime',
+        companyId: 'company-runtime',
+      },
+    },
+    async createLease(agentId: string, input: Record<string, unknown>) {
+      calls.push({ helper: 'createLease', args: [agentId, input] });
+      return {
+        agentId,
+        ...input,
+      };
+    },
+  };
+
+  const result = await dispatchMcpToolCallWithExecution(
+    {
+      toolName: 'create-lease-execution',
+      arguments: {
+        agentId: 'agent-lease-1',
+        leaseScope: 'EXTERNAL_WRITE',
+        expiresAt: '2026-04-10T01:00:00.000Z',
+        now: '2026-04-10T00:00:00.000Z',
+      },
+    },
+    {
+      createExecutionClient: () => client as never,
+    },
+  );
+
+  assert.deepEqual(calls, [{
+    helper: 'createLease',
+    args: ['agent-lease-1', {
+      leaseScope: 'EXTERNAL_WRITE',
+      expiresAt: '2026-04-10T01:00:00.000Z',
+      now: '2026-04-10T00:00:00.000Z',
+    }],
+  }]);
+  assert.deepEqual(result.result, {
+    executionResult: {
+      agentId: 'agent-lease-1',
+      leaseScope: 'EXTERNAL_WRITE',
+      expiresAt: '2026-04-10T01:00:00.000Z',
+      now: '2026-04-10T00:00:00.000Z',
     },
   });
 });
@@ -979,10 +1057,10 @@ test('dispatchMcpToolCall routes packet-grounded notification execution tools th
         companyId: 'company-runtime',
       },
     },
-    async acknowledgeNotification(agentRegistrationId: string, notificationId: string, input: Record<string, unknown>) {
-      calls.push({ helper: 'acknowledgeNotification', args: [agentRegistrationId, notificationId, input] });
+    async acknowledgeNotification(agentId: string, notificationId: string, input: Record<string, unknown>) {
+      calls.push({ helper: 'acknowledgeNotification', args: [agentId, notificationId, input] });
       return {
-        agentRegistrationId,
+        agentId,
         notificationId,
         ...input,
       };
@@ -993,7 +1071,7 @@ test('dispatchMcpToolCall routes packet-grounded notification execution tools th
     {
         toolName: 'acknowledge-notification-execution',
         arguments: {
-          agentRegistrationId: 'areg-1',
+          agentId: 'agent-1',
           notificationId: 'notification-1',
           registrationId: 'areg-1',
           decision: 'acknowledged',
@@ -1008,7 +1086,7 @@ test('dispatchMcpToolCall routes packet-grounded notification execution tools th
 
   assert.deepEqual(calls, [{
     helper: 'acknowledgeNotification',
-    args: ['areg-1', 'notification-1', {
+    args: ['agent-1', 'notification-1', {
       registrationId: 'areg-1',
       decision: 'acknowledged',
       now: '2026-04-10T00:01:00.000Z',
@@ -1017,7 +1095,7 @@ test('dispatchMcpToolCall routes packet-grounded notification execution tools th
   }]);
   assert.deepEqual(result.result, {
     executionResult: {
-      agentRegistrationId: 'areg-1',
+      agentId: 'agent-1',
       notificationId: 'notification-1',
       registrationId: 'areg-1',
       decision: 'acknowledged',
@@ -1130,7 +1208,7 @@ test('dispatchMcpToolCall routes widened Task 2 collection and onboarding read t
   ]);
 });
 
-test('dispatchMcpToolCall routes widened Task 2 registration-bound read tools through shipped SDK helpers', async () => {
+test('dispatchMcpToolCall routes registration-bound reads and canonical account-plane task reads through shipped SDK helpers', async () => {
   const calls: Array<{ helper: string; registrationId: string; id?: string }> = [];
   const client = {
     async getAgentReadiness(registrationId: string) {
@@ -1211,8 +1289,8 @@ test('dispatchMcpToolCall routes widened Task 2 registration-bound read tools th
     dispatchMcpToolCallWithExecution({ toolName: 'agent-capability-profile-read', arguments: { registrationId: 'areg-15' } }, { createExecutionClient: () => client as never }),
     dispatchMcpToolCallWithExecution({ toolName: 'participation-states-read', arguments: { registrationId: 'areg-16' } }, { createExecutionClient: () => client as never }),
     dispatchMcpToolCallWithExecution({ toolName: 'participation-state-read', arguments: { registrationId: 'areg-17', participationStateId: 'ps-42' } }, { createExecutionClient: () => client as never }),
-    dispatchMcpToolCallWithExecution({ toolName: 'task-dispatches-read', arguments: { registrationId: 'areg-18' } }, { createExecutionClient: () => client as never }),
-    dispatchMcpToolCallWithExecution({ toolName: 'task-dispatch-read', arguments: { registrationId: 'areg-19', taskDispatchId: 'td-42' } }, { createExecutionClient: () => client as never }),
+    dispatchMcpToolCallWithExecution({ toolName: 'task-dispatches-read', arguments: { agentId: 'agent-18' } }, { createExecutionClient: () => client as never }),
+    dispatchMcpToolCallWithExecution({ toolName: 'task-dispatch-read', arguments: { agentId: 'agent-19', taskDispatchId: 'td-42' } }, { createExecutionClient: () => client as never }),
   ]);
 
   assert.deepEqual(calls, [
@@ -1224,8 +1302,8 @@ test('dispatchMcpToolCall routes widened Task 2 registration-bound read tools th
     { helper: 'getAgentCapabilityProfile', registrationId: 'areg-15' },
     { helper: 'listParticipationStates', registrationId: 'areg-16' },
     { helper: 'getParticipationState', registrationId: 'areg-17', id: 'ps-42' },
-    { helper: 'listTaskDispatches', registrationId: 'areg-18' },
-    { helper: 'getTaskDispatch', registrationId: 'areg-19', id: 'td-42' },
+    { helper: 'listTaskDispatches', registrationId: 'agent-18' },
+    { helper: 'getTaskDispatch', registrationId: 'agent-19', id: 'td-42' },
   ]);
   assert.deepEqual(results.map((result) => result.result), [
     { truthFetchResult: { registrationId: 'areg-10', readiness: 'ready' } },
@@ -1237,7 +1315,7 @@ test('dispatchMcpToolCall routes widened Task 2 registration-bound read tools th
     { truthFetchResult: { items: [{ participationStateId: 'ps-1' }] } },
     { truthFetchResult: { registrationId: 'areg-17', participationStateId: 'ps-42' } },
     { truthFetchResult: { items: [{ taskDispatchId: 'td-1' }] } },
-    { truthFetchResult: { registrationId: 'areg-19', taskDispatchId: 'td-42' } },
+    { truthFetchResult: { registrationId: 'agent-19', taskDispatchId: 'td-42' } },
   ]);
 });
 
@@ -1405,6 +1483,119 @@ test('dispatchMcpToolCall routes business truth-fetch detail tools through tenan
         attachmentBindingId: 'attachment-42',
       },
     },
+  ]);
+});
+
+test('MCP catalog exposes first-class account-plane continuation tools with canonical schemas', () => {
+  assert.deepEqual(getMcpToolDescriptor('account-agent-closure-status-read') as BidviaMcpDescriptorWithContext, {
+    toolName: 'account-agent-closure-status-read',
+    description: 'Reads the canonical account-plane closure-status through the shipped SDK helper.',
+    inputSchemaRef: {
+      schemaKey: 'BidviaAccountAgentIdentifierInput',
+    },
+    outputMode: 'truth-fetch-result',
+    helperRef: {
+      helperKey: 'getAccountAgentClosureStatus',
+      capabilityKey: 'getAccountAgentClosureStatus',
+    },
+    localCapabilityTier: 'L0-observe-only',
+    localCapabilityRiskTier: 'observe-only',
+    accessContextFamily: 'session',
+    requiredContext: ['tenantId', 'sessionId'],
+  });
+
+  assert.deepEqual(getMcpToolDescriptor('account-agent-authorization-refresh-execution') as BidviaMcpDescriptorWithContext, {
+    toolName: 'account-agent-authorization-refresh-execution',
+    description: 'Executes the claimant account-plane authorization refresh through the shipped SDK helper.',
+    inputSchemaRef: {
+      schemaKey: 'BidviaAccountAgentAuthorizationRefreshExecutionInput',
+    },
+    outputMode: 'execution-result',
+    helperRef: {
+      helperKey: 'account-agent-authorization-refresh-execution',
+      capabilityKey: 'refreshAccountAgentAuthorization',
+    },
+    localCapabilityTier: 'L1-review-safe',
+    localCapabilityRiskTier: 'review-safe',
+    accessContextFamily: 'session',
+    requiredContext: ['tenantId', 'sessionId'],
+    runnable: true,
+    blockedBy: null,
+  });
+
+  assert.deepEqual(getMcpToolDescriptor('operator-dispatch-authority-decision-execution') as BidviaMcpDescriptorWithContext, {
+    toolName: 'operator-dispatch-authority-decision-execution',
+    description: 'Executes the operator/admin dispatch-authority decision through the shipped SDK helper.',
+    inputSchemaRef: {
+      schemaKey: 'BidviaDispatchAuthorityRequestDecisionExecutionInput',
+    },
+    outputMode: 'execution-result',
+    helperRef: {
+      helperKey: 'operator-dispatch-authority-decision-execution',
+      capabilityKey: 'decideDispatchAuthorityRequest',
+    },
+    localCapabilityTier: 'L3-governed-commercial',
+    localCapabilityRiskTier: 'governed-commercial',
+    accessContextFamily: 'admin-session',
+    requiredContext: ['tenantId', 'adminSessionId'],
+    runnable: true,
+    blockedBy: null,
+  });
+});
+
+test('dispatchMcpToolCall routes first-class account-plane continuation tools through shipped SDK helpers', async () => {
+  const calls: Array<{ helper: string; args: unknown[] }> = [];
+  const client = {
+    options: {
+      context: {
+        tenantId: 'tenant-runtime',
+        sessionId: 'sess-runtime',
+        adminSessionId: 'admin-sess-runtime',
+      },
+    },
+    async getAccountAgentClosureStatus(agentId: string) {
+      calls.push({ helper: 'getAccountAgentClosureStatus', args: [agentId] });
+      return { currentStage: 'dispatch_ready' };
+    },
+    async refreshAccountAgentAuthorization(agentId: string, input: Record<string, unknown>) {
+      calls.push({ helper: 'refreshAccountAgentAuthorization', args: [agentId, input] });
+      return { surfaceStatus: 'governed_runtime_authorization_refreshed' };
+    },
+    async createAccountAgentExternalBinding(agentId: string, input: Record<string, unknown>) {
+      calls.push({ helper: 'createAccountAgentExternalBinding', args: [agentId, input] });
+      return { surfaceStatus: 'account_scoped_binding_completed' };
+    },
+    async decideDispatchAuthorityRequest(requestId: string, input: Record<string, unknown>) {
+      calls.push({ helper: 'decideDispatchAuthorityRequest', args: [requestId, input] });
+      return { status: 'APPROVED' };
+    },
+    async getAccountAgentGovernedWorkClosure(agentId: string, taskDispatchId: string) {
+      calls.push({ helper: 'getAccountAgentGovernedWorkClosure', args: [agentId, taskDispatchId] });
+      return { taskDispatchId };
+    },
+  };
+
+  const results = [
+    await dispatchMcpToolCallWithExecution({ toolName: 'account-agent-closure-status-read', arguments: { agentId: 'agent-1' } }, { createExecutionClient: () => client as never }),
+    await dispatchMcpToolCallWithExecution({ toolName: 'account-agent-authorization-refresh-execution', arguments: { agentId: 'agent-1', now: '2026-05-01T12:00:00Z' } }, { createExecutionClient: () => client as never }),
+    await dispatchMcpToolCallWithExecution({ toolName: 'account-agent-external-binding-execution', arguments: { agentId: 'agent-1', systemType: 'wms', systemName: 'integration-smoke', externalAccountRef: 'wms-agent-1', now: '2026-05-01T12:01:00Z' } }, { createExecutionClient: () => client as never }),
+    await dispatchMcpToolCallWithExecution({ toolName: 'operator-dispatch-authority-decision-execution', arguments: { requestId: 'daar-1', decision: 'APPROVE', resolutionReason: 'approve-for-live-run', now: '2026-05-01T12:02:00Z' } }, { createExecutionClient: () => client as never }),
+    await dispatchMcpToolCallWithExecution({ toolName: 'governed-work-closure-read', arguments: { agentId: 'agent-1', taskDispatchId: 'dispatch-1' } }, { createExecutionClient: () => client as never }),
+  ];
+
+  assert.deepEqual(calls, [
+    { helper: 'getAccountAgentClosureStatus', args: ['agent-1'] },
+    { helper: 'refreshAccountAgentAuthorization', args: ['agent-1', { now: '2026-05-01T12:00:00Z' }] },
+    { helper: 'createAccountAgentExternalBinding', args: ['agent-1', { systemType: 'wms', systemName: 'integration-smoke', externalAccountRef: 'wms-agent-1', now: '2026-05-01T12:01:00Z' }] },
+    { helper: 'decideDispatchAuthorityRequest', args: ['daar-1', { decision: 'APPROVE', resolutionReason: 'approve-for-live-run', now: '2026-05-01T12:02:00Z' }] },
+    { helper: 'getAccountAgentGovernedWorkClosure', args: ['agent-1', 'dispatch-1'] },
+  ]);
+  assert.deepEqual(results.map((result) => result.result), [
+    { truthFetchResult: { currentStage: 'dispatch_ready' } },
+    { executionResult: { surfaceStatus: 'governed_runtime_authorization_refreshed' } },
+    { executionResult: { surfaceStatus: 'account_scoped_binding_completed' } },
+    { executionResult: { status: 'APPROVED' } },
+    { truthFetchResult: { taskDispatchId: 'dispatch-1' } },
   ]);
 });
 
@@ -1614,6 +1805,83 @@ test('dispatchMcpToolCall routes local execution tools through the explicit runt
     (industryUniverseExecution.result as { executionResult: { executionResult: { status: string } } }).executionResult.executionResult.status,
     'succeeded',
   );
+});
+
+test('dispatchMcpToolCall industry-universe execution uses the shared runtime path and records local accumulation evidence', async () => {
+  const accumulationPath = buildLocalAccumulationPath('bidvia-mcp-runtime-industry-universe-');
+
+  const result = await dispatchMcpToolCallWithExecution(
+    {
+      toolName: 'industry-universe-execution',
+      arguments: {
+        scenarioId: 'scenario-industry-universe-runtime-2',
+        scenarioLabel: 'industry-universe-mcp-runtime-input',
+        sourceRefs: ['source://market/runtime-2'],
+        evidenceRefs: ['evidence://mcp/runtime-2'],
+        traceIds: ['trace-runtime-2'],
+        workflowIds: ['wf-runtime-2'],
+        createListing: {
+          listingId: 'listing-runtime-2',
+          listingType: 'supply',
+          category: 'basic inorganic industrial chemical',
+          sku: 'sodium-carbonate-runtime-2',
+          quantityValue: '15',
+          quantityUnit: 'tons',
+          regionSummary: 'China -> Vietnam',
+          verificationStatus: 'verified',
+          freshnessTs: '2026-03-27T10:00:00Z',
+          traceId: 'trace-runtime-2',
+          idempotencyKey: 'listing-runtime-2',
+          now: '2026-03-27T10:00:00Z',
+        },
+        activateListing: {
+          now: '2026-03-27T10:01:00Z',
+        },
+        generateMatchCandidates: {
+          upstreamDecision: 'READY_FOR_ROUTING',
+          requiredEvidenceLevel: 1,
+          detectedEvidenceLevel: 1,
+          workflowRunId: 'wf-runtime-2',
+          triggerEventId: 'evt-runtime-2',
+          topN: 10,
+          now: '2026-03-27T10:02:00Z',
+        },
+      },
+    },
+    {
+      localAccumulationPath: accumulationPath,
+      createExecutionClient: () => ({
+        options: {
+          context: {
+            tenantId: 'tenant-a',
+            principalId: 'principal-a',
+            companyId: 'company-a',
+          },
+        },
+        async createListing() {
+          return { ok: true, route: 'createListing' };
+        },
+        async activateListing() {
+          return { ok: true, route: 'activateListing' };
+        },
+        async generateMatchCandidates() {
+          return { ok: true, route: 'generateMatchCandidates' };
+        },
+      }) as never,
+    },
+  );
+
+  const accumulation = await readLocalAccumulation({
+    path: accumulationPath,
+  });
+
+  assert.equal(
+    (result.result as { executionResult: { executionResult: { status: string } } }).executionResult.executionResult.status,
+    'succeeded',
+  );
+  assert.ok(accumulation);
+  assert.equal(accumulation.resultMemory.results.length > 0, true);
+  assert.equal(accumulation.capabilityUsageMemory.capabilities.length > 0, true);
 });
 
 test('dispatchMcpToolCall routes widened Task 2 execution helpers through the shipped local client surface', async () => {

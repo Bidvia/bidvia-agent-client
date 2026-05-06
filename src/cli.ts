@@ -113,6 +113,11 @@ import {
   buildBidviaSurfaceRuntimeIdentityContext,
   runBidviaSurfaceCapability,
 } from './runtime/surface-runtime.js';
+import {
+  buildCliEffectiveContextSnapshot as buildSharedCliEffectiveContextSnapshot,
+  buildCliOnboardingActionExecutionContext as buildSharedCliOnboardingActionExecutionContext,
+  buildCliPersistedOnboardingActionState as buildSharedCliPersistedOnboardingActionState,
+} from './cli-runtime-context.js';
 
 function printJson(value: unknown): void {
   console.log(JSON.stringify(value, null, 2));
@@ -293,6 +298,12 @@ type BidviaCliTruthFetchCommand =
   | 'account-agents'
   | 'account-agent'
   | 'account-agent-dispatch-authority'
+  | 'account-agent-closure-status'
+  | 'account-agent-execution-status'
+  | 'account-agent-execution-listing-status'
+  | 'account-agent-execution-materialization-status'
+  | 'account-integration-capabilities'
+  | 'account-agent-integration-eligibility'
   | 'account-agent-bindings'
   | 'account-records'
   | 'agent-presence'
@@ -310,6 +321,7 @@ type BidviaCliTruthFetchCommand =
   | 'participation-state'
   | 'task-dispatches'
   | 'task-dispatch'
+  | 'governed-work-closure'
   | 'canonical-semantic-concepts'
   | 'canonical-semantic-concept'
   | 'canonical-semantic-labels'
@@ -357,7 +369,10 @@ type BidviaCliIdentitySessionCommand =
   | 'account-me'
   | 'select-org'
   | 'agent-self-service'
+  | 'account-agent-authorization-refresh'
+  | 'account-agent-external-binding'
   | 'account-agent-dispatch-authority-request'
+  | 'operator-dispatch-authority-decision'
   | 'session-refresh'
   | 'session-revoke';
 
@@ -369,6 +384,9 @@ type BidviaCliSupportedValueFlag =
   | '--capability-profile-id'
   | '--participation-state-id'
   | '--task-dispatch-id'
+  | '--listing-id'
+  | '--integration-code'
+  | '--request-id'
   | '--concept-id'
   | '--label-id'
   | '--mapping-id'
@@ -386,6 +404,7 @@ type BidviaCliSupportedValueFlag =
   | '--attachment-binding-id'
   | '--target-ref'
   | '--agent-id'
+  | '--request-id'
   | '--registration-id'
   | '--output';
 
@@ -397,6 +416,9 @@ const bidviaCliSupportedValueFlags = new Set<BidviaCliSupportedValueFlag>([
   '--capability-profile-id',
   '--participation-state-id',
   '--task-dispatch-id',
+  '--listing-id',
+  '--integration-code',
+  '--request-id',
   '--concept-id',
   '--label-id',
   '--mapping-id',
@@ -421,6 +443,12 @@ const truthFetchVisibilityHelpLines = [
   '  account-agents',
   '  account-agent --agent-id ...',
   '  account-agent-dispatch-authority --agent-id ...',
+  '  account-agent-closure-status --agent-id ...',
+  '  account-agent-execution-status --agent-id ...',
+  '  account-agent-execution-listing-status --agent-id ... --listing-id ...',
+  '  account-agent-execution-materialization-status --agent-id ... --listing-id ...',
+  '  account-integration-capabilities',
+  '  account-agent-integration-eligibility --agent-id ... --integration-code ...',
   '  account-agent-bindings',
   '  account-records',
   '  agent-presence --registration-id ...',
@@ -436,8 +464,9 @@ const truthFetchVisibilityHelpLines = [
   '  agent-capability-profile --registration-id ...',
   '  participation-states --registration-id ...',
   '  participation-state --registration-id ... --participation-state-id ...',
-  '  task-dispatches --registration-id ...',
-  '  task-dispatch --registration-id ... --task-dispatch-id ...',
+  '  task-dispatches --agent-id ... [--registration-id compatibility-only]',
+  '  task-dispatch --agent-id ... --task-dispatch-id ... [--registration-id compatibility-only]',
+  '  governed-work-closure --agent-id ... --task-dispatch-id ... [--registration-id compatibility-only]',
   '  canonical-semantic-concepts',
   '  canonical-semantic-concept --concept-id ...',
   '  canonical-semantic-labels',
@@ -469,6 +498,12 @@ const truthFetchVisibilityHelpLines = [
 const truthFetchSupportedFlagsByCommand = {
   'account-agent': ['--agent-id', '--registration-id'],
   'account-agent-dispatch-authority': ['--agent-id', '--registration-id'],
+  'account-agent-closure-status': ['--agent-id', '--registration-id'],
+  'account-agent-execution-status': ['--agent-id', '--registration-id'],
+  'account-agent-execution-listing-status': ['--agent-id', '--registration-id', '--listing-id'],
+  'account-agent-execution-materialization-status': ['--agent-id', '--registration-id', '--listing-id'],
+  'account-integration-capabilities': [],
+  'account-agent-integration-eligibility': ['--agent-id', '--registration-id', '--integration-code'],
   'agent-presence': ['--registration-id'],
   'agent-authority': ['--registration-id'],
   'agent-readiness': ['--registration-id'],
@@ -480,8 +515,9 @@ const truthFetchSupportedFlagsByCommand = {
   'agent-capability-profile': ['--registration-id', '--capability-profile-id'],
   'participation-states': ['--registration-id'],
   'participation-state': ['--registration-id', '--participation-state-id'],
-  'task-dispatches': ['--registration-id'],
-  'task-dispatch': ['--registration-id', '--task-dispatch-id'],
+  'task-dispatches': ['--agent-id', '--registration-id'],
+  'task-dispatch': ['--agent-id', '--registration-id', '--task-dispatch-id'],
+  'governed-work-closure': ['--agent-id', '--registration-id', '--task-dispatch-id'],
   'canonical-semantic-concept': ['--concept-id'],
   'canonical-semantic-label': ['--label-id'],
   'canonical-semantic-mapping': ['--mapping-id'],
@@ -510,8 +546,13 @@ const truthFetchRequiredFlagsByCommand = {
   'agent-capability-profile': ['--registration-id'],
   'participation-states': ['--registration-id'],
   'participation-state': ['--registration-id', '--participation-state-id'],
-  'task-dispatches': ['--registration-id'],
-  'task-dispatch': ['--registration-id', '--task-dispatch-id'],
+  'account-agent-execution-status': ['--agent-id'],
+  'account-agent-execution-listing-status': ['--agent-id', '--listing-id'],
+  'account-agent-execution-materialization-status': ['--agent-id', '--listing-id'],
+  'account-agent-integration-eligibility': ['--agent-id', '--integration-code'],
+  'task-dispatches': ['--agent-id'],
+  'task-dispatch': ['--agent-id', '--task-dispatch-id'],
+  'governed-work-closure': ['--agent-id', '--task-dispatch-id'],
   'canonical-semantic-concept': ['--concept-id'],
   'canonical-semantic-label': ['--label-id'],
   'canonical-semantic-mapping': ['--mapping-id'],
@@ -556,7 +597,11 @@ const truthFetchCollectionCommands = new Set([
 const canonicalAccountAgentIdentifierCommands = new Set([
   'account-agent',
   'account-agent-dispatch-authority',
+  'account-agent-closure-status',
+  'governed-work-closure',
   'account-agent-dispatch-authority-request',
+  'account-agent-authorization-refresh',
+  'account-agent-external-binding',
   'agent-self-service',
 ]);
 
@@ -573,7 +618,10 @@ const identitySessionSupportedFlagsByCommand = {
   'account-me': [],
   'select-org': ['--input'],
   'agent-self-service': ['--registration-id', '--agent-id', '--input'],
+  'account-agent-authorization-refresh': ['--agent-id', '--registration-id', '--input'],
+  'account-agent-external-binding': ['--agent-id', '--registration-id', '--input'],
   'account-agent-dispatch-authority-request': ['--agent-id', '--registration-id'],
+  'operator-dispatch-authority-decision': ['--request-id', '--input'],
   'session-refresh': [],
   'session-revoke': [],
 } as const satisfies Record<BidviaCliIdentitySessionCommand, readonly BidviaCliSupportedValueFlag[]>;
@@ -594,12 +642,15 @@ const identitySessionRequiredContextByCommand = {
   'account-me': ['tenantId', 'sessionId'],
   'select-org': ['tenantId', 'sessionId'],
   'agent-self-service': ['tenantId', 'sessionId'],
+  'account-agent-authorization-refresh': ['tenantId', 'sessionId'],
+  'account-agent-external-binding': ['tenantId', 'sessionId'],
   'account-agent-dispatch-authority-request': ['tenantId', 'sessionId'],
+  'operator-dispatch-authority-decision': ['tenantId', 'adminSessionId'],
   'session-refresh': ['tenantId', 'sessionId'],
   'session-revoke': ['tenantId', 'sessionId'],
 } as const satisfies Record<
   BidviaCliIdentitySessionCommand,
-  readonly ('tenantId' | 'sessionId')[]
+  readonly ('tenantId' | 'sessionId' | 'adminSessionId')[]
 >;
 
 function readOnboardingResultString(
@@ -718,16 +769,7 @@ function buildEffectiveContextSnapshot(
   env: NodeJS.ProcessEnv,
   localState: BidviaLocalOnboardingState | null,
 ) {
-  return {
-    tenantId: buildContextValueWithSource(readNonEmptyEnvValue(env, 'BIDVIA_TENANT_ID'), localState?.tenantId),
-    agentId: buildContextValueWithSource(readNonEmptyEnvValue(env, 'BIDVIA_AGENT_ID'), localState?.agentId),
-    principalId: buildContextValueWithSource(readNonEmptyEnvValue(env, 'BIDVIA_PRINCIPAL_ID'), localState?.principalId),
-    companyId: buildContextValueWithSource(readNonEmptyEnvValue(env, 'BIDVIA_COMPANY_ID'), localState?.companyId),
-    registrationId: buildContextValueWithSource(readNonEmptyEnvValue(env, 'BIDVIA_REGISTRATION_ID'), localState?.registrationId),
-    lastCompletedStep: buildContextValueWithSource(undefined, localState?.lastCompletedStep),
-    sessionId: buildSecretPresenceWithSource(readNonEmptyEnvValue(env, 'BIDVIA_SESSION_ID'), localState?.sessionId),
-    adminSessionId: buildSecretPresenceWithSource(readNonEmptyEnvValue(env, 'BIDVIA_ADMIN_SESSION_ID')),
-  };
+  return buildSharedCliEffectiveContextSnapshot(env, localState);
 }
 
 function buildDoctorReadinessEligibility(effectiveContext: ReturnType<typeof buildEffectiveContextSnapshot>) {
@@ -1636,12 +1678,55 @@ const identitySessionCommandDefinitions = {
       });
     },
   },
+  'account-agent-authorization-refresh': {
+    helperKey: 'refreshAccountAgentAuthorization',
+    run: (client, parsedArgs) => {
+      const input = parseCliJsonInput('account-agent-authorization-refresh', parsedArgs.input);
+      return client.refreshAccountAgentAuthorization(
+        readCanonicalAccountAgentId('account-agent-authorization-refresh', parsedArgs),
+        {
+          now: readRequiredStringInput('account-agent-authorization-refresh', input, 'now'),
+        },
+      );
+    },
+  },
+  'account-agent-external-binding': {
+    helperKey: 'createAccountAgentExternalBinding',
+    run: (client, parsedArgs) => {
+      const input = parseCliJsonInput('account-agent-external-binding', parsedArgs.input);
+      return client.createAccountAgentExternalBinding(
+        readCanonicalAccountAgentId('account-agent-external-binding', parsedArgs),
+        {
+          systemType: readRequiredStringInput('account-agent-external-binding', input, 'systemType'),
+          systemName: readRequiredStringInput('account-agent-external-binding', input, 'systemName'),
+          externalAccountRef: readRequiredStringInput('account-agent-external-binding', input, 'externalAccountRef'),
+          now: readRequiredStringInput('account-agent-external-binding', input, 'now'),
+        },
+      );
+    },
+  },
   'account-agent-dispatch-authority-request': {
     helperKey: 'createAccountAgentDispatchAuthorityRequest',
     run: (client, parsedArgs, now) => client.createAccountAgentDispatchAuthorityRequest(
       readCanonicalAccountAgentId('account-agent-dispatch-authority-request', parsedArgs),
       { now },
     ),
+  },
+  'operator-dispatch-authority-decision': {
+    helperKey: 'decideDispatchAuthorityRequest',
+    run: (client, parsedArgs) => {
+      const requestId = parsedArgs.flagValues['--request-id'];
+      if (!requestId) {
+        throw new Error('Missing required --request-id for operator-dispatch-authority-decision.');
+      }
+
+      const input = parseCliJsonInput('operator-dispatch-authority-decision', parsedArgs.input);
+      return client.decideDispatchAuthorityRequest(requestId, {
+        decision: readRequiredStringInput('operator-dispatch-authority-decision', input, 'decision'),
+        resolutionReason: readRequiredStringInput('operator-dispatch-authority-decision', input, 'resolutionReason'),
+        now: readRequiredStringInput('operator-dispatch-authority-decision', input, 'now'),
+      });
+    },
   },
   'session-refresh': {
     helperKey: 'refreshSession',
@@ -1669,25 +1754,7 @@ function buildOnboardingActionExecutionContext(
   localState: BidviaLocalOnboardingState | null,
   effectiveContext: ReturnType<typeof buildEffectiveContextSnapshot>,
 ) {
-  if (command === 'create-provisional-agent' || command === 'query-provisional-agent') {
-    return {
-      tenantId: effectiveContext.tenantId.value ?? undefined,
-      agentId: undefined,
-      principalId: undefined,
-      companyId: undefined,
-      registrationId: undefined,
-      sessionId: undefined,
-    };
-  }
-
-  return {
-    tenantId: effectiveContext.tenantId.value ?? undefined,
-    agentId: effectiveContext.agentId.value ?? undefined,
-    principalId: effectiveContext.principalId.value ?? undefined,
-    companyId: effectiveContext.companyId.value ?? undefined,
-    registrationId: effectiveContext.registrationId.value ?? undefined,
-    sessionId: readEffectiveSessionId(env, localState),
-  };
+  return buildSharedCliOnboardingActionExecutionContext(command, env, localState, effectiveContext);
 }
 
 function buildIdentitySessionExecutionContext(
@@ -1702,6 +1769,7 @@ function buildIdentitySessionExecutionContext(
     companyId: effectiveContext.companyId.value ?? undefined,
     registrationId: undefined,
     sessionId: readEffectiveSessionId(env, localState),
+    adminSessionId: readNonEmptyEnvValue(env, 'BIDVIA_ADMIN_SESSION_ID'),
   };
 }
 
@@ -1731,6 +1799,8 @@ function buildPersistedIdentitySessionState(
     ? (result as Record<string, unknown>).session as Record<string, unknown> | undefined
     : undefined;
   const preserveExistingClaimedContext = command === 'agent-self-service'
+    || command === 'account-agent-authorization-refresh'
+    || command === 'account-agent-external-binding'
     || command === 'account-me'
     || command === 'select-org'
     || command === 'session-refresh'
@@ -1779,48 +1849,14 @@ function buildPersistedOnboardingActionState(
   executionContext: ReturnType<typeof buildOnboardingActionExecutionContext>,
   now: string,
 ) {
-  if (command === 'create-provisional-agent' || command === 'query-provisional-agent') {
-    return {
-      tenantId: readOnboardingResultString(result, 'tenantId', 'tenant_id')
-        ?? executionContext.tenantId
-        ?? existingState?.tenantId,
-      ...(existingState?.agentId === undefined ? {} : { agentId: existingState.agentId }),
-      ...(existingState?.principalId === undefined ? {} : { principalId: existingState.principalId }),
-      ...(existingState?.companyId === undefined ? {} : { companyId: existingState.companyId }),
-      ...(existingState?.registrationId === undefined ? {} : { registrationId: existingState.registrationId }),
-      ...(existingState?.sessionId === undefined ? {} : { sessionId: existingState.sessionId }),
-      lastCompletedStep: command,
-      createdAt: existingState?.createdAt ?? now,
-      updatedAt: now,
-    };
-  }
-
-  const claimedAgentId = readOnboardingResultString(result, 'agentId', 'agent_id')
-    ?? readOnboardingRegistrationResultString(result, 'agentId', ['agent_id'])
-    ?? (effectiveContext.agentId.source === 'env' ? effectiveContext.agentId.value ?? undefined : undefined);
-  const claimedPrincipalId = readOnboardingResultString(result, 'principalId', 'principal_id')
-    ?? readOnboardingRegistrationResultString(result, 'principalId', ['principal_id'])
-    ?? (effectiveContext.principalId.source === 'env' ? effectiveContext.principalId.value ?? undefined : undefined);
-  const claimedCompanyId = readOnboardingResultString(result, 'companyId', 'company_id')
-    ?? readOnboardingRegistrationResultString(result, 'companyId', ['company_id', 'tenant_id'])
-    ?? (effectiveContext.companyId.source === 'env' ? effectiveContext.companyId.value ?? undefined : undefined);
-  const claimedRegistrationId = readOnboardingResultString(result, 'registrationId', 'registration_id')
-    ?? readOnboardingRegistrationResultString(result, 'registrationId', ['agent_registration_id', 'registration_id'])
-    ?? (effectiveContext.registrationId.source === 'env' ? effectiveContext.registrationId.value ?? undefined : undefined);
-
-  return {
-    tenantId: readOnboardingResultString(result, 'tenantId', 'tenant_id')
-      ?? executionContext.tenantId
-      ?? existingState?.tenantId,
-    ...(claimedAgentId === undefined ? {} : { agentId: claimedAgentId }),
-    ...(claimedPrincipalId === undefined ? {} : { principalId: claimedPrincipalId }),
-    ...(claimedCompanyId === undefined ? {} : { companyId: claimedCompanyId }),
-    ...(claimedRegistrationId === undefined ? {} : { registrationId: claimedRegistrationId }),
-    ...(existingState?.sessionId === undefined ? {} : { sessionId: existingState.sessionId }),
-    lastCompletedStep: command,
-    createdAt: existingState?.createdAt ?? now,
-    updatedAt: now,
-  };
+  return buildSharedCliPersistedOnboardingActionState(
+    command,
+    result,
+    existingState,
+    effectiveContext,
+    executionContext,
+    now,
+  );
 }
 
 const truthFetchCommandDefinitions: Record<BidviaCliTruthFetchCommand, BidviaCliTruthFetchCommandDefinition> = {
@@ -1833,6 +1869,37 @@ const truthFetchCommandDefinitions: Record<BidviaCliTruthFetchCommand, BidviaCli
   'account-agent-dispatch-authority': {
     run: (client, parsedArgs) => client.getAccountAgentDispatchAuthority(
       readCanonicalAccountAgentId('account-agent-dispatch-authority', parsedArgs),
+    ),
+  },
+  'account-agent-closure-status': {
+    run: (client, parsedArgs) => client.getAccountAgentClosureStatus(
+      readCanonicalAccountAgentId('account-agent-closure-status', parsedArgs),
+    ),
+  },
+  'account-agent-execution-status': {
+    run: (client, parsedArgs) => client.getAccountAgentExecutionStatus(
+      readCanonicalAccountAgentId('account-agent-execution-status', parsedArgs),
+    ),
+  },
+  'account-agent-execution-listing-status': {
+    run: (client, parsedArgs) => client.getAccountAgentExecutionListingStatus(
+      readCanonicalAccountAgentId('account-agent-execution-listing-status', parsedArgs),
+      parsedArgs.flagValues['--listing-id']!,
+    ),
+  },
+  'account-agent-execution-materialization-status': {
+    run: (client, parsedArgs) => client.getAccountAgentExecutionListingMaterializationStatus(
+      readCanonicalAccountAgentId('account-agent-execution-materialization-status', parsedArgs),
+      parsedArgs.flagValues['--listing-id']!,
+    ),
+  },
+  'account-integration-capabilities': {
+    run: (client) => client.listAccountIntegrationCapabilities(),
+  },
+  'account-agent-integration-eligibility': {
+    run: (client, parsedArgs) => client.getAccountAgentIntegrationEligibility(
+      readCanonicalAccountAgentId('account-agent-integration-eligibility', parsedArgs),
+      parsedArgs.flagValues['--integration-code']!,
     ),
   },
   'account-agent-bindings': {
@@ -1889,11 +1956,17 @@ const truthFetchCommandDefinitions: Record<BidviaCliTruthFetchCommand, BidviaCli
     ),
   },
   'task-dispatches': {
-    run: (client, parsedArgs) => client.listTaskDispatches(parsedArgs.flagValues['--registration-id']!),
+    run: (client, parsedArgs) => client.listTaskDispatches(readCanonicalAccountAgentId('task-dispatches', parsedArgs)),
   },
   'task-dispatch': {
     run: (client, parsedArgs) => client.getTaskDispatch(
-      parsedArgs.flagValues['--registration-id']!,
+      readCanonicalAccountAgentId('task-dispatch', parsedArgs),
+      parsedArgs.flagValues['--task-dispatch-id']!,
+    ),
+  },
+  'governed-work-closure': {
+    run: (client, parsedArgs) => client.getAccountAgentGovernedWorkClosure(
+      readCanonicalAccountAgentId('governed-work-closure', parsedArgs),
       parsedArgs.flagValues['--task-dispatch-id']!,
     ),
   },
@@ -2798,6 +2871,10 @@ export async function runCli(
         return effectiveContext.tenantId.value === null;
       }
 
+      if (contextKey === 'adminSessionId') {
+        return effectiveContext.adminSessionId.present === false;
+      }
+
       return effectiveContext.sessionId.present === false;
     });
 
@@ -3171,10 +3248,22 @@ export async function runCli(
     }
 
     const env = dependencies.resolveProcessEnv();
-    const result = await executeIndustryUniverseScenario(
-      dependencies.createClient(env, executionContext),
-      buildIndustryUniverseScenarioPlan(input as unknown as Parameters<typeof buildIndustryUniverseScenarioPlan>[0]),
-    );
+    const result = await runBidviaSurfaceCapability({
+      transport: 'cli',
+      helperKey: 'executeIndustryUniverseScenario',
+      capabilityKey: 'executeIndustryUniverseScenario',
+      identity: buildBidviaSurfaceRuntimeIdentityContext(executionContext),
+      input,
+      createClient: () => dependencies.createClient(env, executionContext),
+      execute: async (client) => executeIndustryUniverseScenario(
+        client,
+        buildIndustryUniverseScenarioPlan(
+          input as unknown as Parameters<typeof buildIndustryUniverseScenarioPlan>[0],
+        ),
+      ),
+      now: dependencies.now,
+      accumulation: { env },
+    });
     dependencies.printJson(result);
     return 0;
   }

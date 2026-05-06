@@ -1,5 +1,7 @@
 import type {
   BidviaAcceptAccountMembershipInvitationInput,
+  BidviaAccountAgentAuthorizationRefreshInput,
+  BidviaAccountAgentExternalBindingInput,
   BidviaAccountAgentDispatchAuthorityRequestInput,
   BidviaAgentSelfServicePatchInput,
   BidviaAgentAuthorityLadderWriteInput,
@@ -24,6 +26,7 @@ import type {
   BidviaClientTransportErrorKind,
   BidviaCreateAccountMembershipInvitationInput,
   BidviaCreateConnectionRequestInput,
+  BidviaDispatchAuthorityRequestDecisionInput,
   BidviaEnterpriseAccountSignUpInput,
   BidviaCreateListingInput,
   BidviaEvidenceSubmissionInput,
@@ -403,7 +406,21 @@ export class BidviaClient implements BidviaTaskRuntimeClientPort {
       body: {
         now: input.now,
         ...(input.selfDescription === undefined ? {} : { self_description: input.selfDescription }),
-        ...(input.capabilityProfile === undefined ? {} : { capability_profile: input.capabilityProfile }),
+        ...(input.capabilityProfile === undefined
+          ? {}
+          : {
+              capability_profile: {
+                ...(input.capabilityProfile.domainStrengths === undefined ? {} : { domain_strengths: input.capabilityProfile.domainStrengths }),
+                ...(input.capabilityProfile.templateDomains === undefined ? {} : { template_domains: input.capabilityProfile.templateDomains }),
+                ...(input.capabilityProfile.workflowRoles === undefined ? {} : { workflow_roles: input.capabilityProfile.workflowRoles }),
+                ...(input.capabilityProfile.allowedRuntimeScopes === undefined ? {} : { allowed_runtime_scopes: input.capabilityProfile.allowedRuntimeScopes }),
+                ...(input.capabilityProfile.qualitySignals === undefined ? {} : { quality_signals: input.capabilityProfile.qualitySignals }),
+                ...(input.capabilityProfile.adoptionRate === undefined ? {} : { adoption_rate: input.capabilityProfile.adoptionRate }),
+                ...(input.capabilityProfile.evidenceScore === undefined ? {} : { evidence_score: input.capabilityProfile.evidenceScore }),
+                ...(input.capabilityProfile.riskReliabilityBand === undefined ? {} : { risk_reliability_band: input.capabilityProfile.riskReliabilityBand }),
+                ...(input.capabilityProfile.routingPriority === undefined ? {} : { routing_priority: input.capabilityProfile.routingPriority }),
+              },
+            }),
         ...(input.taskDispatchAcceptance === undefined
           ? {}
           : {
@@ -485,6 +502,218 @@ export class BidviaClient implements BidviaTaskRuntimeClientPort {
     });
   }
 
+  async postAccountAgentExecutionPresence(
+    agentId: string,
+    input: BidviaHeartbeatInput,
+    requestPolicy?: BidviaClientRequestPolicy,
+  ) {
+    const context = this.resolveRequestContext(requestPolicy);
+    const tenantId = this.requireTenantId(context);
+    return this.request(
+      `/runtime/account/agents/${encodeURIComponent(agentId)}/execution/presence?tenant_id=${encodeURIComponent(tenantId)}`,
+      {
+        context,
+        method: 'POST',
+        headers: this.requireSessionHeaders(context),
+        body: {
+          now: input.now,
+          expires_at: input.expiresAt,
+        },
+        requestPolicy,
+      },
+    );
+  }
+
+  async getAccountAgentExecutionStatus(agentId: string, requestPolicy?: BidviaClientRequestPolicy) {
+    const context = this.resolveRequestContext(requestPolicy);
+    const tenantId = this.requireTenantId(context);
+    return this.request(
+      `/runtime/account/agents/${encodeURIComponent(agentId)}/execution/status?tenant_id=${encodeURIComponent(tenantId)}`,
+      {
+        context,
+        method: 'GET',
+        headers: this.requireSessionHeaders(context),
+        requestPolicy,
+      },
+    );
+  }
+
+  async uploadAccountAgentExecutionSync(
+    agentId: string,
+    input: BidviaSyncUploadInput,
+    requestPolicy?: BidviaClientRequestPolicy,
+  ) {
+    const context = this.resolveRequestContext(requestPolicy);
+    const tenantId = this.requireTenantId(context);
+    return this.request(
+      `/runtime/account/agents/${encodeURIComponent(agentId)}/execution/sync/upload?tenant_id=${encodeURIComponent(tenantId)}`,
+      {
+        context,
+        method: 'POST',
+        headers: this.requireSessionHeaders(context),
+        body: {
+          cursor_ref: input.cursorRef,
+          object_count: input.objectCount,
+          now: input.now,
+        },
+        requestPolicy,
+      },
+    );
+  }
+
+  async downloadAccountAgentExecutionSync(agentId: string, requestPolicy?: BidviaClientRequestPolicy) {
+    const context = this.resolveRequestContext(requestPolicy);
+    const tenantId = this.requireTenantId(context);
+    return this.request(
+      `/runtime/account/agents/${encodeURIComponent(agentId)}/execution/sync/download?tenant_id=${encodeURIComponent(tenantId)}`,
+      {
+        context,
+        method: 'GET',
+        headers: this.requireSessionHeaders(context),
+        requestPolicy,
+      },
+    );
+  }
+
+  async submitAccountAgentExecutionEvidence(
+    agentId: string,
+    input: BidviaEvidenceSubmissionInput,
+    requestPolicy?: BidviaClientRequestPolicy,
+  ) {
+    const context = this.resolveRequestContext(requestPolicy);
+    const tenantId = this.requireTenantId(context);
+    return this.request(
+      `/runtime/account/agents/${encodeURIComponent(agentId)}/execution/evidence-submissions?tenant_id=${encodeURIComponent(tenantId)}`,
+      {
+        context,
+        method: 'POST',
+        headers: this.requireSessionHeaders(context),
+        body: {
+          evidence_ref: input.evidenceRef,
+          evidence_kind: input.evidenceKind,
+          summary: input.summary,
+          now: input.now,
+        },
+        requestPolicy,
+      },
+    );
+  }
+
+  async submitAccountAgentExecutionProposal(
+    agentId: string,
+    input: BidviaProposalSubmissionInput,
+    requestPolicy?: BidviaClientRequestPolicy,
+  ) {
+    const context = this.resolveRequestContext(requestPolicy);
+    const tenantId = this.requireTenantId(context);
+    return this.request(
+      `/runtime/account/agents/${encodeURIComponent(agentId)}/execution/proposals?tenant_id=${encodeURIComponent(tenantId)}`,
+      {
+        context,
+        method: 'POST',
+        headers: this.requireSessionHeaders(context),
+        body: {
+          proposal_type: input.proposalType,
+          proposal_ref: input.proposalRef,
+          summary: input.summary,
+          now: input.now,
+        },
+        requestPolicy,
+      },
+    );
+  }
+
+  async createAccountAgentExecutionListing(
+    agentId: string,
+    input: BidviaCreateListingInput,
+    requestPolicy?: BidviaClientRequestPolicy,
+  ) {
+    const context = this.resolveRequestContext(requestPolicy);
+    const tenantId = this.requireTenantId(context);
+    return this.request(
+      `/runtime/account/agents/${encodeURIComponent(agentId)}/execution/listings?tenant_id=${encodeURIComponent(tenantId)}`,
+      {
+        context,
+        method: 'POST',
+        headers: this.requireSessionHeaders(context),
+        body: {
+          listing_id: input.listingId,
+          listing_type: input.listingType,
+          category: input.category,
+          sku: input.sku,
+          quantity_value: input.quantityValue,
+          quantity_unit: input.quantityUnit,
+          region_summary: input.regionSummary,
+          verification_status: input.verificationStatus,
+          freshness_ts: input.freshnessTs,
+          trace_id: input.traceId,
+          idempotency_key: input.idempotencyKey,
+          now: input.now,
+        },
+        requestPolicy,
+      },
+    );
+  }
+
+  async activateAccountAgentExecutionListing(
+    agentId: string,
+    listingId: string,
+    input: { verificationStatus?: string; now: string },
+    requestPolicy?: BidviaClientRequestPolicy,
+  ) {
+    const context = this.resolveRequestContext(requestPolicy);
+    const tenantId = this.requireTenantId(context);
+    return this.request(
+      `/runtime/account/agents/${encodeURIComponent(agentId)}/execution/listings/${encodeURIComponent(listingId)}/activate?tenant_id=${encodeURIComponent(tenantId)}`,
+      {
+        context,
+        method: 'POST',
+        headers: this.requireSessionHeaders(context),
+        body: {
+          ...(input.verificationStatus === undefined ? {} : { verification_status: input.verificationStatus }),
+          now: input.now,
+        },
+        requestPolicy,
+      },
+    );
+  }
+
+  async getAccountAgentExecutionListingStatus(
+    agentId: string,
+    listingId: string,
+    requestPolicy?: BidviaClientRequestPolicy,
+  ) {
+    const context = this.resolveRequestContext(requestPolicy);
+    const tenantId = this.requireTenantId(context);
+    return this.request(
+      `/runtime/account/agents/${encodeURIComponent(agentId)}/execution/listings/${encodeURIComponent(listingId)}/status?tenant_id=${encodeURIComponent(tenantId)}`,
+      {
+        context,
+        method: 'GET',
+        headers: this.requireSessionHeaders(context),
+        requestPolicy,
+      },
+    );
+  }
+
+  async getAccountAgentExecutionListingMaterializationStatus(
+    agentId: string,
+    listingId: string,
+    requestPolicy?: BidviaClientRequestPolicy,
+  ) {
+    const context = this.resolveRequestContext(requestPolicy);
+    const tenantId = this.requireTenantId(context);
+    return this.request(
+      `/runtime/account/agents/${encodeURIComponent(agentId)}/execution/listings/${encodeURIComponent(listingId)}/materialization-status?tenant_id=${encodeURIComponent(tenantId)}`,
+      {
+        context,
+        method: 'GET',
+        headers: this.requireSessionHeaders(context),
+        requestPolicy,
+      },
+    );
+  }
+
   async postHeartbeat(input: BidviaHeartbeatInput, requestPolicy?: BidviaClientRequestPolicy) {
     const context = this.resolveRequestContext(requestPolicy);
     return this.request(this.registrationPath(context, '/heartbeat'), {
@@ -546,6 +775,35 @@ export class BidviaClient implements BidviaTaskRuntimeClientPort {
     });
   }
 
+  async listAccountIntegrationCapabilities(requestPolicy?: BidviaClientRequestPolicy) {
+    const context = this.resolveRequestContext(requestPolicy);
+    this.requireTenantId(context);
+    return this.request('/runtime/account/integration-capabilities', {
+      context,
+      method: 'GET',
+      headers: this.requireSessionHeaders(context),
+      requestPolicy,
+    });
+  }
+
+  async getAccountAgentIntegrationEligibility(
+    agentId: string,
+    integrationCode: string,
+    requestPolicy?: BidviaClientRequestPolicy,
+  ) {
+    const context = this.resolveRequestContext(requestPolicy);
+    this.requireTenantId(context);
+    return this.request(
+      `/runtime/account/agents/${encodeURIComponent(agentId)}/integrations/${encodeURIComponent(integrationCode)}/eligibility`,
+      {
+        context,
+        method: 'GET',
+        headers: this.requireSessionHeaders(context),
+        requestPolicy,
+      },
+    );
+  }
+
   async getAccountAgentDispatchAuthority(
     agentId: string,
     requestPolicy?: BidviaClientRequestPolicy,
@@ -558,6 +816,65 @@ export class BidviaClient implements BidviaTaskRuntimeClientPort {
         context,
         method: 'GET',
         headers: this.requireSessionHeaders(context),
+        requestPolicy,
+      },
+    );
+  }
+
+  async getAccountAgentClosureStatus(agentId: string, requestPolicy?: BidviaClientRequestPolicy) {
+    const context = this.resolveRequestContext(requestPolicy);
+    this.requireTenantId(context);
+    return this.request(
+      `/runtime/account/agents/${encodeURIComponent(agentId)}/closure-status?tenant_id=${encodeURIComponent(this.requireTenantId(context))}`,
+      {
+        context,
+        method: 'GET',
+        headers: this.requireSessionHeaders(context),
+        requestPolicy,
+      },
+    );
+  }
+
+  async refreshAccountAgentAuthorization(
+    agentId: string,
+    input: BidviaAccountAgentAuthorizationRefreshInput,
+    requestPolicy?: BidviaClientRequestPolicy,
+  ) {
+    const context = this.resolveRequestContext(requestPolicy);
+    this.requireTenantId(context);
+    return this.request(
+      `/runtime/account/agents/${encodeURIComponent(agentId)}/governed-runtime/authorization-refresh?tenant_id=${encodeURIComponent(this.requireTenantId(context))}`,
+      {
+        context,
+        method: 'POST',
+        headers: this.requireSessionHeaders(context),
+        body: {
+          now: input.now,
+        },
+        requestPolicy,
+      },
+    );
+  }
+
+  async createAccountAgentExternalBinding(
+    agentId: string,
+    input: BidviaAccountAgentExternalBindingInput,
+    requestPolicy?: BidviaClientRequestPolicy,
+  ) {
+    const context = this.resolveRequestContext(requestPolicy);
+    this.requireTenantId(context);
+    return this.request(
+      `/runtime/account/agents/${encodeURIComponent(agentId)}/external-account-bindings?tenant_id=${encodeURIComponent(this.requireTenantId(context))}`,
+      {
+        context,
+        method: 'POST',
+        headers: this.requireSessionHeaders(context),
+        body: {
+          system_type: input.systemType,
+          system_name: input.systemName,
+          external_account_ref: input.externalAccountRef,
+          now: input.now,
+        },
         requestPolicy,
       },
     );
@@ -578,6 +895,32 @@ export class BidviaClient implements BidviaTaskRuntimeClientPort {
         headers: this.requireSessionHeaders(context),
         body: {
           requested_target: 'bounded_dispatch_authority_activation',
+          now: input.now,
+        },
+        requestPolicy,
+      },
+    );
+  }
+
+  async decideDispatchAuthorityRequest(
+    requestId: string,
+    input: BidviaDispatchAuthorityRequestDecisionInput,
+    requestPolicy?: BidviaClientRequestPolicy,
+  ) {
+    const context = this.resolveRequestContext(requestPolicy);
+    const tenantId = this.requireTenantId(context);
+    return this.request(
+      `/operator/dispatch-authority-requests/${encodeURIComponent(requestId)}/decision?tenant_id=${encodeURIComponent(tenantId)}`,
+      {
+        context,
+        method: 'POST',
+        headers: {
+          'x-authorized-tenant-id': tenantId,
+          ...this.requireAdminSessionHeaders(context),
+        },
+        body: {
+          decision: input.decision,
+          resolution_reason: input.resolutionReason,
           now: input.now,
         },
         requestPolicy,
@@ -903,12 +1246,12 @@ export class BidviaClient implements BidviaTaskRuntimeClientPort {
   }
 
   async createLease(
-    agentRegistrationId: string,
+    agentId: string,
     input: BidviaLeaseWriteInput,
     requestPolicy?: BidviaClientRequestPolicy,
   ) {
     const context = this.resolveRequestContext(requestPolicy);
-    return this.request(this.accountTaskPlanePath(agentRegistrationId, '/leases', context), {
+    return this.request(this.accountTaskPlanePath(agentId, '/leases', context), {
       context,
       method: 'POST',
       headers: this.requireAccountTaskPlaneWriteHeaders(context),
@@ -918,11 +1261,11 @@ export class BidviaClient implements BidviaTaskRuntimeClientPort {
   }
 
   async listTaskDispatches(
-    agentRegistrationId: string,
+    agentId: string,
     requestPolicy?: BidviaClientRequestPolicy,
   ) {
     const context = this.resolveRequestContext(requestPolicy);
-    return this.request(this.accountTaskPlanePath(agentRegistrationId, '/task-dispatches', context), {
+    return this.request(this.accountTaskPlanePath(agentId, '/task-dispatches', context), {
       context,
       method: 'GET',
       headers: this.requireGovernedReadHeaders(context),
@@ -931,12 +1274,12 @@ export class BidviaClient implements BidviaTaskRuntimeClientPort {
   }
 
   async createTaskDispatch(
-    agentRegistrationId: string,
+    agentId: string,
     input: BidviaTaskDispatchWriteInput,
     requestPolicy?: BidviaClientRequestPolicy,
   ) {
     const context = this.resolveRequestContext(requestPolicy);
-    return this.request(this.accountTaskPlanePath(agentRegistrationId, '/task-dispatches', context), {
+    return this.request(this.accountTaskPlanePath(agentId, '/task-dispatches', context), {
       context,
       method: 'POST',
       headers: this.requireAccountTaskPlaneWriteHeaders(context),
@@ -946,14 +1289,14 @@ export class BidviaClient implements BidviaTaskRuntimeClientPort {
   }
 
   async getTaskDispatch(
-    agentRegistrationId: string,
+    agentId: string,
     taskDispatchId: string,
     requestPolicy?: BidviaClientRequestPolicy,
   ) {
     const context = this.resolveRequestContext(requestPolicy);
     return this.request(
       this.accountTaskPlanePath(
-        agentRegistrationId,
+        agentId,
         `/task-dispatches/${encodeURIComponent(taskDispatchId)}`,
         context,
       ),
@@ -961,6 +1304,24 @@ export class BidviaClient implements BidviaTaskRuntimeClientPort {
         context,
         method: 'GET',
         headers: this.requireGovernedReadHeaders(context),
+        requestPolicy,
+      },
+    );
+  }
+
+  async getAccountAgentGovernedWorkClosure(
+    agentId: string,
+    taskDispatchId: string,
+    requestPolicy?: BidviaClientRequestPolicy,
+  ) {
+    const context = this.resolveRequestContext(requestPolicy);
+    const tenantId = this.requireTenantId(context);
+    return this.request(
+      `/runtime/account/agents/${encodeURIComponent(agentId)}/task-dispatches/${encodeURIComponent(taskDispatchId)}/governed-work-closure?tenant_id=${encodeURIComponent(tenantId)}`,
+      {
+        context,
+        method: 'GET',
+        headers: this.requireSessionHeaders(context),
         requestPolicy,
       },
     );
@@ -976,29 +1337,29 @@ export class BidviaClient implements BidviaTaskRuntimeClientPort {
     requestPolicy?: BidviaClientRequestPolicy,
   ): Promise<unknown>;
   async getNotification(
-    inputOrAgentRegistrationId: string | BidviaNotificationIdentifierInput,
+    inputOrAgentId: string | BidviaNotificationIdentifierInput,
     notificationIdOrRequestPolicy?: string | BidviaClientRequestPolicy,
     maybeRequestPolicy?: BidviaClientRequestPolicy,
   ) {
     const context = this.resolveRequestContext(
-      typeof inputOrAgentRegistrationId === 'string'
+      typeof inputOrAgentId === 'string'
         ? maybeRequestPolicy
         : notificationIdOrRequestPolicy as BidviaClientRequestPolicy | undefined,
     );
-    const agentRegistrationId = typeof inputOrAgentRegistrationId === 'string'
-      ? inputOrAgentRegistrationId
-      : inputOrAgentRegistrationId.agentRegistrationId;
-    const notificationId = typeof inputOrAgentRegistrationId === 'string'
+    const agentId = typeof inputOrAgentId === 'string'
+      ? inputOrAgentId
+      : inputOrAgentId.agentId ?? inputOrAgentId.agentRegistrationId;
+    const notificationId = typeof inputOrAgentId === 'string'
       ? notificationIdOrRequestPolicy as string
-      : inputOrAgentRegistrationId.notificationId;
+      : inputOrAgentId.notificationId;
 
     return this.request(
-      `/runtime/account/agents/${encodeURIComponent(agentRegistrationId)}/notifications/${encodeURIComponent(notificationId)}?tenant_id=${encodeURIComponent(this.requireTenantId(context))}`,
+      `/runtime/account/agents/${encodeURIComponent(agentId)}/notifications/${encodeURIComponent(notificationId)}?tenant_id=${encodeURIComponent(this.requireTenantId(context))}`,
       {
         context,
         method: 'GET',
         headers: this.requireGovernedReadHeaders(context),
-        requestPolicy: typeof inputOrAgentRegistrationId === 'string'
+        requestPolicy: typeof inputOrAgentId === 'string'
           ? maybeRequestPolicy
           : notificationIdOrRequestPolicy as BidviaClientRequestPolicy | undefined,
       },
@@ -1024,7 +1385,7 @@ export class BidviaClient implements BidviaTaskRuntimeClientPort {
   }
 
   async acknowledgeNotification(
-    agentRegistrationId: string,
+    agentId: string,
     notificationId: string,
     input: BidviaNotificationAcknowledgementWriteInput,
     requestPolicy?: BidviaClientRequestPolicy,
@@ -1032,7 +1393,7 @@ export class BidviaClient implements BidviaTaskRuntimeClientPort {
     const context = this.resolveRequestContext(requestPolicy);
 
     return this.request(
-      `/runtime/account/agents/${encodeURIComponent(agentRegistrationId)}/notifications/${encodeURIComponent(notificationId)}/acknowledgements?tenant_id=${encodeURIComponent(this.requireTenantId(context))}`,
+      `/runtime/account/agents/${encodeURIComponent(agentId)}/notifications/${encodeURIComponent(notificationId)}/acknowledgements?tenant_id=${encodeURIComponent(this.requireTenantId(context))}`,
       {
         context,
         method: 'POST',
@@ -1082,7 +1443,7 @@ export class BidviaClient implements BidviaTaskRuntimeClientPort {
   }
 
   async assignTaskDispatch(
-    agentRegistrationId: string,
+    agentId: string,
     taskDispatchId: string,
     input: BidviaTaskDispatchAssignInput,
     requestPolicy?: BidviaClientRequestPolicy,
@@ -1090,7 +1451,7 @@ export class BidviaClient implements BidviaTaskRuntimeClientPort {
     const context = this.resolveRequestContext(requestPolicy);
     return this.request(
       this.accountTaskPlanePath(
-        agentRegistrationId,
+        agentId,
         `/task-dispatches/${encodeURIComponent(taskDispatchId)}/assign`,
         context,
       ),
@@ -1105,7 +1466,7 @@ export class BidviaClient implements BidviaTaskRuntimeClientPort {
   }
 
   async suspendTaskDispatch(
-    agentRegistrationId: string,
+    agentId: string,
     taskDispatchId: string,
     input: BidviaTaskDispatchSuspendInput,
     requestPolicy?: BidviaClientRequestPolicy,
@@ -1113,7 +1474,7 @@ export class BidviaClient implements BidviaTaskRuntimeClientPort {
     const context = this.resolveRequestContext(requestPolicy);
     return this.request(
       this.accountTaskPlanePath(
-        agentRegistrationId,
+        agentId,
         `/task-dispatches/${encodeURIComponent(taskDispatchId)}/suspend`,
         context,
       ),
@@ -1128,7 +1489,7 @@ export class BidviaClient implements BidviaTaskRuntimeClientPort {
   }
 
   async resumeTaskDispatch(
-    agentRegistrationId: string,
+    agentId: string,
     taskDispatchId: string,
     input: BidviaTaskDispatchResumeInput,
     requestPolicy?: BidviaClientRequestPolicy,
@@ -1136,7 +1497,7 @@ export class BidviaClient implements BidviaTaskRuntimeClientPort {
     const context = this.resolveRequestContext(requestPolicy);
     return this.request(
       this.accountTaskPlanePath(
-        agentRegistrationId,
+        agentId,
         `/task-dispatches/${encodeURIComponent(taskDispatchId)}/resume`,
         context,
       ),
@@ -1151,7 +1512,7 @@ export class BidviaClient implements BidviaTaskRuntimeClientPort {
   }
 
   async completeTaskDispatch(
-    agentRegistrationId: string,
+    agentId: string,
     taskDispatchId: string,
     input: BidviaTaskDispatchCompleteInput,
     requestPolicy?: BidviaClientRequestPolicy,
@@ -1159,7 +1520,7 @@ export class BidviaClient implements BidviaTaskRuntimeClientPort {
     const context = this.resolveRequestContext(requestPolicy);
     return this.request(
       this.accountTaskPlanePath(
-        agentRegistrationId,
+        agentId,
         `/task-dispatches/${encodeURIComponent(taskDispatchId)}/complete`,
         context,
       ),
@@ -1174,7 +1535,7 @@ export class BidviaClient implements BidviaTaskRuntimeClientPort {
   }
 
   async failTaskDispatch(
-    agentRegistrationId: string,
+    agentId: string,
     taskDispatchId: string,
     input: BidviaTaskDispatchFailInput,
     requestPolicy?: BidviaClientRequestPolicy,
@@ -1182,7 +1543,7 @@ export class BidviaClient implements BidviaTaskRuntimeClientPort {
     const context = this.resolveRequestContext(requestPolicy);
     return this.request(
       this.accountTaskPlanePath(
-        agentRegistrationId,
+        agentId,
         `/task-dispatches/${encodeURIComponent(taskDispatchId)}/fail`,
         context,
       ),
@@ -1197,12 +1558,12 @@ export class BidviaClient implements BidviaTaskRuntimeClientPort {
   }
 
   async createClaim(
-    agentRegistrationId: string,
+    agentId: string,
     input: BidviaClaimWriteInput,
     requestPolicy?: BidviaClientRequestPolicy,
   ) {
     const context = this.resolveRequestContext(requestPolicy);
-    return this.request(this.accountTaskPlanePath(agentRegistrationId, '/claims', context), {
+    return this.request(this.accountTaskPlanePath(agentId, '/claims', context), {
       context,
       method: 'POST',
       headers: this.requireAccountTaskPlaneWriteHeaders(context),
@@ -1212,7 +1573,7 @@ export class BidviaClient implements BidviaTaskRuntimeClientPort {
   }
 
   async acceptClaim(
-    agentRegistrationId: string,
+    agentId: string,
     claimId: string,
     input: BidviaClaimAcceptInput,
     requestPolicy?: BidviaClientRequestPolicy,
@@ -1220,7 +1581,7 @@ export class BidviaClient implements BidviaTaskRuntimeClientPort {
     const context = this.resolveRequestContext(requestPolicy);
     return this.request(
       this.accountTaskPlanePath(
-        agentRegistrationId,
+        agentId,
         `/claims/${encodeURIComponent(claimId)}/accept`,
         context,
       ),
@@ -1235,7 +1596,7 @@ export class BidviaClient implements BidviaTaskRuntimeClientPort {
   }
 
   async rejectClaim(
-    agentRegistrationId: string,
+    agentId: string,
     claimId: string,
     input: BidviaClaimRejectInput,
     requestPolicy?: BidviaClientRequestPolicy,
@@ -1243,7 +1604,7 @@ export class BidviaClient implements BidviaTaskRuntimeClientPort {
     const context = this.resolveRequestContext(requestPolicy);
     return this.request(
       this.accountTaskPlanePath(
-        agentRegistrationId,
+        agentId,
         `/claims/${encodeURIComponent(claimId)}/reject`,
         context,
       ),

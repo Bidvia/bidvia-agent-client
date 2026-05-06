@@ -166,7 +166,7 @@ test('BidviaClient exposes a bounded claimed-agent self-service patch surface fo
     now: '2026-04-11T17:20:00Z',
     self_description: 'Keeps a bounded customer-facing profile.',
     capability_profile: {
-      domainStrengths: ['pricing'],
+      domain_strengths: ['pricing'],
     },
     task_dispatch_acceptance: {
       accepts_task_dispatches: true,
@@ -175,6 +175,52 @@ test('BidviaClient exposes a bounded claimed-agent self-service patch surface fo
     participation_state: {
       state: 'AVAILABLE',
       reason: 'ready-for-task-dispatch',
+    },
+  });
+});
+
+test('BidviaClient serializes nested capabilityProfile fields for claimed-agent self-service in the Core wire format', async () => {
+  const { calls, fetchStub } = createFetchStub();
+  const client = new BidviaClient({
+    baseUrl: 'http://127.0.0.1:8787',
+    context: {
+      tenantId: 'tenant-public',
+      sessionId: 'sess-1',
+    },
+    fetchImpl: fetchStub,
+  });
+
+  const patchAgentSelfService = Reflect.get(client, 'patchAgentSelfService');
+  assert.equal(typeof patchAgentSelfService, 'function');
+
+  await Reflect.apply(patchAgentSelfService, client, ['agent-1', {
+    now: '2026-05-06T09:05:35Z',
+    capabilityProfile: {
+      domainStrengths: ['integration'],
+      templateDomains: ['governed-assets'],
+      workflowRoles: ['dispatcher'],
+      allowedRuntimeScopes: ['EXTERNAL_WRITE'],
+      qualitySignals: ['agent-self-described'],
+      adoptionRate: 0,
+      evidenceScore: 0,
+      riskReliabilityBand: 'LOW',
+      routingPriority: 0,
+    },
+  }]);
+
+  assert.equal(calls.length, 1);
+  assert.deepEqual(JSON.parse(String(calls[0]?.init?.body)), {
+    now: '2026-05-06T09:05:35Z',
+    capability_profile: {
+      domain_strengths: ['integration'],
+      template_domains: ['governed-assets'],
+      workflow_roles: ['dispatcher'],
+      allowed_runtime_scopes: ['EXTERNAL_WRITE'],
+      quality_signals: ['agent-self-described'],
+      adoption_rate: 0,
+      evidence_score: 0,
+      risk_reliability_band: 'LOW',
+      routing_priority: 0,
     },
   });
 });

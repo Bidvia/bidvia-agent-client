@@ -539,6 +539,29 @@ test('capability registry marks dispatch-authority review as a session-bound acc
   assert.notEqual(dispatchAuthorityReviewBoundary.reviewFamily, activeRoleBindingBoundary.blockedOn);
 });
 
+test('capability registry uses canonical agentId path tokens for account-scoped task and notification families', () => {
+  assert.equal(
+    getRouteCapability('createLease')?.routePathTemplate,
+    '/runtime/account/agents/:agentId/leases',
+  );
+  assert.equal(
+    getRouteCapability('listTaskDispatches')?.routePathTemplate,
+    '/runtime/account/agents/:agentId/task-dispatches',
+  );
+  assert.equal(
+    getRouteCapability('getTaskDispatch')?.routePathTemplate,
+    '/runtime/account/agents/:agentId/task-dispatches/:task_dispatch_id',
+  );
+  assert.equal(
+    getRouteCapability('acknowledgeNotification')?.routePathTemplate,
+    '/runtime/account/agents/:agentId/notifications/:notification_id/acknowledgements',
+  );
+  assert.equal(
+    getRouteCapability('createClaim')?.routePathTemplate,
+    '/runtime/account/agents/:agentId/claims',
+  );
+});
+
 test('capability registry exposes shipped widened T2 and T3 truth-fetch helpers as real route capabilities', () => {
   const shippedExpandedHelperKeys = [
     'getAgentReadiness',
@@ -722,7 +745,7 @@ test('capability registry describes principal-governed reads and canonical parti
 
   assert.deepEqual(getRouteCapability('listTaskDispatches'), {
     helperKey: 'listTaskDispatches',
-    routePathTemplate: '/runtime/account/agents/:agent_registration_id/task-dispatches',
+    routePathTemplate: '/runtime/account/agents/:agentId/task-dispatches',
     httpMethod: 'GET',
     accessContextFamily: 'principal-governed-read',
     contextSemantic: 'principal-governed-read',
@@ -750,7 +773,7 @@ test('capability registry describes principal-governed reads and canonical parti
     [
       {
         helperKey: 'createLease',
-        routePathTemplate: '/runtime/account/agents/:agent_registration_id/leases',
+        routePathTemplate: '/runtime/account/agents/:agentId/leases',
         httpMethod: 'POST',
         accessContextFamily: 'operator-company',
         contextSemantic: 'operator-company',
@@ -763,7 +786,7 @@ test('capability registry describes principal-governed reads and canonical parti
       },
       {
         helperKey: 'createTaskDispatch',
-        routePathTemplate: '/runtime/account/agents/:agent_registration_id/task-dispatches',
+        routePathTemplate: '/runtime/account/agents/:agentId/task-dispatches',
         httpMethod: 'POST',
         accessContextFamily: 'operator-company',
         contextSemantic: 'operator-company',
@@ -776,7 +799,7 @@ test('capability registry describes principal-governed reads and canonical parti
       },
       {
         helperKey: 'assignTaskDispatch',
-        routePathTemplate: '/runtime/account/agents/:agent_registration_id/task-dispatches/:task_dispatch_id/assign',
+        routePathTemplate: '/runtime/account/agents/:agentId/task-dispatches/:task_dispatch_id/assign',
         httpMethod: 'POST',
         accessContextFamily: 'operator-company',
         contextSemantic: 'operator-company',
@@ -789,7 +812,7 @@ test('capability registry describes principal-governed reads and canonical parti
       },
       {
         helperKey: 'suspendTaskDispatch',
-        routePathTemplate: '/runtime/account/agents/:agent_registration_id/task-dispatches/:task_dispatch_id/suspend',
+        routePathTemplate: '/runtime/account/agents/:agentId/task-dispatches/:task_dispatch_id/suspend',
         httpMethod: 'POST',
         accessContextFamily: 'operator-company',
         contextSemantic: 'operator-company',
@@ -802,7 +825,7 @@ test('capability registry describes principal-governed reads and canonical parti
       },
       {
         helperKey: 'resumeTaskDispatch',
-        routePathTemplate: '/runtime/account/agents/:agent_registration_id/task-dispatches/:task_dispatch_id/resume',
+        routePathTemplate: '/runtime/account/agents/:agentId/task-dispatches/:task_dispatch_id/resume',
         httpMethod: 'POST',
         accessContextFamily: 'operator-company',
         contextSemantic: 'operator-company',
@@ -815,7 +838,7 @@ test('capability registry describes principal-governed reads and canonical parti
       },
       {
         helperKey: 'completeTaskDispatch',
-        routePathTemplate: '/runtime/account/agents/:agent_registration_id/task-dispatches/:task_dispatch_id/complete',
+        routePathTemplate: '/runtime/account/agents/:agentId/task-dispatches/:task_dispatch_id/complete',
         httpMethod: 'POST',
         accessContextFamily: 'operator-company',
         contextSemantic: 'operator-company',
@@ -828,7 +851,7 @@ test('capability registry describes principal-governed reads and canonical parti
       },
       {
         helperKey: 'failTaskDispatch',
-        routePathTemplate: '/runtime/account/agents/:agent_registration_id/task-dispatches/:task_dispatch_id/fail',
+        routePathTemplate: '/runtime/account/agents/:agentId/task-dispatches/:task_dispatch_id/fail',
         httpMethod: 'POST',
         accessContextFamily: 'operator-company',
         contextSemantic: 'operator-company',
@@ -841,7 +864,7 @@ test('capability registry describes principal-governed reads and canonical parti
       },
       {
         helperKey: 'createClaim',
-        routePathTemplate: '/runtime/account/agents/:agent_registration_id/claims',
+        routePathTemplate: '/runtime/account/agents/:agentId/claims',
         httpMethod: 'POST',
         accessContextFamily: 'operator-company',
         contextSemantic: 'operator-company',
@@ -854,7 +877,7 @@ test('capability registry describes principal-governed reads and canonical parti
       },
       {
         helperKey: 'acceptClaim',
-        routePathTemplate: '/runtime/account/agents/:agent_registration_id/claims/:claim_id/accept',
+        routePathTemplate: '/runtime/account/agents/:agentId/claims/:claim_id/accept',
         httpMethod: 'POST',
         accessContextFamily: 'operator-company',
         contextSemantic: 'operator-company',
@@ -867,7 +890,7 @@ test('capability registry describes principal-governed reads and canonical parti
       },
       {
         helperKey: 'rejectClaim',
-        routePathTemplate: '/runtime/account/agents/:agent_registration_id/claims/:claim_id/reject',
+        routePathTemplate: '/runtime/account/agents/:agentId/claims/:claim_id/reject',
         httpMethod: 'POST',
         accessContextFamily: 'operator-company',
         contextSemantic: 'operator-company',

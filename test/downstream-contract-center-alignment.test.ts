@@ -22,45 +22,45 @@ function getRouteTemplateByHelperKey(helperKey: string) {
 test('local route capability catalog uses account-scoped canonical task consumer routes', () => {
   const discoveryRoutes = listDiscoveryRouteTemplates();
 
-  assert.equal(getRouteTemplateByHelperKey('listTaskDispatches'), '/runtime/account/agents/:agent_registration_id/task-dispatches');
-  assert.equal(getRouteTemplateByHelperKey('getTaskDispatch'), '/runtime/account/agents/:agent_registration_id/task-dispatches/:task_dispatch_id');
-  assert.equal(getRouteTemplateByHelperKey('createClaim'), '/runtime/account/agents/:agent_registration_id/claims');
-  assert.equal(getRouteTemplateByHelperKey('acceptClaim'), '/runtime/account/agents/:agent_registration_id/claims/:claim_id/accept');
-  assert.equal(getRouteTemplateByHelperKey('rejectClaim'), '/runtime/account/agents/:agent_registration_id/claims/:claim_id/reject');
-  assert.equal(getRouteTemplateByHelperKey('createLease'), '/runtime/account/agents/:agent_registration_id/leases');
-  assert.equal(getRouteTemplateByHelperKey('completeTaskDispatch'), '/runtime/account/agents/:agent_registration_id/task-dispatches/:task_dispatch_id/complete');
-  assert.equal(getRouteTemplateByHelperKey('failTaskDispatch'), '/runtime/account/agents/:agent_registration_id/task-dispatches/:task_dispatch_id/fail');
+  assert.equal(getRouteTemplateByHelperKey('listTaskDispatches'), '/runtime/account/agents/:agentId/task-dispatches');
+  assert.equal(getRouteTemplateByHelperKey('getTaskDispatch'), '/runtime/account/agents/:agentId/task-dispatches/:task_dispatch_id');
+  assert.equal(getRouteTemplateByHelperKey('createClaim'), '/runtime/account/agents/:agentId/claims');
+  assert.equal(getRouteTemplateByHelperKey('acceptClaim'), '/runtime/account/agents/:agentId/claims/:claim_id/accept');
+  assert.equal(getRouteTemplateByHelperKey('rejectClaim'), '/runtime/account/agents/:agentId/claims/:claim_id/reject');
+  assert.equal(getRouteTemplateByHelperKey('createLease'), '/runtime/account/agents/:agentId/leases');
+  assert.equal(getRouteTemplateByHelperKey('completeTaskDispatch'), '/runtime/account/agents/:agentId/task-dispatches/:task_dispatch_id/complete');
+  assert.equal(getRouteTemplateByHelperKey('failTaskDispatch'), '/runtime/account/agents/:agentId/task-dispatches/:task_dispatch_id/fail');
 
   assert.ok(
-    discoveryRoutes.includes('/runtime/account/agents/:agent_registration_id/task-dispatches'),
+    discoveryRoutes.includes('/runtime/account/agents/:agentId/task-dispatches'),
     'Expected local discovery catalog to include canonical account-scoped task dispatch list route',
   );
   assert.ok(
-    discoveryRoutes.includes('/runtime/account/agents/:agent_registration_id/task-dispatches/:task_dispatch_id'),
+    discoveryRoutes.includes('/runtime/account/agents/:agentId/task-dispatches/:task_dispatch_id'),
     'Expected local discovery catalog to include canonical account-scoped task dispatch detail route',
   );
   assert.ok(
-    discoveryRoutes.includes('/runtime/account/agents/:agent_registration_id/claims'),
+    discoveryRoutes.includes('/runtime/account/agents/:agentId/claims'),
     'Expected local discovery catalog to include canonical account-scoped claim creation route',
   );
   assert.ok(
-    discoveryRoutes.includes('/runtime/account/agents/:agent_registration_id/claims/:claim_id/accept'),
+    discoveryRoutes.includes('/runtime/account/agents/:agentId/claims/:claim_id/accept'),
     'Expected local discovery catalog to include canonical account-scoped claim accept route',
   );
   assert.ok(
-    discoveryRoutes.includes('/runtime/account/agents/:agent_registration_id/claims/:claim_id/reject'),
+    discoveryRoutes.includes('/runtime/account/agents/:agentId/claims/:claim_id/reject'),
     'Expected local discovery catalog to include canonical account-scoped claim reject route',
   );
   assert.ok(
-    discoveryRoutes.includes('/runtime/account/agents/:agent_registration_id/leases'),
+    discoveryRoutes.includes('/runtime/account/agents/:agentId/leases'),
     'Expected local discovery catalog to include canonical account-scoped lease route',
   );
   assert.ok(
-    discoveryRoutes.includes('/runtime/account/agents/:agent_registration_id/task-dispatches/:task_dispatch_id/complete'),
+    discoveryRoutes.includes('/runtime/account/agents/:agentId/task-dispatches/:task_dispatch_id/complete'),
     'Expected local discovery catalog to include canonical account-scoped task completion route',
   );
   assert.ok(
-    discoveryRoutes.includes('/runtime/account/agents/:agent_registration_id/task-dispatches/:task_dispatch_id/fail'),
+    discoveryRoutes.includes('/runtime/account/agents/:agentId/task-dispatches/:task_dispatch_id/fail'),
     'Expected local discovery catalog to include canonical account-scoped task failure route',
   );
 });
@@ -69,22 +69,22 @@ test('local discovery surfaces include the canonical account-scoped notification
   const capabilityRoutes = listRouteTemplates();
   const discoveryRoutes = listDiscoveryRouteTemplates();
 
-  assert.equal(getRouteTemplateByHelperKey('getNotification'), '/runtime/account/agents/:agent_registration_id/notifications/:notification_id');
+  assert.equal(getRouteTemplateByHelperKey('getNotification'), '/runtime/account/agents/:agentId/notifications/:notification_id');
   assert.ok(
-    capabilityRoutes.includes('/runtime/account/agents/:agent_registration_id/notifications/:notification_id'),
+    capabilityRoutes.includes('/runtime/account/agents/:agentId/notifications/:notification_id'),
     'Expected route capability catalog to include canonical account-scoped notification detail route',
   );
   assert.ok(
-    discoveryRoutes.includes('/runtime/account/agents/:agent_registration_id/notifications/:notification_id'),
+    discoveryRoutes.includes('/runtime/account/agents/:agentId/notifications/:notification_id'),
     'Expected local discovery catalog to include canonical account-scoped notification detail route',
   );
-  assert.equal(getRouteTemplateByHelperKey('acknowledgeNotification'), '/runtime/account/agents/:agent_registration_id/notifications/:notification_id/acknowledgements');
+  assert.equal(getRouteTemplateByHelperKey('acknowledgeNotification'), '/runtime/account/agents/:agentId/notifications/:notification_id/acknowledgements');
   assert.ok(
-    capabilityRoutes.includes('/runtime/account/agents/:agent_registration_id/notifications/:notification_id/acknowledgements'),
+    capabilityRoutes.includes('/runtime/account/agents/:agentId/notifications/:notification_id/acknowledgements'),
     'Expected route capability catalog to include canonical account-scoped notification acknowledgement route',
   );
   assert.ok(
-    discoveryRoutes.includes('/runtime/account/agents/:agent_registration_id/notifications/:notification_id/acknowledgements'),
+    discoveryRoutes.includes('/runtime/account/agents/:agentId/notifications/:notification_id/acknowledgements'),
     'Expected local discovery catalog to include canonical account-scoped notification acknowledgement route',
   );
 });
@@ -94,11 +94,11 @@ test('event notification plane keeps acknowledgement as the only canonical execu
 
   assert.equal(
     plane.readRoute.routePathTemplate,
-    '/runtime/account/agents/:agent_registration_id/notifications/:notification_id',
+    '/runtime/account/agents/:agentId/notifications/:notification_id',
   );
   assert.deepEqual(
     plane.executionRoutes.map((route) => route.routePathTemplate),
-    ['/runtime/account/agents/:agent_registration_id/notifications/:notification_id/acknowledgements'],
+    ['/runtime/account/agents/:agentId/notifications/:notification_id/acknowledgements'],
   );
   assert.deepEqual(plane.capabilityModes.executionHelperKeys, ['acknowledgeNotification']);
 });

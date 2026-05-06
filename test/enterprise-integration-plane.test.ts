@@ -2,6 +2,26 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import * as publicSurface from '../src/index.ts';
+import {
+  getCorePayloadContractMatrixEntry,
+  listCorePayloadContractEntriesForPlane,
+} from '../src/core-payload-contract-matrix.ts';
+
+test('enterprise integration matrix keeps a single canonical eligibility route entry with the camelCase integration token', () => {
+  const ownershipEntries = listCorePayloadContractEntriesForPlane('enterprise-integration').filter((entry) =>
+    entry.helperKey === 'listAccountIntegrationCapabilities'
+    || entry.helperKey === 'getAccountAgentIntegrationEligibility'
+  );
+
+  assert.deepEqual(
+    ownershipEntries.map((entry) => entry.helperKey),
+    ['listAccountIntegrationCapabilities', 'getAccountAgentIntegrationEligibility'],
+  );
+  assert.equal(
+    getCorePayloadContractMatrixEntry('getAccountAgentIntegrationEligibility')?.routePathTemplate,
+    '/runtime/account/agents/:agentId/integrations/:integrationCode/eligibility',
+  );
+});
 
 test('enterprise integration plane adapter centers the canonical core integration route family without broader authority claims', () => {
   const exports = publicSurface as Record<string, unknown>;
@@ -50,20 +70,51 @@ test('enterprise integration plane adapter centers the canonical core integratio
   assert.equal(plane.packetTruthBoundary.blockedBy, null);
   assert.deepEqual(plane.packetTruthBoundary.packetCompleteFieldFamilies, [
     'identity-mapping-fields',
+    'account-integration-capability-read-models',
+    'account-agent-invocation-eligibility-read-models',
     'attachment-document-media-evidence-visibility',
   ]);
   assert.equal(plane.packetTruthBoundary.inventedPacketFieldsBlocked, true);
   assert.deepEqual(plane.helperGroups.map((group) => group.groupKey), [
-    'core-integration-routes',
+    'integration-ownership-slice',
+    'compatibility-provider-routes',
     'asset-evidence-family',
     'evidence-submission',
     'commercial-action',
     'governed-proposals',
     'opportunity-handoffs',
   ]);
-  assert.deepEqual(plane.helperGroups.find((group) => group.groupKey === 'core-integration-routes'), {
-    groupKey: 'core-integration-routes',
-    label: 'Canonical Core enterprise integration routes',
+  assert.deepEqual(plane.helperGroups.find((group) => group.groupKey === 'integration-ownership-slice'), {
+    groupKey: 'integration-ownership-slice',
+    label: 'Canonical account integration ownership slice',
+    helperKeys: [
+      'listAccountIntegrationCapabilities',
+      'getAccountAgentIntegrationEligibility',
+    ],
+    clientMethods: [
+      'listAccountIntegrationCapabilities',
+      'getAccountAgentIntegrationEligibility',
+    ],
+    cliCommands: [
+      'account-integration-capabilities',
+      'account-agent-integration-eligibility',
+    ],
+    discoveryHelperKeys: [
+      'listAccountIntegrationCapabilities',
+      'getAccountAgentIntegrationEligibility',
+    ],
+    broaderEnterpriseAuthorityClaimed: false,
+    broaderSystemAuthorityClaimed: false,
+    payloadPacketStatus: 'packet-grounded',
+    blockedBy: null,
+    notes: [
+      'The V14 canonical integration trunk is the account integration capability directory plus bounded account-agent eligibility truth.',
+      'The bounded inbound invocation route remains canonical ownership metadata but stays fail-closed here until Core freezes an open-client request body.',
+    ],
+  });
+  assert.deepEqual(plane.helperGroups.find((group) => group.groupKey === 'compatibility-provider-routes'), {
+    groupKey: 'compatibility-provider-routes',
+    label: 'Compatibility-only provider onboarding seams',
     helperKeys: [
       'submitIntegrationOnboardingContract',
       'logInHaisiWms',
@@ -85,9 +136,9 @@ test('enterprise integration plane adapter centers the canonical core integratio
     ],
     broaderEnterpriseAuthorityClaimed: false,
     broaderSystemAuthorityClaimed: false,
-    payloadPacketStatus: 'packet-grounded',
-    blockedBy: null,
-    notes: ['The enterprise plane is anchored to the Core-owned integration route family and visibility boundaries.'],
+    payloadPacketStatus: 'blocked-pending-packet',
+    blockedBy: 'core-plane-payload-packet-not-yet-frozen',
+    notes: ['Legacy onboarding-contract and provider-shaped Haisi seams remain compatibility-only support surfaces rather than the canonical V14 product root.'],
   });
   assert.deepEqual(plane.helperGroups.find((group) => group.groupKey === 'asset-evidence-family'), {
     groupKey: 'asset-evidence-family',

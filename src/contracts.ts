@@ -218,8 +218,43 @@ export interface BidviaAccountAgentDispatchAuthorityRequestInput {
   now: string;
 }
 
+export interface BidviaAccountAgentAuthorizationRefreshInput {
+  now: string;
+}
+
+export interface BidviaAccountAgentAuthorizationRefreshExecutionInput
+  extends BidviaAccountAgentIdentifierInput,
+    BidviaAccountAgentAuthorizationRefreshInput {}
+
+export interface BidviaAccountAgentExternalBindingInput {
+  systemType: string;
+  systemName: string;
+  externalAccountRef: string;
+  now: string;
+}
+
+export interface BidviaAccountAgentExternalBindingExecutionInput
+  extends BidviaAccountAgentIdentifierInput,
+    BidviaAccountAgentExternalBindingInput {}
+
+export interface BidviaDispatchAuthorityRequestDecisionInput {
+  decision: string;
+  resolutionReason: string;
+  now: string;
+}
+
+export interface BidviaDispatchAuthorityRequestDecisionExecutionInput
+  extends BidviaDispatchAuthorityRequestDecisionInput {
+  requestId: string;
+}
+
+export interface BidviaAccountAgentIntegrationIdentifierInput extends BidviaAccountAgentIdentifierInput {
+  integrationCode: string;
+}
+
 export interface BidviaNotificationIdentifierInput {
-  agentRegistrationId: string;
+  agentId: string;
+  agentRegistrationId?: string;
   notificationId: string;
 }
 
@@ -396,6 +431,47 @@ export interface BidviaParticipationStateExecutionInput
   extends BidviaAgentRegistrationIdentifierInput,
     BidviaParticipationStateWriteInput {}
 
+export interface BidviaAccountAgentIdentifierInput {
+  agentId: string;
+  agentRegistrationId?: string;
+  registrationId?: string;
+}
+
+export interface BidviaAccountAgentIntegrationIdentifierInput
+  extends BidviaAccountAgentIdentifierInput {
+  integrationCode: string;
+}
+
+export interface BidviaAccountAgentExecutionListingIdentifierInput extends BidviaAccountAgentIdentifierInput {
+  listingId: string;
+}
+
+export interface BidviaAccountAgentExecutionPresenceExecutionInput
+  extends BidviaAccountAgentIdentifierInput,
+    BidviaHeartbeatInput {}
+
+export interface BidviaAccountAgentExecutionSyncUploadExecutionInput
+  extends BidviaAccountAgentIdentifierInput,
+    BidviaSyncUploadInput {}
+
+export interface BidviaAccountAgentExecutionEvidenceExecutionInput
+  extends BidviaAccountAgentIdentifierInput,
+    BidviaEvidenceSubmissionInput {}
+
+export interface BidviaAccountAgentExecutionProposalExecutionInput
+  extends BidviaAccountAgentIdentifierInput,
+    BidviaProposalSubmissionInput {}
+
+export interface BidviaAccountAgentExecutionListingCreateExecutionInput
+  extends BidviaAccountAgentIdentifierInput,
+    BidviaCreateListingInput {}
+
+export interface BidviaAccountAgentExecutionListingActivateExecutionInput
+  extends BidviaAccountAgentExecutionListingIdentifierInput {
+  verificationStatus?: string;
+  now: string;
+}
+
 export interface BidviaLeaseWriteInput {
   leaseScope: string;
   now: string;
@@ -403,7 +479,7 @@ export interface BidviaLeaseWriteInput {
 }
 
 export interface BidviaLeaseExecutionInput
-  extends BidviaAgentRegistrationIdentifierInput,
+  extends BidviaAccountAgentIdentifierInput,
     BidviaLeaseWriteInput {}
 
 export interface BidviaTaskDispatchWriteInput {
@@ -414,7 +490,7 @@ export interface BidviaTaskDispatchWriteInput {
 }
 
 export interface BidviaTaskDispatchExecutionInput
-  extends BidviaAgentRegistrationIdentifierInput,
+  extends BidviaAccountAgentIdentifierInput,
     BidviaTaskDispatchWriteInput {}
 
 export interface BidviaTaskDispatchAssignInput {
@@ -423,7 +499,7 @@ export interface BidviaTaskDispatchAssignInput {
   reason: string;
 }
 
-export interface BidviaTaskDispatchIdentifierInput extends BidviaAgentRegistrationIdentifierInput {
+export interface BidviaTaskDispatchIdentifierInput extends BidviaAccountAgentIdentifierInput {
   taskDispatchId: string;
 }
 
@@ -477,7 +553,7 @@ export interface BidviaClaimWriteInput {
 }
 
 export interface BidviaClaimExecutionInput
-  extends BidviaAgentRegistrationIdentifierInput,
+  extends BidviaAccountAgentIdentifierInput,
     BidviaClaimWriteInput {}
 
 export interface BidviaClaimAcceptInput {
@@ -485,7 +561,7 @@ export interface BidviaClaimAcceptInput {
   taskDispatchId?: string;
 }
 
-export interface BidviaClaimIdentifierInput extends BidviaAgentRegistrationIdentifierInput {
+export interface BidviaClaimIdentifierInput extends BidviaAccountAgentIdentifierInput {
   claimId: string;
 }
 
@@ -1417,7 +1493,7 @@ export interface BidviaExecutionGuidanceCheckpoint {
     | 'self-service-patch'
     | 'dispatch-authority-request'
     | 'operator-review-closure'
-    | 'external-binding-completion-unresolved'
+    | 'external-binding-completion'
     | 'post-step-truth-check';
   actor: 'external-claimed-agent' | 'operator-or-admin';
   lane: BidviaExecutionGuidanceEntry['lane'];
@@ -1426,6 +1502,7 @@ export interface BidviaExecutionGuidanceCheckpoint {
     helperKeys: Array<
       'getAgentReadiness'
       | 'getAccountAgentDispatchAuthority'
+      | 'createAccountAgentExternalBinding'
       | 'listAccountAgentBindings'
     >;
     truthFields: Array<'taskWriteReady' | 'dispatchEligibility'>;
@@ -1494,7 +1571,7 @@ export interface BidviaResultReportingLifecycleGuidance {
 export interface BidviaNotificationAcknowledgementPathGuidance {
   status: BidviaNotificationAcknowledgementPathStatus;
   helperKey: 'acknowledgeNotification';
-  routePathTemplate: '/runtime/account/agents/:agent_registration_id/notifications/:notification_id/acknowledgements';
+  routePathTemplate: '/runtime/account/agents/:agentId/notifications/:notification_id/acknowledgements';
   requiredContext: ['tenantId', 'principalId', 'companyId'];
   guidance: string;
 }
@@ -2231,7 +2308,8 @@ export interface BidviaCapabilityPlaneView {
 }
 
 export const bidviaEnterpriseIntegrationPlaneHelperGroupKeys = [
-  'core-integration-routes',
+  'integration-ownership-slice',
+  'compatibility-provider-routes',
   'asset-evidence-family',
   'evidence-submission',
   'commercial-action',
@@ -2330,14 +2408,14 @@ export type BidviaEventNotificationPlaneCapabilityMode =
 
 export interface BidviaEventNotificationPlaneReadRoute {
   helperKey: 'getNotification';
-  routePathTemplate: '/runtime/account/agents/:agent_registration_id/notifications/:notification_id';
+  routePathTemplate: '/runtime/account/agents/:agentId/notifications/:notification_id';
   httpMethod: 'GET';
   requiredContext: ['tenantId', 'principalId'];
 }
 
 export interface BidviaEventNotificationPlaneExecutionRoute {
   helperKey: 'acknowledgeNotification';
-  routePathTemplate: '/runtime/account/agents/:agent_registration_id/notifications/:notification_id/acknowledgements';
+  routePathTemplate: '/runtime/account/agents/:agentId/notifications/:notification_id/acknowledgements';
   httpMethod: 'POST';
   blockedBy: null;
   notes: string[];

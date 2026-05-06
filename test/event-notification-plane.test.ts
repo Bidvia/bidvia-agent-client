@@ -45,13 +45,13 @@ test('event notification plane exposes account-scoped read visibility and acknow
     ],
     [
       '/runtime/account/agents/:agent_registration_id/notifications',
-      '/runtime/account/agents/:agent_registration_id/notifications/:notification_id',
+      '/runtime/account/agents/:agentId/notifications/:notification_id',
     ],
   );
   assert.deepEqual(plane.capabilityModes.visibilityOnlyHelperKeys, readHelperKeys);
   assert.deepEqual(plane.capabilityModes.executionHelperKeys, executionHelperKeys);
   assert.deepEqual(plane.executionRoutes.map((route) => route.routePathTemplate), [
-    '/runtime/account/agents/:agent_registration_id/notifications/:notification_id/acknowledgements',
+    '/runtime/account/agents/:agentId/notifications/:notification_id/acknowledgements',
   ]);
   assert.equal(getEventNotificationPlaneCapabilityMode('getNotification'), 'visibility-only');
   assert.equal(getEventNotificationPlaneCapabilityMode('acknowledgeNotification'), 'packet-grounded-execution');
@@ -95,14 +95,14 @@ test('BidviaClient uses governed read headers for canonical notification visibil
   });
 
   await client.getNotification({
-    agentRegistrationId: 'areg-1',
+    agentId: 'agent-1',
     notificationId: 'notification-1',
   });
 
   assert.equal(calls.length, 1);
   assert.equal(
     String(calls[0]?.input),
-    'http://127.0.0.1:8787/runtime/account/agents/areg-1/notifications/notification-1?tenant_id=tenant-a',
+    'http://127.0.0.1:8787/runtime/account/agents/agent-1/notifications/notification-1?tenant_id=tenant-a',
   );
   assert.equal((calls[0]?.init?.headers as Record<string, string>)['x-authorized-tenant-id'], 'tenant-a');
   assert.equal((calls[0]?.init?.headers as Record<string, string>)['x-bidvia-principal-id'], 'actor-1');

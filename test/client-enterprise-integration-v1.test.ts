@@ -22,11 +22,14 @@ test('BidviaClient exposes the canonical enterprise integration core route famil
     baseUrl: 'http://127.0.0.1:8787',
     context: {
       tenantId: 'tenant-a',
+      sessionId: 'sess-1',
       principalId: 'actor-1',
     },
     fetchImpl: fetchStub,
   });
 
+  await client.listAccountIntegrationCapabilities();
+  await client.getAccountAgentIntegrationEligibility('agent-1', 'haisi-wms');
   await client.submitIntegrationOnboardingContract('haisi-wms', {
     agentRegistrationId: 'areg-chem-1',
     identityMapping: {
@@ -57,20 +60,16 @@ test('BidviaClient exposes the canonical enterprise integration core route famil
     details: [],
   });
 
-  assert.equal(calls.length, 4);
-  assert.equal(String(calls[0]?.input), 'http://127.0.0.1:8787/runtime/integrations/haisi-wms/onboarding-contract?tenant_id=tenant-a');
-  assert.equal(String(calls[1]?.input), 'http://127.0.0.1:8787/runtime/integrations/haisi-wms/login?tenant_id=tenant-a');
-  assert.equal(String(calls[2]?.input), 'http://127.0.0.1:8787/runtime/integrations/haisi-wms/warehouses?tenant_id=tenant-a');
-  assert.equal(String(calls[3]?.input), 'http://127.0.0.1:8787/runtime/integrations/haisi-wms/inbound?tenant_id=tenant-a');
-  assert.equal((calls[0]?.init?.headers as Record<string, string>)['x-authorized-tenant-id'], 'tenant-a');
-  assert.equal((calls[0]?.init?.headers as Record<string, string>)['x-bidvia-principal-id'], 'actor-1');
-  assert.equal((calls[1]?.init?.headers as Record<string, string>)['x-authorized-tenant-id'], 'tenant-a');
-  assert.equal((calls[1]?.init?.headers as Record<string, string>)['x-bidvia-principal-id'], 'actor-1');
-  assert.equal((calls[2]?.init?.headers as Record<string, string>)['x-authorized-tenant-id'], 'tenant-a');
-  assert.equal((calls[2]?.init?.headers as Record<string, string>)['x-bidvia-principal-id'], 'actor-1');
-  assert.equal((calls[3]?.init?.headers as Record<string, string>)['x-authorized-tenant-id'], 'tenant-a');
-  assert.equal((calls[3]?.init?.headers as Record<string, string>)['x-bidvia-principal-id'], 'actor-1');
-  assert.deepEqual(JSON.parse(String(calls[0]?.init?.body)), {
+  assert.equal(calls.length, 6);
+  assert.equal(String(calls[0]?.input), 'http://127.0.0.1:8787/runtime/account/integration-capabilities');
+  assert.equal(String(calls[1]?.input), 'http://127.0.0.1:8787/runtime/account/agents/agent-1/integrations/haisi-wms/eligibility');
+  assert.equal(String(calls[2]?.input), 'http://127.0.0.1:8787/runtime/integrations/haisi-wms/onboarding-contract?tenant_id=tenant-a');
+  assert.equal(String(calls[3]?.input), 'http://127.0.0.1:8787/runtime/integrations/haisi-wms/login?tenant_id=tenant-a');
+  assert.equal(String(calls[4]?.input), 'http://127.0.0.1:8787/runtime/integrations/haisi-wms/warehouses?tenant_id=tenant-a');
+  assert.equal(String(calls[5]?.input), 'http://127.0.0.1:8787/runtime/integrations/haisi-wms/inbound?tenant_id=tenant-a');
+  assert.equal((calls[0]?.init?.headers as Record<string, string>)['x-bidvia-session-id'], 'sess-1');
+  assert.equal((calls[1]?.init?.headers as Record<string, string>)['x-bidvia-session-id'], 'sess-1');
+  assert.deepEqual(JSON.parse(String(calls[2]?.init?.body)), {
     agent_registration_id: 'areg-chem-1',
     identity_mapping: {
       source: {
@@ -92,9 +91,9 @@ test('BidviaClient exposes the canonical enterprise integration core route famil
     },
     now: '2026-04-10T09:00:00Z',
   });
-  assert.deepEqual(JSON.parse(String(calls[1]?.init?.body)), {});
-  assert.equal(calls[2]?.init?.body, undefined);
-  assert.deepEqual(JSON.parse(String(calls[3]?.init?.body)), {
+  assert.deepEqual(JSON.parse(String(calls[3]?.init?.body)), {});
+  assert.equal(calls[4]?.init?.body, undefined);
+  assert.deepEqual(JSON.parse(String(calls[5]?.init?.body)), {
     warehouseId: 40,
     date: '2026-03-16',
     details: [],

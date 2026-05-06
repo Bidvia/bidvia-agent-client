@@ -36,7 +36,7 @@ test('core-plane adoption exports one frozen Core entry per Stage 2 plane and ke
       capability: 'packet-grounded-read',
       'workflow-stage': 'blocked-pending-packet',
       'event-notification': 'packet-grounded-execution',
-      'enterprise-integration': 'packet-grounded-execution',
+      'enterprise-integration': 'packet-grounded-read',
     },
   );
   assert.deepEqual(
@@ -110,7 +110,7 @@ test('core-plane adoption snapshot stays scoped to frozen Core-facing truth and 
       ['capability', 'packet-grounded-read'],
       ['workflow-stage', 'blocked-pending-packet'],
       ['event-notification', 'packet-grounded-execution'],
-      ['enterprise-integration', 'packet-grounded-execution'],
+      ['enterprise-integration', 'packet-grounded-read'],
     ],
   );
 });
@@ -162,7 +162,7 @@ test('stage 3 release waves stay blocked until workflow-stage and canonical rout
       ['task', 'packet-grounded', 'descriptive-plane-visible', 'packet-grounded-execution'],
       ['workflow-stage', 'blocked-pending-packet', 'descriptive-plane-visible', 'blocked-pending-packet'],
       ['event-notification', 'packet-grounded', 'descriptive-plane-visible', 'packet-grounded-execution'],
-      ['enterprise-integration', 'packet-grounded', 'descriptive-plane-visible', 'packet-grounded-execution'],
+      ['enterprise-integration', 'packet-grounded', 'descriptive-plane-visible', 'packet-grounded-read'],
     ],
   );
   assert.deepEqual(
