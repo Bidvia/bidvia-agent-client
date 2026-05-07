@@ -208,3 +208,31 @@ test('public release surface exports the OpenClaw config and companion bundle he
   assert.equal(typeof exports.buildEventNotificationPlaneView, 'function');
   assert.equal(typeof exports.buildStage3ReleaseGate, 'function');
 });
+
+test('public docs explain bounded validation tooling and new bounded task-plane CLI coverage without framing it as internal certification', () => {
+  const readme = readText('README.md');
+  const onboardingGuide = readText('docs/ONBOARDING.md');
+  const openClawOnboarding = readText('docs/OPENCLAW_GATEWAY_ONBOARDING.md');
+  const openClawSmoke = readText('docs/OPENCLAW_GATEWAY_SMOKE.md');
+  const releaseChecklist = readText('docs/INTERNAL_RELEASE_CHECKLIST.md');
+  const roadmap = readText('docs/ROADMAP.md');
+
+  for (const document of [readme, onboardingGuide, openClawOnboarding, openClawSmoke]) {
+    assert.match(document, /install-integrity/i);
+    assert.match(document, /validation-smoke/i);
+    assert.match(document, /diagnostic-bundle-export/i);
+  }
+
+  for (const document of [readme, onboardingGuide, roadmap]) {
+    assert.match(document, /create-task-dispatch/i);
+    assert.match(document, /create-claim/i);
+    assert.match(document, /bounded/i);
+    assert.match(document, /fail-closed/i);
+  }
+
+  assert.match(releaseChecklist, /validation-smoke/i);
+  assert.match(releaseChecklist, /diagnostic-bundle-export/i);
+  assert.doesNotMatch(readme, /internal Core acceptance harness/i);
+  assert.doesNotMatch(onboardingGuide, /internal Core acceptance harness/i);
+  assert.doesNotMatch(roadmap, /internal Core acceptance harness/i);
+});

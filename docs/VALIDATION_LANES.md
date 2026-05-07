@@ -19,6 +19,16 @@ This lane is the primary path for:
 
 This lane does **not** prove that every deterministic fixture or proof-lane object already exists.
 
+For bounded local-first tooling on this lane, start with:
+
+```bash
+bidvia install-integrity
+bidvia validation-smoke
+bidvia diagnostic-bundle-export --output ./bidvia-diagnostic-bundle
+```
+
+Those commands stay fail-closed. `install-integrity` is the local install-path self-check, `validation-smoke` is the bounded external-user validation lane, and `diagnostic-bundle-export` packages bounded smoke evidence into shareable artifacts without turning this lane into a Core-owned certification flow.
+
 ## 2. Proof-lane / admin-session validation
 
 Use the proof-lane when the validation target is a deterministic walkthrough that depends on admin-session access or seeded proof data.

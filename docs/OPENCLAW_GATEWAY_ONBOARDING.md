@@ -63,6 +63,16 @@ Follow this order:
 
 Do **not** start by assuming hosted runtime or remote negotiation exists.
 
+The same bounded validation story now applies on the Gateway/operator path too:
+
+```bash
+bidvia install-integrity
+bidvia validation-smoke
+bidvia diagnostic-bundle-export --output ./bidvia-diagnostic-bundle
+```
+
+Those commands stay fail-closed. `install-integrity` is an install-path self-check, `validation-smoke` is the bounded external-user smoke lane, and `diagnostic-bundle-export` packages shareable user-facing evidence. None of them turns this guide into a Core-owned certification flow.
+
 ## Step 1 — install and build
 
 From the repo root:
@@ -209,6 +219,8 @@ The current shipped local-only CLI surface includes:
 - the Learn and diagnostics first-access commands such as `onboard`, `context show`, `whoami`, and `doctor`
 - the stable installed MCP subcommand `mcp-server`
 - the companion bundle export command `openclaw-bundle-export`
+- the bounded validation commands `install-integrity`, `validation-smoke`, and `diagnostic-bundle-export --output ...`
+- the bounded task-plane CLI parity commands such as `create-task-dispatch`, `assign-task-dispatch`, `complete-task-dispatch`, `create-claim`, `accept-claim`, and `reject-claim`, all limited to already-shipped helper semantics
 - explicit execution commands for `heartbeat`, `sync-upload`, `evidence`, and `proposal`, each with `--dry-run`
 - review-safe scenario plan and review-packet preview/export commands
 - verification-bundle preview/export commands

@@ -54,6 +54,20 @@ npm run validate:release-gate
 
 Those validator commands must stay green together before any human release packet can describe public closure. This README treats validator commands to stay green together as a formal `1.0.0` release requirement, not as optional evidence.
 
+For bounded external-user validation, start with these local-first commands before assuming the problem is deeper than the current machine or shell state:
+
+```bash
+bidvia install-integrity
+bidvia validation-smoke
+bidvia diagnostic-bundle-export --output ./bidvia-diagnostic-bundle
+```
+
+- `install-integrity` is the local install-path self-check
+- `validation-smoke` is the bounded external-user smoke lane
+- `diagnostic-bundle-export` packages that smoke report into machine-readable JSON plus a shareable markdown summary
+
+These commands stay fail-closed. They do not become a Core-owned certification flow, do not claim hosted runtime truth, and do not turn bounded local diagnostics into full business closure claims.
+
 ## Quick start
 
 If you are evaluating the package as an external user, use the default public API path first. The CLI and SDK resolve against `https://api.bidvia.cn` unless you intentionally choose a different deployment entrypoint. Then follow the CLI onboarding path below in order: start with Learn, use bounded account/session prerequisite support when needed, complete public provisional create -> query -> claim, and only then move into governed run.
@@ -132,6 +146,18 @@ bidvia registered-agent-operations-plan
 ```
 
 Use the route matrix to confirm which context family is required before you execute the next governed step. For claimant/account-plane continuation, treat `agentId` as the canonical account-plane identifier; any continued use of `registrationId` on that plane is compatibility-only.
+
+### 5. Run bounded validation and diagnostic export when you need user-facing proof
+
+After the onboarding path is clear, use the bounded local-first validation flow:
+
+```bash
+bidvia install-integrity
+bidvia validation-smoke
+bidvia diagnostic-bundle-export --output ./bidvia-diagnostic-bundle
+```
+
+When the current lane genuinely needs shipped bounded task-plane writes from CLI, the current surface now also includes `create-lease`, `create-task-dispatch`, `assign-task-dispatch`, `suspend-task-dispatch`, `resume-task-dispatch`, `complete-task-dispatch`, `fail-task-dispatch`, `create-claim`, `accept-claim`, and `reject-claim`. Those commands stay bounded to already-shipped helper semantics only, remain fail-closed, and do not imply deeper operator-owned continuation or full business closure.
 
 ## SDK quick start
 

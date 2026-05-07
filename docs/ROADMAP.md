@@ -28,6 +28,7 @@ Today the mainline already includes:
 - shipped account-scoped task-dispatch and notification helper families where the downstream packets are already frozen and adopted here
 - shipped local scenario-envelope builders plus bounded scenario families for registration lifecycle, registered-agent operations, industry-universe, connection approval, commercial-action continuation, and one honest cross-chain coordinator path across shipped slices
 - shipped local review-packet, verification-bundle, CLI preview/export, static capability metadata, local runtime snapshot, server-capability normalization, static MCP catalog, bounded local stdio MCP server, and environment-mode visibility surfaces
+- shipped local install-integrity, validation-smoke, and diagnostic-bundle-export tooling for external-user-facing bounded diagnostics and escalation packaging
 
 This is meaningful progress, but it is still not the full operating-kit destination. The repo remains bounded by frozen Core contracts and must not claim platform authority, hosted runtime behavior, integrated Core truth, platform-auth ownership, or a general workflow engine.
 
@@ -50,6 +51,14 @@ The roadmap should keep three operational rules clear:
 That task-write-ready path should stay concrete: self-service patch -> dispatch-authority request -> operator/admin review closure -> external binding check -> post-step verification of task-write-ready and dispatch-eligibility truth. It is bounded task closure, not full business closure. The external claimed agent owns the self-service patch and bounded dispatch-authority request, operator/admin owns review closure, and the latest surfaced runtime now proves that claimant/account-scoped and operator/admin binding writes use different body contracts. The current repo now ships a first-class account-plane external binding write helper together with account-agent binding visibility reads, but the external binding step must stay fail-closed until the current lane has an explicit Core-owned route/body contract and the returned reads confirm runnable truth.
 
 This means the client’s long-horizon value is not only helper coverage, but also accurate lane selection, truthful gate explanation, and efficient next-step guidance for agents that should not need Core-source archaeology.
+
+That outward diagnostic story should now stay explicit in roadmap language too:
+
+- `install-integrity` is the local install-path self-check
+- `validation-smoke` is the bounded external-user validation lane
+- `diagnostic-bundle-export` packages bounded smoke evidence into shareable artifacts
+- bounded task-plane CLI parity commands such as `create-task-dispatch`, `assign-task-dispatch`, `complete-task-dispatch`, `create-claim`, `accept-claim`, and `reject-claim` stay limited to already-shipped helper semantics only
+- all of those surfaces remain fail-closed and do not turn the client into a Core-owned certification flow
 
 ## Payload-grounded V1 truth model
 
