@@ -80,6 +80,8 @@ test('package metadata declares the installed MCP execution surface without losi
 test('package source tree includes the OpenClaw companion bundle export alongside the existing stdio MCP handoff surfaces', () => {
   assert.equal(fileExists('src/openclaw-config-export.ts'), true);
   assert.equal(fileExists('src/openclaw-bundle-export.ts'), true);
+  assert.equal(fileExists('src/install-integrity.ts'), true);
+  assert.equal(fileExists('src/diagnostic-bundle.ts'), true);
   assert.equal(fileExists('src/cli.ts'), true);
   assert.equal(fileExists('src/index.ts'), true);
 });

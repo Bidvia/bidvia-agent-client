@@ -209,6 +209,7 @@ export function buildCapabilityPlaneLocalRuntimeSnapshot(
   return {
     baseUrl: resolveBidviaBaseUrl(options),
     environmentMode: resolveBidviaEnvironmentMode(options),
+    localDiagnostics: [],
     routeCapabilities: {
       source: 'local-static',
       ...buildLocalStaticMetadata('repo-route-capabilities', lastUpdatedAt),

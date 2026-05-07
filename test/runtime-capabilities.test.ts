@@ -9,6 +9,7 @@ import {
   buildCapabilityPlaneView,
 } from '../src/capability-plane.ts';
 import {
+  buildLocalDiagnosticCommandCatalog,
   buildLocalMcpToolCatalog,
   buildLocalRouteCapabilityCatalog,
 } from '../src/discovery-catalog.ts';
@@ -28,6 +29,7 @@ test('buildLocalRuntimeCapabilitySnapshot defaults to the public china API while
 
   assert.equal(snapshot.baseUrl, 'https://api.bidvia.cn');
   assert.equal(snapshot.environmentMode, 'production');
+  assert.deepEqual(snapshot.localDiagnostics, buildLocalDiagnosticCommandCatalog());
   assert.equal(snapshot.routeCapabilities.source, 'local-static');
   assert.equal(snapshot.routeCapabilities.items.length > 0, true);
   assert.equal(snapshot.routeCapabilities.schemaVersion, '2026-03-27');
@@ -106,8 +108,12 @@ test('buildLocalRuntimeCapabilitySnapshot flows through the explicit capability-
   capabilityPlaneSnapshot.localMcpServer.lastUpdatedAt = runtimeSnapshot.localMcpServer.lastUpdatedAt;
   capabilityPlaneSnapshot.deferredServerNegotiation.lastUpdatedAt = runtimeSnapshot.deferredServerNegotiation.lastUpdatedAt;
   capabilityPlaneSnapshot.executionGuidance = runtimeSnapshot.executionGuidance;
+  const expectedRuntimeSnapshot = {
+    ...capabilityPlaneSnapshot,
+    localDiagnostics: buildLocalDiagnosticCommandCatalog(),
+  };
 
-  assert.deepEqual(runtimeSnapshot, capabilityPlaneSnapshot);
+  assert.deepEqual(runtimeSnapshot, expectedRuntimeSnapshot);
   assert.equal(capabilityPlane.localSnapshots.descriptiveOnly, true);
   assert.equal(capabilityPlane.localSnapshots.liveServerNegotiationClaimed, false);
   assert.equal(capabilityPlane.localSnapshots.remoteRegistryBehaviorClaimed, false);
@@ -318,6 +324,8 @@ test('buildLocalRuntimeCapabilitySnapshot keeps execution listing status capabil
 
 test('buildLocalRuntimeCapabilitySnapshot carries shared execution truth without widening release blockers', () => {
   const snapshot = buildLocalRuntimeCapabilitySnapshot();
+
+  assert.deepEqual(snapshot.localDiagnostics, buildLocalDiagnosticCommandCatalog());
 
   assert.deepEqual(
     snapshot.planeAdoption.map((status) => ({

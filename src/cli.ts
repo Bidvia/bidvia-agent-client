@@ -11,7 +11,6 @@ import type {
   BidviaEvidenceSubmissionInput,
   BidviaHeartbeatInput,
   BidviaProposalSubmissionInput,
-  BidviaServerCapabilityPayload,
   BidviaSyncUploadInput,
 } from './contracts.js';
 import {
@@ -26,6 +25,7 @@ import {
   bidviaNextStageReadRouteDiscoveryGroups,
 } from './capabilities.js';
 import {
+  buildLocalDiagnosticCommandCatalog,
   buildEnterpriseIntegrationDiscoverySnapshot,
   buildLocalDiscoveryCatalog,
   buildLocalRouteCapabilityCatalog,
@@ -75,6 +75,9 @@ import {
   buildOnboardingReadiness,
 } from './onboarding-readiness.js';
 import { buildLocalRuntimeCapabilitySnapshot } from './runtime-capabilities.js';
+import { buildInstallIntegritySnapshot } from './install-integrity.js';
+import { buildValidationSmokeSnapshot } from './validation-smoke.js';
+import { exportDiagnosticBundle } from './diagnostic-bundle.js';
 import {
   writeOpenClawCompanionBundle,
 } from './openclaw-bundle-export.js';
@@ -88,6 +91,7 @@ import {
 } from './route-context-matrix.js';
 import { listCorePayloadContractMatrixEntries } from './core-payload-contract-matrix.js';
 import { listPlaneExecutionGates } from './plane-execution-gate.js';
+import { buildSampleServerCapabilityPayload } from './server-capabilities.js';
 import {
   listOnboardingJourneyCommandHints,
 } from './onboarding-journey.js';
@@ -133,42 +137,6 @@ export function shouldRunCliMain(argvEntry: string | undefined, moduleUrl: strin
   }
 
   return path.resolve(argvEntry) === fileURLToPath(moduleUrl);
-}
-
-function buildSampleServerCapabilityPayload(): BidviaServerCapabilityPayload {
-  return {
-    environment_mode: 'production' as const,
-    route_capabilities: [
-      {
-        helper_key: 'postHeartbeat',
-        route_path_template: '/runtime/agents/:registrationId/heartbeat',
-        http_method: 'POST' as const,
-        access_context_family: 'registration' as const,
-        required_context: ['tenantId', 'registrationId', 'principalId'],
-        scope: 'write' as const,
-        level: 'atomic-route' as const,
-      },
-    ],
-    mcp_tools: [
-      {
-        tool_name: 'industry-universe-plan-preview',
-        description: 'Previews the bounded industry universe scenario plan payload.',
-        input_schema_ref: {
-          schema_key: 'BidviaIndustryUniverseScenarioPlanInput',
-        },
-        output_mode: 'plan-preview' as const,
-        helper_ref: {
-          helper_key: 'buildIndustryUniverseScenarioPlan',
-          capability_key: 'buildIndustryUniverseScenarioPlan',
-        },
-      },
-    ],
-    mcp_server: {
-      available: true,
-      transport: 'stdio' as const,
-      supported_methods: ['initialize', 'tools/list', 'tools/call'] as const,
-    },
-  };
 }
 
 function createClient(
@@ -376,6 +344,18 @@ type BidviaCliIdentitySessionCommand =
   | 'session-refresh'
   | 'session-revoke';
 
+type BidviaCliTaskPlaneWriteCommand =
+  | 'create-lease'
+  | 'create-task-dispatch'
+  | 'assign-task-dispatch'
+  | 'suspend-task-dispatch'
+  | 'resume-task-dispatch'
+  | 'complete-task-dispatch'
+  | 'fail-task-dispatch'
+  | 'create-claim'
+  | 'accept-claim'
+  | 'reject-claim';
+
 type BidviaCliSupportedValueFlag =
   | '--input'
   | '--provisional-agent-ref'
@@ -387,6 +367,7 @@ type BidviaCliSupportedValueFlag =
   | '--listing-id'
   | '--integration-code'
   | '--request-id'
+  | '--claim-id'
   | '--concept-id'
   | '--label-id'
   | '--mapping-id'
@@ -419,6 +400,7 @@ const bidviaCliSupportedValueFlags = new Set<BidviaCliSupportedValueFlag>([
   '--listing-id',
   '--integration-code',
   '--request-id',
+  '--claim-id',
   '--concept-id',
   '--label-id',
   '--mapping-id',
@@ -652,6 +634,32 @@ const identitySessionRequiredContextByCommand = {
   BidviaCliIdentitySessionCommand,
   readonly ('tenantId' | 'sessionId' | 'adminSessionId')[]
 >;
+
+const taskPlaneWriteSupportedFlagsByCommand = {
+  'create-lease': ['--agent-id', '--input'],
+  'create-task-dispatch': ['--agent-id', '--input'],
+  'assign-task-dispatch': ['--agent-id', '--task-dispatch-id', '--input'],
+  'suspend-task-dispatch': ['--agent-id', '--task-dispatch-id', '--input'],
+  'resume-task-dispatch': ['--agent-id', '--task-dispatch-id', '--input'],
+  'complete-task-dispatch': ['--agent-id', '--task-dispatch-id', '--input'],
+  'fail-task-dispatch': ['--agent-id', '--task-dispatch-id', '--input'],
+  'create-claim': ['--agent-id', '--input'],
+  'accept-claim': ['--agent-id', '--claim-id', '--input'],
+  'reject-claim': ['--agent-id', '--claim-id', '--input'],
+} as const satisfies Record<BidviaCliTaskPlaneWriteCommand, readonly BidviaCliSupportedValueFlag[]>;
+
+const taskPlaneWriteRequiredContextByCommand = {
+  'create-lease': ['tenantId', 'sessionId', 'principalId', 'companyId'],
+  'create-task-dispatch': ['tenantId', 'sessionId', 'principalId', 'companyId'],
+  'assign-task-dispatch': ['tenantId', 'sessionId', 'principalId', 'companyId'],
+  'suspend-task-dispatch': ['tenantId', 'sessionId', 'principalId', 'companyId'],
+  'resume-task-dispatch': ['tenantId', 'sessionId', 'principalId', 'companyId'],
+  'complete-task-dispatch': ['tenantId', 'sessionId', 'principalId', 'companyId'],
+  'fail-task-dispatch': ['tenantId', 'sessionId', 'principalId', 'companyId'],
+  'create-claim': ['tenantId', 'sessionId', 'principalId', 'companyId'],
+  'accept-claim': ['tenantId', 'sessionId', 'principalId', 'companyId'],
+  'reject-claim': ['tenantId', 'sessionId', 'principalId', 'companyId'],
+} as const satisfies Record<BidviaCliTaskPlaneWriteCommand, readonly ('tenantId' | 'sessionId' | 'principalId' | 'companyId')[]>;
 
 function readOnboardingResultString(
   value: unknown,
@@ -1560,6 +1568,15 @@ function readCanonicalAccountAgentId(command: string, parsedArgs: BidviaCliParse
   return agentId;
 }
 
+function readRequiredAgentId(command: string, parsedArgs: BidviaCliParsedArgs): string {
+  const agentId = parsedArgs.flagValues['--agent-id'];
+  if (!agentId) {
+    throw new Error(`Missing required --agent-id for ${command}.`);
+  }
+
+  return agentId;
+}
+
 const onboardingActionCommandDefinitions = {
   'create-provisional-agent': {
     helperKey: 'createProvisionalAgent',
@@ -1746,6 +1763,139 @@ const identitySessionCommandDefinitions = {
       now: string,
     ) => Promise<unknown>;
   }
+>;
+
+const taskPlaneWriteCommandDefinitions = {
+  'create-lease': {
+    run: (client: BidviaClient, parsedArgs: BidviaCliParsedArgs) => {
+      const input = parseCliJsonInput('create-lease', parsedArgs.input);
+      return client.createLease(readRequiredAgentId('create-lease', parsedArgs), {
+        leaseScope: readRequiredStringInput('create-lease', input, 'leaseScope'),
+        now: readRequiredStringInput('create-lease', input, 'now'),
+        expiresAt: readRequiredStringInput('create-lease', input, 'expiresAt'),
+      });
+    },
+  },
+  'create-task-dispatch': {
+    run: (client: BidviaClient, parsedArgs: BidviaCliParsedArgs) => {
+      const input = parseCliJsonInput('create-task-dispatch', parsedArgs.input);
+      return client.createTaskDispatch(readRequiredAgentId('create-task-dispatch', parsedArgs), {
+        taskKind: readRequiredStringInput('create-task-dispatch', input, 'taskKind'),
+        taskRef: readRequiredStringInput('create-task-dispatch', input, 'taskRef'),
+        now: readRequiredStringInput('create-task-dispatch', input, 'now'),
+        reason: readRequiredStringInput('create-task-dispatch', input, 'reason'),
+      });
+    },
+  },
+  'assign-task-dispatch': {
+    run: (client: BidviaClient, parsedArgs: BidviaCliParsedArgs) => {
+      const taskDispatchId = parsedArgs.flagValues['--task-dispatch-id'];
+      if (!taskDispatchId) {
+        throw new Error('Missing required --task-dispatch-id for assign-task-dispatch.');
+      }
+      const input = parseCliJsonInput('assign-task-dispatch', parsedArgs.input);
+      return client.assignTaskDispatch(readRequiredAgentId('assign-task-dispatch', parsedArgs), taskDispatchId, {
+        assignedToRegistrationId: readRequiredStringInput('assign-task-dispatch', input, 'assignedToRegistrationId'),
+        now: readRequiredStringInput('assign-task-dispatch', input, 'now'),
+        reason: readRequiredStringInput('assign-task-dispatch', input, 'reason'),
+      });
+    },
+  },
+  'suspend-task-dispatch': {
+    run: (client: BidviaClient, parsedArgs: BidviaCliParsedArgs) => {
+      const taskDispatchId = parsedArgs.flagValues['--task-dispatch-id'];
+      if (!taskDispatchId) {
+        throw new Error('Missing required --task-dispatch-id for suspend-task-dispatch.');
+      }
+      const input = parseCliJsonInput('suspend-task-dispatch', parsedArgs.input);
+      return client.suspendTaskDispatch(readRequiredAgentId('suspend-task-dispatch', parsedArgs), taskDispatchId, {
+        now: readRequiredStringInput('suspend-task-dispatch', input, 'now'),
+        reason: readRequiredStringInput('suspend-task-dispatch', input, 'reason'),
+      });
+    },
+  },
+  'resume-task-dispatch': {
+    run: (client: BidviaClient, parsedArgs: BidviaCliParsedArgs) => {
+      const taskDispatchId = parsedArgs.flagValues['--task-dispatch-id'];
+      if (!taskDispatchId) {
+        throw new Error('Missing required --task-dispatch-id for resume-task-dispatch.');
+      }
+      const input = parseCliJsonInput('resume-task-dispatch', parsedArgs.input);
+      return client.resumeTaskDispatch(readRequiredAgentId('resume-task-dispatch', parsedArgs), taskDispatchId, {
+        now: readRequiredStringInput('resume-task-dispatch', input, 'now'),
+        reason: readRequiredStringInput('resume-task-dispatch', input, 'reason'),
+      });
+    },
+  },
+  'complete-task-dispatch': {
+    run: (client: BidviaClient, parsedArgs: BidviaCliParsedArgs) => {
+      const taskDispatchId = parsedArgs.flagValues['--task-dispatch-id'];
+      if (!taskDispatchId) {
+        throw new Error('Missing required --task-dispatch-id for complete-task-dispatch.');
+      }
+      const input = parseCliJsonInput('complete-task-dispatch', parsedArgs.input);
+      return client.completeTaskDispatch(readRequiredAgentId('complete-task-dispatch', parsedArgs), taskDispatchId, {
+        now: readRequiredStringInput('complete-task-dispatch', input, 'now'),
+        reason: readRequiredStringInput('complete-task-dispatch', input, 'reason'),
+        outcomeRef: readRequiredStringInput('complete-task-dispatch', input, 'outcomeRef'),
+      });
+    },
+  },
+  'fail-task-dispatch': {
+    run: (client: BidviaClient, parsedArgs: BidviaCliParsedArgs) => {
+      const taskDispatchId = parsedArgs.flagValues['--task-dispatch-id'];
+      if (!taskDispatchId) {
+        throw new Error('Missing required --task-dispatch-id for fail-task-dispatch.');
+      }
+      const input = parseCliJsonInput('fail-task-dispatch', parsedArgs.input);
+      return client.failTaskDispatch(readRequiredAgentId('fail-task-dispatch', parsedArgs), taskDispatchId, {
+        now: readRequiredStringInput('fail-task-dispatch', input, 'now'),
+        reason: readRequiredStringInput('fail-task-dispatch', input, 'reason'),
+        outcomeRef: readRequiredStringInput('fail-task-dispatch', input, 'outcomeRef'),
+      });
+    },
+  },
+  'create-claim': {
+    run: (client: BidviaClient, parsedArgs: BidviaCliParsedArgs) => {
+      const input = parseCliJsonInput('create-claim', parsedArgs.input);
+      return client.createClaim(readRequiredAgentId('create-claim', parsedArgs), {
+        claimKind: readRequiredStringInput('create-claim', input, 'claimKind'),
+        claimRef: readRequiredStringInput('create-claim', input, 'claimRef'),
+        taskDispatchId: readRequiredStringInput('create-claim', input, 'taskDispatchId'),
+        now: readRequiredStringInput('create-claim', input, 'now'),
+      });
+    },
+  },
+  'accept-claim': {
+    run: (client: BidviaClient, parsedArgs: BidviaCliParsedArgs) => {
+      const claimId = parsedArgs.flagValues['--claim-id'];
+      if (!claimId) {
+        throw new Error('Missing required --claim-id for accept-claim.');
+      }
+      const input = parseCliJsonInput('accept-claim', parsedArgs.input);
+      return client.acceptClaim(readRequiredAgentId('accept-claim', parsedArgs), claimId, {
+        taskDispatchId: readRequiredStringInput('accept-claim', input, 'taskDispatchId'),
+        now: readRequiredStringInput('accept-claim', input, 'now'),
+      });
+    },
+  },
+  'reject-claim': {
+    run: (client: BidviaClient, parsedArgs: BidviaCliParsedArgs) => {
+      const claimId = parsedArgs.flagValues['--claim-id'];
+      if (!claimId) {
+        throw new Error('Missing required --claim-id for reject-claim.');
+      }
+      const input = parseCliJsonInput('reject-claim', parsedArgs.input);
+      return client.rejectClaim(readRequiredAgentId('reject-claim', parsedArgs), claimId, {
+        taskDispatchId: readRequiredStringInput('reject-claim', input, 'taskDispatchId'),
+        reason: readRequiredStringInput('reject-claim', input, 'reason'),
+        now: readRequiredStringInput('reject-claim', input, 'now'),
+      });
+    },
+  },
+} as const satisfies Record<
+  BidviaCliTaskPlaneWriteCommand,
+  { run: (client: BidviaClient, parsedArgs: BidviaCliParsedArgs) => Promise<unknown> }
 >;
 
 function buildOnboardingActionExecutionContext(
@@ -2086,12 +2236,23 @@ function getSupportedValueFlagsForCommand(command: string): readonly BidviaCliSu
     return ['--output'];
   }
 
+  if (command === 'diagnostic-bundle-export') {
+    return ['--output'];
+  }
+
   if (command === 'verification-bundle-preview' || command === 'verification-bundle-export') {
     return ['--input'];
   }
 
   if (command === 'industry-universe-execution') {
     return ['--input'];
+  }
+
+  const taskPlaneWriteSupportedFlags = taskPlaneWriteSupportedFlagsByCommand[
+    command as BidviaCliTaskPlaneWriteCommand
+  ];
+  if (taskPlaneWriteSupportedFlags) {
+    return taskPlaneWriteSupportedFlags;
   }
 
   const identitySessionSupportedFlags = identitySessionSupportedFlagsByCommand[
@@ -2466,12 +2627,25 @@ function printHelp(printLine: (value: string) => void): void {
   printLine('  registered-agent-operations-plan');
   printLine('  mcp-server');
   printLine('  industry-universe-execution --input ...');
+  printLine('  create-lease --agent-id ... --input ...');
+  printLine('  create-task-dispatch --agent-id ... --input ...');
+  printLine('  assign-task-dispatch --agent-id ... --task-dispatch-id ... --input ...');
+  printLine('  suspend-task-dispatch --agent-id ... --task-dispatch-id ... --input ...');
+  printLine('  resume-task-dispatch --agent-id ... --task-dispatch-id ... --input ...');
+  printLine('  complete-task-dispatch --agent-id ... --task-dispatch-id ... --input ...');
+  printLine('  fail-task-dispatch --agent-id ... --task-dispatch-id ... --input ...');
+  printLine('  create-claim --agent-id ... --input ...');
+  printLine('  accept-claim --agent-id ... --claim-id ... --input ...');
+  printLine('  reject-claim --agent-id ... --claim-id ... --input ...');
   printLine('  heartbeat [--dry-run]');
   printLine('  sync-upload [--dry-run]');
   printLine('  evidence [--dry-run]');
   printLine('  proposal [--dry-run]');
   printLine('Diagnostics:');
   printLine('  environment-mode');
+  printLine('  install-integrity');
+  printLine('  validation-smoke');
+  printLine('  diagnostic-bundle-export --output ...');
   printLine('  runtime-capabilities');
   printLine('  launch-topology-smoke');
   printLine('  server-capabilities');
@@ -2504,6 +2678,7 @@ function buildOperatorDiscoverySnapshot() {
     command: 'operator-discovery',
     scope: 'local-only',
     cli: {
+      localDiagnostics: buildLocalDiagnosticCommandCatalog(),
       routeCapabilities: buildLocalRouteCapabilityCatalog(),
       planeAdoption: planeAdoption.map((status): BidviaCorePlaneAdoptionStatus => ({
         ...status,
@@ -2726,6 +2901,45 @@ export async function runCli(
     return 0;
   }
 
+  if (command === 'install-integrity') {
+    dependencies.printJson(buildInstallIntegritySnapshot());
+    return 0;
+  }
+
+  if (command === 'validation-smoke') {
+    const localStateResult = await readCliLocalOnboardingState(dependencies);
+    dependencies.printJson(buildValidationSmokeSnapshot({
+      env: dependencies.resolveProcessEnv(),
+      localOnboardingState: localStateResult.state,
+    }));
+    return 0;
+  }
+
+  if (command === 'diagnostic-bundle-export') {
+    const outputPath = parsedArgs.flagValues['--output'];
+    if (!outputPath) {
+      return printStructuredFailure(
+        dependencies,
+        buildStructuredFailure(
+          command,
+          'invalid-input',
+          'Missing required --output for diagnostic-bundle-export.',
+          {
+            details: ['--output'],
+          },
+        ),
+      );
+    }
+
+    const localStateResult = await readCliLocalOnboardingState(dependencies);
+    const report = await exportDiagnosticBundle(outputPath, {
+      env: dependencies.resolveProcessEnv(),
+      localOnboardingState: localStateResult.state,
+    });
+    dependencies.printJson(report);
+    return 0;
+  }
+
   if (command === 'runtime-capabilities') {
     dependencies.printJson(buildLocalRuntimeCapabilitySnapshot({
       explicitBaseUrl: dependencies.resolveBaseUrl(),
@@ -2846,6 +3060,73 @@ export async function runCli(
   if (command === 'mcp-server') {
     dependencies.runLocalMcpServer();
     return 0;
+  }
+
+  const taskPlaneWriteCommand = taskPlaneWriteCommandDefinitions[
+    command as BidviaCliTaskPlaneWriteCommand
+  ];
+  if (taskPlaneWriteCommand) {
+    const env = dependencies.resolveProcessEnv();
+    const localStateResult = await readCliLocalOnboardingState(dependencies);
+    const localState = localStateResult.state;
+    const baseExecutionContext = dependencies.resolveExecutionContext();
+    const executionContext = {
+      tenantId: baseExecutionContext.tenantId ?? localState?.tenantId,
+      principalId: baseExecutionContext.principalId ?? localState?.principalId,
+      companyId: baseExecutionContext.companyId ?? localState?.companyId,
+      registrationId: baseExecutionContext.registrationId ?? localState?.registrationId,
+      sessionId: baseExecutionContext.sessionId ?? localState?.sessionId,
+      adminSessionId: baseExecutionContext.adminSessionId,
+      principalType: baseExecutionContext.principalType,
+      authorizedRole: baseExecutionContext.authorizedRole,
+    };
+    const requiredContext = taskPlaneWriteRequiredContextByCommand[
+      command as BidviaCliTaskPlaneWriteCommand
+    ];
+    const missingContext = requiredContext.filter((contextKey) => !executionContext[contextKey]);
+
+    if (missingContext.length > 0) {
+      return printStructuredFailure(
+        dependencies,
+        buildStructuredFailure(
+          command,
+          'missing-context',
+          buildCliMissingContextMessage(command, missingContext),
+        ),
+      );
+    }
+
+    try {
+      const client = dependencies.createClient(env, executionContext);
+      const result = await taskPlaneWriteCommand.run(client, parsedArgs);
+      dependencies.printJson(result);
+      return 0;
+    } catch (error) {
+      if (error instanceof Error && !(error instanceof BidviaClientTransportError)) {
+        return printStructuredFailure(
+          dependencies,
+          buildStructuredFailure(
+            command,
+            'invalid-input',
+            error.message,
+          ),
+        );
+      }
+
+      const normalizedFailure = normalizeOnboardingActionTransportFailure(error);
+      return printStructuredFailure(
+        dependencies,
+        buildStructuredFailure(
+          command,
+          'transport-error',
+          normalizedFailure.message,
+          {
+            details: [normalizedFailure.transport.name],
+            transport: normalizedFailure.transport,
+          },
+        ),
+      );
+    }
   }
 
   if (command === 'route-context-matrix') {

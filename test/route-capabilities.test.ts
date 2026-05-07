@@ -136,6 +136,25 @@ test('capability registry gives every shipped route complete local tier and risk
   );
 });
 
+test('route capabilities freeze the approved task-plane CLI parity helper set as already-shipped execution surfaces', () => {
+  for (const helperKey of [
+    'createLease',
+    'createTaskDispatch',
+    'assignTaskDispatch',
+    'suspendTaskDispatch',
+    'resumeTaskDispatch',
+    'completeTaskDispatch',
+    'failTaskDispatch',
+    'createClaim',
+    'acceptClaim',
+    'rejectClaim',
+  ] as const) {
+    const capability = getRouteCapability(helperKey);
+    assert.ok(capability, `expected route capability for ${helperKey}`);
+    assert.equal(capability?.scope, 'write');
+  }
+});
+
 test('capability plane view keeps capability discovery descriptive-only until packet-complete core truth exists', () => {
   const capabilityPlane = buildCapabilityPlaneView();
 

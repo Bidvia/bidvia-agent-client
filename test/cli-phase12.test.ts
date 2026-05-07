@@ -68,12 +68,25 @@ test('runCli prints grouped help output for the learn, create-claim, run, diagno
     '  registered-agent-operations-plan',
     '  mcp-server',
     '  industry-universe-execution --input ...',
+    '  create-lease --agent-id ... --input ...',
+    '  create-task-dispatch --agent-id ... --input ...',
+    '  assign-task-dispatch --agent-id ... --task-dispatch-id ... --input ...',
+    '  suspend-task-dispatch --agent-id ... --task-dispatch-id ... --input ...',
+    '  resume-task-dispatch --agent-id ... --task-dispatch-id ... --input ...',
+    '  complete-task-dispatch --agent-id ... --task-dispatch-id ... --input ...',
+    '  fail-task-dispatch --agent-id ... --task-dispatch-id ... --input ...',
+    '  create-claim --agent-id ... --input ...',
+    '  accept-claim --agent-id ... --claim-id ... --input ...',
+    '  reject-claim --agent-id ... --claim-id ... --input ...',
     '  heartbeat [--dry-run]',
     '  sync-upload [--dry-run]',
     '  evidence [--dry-run]',
     '  proposal [--dry-run]',
     'Diagnostics:',
     '  environment-mode',
+    '  install-integrity',
+    '  validation-smoke',
+    '  diagnostic-bundle-export --output ...',
     '  runtime-capabilities',
     '  launch-topology-smoke',
     '  server-capabilities',
@@ -146,6 +159,20 @@ test('runCli prints grouped help output for the learn, create-claim, run, diagno
     '  verification-bundle-preview [--input registration-lifecycle|registered-agent-operations]',
     '  verification-bundle-export [--input registration-lifecycle|registered-agent-operations]',
   ]);
+  for (const command of [
+    '  create-lease --agent-id ... --input ...',
+    '  create-task-dispatch --agent-id ... --input ...',
+    '  assign-task-dispatch --agent-id ... --task-dispatch-id ... --input ...',
+    '  suspend-task-dispatch --agent-id ... --task-dispatch-id ... --input ...',
+    '  resume-task-dispatch --agent-id ... --task-dispatch-id ... --input ...',
+    '  complete-task-dispatch --agent-id ... --task-dispatch-id ... --input ...',
+    '  fail-task-dispatch --agent-id ... --task-dispatch-id ... --input ...',
+    '  create-claim --agent-id ... --input ...',
+    '  accept-claim --agent-id ... --claim-id ... --input ...',
+    '  reject-claim --agent-id ... --claim-id ... --input ...',
+  ]) {
+    assert.equal(lines.includes(command), true);
+  }
 });
 
 test('runCli prints operator discovery snapshots for CLI route metadata and local MCP packaging', async () => {
@@ -167,6 +194,7 @@ test('runCli prints operator discovery snapshots for CLI route metadata and loca
     scope: string;
       cli: {
         routeCapabilities: Array<{ helperKey: string; routePathTemplate: string; accessContextFamily: string }>;
+        localDiagnostics: Array<{ command: string; scope: string; summary: string }>;
         planeAdoption: Array<{
           plane: string;
           frozenInCore: boolean;
@@ -222,6 +250,23 @@ test('runCli prints operator discovery snapshots for CLI route metadata and loca
   };
   assert.equal(snapshot.command, 'operator-discovery');
   assert.equal(snapshot.scope, 'local-only');
+  assert.deepEqual(snapshot.cli.localDiagnostics, [
+    {
+      command: 'install-integrity',
+      scope: 'local-only',
+      summary: 'Reports the active bidvia binary, local package roots, package version, and likely install-path drift.',
+    },
+    {
+      command: 'validation-smoke',
+      scope: 'local-only',
+      summary: 'Runs a bounded local-first smoke pass over install, environment, runtime capability, server capability, and context diagnostics.',
+    },
+    {
+      command: 'diagnostic-bundle-export',
+      scope: 'local-only',
+      summary: 'Exports the bounded smoke report as machine-readable JSON plus a shareable markdown summary.',
+    },
+  ]);
   assert.deepEqual(snapshot.cli.planeAdoption, [
     {
       plane: 'identity-session',

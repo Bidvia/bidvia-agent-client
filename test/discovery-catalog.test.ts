@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
+  buildLocalDiagnosticCommandCatalog,
   buildLocalDiscoveryCatalog,
   buildLocalMcpProductizationSnapshot,
   buildLocalMcpToolCatalog,
@@ -14,6 +15,38 @@ function requireDiscoveryEntry(helperKey: string) {
   assert.ok(entry, `expected discovery catalog entry for ${helperKey}`);
   return entry;
 }
+
+const approvedTaskPlaneCliParityMatrix = [
+  ['createLease', 'create-lease-execution'],
+  ['createTaskDispatch', 'create-task-dispatch-execution'],
+  ['assignTaskDispatch', 'assign-task-dispatch-execution'],
+  ['suspendTaskDispatch', 'suspend-task-dispatch-execution'],
+  ['resumeTaskDispatch', 'resume-task-dispatch-execution'],
+  ['completeTaskDispatch', 'complete-task-dispatch-execution'],
+  ['failTaskDispatch', 'fail-task-dispatch-execution'],
+  ['createClaim', 'create-claim-execution'],
+  ['acceptClaim', 'accept-claim-execution'],
+  ['rejectClaim', 'reject-claim-execution'],
+] as const;
+
+test('discovery catalog exposes the approved task-plane CLI parity commands alongside their runnable MCP tools', () => {
+  for (const [helperKey, toolName] of approvedTaskPlaneCliParityMatrix) {
+    const entry = requireDiscoveryEntry(helperKey);
+    assert.equal(entry.cliCommands.length, 1, `expected one CLI command for ${helperKey}`);
+    assert.deepEqual(entry.mcpTools, [{ toolName, outputMode: 'execution-result' }]);
+  }
+
+  assert.deepEqual(requireDiscoveryEntry('createLease').cliCommands, ['create-lease']);
+  assert.deepEqual(requireDiscoveryEntry('createTaskDispatch').cliCommands, ['create-task-dispatch']);
+  assert.deepEqual(requireDiscoveryEntry('assignTaskDispatch').cliCommands, ['assign-task-dispatch']);
+  assert.deepEqual(requireDiscoveryEntry('suspendTaskDispatch').cliCommands, ['suspend-task-dispatch']);
+  assert.deepEqual(requireDiscoveryEntry('resumeTaskDispatch').cliCommands, ['resume-task-dispatch']);
+  assert.deepEqual(requireDiscoveryEntry('completeTaskDispatch').cliCommands, ['complete-task-dispatch']);
+  assert.deepEqual(requireDiscoveryEntry('failTaskDispatch').cliCommands, ['fail-task-dispatch']);
+  assert.deepEqual(requireDiscoveryEntry('createClaim').cliCommands, ['create-claim']);
+  assert.deepEqual(requireDiscoveryEntry('acceptClaim').cliCommands, ['accept-claim']);
+  assert.deepEqual(requireDiscoveryEntry('rejectClaim').cliCommands, ['reject-claim']);
+});
 
 test('buildLocalDiscoveryCatalog returns operator-readable local mappings without remote discovery semantics', () => {
   const catalog = buildLocalDiscoveryCatalog();
@@ -391,6 +424,19 @@ test('buildLocalDiscoveryCatalog returns operator-readable local mappings withou
   assert.equal(catalog.some((entry) => entry.helperKey === 'listCanonicalSemanticLineageLinks'), false);
 });
 
+test('discovery catalog freezes the approved task-plane CLI parity candidates with explicit CLI bindings', () => {
+  for (const [helperKey, mcpToolName] of approvedTaskPlaneCliParityMatrix) {
+    const entry = requireDiscoveryEntry(helperKey);
+    assert.equal(entry.cliCommands.length, 1);
+    assert.deepEqual(entry.mcpTools, [
+      {
+        toolName: mcpToolName,
+        outputMode: 'execution-result',
+      },
+    ]);
+  }
+});
+
 test('discovery catalog marks the canonical downstream task consumer routes as account-scoped', () => {
   assert.deepEqual(requireDiscoveryEntry('createTaskDispatch'), {
     helperKey: 'createTaskDispatch',
@@ -410,7 +456,7 @@ test('discovery catalog marks the canonical downstream task consumer routes as a
     runnable: true,
     blockedBy: null,
     taskPlaneCapabilityMode: 'packet-grounded-execution',
-    cliCommands: [],
+    cliCommands: ['create-task-dispatch'],
     mcpTools: [
       {
         toolName: 'create-task-dispatch-execution',
@@ -437,7 +483,7 @@ test('discovery catalog marks the canonical downstream task consumer routes as a
     runnable: true,
     blockedBy: null,
     taskPlaneCapabilityMode: 'packet-grounded-execution',
-    cliCommands: [],
+    cliCommands: ['create-lease'],
     mcpTools: [
       {
         toolName: 'create-lease-execution',
@@ -881,4 +927,24 @@ test('discovery and MCP productization snapshots stay local-only under the capab
   assert.equal(mcpProductization.serverBoundary.remoteDiscovery, false);
   assert.equal(mcpProductization.serverBoundary.hosted, false);
   assert.equal(mcpProductization.serverBoundary.sourceOfTruth, 'local-sdk-helpers');
+});
+
+test('buildLocalDiagnosticCommandCatalog exposes install-integrity as an explicit local-only diagnostic surface', () => {
+  assert.deepEqual(buildLocalDiagnosticCommandCatalog(), [
+    {
+      command: 'install-integrity',
+      scope: 'local-only',
+      summary: 'Reports the active bidvia binary, local package roots, package version, and likely install-path drift.',
+    },
+    {
+      command: 'validation-smoke',
+      scope: 'local-only',
+      summary: 'Runs a bounded local-first smoke pass over install, environment, runtime capability, server capability, and context diagnostics.',
+    },
+    {
+      command: 'diagnostic-bundle-export',
+      scope: 'local-only',
+      summary: 'Exports the bounded smoke report as machine-readable JSON plus a shareable markdown summary.',
+    },
+  ]);
 });

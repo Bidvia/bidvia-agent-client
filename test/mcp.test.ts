@@ -121,6 +121,19 @@ const expectedBidviaMcpToolNames = [
 
 const expectedBidviaReadToolNames = expectedBidviaMcpToolNames.filter((toolName) => toolName.endsWith('-read'));
 
+const approvedTaskPlaneCliParityToolNames = [
+  'create-lease-execution',
+  'create-task-dispatch-execution',
+  'assign-task-dispatch-execution',
+  'suspend-task-dispatch-execution',
+  'resume-task-dispatch-execution',
+  'complete-task-dispatch-execution',
+  'fail-task-dispatch-execution',
+  'create-claim-execution',
+  'accept-claim-execution',
+  'reject-claim-execution',
+] as const;
+
 const dispatchMcpToolCallWithExecution = dispatchMcpToolCall as unknown as (
   request: BidviaMcpToolCallRequest,
   dependencies?: {
@@ -216,6 +229,12 @@ test('MCP tool catalog gives every shipped tool complete local tier and risk met
     bidviaMcpTools.every((tool) => Array.isArray((tool as BidviaMcpDescriptorWithContext).requiredContext)),
     true,
   );
+});
+
+test('MCP tool catalog freezes the approved task-plane CLI parity execution surfaces', () => {
+  for (const toolName of approvedTaskPlaneCliParityToolNames) {
+    assert.equal(bidviaMcpTools.some((tool) => tool.toolName === toolName), true);
+  }
 });
 
 test('MCP tool catalog covers the current bounded preview, truth-fetch, export, and local execution slices only', () => {

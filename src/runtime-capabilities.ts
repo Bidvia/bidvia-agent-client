@@ -6,6 +6,7 @@ import {
   listCorePlaneAdoptionStatuses,
 } from './core-plane-adoption.js';
 import {
+  buildLocalDiagnosticCommandCatalog,
   buildLocalMcpToolCatalog,
   buildLocalRouteCapabilityCatalog,
 } from './discovery-catalog.js';
@@ -24,6 +25,7 @@ export function buildLocalRuntimeCapabilitySnapshot(
 
   return {
     ...snapshot,
+    localDiagnostics: buildLocalDiagnosticCommandCatalog(),
     planeAdoption,
     stage3ReleaseGate,
     executionGuidance: buildExecutionGuidanceEntries(),

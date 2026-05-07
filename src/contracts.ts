@@ -1471,11 +1471,131 @@ export interface BidviaLocalMcpServerAvailability extends BidviaLocalCapabilityS
   supportedMethods: BidviaMcpServerSupportedMethod[];
 }
 
+export interface BidviaLocalDiagnosticCommandDescriptor {
+  command: 'install-integrity' | 'validation-smoke' | 'diagnostic-bundle-export';
+  scope: 'local-only';
+  summary: string;
+}
+
 export interface BidviaDeferredServerCapabilityNegotiation
   extends BidviaLocalCapabilitySnapshotMetadata {
   source: 'deferred-server-negotiation';
   status: 'deferred';
   serverProvidedCapabilitiesKnown: false;
+}
+
+export const bidviaClientToolingBlockerKinds = [
+  'install-path-mismatch',
+  'missing-context',
+  'transport-failure',
+  'returned-bounded-stop',
+  'unsupported-or-deferred-surface',
+] as const;
+
+export type BidviaClientToolingBlockerKind = (typeof bidviaClientToolingBlockerKinds)[number];
+
+export interface BidviaInstallIntegrityReport {
+  command: 'install-integrity';
+  scope: 'local-only';
+  activeExecutablePath: string;
+  resolvedPackageRoot: string | null;
+  resolvedDistRoot: string | null;
+  packageName: '@bidvia/client';
+  packageVersion: string | null;
+  pathDriftDetected: boolean;
+  driftSignals: string[];
+  blockerKind: BidviaClientToolingBlockerKind | null;
+  recommendedNextStep: string | null;
+}
+
+export interface BidviaValidationSmokeCheck {
+  checkKey:
+    | 'install-integrity'
+    | 'environment-mode'
+    | 'launch-topology-smoke'
+    | 'runtime-capabilities'
+    | 'server-capabilities'
+    | 'context-availability';
+  status: 'passed' | 'blocked' | 'failed';
+  blockerKind: BidviaClientToolingBlockerKind | null;
+  summary: string;
+}
+
+export interface BidviaValidationSmokeReport {
+  command: 'validation-smoke';
+  scope: 'local-only';
+  installIntegrity: BidviaInstallIntegrityReport;
+  environment: {
+    baseUrl: string;
+    environmentMode: 'local' | 'sim' | 'production';
+  };
+  contextAvailability: {
+    tenantIdPresent: boolean;
+    sessionIdPresent: boolean;
+    principalIdPresent: boolean;
+    adminSessionIdPresent: boolean;
+  };
+  checks: BidviaValidationSmokeCheck[];
+  summary: {
+    passedCount: number;
+    blockedCount: number;
+    failedCount: number;
+  };
+}
+
+export interface BidviaDiagnosticBundleReport {
+  command: 'diagnostic-bundle-export';
+  scope: 'local-only';
+  outputPath: string;
+  writtenFiles: string[];
+  summaryFormat: 'markdown';
+  smokeReport: BidviaValidationSmokeReport;
+}
+
+function cloneInstallIntegrityReport(report: BidviaInstallIntegrityReport): BidviaInstallIntegrityReport {
+  return {
+    ...report,
+    driftSignals: [...report.driftSignals],
+  };
+}
+
+function cloneValidationSmokeCheck(check: BidviaValidationSmokeCheck): BidviaValidationSmokeCheck {
+  return {
+    ...check,
+  };
+}
+
+function cloneValidationSmokeReport(report: BidviaValidationSmokeReport): BidviaValidationSmokeReport {
+  return {
+    ...report,
+    installIntegrity: cloneInstallIntegrityReport(report.installIntegrity),
+    environment: {
+      ...report.environment,
+    },
+    contextAvailability: {
+      ...report.contextAvailability,
+    },
+    checks: report.checks.map(cloneValidationSmokeCheck),
+    summary: {
+      ...report.summary,
+    },
+  };
+}
+
+export function buildInstallIntegrityReport(report: BidviaInstallIntegrityReport): BidviaInstallIntegrityReport {
+  return cloneInstallIntegrityReport(report);
+}
+
+export function buildValidationSmokeReport(report: BidviaValidationSmokeReport): BidviaValidationSmokeReport {
+  return cloneValidationSmokeReport(report);
+}
+
+export function buildDiagnosticBundleReport(report: BidviaDiagnosticBundleReport): BidviaDiagnosticBundleReport {
+  return {
+    ...report,
+    writtenFiles: [...report.writtenFiles],
+    smokeReport: cloneValidationSmokeReport(report.smokeReport),
+  };
 }
 
 export interface BidviaExecutionGuidanceEntry {
@@ -1587,6 +1707,7 @@ export interface BidviaAgentLifecycleGuidance {
 export interface BidviaLocalRuntimeCapabilitySnapshot {
   baseUrl: string;
   environmentMode: BidviaEnvironmentMode;
+  localDiagnostics: BidviaLocalDiagnosticCommandDescriptor[];
   routeCapabilities: BidviaLocalRouteCapabilityKnowledge;
   mcpTools: BidviaLocalMcpToolKnowledge;
   localMcpServer: BidviaLocalMcpServerAvailability;

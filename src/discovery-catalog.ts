@@ -1,4 +1,5 @@
 import type {
+  BidviaLocalDiagnosticCommandDescriptor,
   BidviaEnterpriseIntegrationPlaneHelperGroup,
   BidviaMcpToolDescriptor,
   BidviaMcpToolOutputMode,
@@ -13,6 +14,24 @@ import { getPlaneExecutionGate } from './plane-execution-gate.js';
 type BidviaLocalDiscoveryKind = 'read' | 'review-safe' | 'execute' | 'blocked';
 
 type BidviaLocalDiscoveryRecommendedOutputMode = BidviaMcpToolOutputMode;
+
+const localDiagnosticCommandCatalog: readonly BidviaLocalDiagnosticCommandDescriptor[] = [
+  {
+    command: 'install-integrity',
+    scope: 'local-only',
+    summary: 'Reports the active bidvia binary, local package roots, package version, and likely install-path drift.',
+  },
+  {
+    command: 'validation-smoke',
+    scope: 'local-only',
+    summary: 'Runs a bounded local-first smoke pass over install, environment, runtime capability, server capability, and context diagnostics.',
+  },
+  {
+    command: 'diagnostic-bundle-export',
+    scope: 'local-only',
+    summary: 'Exports the bounded smoke report as machine-readable JSON plus a shareable markdown summary.',
+  },
+] as const;
 
 type BidviaLocalDiscoveryCliBinding = {
   command: string;
@@ -133,6 +152,16 @@ const localCliBindings: readonly BidviaLocalDiscoveryCliBinding[] = [
   { command: 'account-agent-authorization-refresh', helperKey: 'refreshAccountAgentAuthorization', recommendedOutputMode: 'execution-result' },
   { command: 'account-agent-external-binding', helperKey: 'createAccountAgentExternalBinding', recommendedOutputMode: 'execution-result' },
   { command: 'operator-dispatch-authority-decision', helperKey: 'decideDispatchAuthorityRequest', recommendedOutputMode: 'execution-result' },
+  { command: 'create-lease', helperKey: 'createLease', recommendedOutputMode: 'execution-result' },
+  { command: 'create-task-dispatch', helperKey: 'createTaskDispatch', recommendedOutputMode: 'execution-result' },
+  { command: 'assign-task-dispatch', helperKey: 'assignTaskDispatch', recommendedOutputMode: 'execution-result' },
+  { command: 'suspend-task-dispatch', helperKey: 'suspendTaskDispatch', recommendedOutputMode: 'execution-result' },
+  { command: 'resume-task-dispatch', helperKey: 'resumeTaskDispatch', recommendedOutputMode: 'execution-result' },
+  { command: 'complete-task-dispatch', helperKey: 'completeTaskDispatch', recommendedOutputMode: 'execution-result' },
+  { command: 'fail-task-dispatch', helperKey: 'failTaskDispatch', recommendedOutputMode: 'execution-result' },
+  { command: 'create-claim', helperKey: 'createClaim', recommendedOutputMode: 'execution-result' },
+  { command: 'accept-claim', helperKey: 'acceptClaim', recommendedOutputMode: 'execution-result' },
+  { command: 'reject-claim', helperKey: 'rejectClaim', recommendedOutputMode: 'execution-result' },
   { command: 'governed-work-closure', helperKey: 'getAccountAgentGovernedWorkClosure', recommendedOutputMode: 'truth-fetch-result' },
   { command: 'connection-approval-plan', helperKey: 'buildConnectionApprovalScenarioPlan', recommendedOutputMode: 'plan-preview' },
   { command: 'connection-approval-review-packet-preview', helperKey: 'buildConnectionApprovalScenarioPlan', recommendedOutputMode: 'review-packet-preview' },
@@ -947,6 +976,12 @@ function createLocalMcpToolDescriptor(binding: BidviaLocalDiscoveryMcpBinding): 
 
 export function buildLocalRouteCapabilityCatalog(): BidviaRouteCapability[] {
   return exportRouteCapabilityCatalog();
+}
+
+export function buildLocalDiagnosticCommandCatalog(): BidviaLocalDiagnosticCommandDescriptor[] {
+  return localDiagnosticCommandCatalog.map((entry) => ({
+    ...entry,
+  }));
 }
 
 export function getRouteCapabilityFromLocalCatalog(helperKey: string): BidviaRouteCapability | undefined {
