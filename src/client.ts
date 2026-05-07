@@ -1130,7 +1130,7 @@ export class BidviaClient implements BidviaTaskRuntimeClientPort {
       {
         context,
         method: 'POST',
-        headers: this.requireOperatorActionHeaders(context),
+        headers: this.requireOperatorGovernanceWriteHeaders(context),
         body: {
           principal_ref: input.principalRef,
           tenant_scope: input.tenantScope,
@@ -1155,7 +1155,7 @@ export class BidviaClient implements BidviaTaskRuntimeClientPort {
       {
         context,
         method: 'POST',
-        headers: this.requireOperatorActionHeaders(context),
+        headers: this.requireOperatorGovernanceWriteHeaders(context),
         body: {
           authority_rung: input.authorityRung,
           granted_action_scopes: input.grantedActionScopes,
@@ -1179,7 +1179,7 @@ export class BidviaClient implements BidviaTaskRuntimeClientPort {
       {
         context,
         method: 'POST',
-        headers: this.requireOperatorActionHeaders(context),
+        headers: this.requireOperatorGovernanceWriteHeaders(context),
         body: {
           domain_strengths: input.domainStrengths,
           template_domains: input.templateDomains,
@@ -1218,7 +1218,7 @@ export class BidviaClient implements BidviaTaskRuntimeClientPort {
     return this.request(this.agentRuntimePath(agentRegistrationId, '/participation-states', context), {
       context,
       method: 'POST',
-      headers: this.requireOperatorActionHeaders(context),
+      headers: this.requireOperatorGovernanceWriteHeaders(context),
       body: buildTaskPlaneParticipationStateBody(input),
       requestPolicy,
     });
@@ -2436,6 +2436,15 @@ export class BidviaClient implements BidviaTaskRuntimeClientPort {
       'x-bidvia-principal-id': principalId,
       'x-authorized-company-id': companyId,
     });
+  }
+
+  private requireOperatorGovernanceWriteHeaders(context: BidviaClientContext) {
+    return {
+      ...this.requireOperatorActionHeaders(context),
+      ...(context.adminSessionId === undefined
+        ? {}
+        : { 'x-bidvia-admin-session-id': context.adminSessionId }),
+    };
   }
 
   private requireAccountTaskPlaneWriteHeaders(context: BidviaClientContext) {

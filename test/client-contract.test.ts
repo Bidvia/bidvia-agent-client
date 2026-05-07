@@ -319,6 +319,7 @@ test('BidviaClient supports frozen governance write wrappers under principal-gov
       principalType: 'operator',
       authorizedRole: 'admin',
       companyId: 'company-a',
+      adminSessionId: 'admin-sess-1',
     },
     fetchImpl: fetchStub,
   });
@@ -360,8 +361,11 @@ test('BidviaClient supports frozen governance write wrappers under principal-gov
   assert.equal((calls[0]?.init?.headers as Record<string, string>)['x-authorized-tenant-id'], 'tenant-a');
   assert.equal((calls[0]?.init?.headers as Record<string, string>)['x-bidvia-principal-id'], 'actor-1');
   assert.equal((calls[0]?.init?.headers as Record<string, string>)['x-authorized-company-id'], 'company-a');
+  assert.equal((calls[0]?.init?.headers as Record<string, string>)['x-bidvia-admin-session-id'], 'admin-sess-1');
   assert.equal((calls[0]?.init?.headers as Record<string, string>)['x-bidvia-principal-type'], 'operator');
   assert.equal((calls[0]?.init?.headers as Record<string, string>)['x-authorized-role'], 'admin');
+  assert.equal((calls[1]?.init?.headers as Record<string, string>)['x-bidvia-admin-session-id'], 'admin-sess-1');
+  assert.equal((calls[2]?.init?.headers as Record<string, string>)['x-bidvia-admin-session-id'], 'admin-sess-1');
   assert.equal((calls[1]?.init?.headers as Record<string, string>)['x-bidvia-principal-type'], 'operator');
   assert.equal((calls[1]?.init?.headers as Record<string, string>)['x-authorized-role'], 'admin');
   assert.equal((calls[2]?.init?.headers as Record<string, string>)['x-bidvia-principal-type'], 'operator');
