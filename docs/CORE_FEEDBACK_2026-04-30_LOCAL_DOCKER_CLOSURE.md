@@ -74,12 +74,10 @@ This rerun proved the following bounded live chain on the ordinary surfaced lane
 7. claimant external-account binding succeeded;
 8. claimant self-service repair succeeded after aligning the capability-profile write payload to the current Core wire contract;
 9. the active installed `bidvia` command path was refreshed and then successfully replayed the claimant self-service repair using camelCase `capabilityProfile` input while the client handled the nested Core wire-format translation;
-10. final claimant dispatch-authority readback returned:
-   - `dispatch_eligibility.allowed = true`
-   - `dispatch_eligibility.state = eligible`
-   - `dispatch_eligibility.readiness_state = active`
-   - `recommended_next_step = dispatch_ready`
-   - `next_step_kind = dispatch_authorized`
+10. account-owned execution listing create/activate and materialization-status readback succeeded;
+11. account integration capability-directory and bounded eligibility readback succeeded;
+12. bounded public proof-reading routes (`public/market`, `public/universe`, `public/universe/network-summary`, `public/platform-stats`) succeeded;
+13. seeded V10 proof-lane readback succeeded with admin-session-backed seeded inputs and returned an explicit package/proof continuity snapshot.
 
 One environment-specific issue was also observed and recovered during this rerun:
 
@@ -87,9 +85,48 @@ One environment-specific issue was also observed and recovered during this rerun
 - the final active install was realigned by replacing the user-level installed `dist/` tree with the current worktree build output;
 - after that realignment, the installed command path successfully accepted the repaired claimant self-service payload and returned the eligible dispatch-authority readback above.
 
-This means the current local-docker environment now proves more than the earlier blocked harness-only state. It proves fresh admin bootstrap, fresh claimant onboarding, and fresh account-plane dispatch-ready continuation on the ordinary surfaced lane.
+This means the current local-docker environment now proves more than the earlier blocked harness-only state. It proves fresh admin bootstrap, fresh claimant onboarding, bounded account-plane continuation, bounded materialization readback, bounded integration-ownership readback, bounded public proof-reading on the ordinary surfaced lane, and seeded V10 proof-lane readback on the operator/admin lane.
+
+It does **not** currently prove a stable transition from account-plane claimant closure into live task-dispatch execution. The latest local-docker runtime now shows a narrower but more actionable gap:
+
+- claimant self-service writes returned `task_dispatch_acceptance.accepts_task_dispatches = true` in the immediate write response,
+- but later authoritative account-agent, closure-status, and dispatch-authority reads still returned `task_dispatch_opt_in_required`,
+- and a direct `POST /runtime/account/agents/:agentId/task-dispatches` attempt using the currently accepted `task_kind = COMMERCIAL_ACTION_REVIEW` remained blocked with `403 task_dispatch_opt_in_required`.
+
+This is no longer a claimant guesswork problem. It is either:
+
+1. a local-docker runtime projection/persistence defect around task-dispatch acceptance, or
+2. a still-unfrozen semantics gap where the write response and the later authoritative reads are not yet aligned.
+
+The latest main-repo code inspection now strongly favors **(1) Core hard defect** over a claimant-precondition interpretation:
+
+- the claimant self-service handler writes `accepts_task_dispatches` and `accepted_task_dispatch_scopes` onto the registration record,
+- later account-agent detail, dispatch-authority, and task-plane eligibility all read those fields back from the same registration truth snapshot,
+- but the Postgres `agent_registrations` schema and persistence/reload path currently omit those fields entirely.
+
+That explains the exact local-docker symptom we observed:
+
+- self-service write response echoes `task_dispatch_acceptance` successfully,
+- later authoritative reads revert to `task_dispatch_opt_in_required`,
+- `POST /runtime/account/agents/:agentId/task-dispatches` remains blocked even with the currently accepted `task_kind = COMMERCIAL_ACTION_REVIEW`.
+
+So the current most accurate classification is:
+
+- **Core hard defect:** task-dispatch acceptance is not being durably projected/reloaded on the current local-docker runtime.
 
 It still does **not** convert the deeper operator-matching / opportunity-emergence / end-state / proof-closure seam into a certified surfaced loop. Those boundaries remain explicit and fail-closed unless new route-level evidence is collected.
+
+The latest deeper observability probes sharpen that boundary further:
+
+- `GET /runtime/v10/proof-lanes/opportunity-package-handoff` is readable with admin-session-backed seeded proof inputs and returns package/proof continuity state;
+- `GET /runtime/v11/launch-lane-observability` still does **not** open on the current claimant account-plane context and currently remains gated behind additional authorized principal context;
+- there is still no open ordinary-lane `GET /runtime/opportunities` root available on the current local-docker runtime.
+
+So the current honest downstream reading is:
+
+- V10 proof-lane remains a seeded/operator-admin observability seam,
+- V11 launch observability remains a principal/operator-gated seam,
+- neither should be misread as a claimant-owned ordinary continuation route.
 
 ## What is now proven on the ordinary surfaced lane
 
@@ -132,7 +169,7 @@ The following account-owned operational route family is now fresh-proven:
 
 This is important because it narrows the remaining gap. The unresolved problem is no longer “claimant cannot execute at all.”
 
-### 4. Business-entry and minimal dispatch lifecycle are real
+### 4. Business-entry is real, but claimant task-dispatch opening still has a current local-docker gap
 
 The following surfaced business-entry chain is proven:
 
@@ -140,15 +177,19 @@ The following surfaced business-entry chain is proven:
 - listing activate
 - materialization-status readback
 
-The following minimal task/dispatch lifecycle is also proven on fresh objects:
+The following bounded business-entry and materialization readback chain is proven on fresh objects:
 
-- claim create
-- claim accept
-- lease create
-- task-dispatch complete
-- invalid post-complete fail returns the expected `409 invalid_task_dispatch_transition`
+- listing create
+- listing activate
+- materialization-status readback
 
-This proves bounded task closure and bounded object lifecycle truth.
+The current local-docker rerun does **not** freshly prove the claimant-opened task-dispatch chain. The latest direct attempt to open a dispatch with the currently accepted `task_kind = COMMERCIAL_ACTION_REVIEW` remained blocked by `403 task_dispatch_opt_in_required` even after self-service task-dispatch acceptance writes were echoed as successful.
+
+So the current honest reading is:
+
+- bounded business entry is proven,
+- bounded task closure remains proven by the older certification packet and route tests,
+- but fresh claimant-opened task-dispatch creation in the current local-docker runtime still has a concrete follow-up gap that should be treated as a Core-side projection/persistence issue until disproven.
 
 ### 5. Public growth readbacks are real but limited in what they prove
 

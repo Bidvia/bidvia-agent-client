@@ -4,21 +4,37 @@
   "baseUrl": "http://127.0.0.1:8787",
   "lane": "default-local-docker",
   "summary": {
-    "status": "bounded-claimant-dispatch-ready-proven",
+    "status": "bounded-claimant-account-plane-closure-proven-with-task-opt-in-gap",
     "notes": [
-      "Fresh local-docker live rerun succeeded through admin invitation issuance, claimant onboarding, provisional claim, dispatch-authority review closure, external binding, self-service repair, and final eligible dispatch-authority readback.",
-      "Deeper commercial-universe continuation beyond dispatch-ready was not exercised in this rerun."
+      "Fresh local-docker live rerun succeeded through admin invitation issuance, claimant onboarding, provisional claim, dispatch-authority review closure, external binding, self-service repair, and bounded advanced readbacks.",
+      "The final local-docker runtime still shows task_dispatch_opt_in_required on authoritative account-plane and task-dispatch write paths even after self-service task-dispatch acceptance writes were echoed back as successful."
     ]
   },
   "runtime": {
     "healthz": {
       "status": "ok",
-      "runtime_identity_state": "identity_unset",
+      "version_markers": {
+        "source_main_commit_marker": "79f5bd0",
+        "runtime_reported_version_marker": "79f5bd0",
+        "bootstrap_package_version_marker": "1.0.0",
+        "scenario_package_version_marker": "1.0.0",
+        "review_record_path": "docs/org/review-records/2026-05-06_self_hosted_pg_recovery_review.md"
+      },
+      "runtime_identity_state": "identity_complete",
       "release_closure_state": "terminal-envelope-bounded"
     },
     "readyz": {
       "status": "ready",
-      "readiness_mode": "local-db-minimum"
+      "readiness_mode": "local-db-minimum",
+      "version_markers": {
+        "source_main_commit_marker": "79f5bd0",
+        "runtime_reported_version_marker": "79f5bd0",
+        "bootstrap_package_version_marker": "1.0.0",
+        "scenario_package_version_marker": "1.0.0",
+        "review_record_path": "docs/org/review-records/2026-05-06_self_hosted_pg_recovery_review.md"
+      },
+      "runtime_identity_state": "identity_complete",
+      "release_closure_state": "terminal-envelope-bounded"
     }
   },
   "returnedIds": {
@@ -144,16 +160,101 @@
     },
     {
       "stepKey": "final-dispatch-authority-readback",
-      "status": "passed",
+      "status": "blocked",
       "command": "bidvia account-agent-dispatch-authority",
       "returned": {
         "dispatchEligibility": {
-          "state": "eligible",
-          "allowed": true,
+          "state": "denied",
+          "allowed": false,
           "readiness_state": "active",
-          "recommended_next_step": "dispatch_ready",
-          "next_step_kind": "dispatch_authorized"
+          "recommended_next_step": "complete_task_dispatch_opt_in",
+          "next_step_kind": "self_service_patch"
         }
+      }
+    },
+    {
+      "stepKey": "materialization-spine-readback",
+      "status": "passed",
+      "route": "GET /runtime/account/agents/:agentId/execution/listings/:listingId/materialization-status",
+      "returned": {
+        "materialization_stage": "match_prerequisites_missing",
+        "completion_class": "materialization-blocked",
+        "recommended_next_step": "handoff_to_operator_for_match_repair",
+        "next_step_kind": "handoff_to_operator"
+      }
+    },
+    {
+      "stepKey": "integration-ownership-readback",
+      "status": "passed",
+      "commands": [
+        "bidvia account-integration-capabilities",
+        "bidvia account-agent-integration-eligibility --agent-id ... --integration-code haisi-wms"
+      ],
+      "returned": {
+        "invocation_ownership": "not_owned_by_current_actor",
+        "eligible": false,
+        "readiness_state": "discovered_not_installed",
+        "recommended_next_step": "install_integration_capability"
+      }
+    },
+    {
+      "stepKey": "public-proof-bounded-reading",
+      "status": "passed",
+      "routes": [
+        "GET /runtime/public/market",
+        "GET /runtime/public/universe",
+        "GET /runtime/public/universe/network-summary",
+        "GET /runtime/public/platform-stats"
+      ],
+      "returned": {
+        "proof_boundary": "bounded_public_growth",
+        "terminal_execution_convergence_state": "bounded-terminal-in-progress",
+        "productization_reading": "upper_platform_growth_coherence"
+      }
+    },
+    {
+      "stepKey": "v10-proof-lane-seeded-readback",
+      "status": "passed",
+      "route": "GET /runtime/v10/proof-lanes/opportunity-package-handoff",
+      "returned": {
+        "opportunity_id": "opp-v10-proof-1",
+        "package_id": "pkg-09fad087-5f68-46a8-944b-2f5af50604ff",
+        "continuity_state": "external_handoff_queue_ready",
+        "next_action": "manual_takeover",
+        "provider_proof_state": "not_yet_completed"
+      }
+    },
+    {
+      "stepKey": "v11-launch-observability-readback",
+      "status": "blocked",
+      "route": "GET /runtime/v11/launch-lane-observability",
+      "returned": {
+        "error_code": "principal_context_missing",
+        "claimed_principal_attempt_error": "active_role_binding_required"
+      }
+    },
+    {
+      "stepKey": "task-plane-dispatch-create-attempt",
+      "status": "blocked",
+      "route": "POST /runtime/account/agents/:agentId/task-dispatches",
+      "returned": {
+        "error_code": "task_dispatch_opt_in_required",
+        "task_kind": "COMMERCIAL_ACTION_REVIEW"
+      }
+    },
+    {
+      "stepKey": "governed-read-post-refresh",
+      "status": "blocked",
+      "commands": [
+        "bidvia account-agent-authorization-refresh --agent-id ...",
+        "bidvia agent-readiness --registration-id ...",
+        "bidvia agent-summary --registration-id ..."
+      ],
+      "returned": {
+        "authorization_refresh_surface_status": "governed_runtime_authorization_refreshed",
+        "governed_read_error": "active_role_binding_required",
+        "recommended_next_step": "refresh_authorization_context",
+        "next_step_kind": "org_context_authorization_refresh"
       }
     }
   ],
@@ -165,6 +266,18 @@
     {
       "kind": "user-level-installed-cli-prefix-divergence-recovered",
       "details": "The active user-level bidvia path initially remained stale after npm reinstall because the actual command path and npm global prefix diverged. The active install was ultimately realigned by replacing the user-level installed dist tree with the current worktree build output."
+    },
+    {
+      "kind": "core-task-dispatch-opt-in-projection-gap",
+      "details": "The local-docker runtime echoed claimant self-service task_dispatch_acceptance writes as successful, but later authoritative account-agent, closure-status, and dispatch-authority reads still reported task_dispatch_opt_in_required, and direct task-dispatch creation remained blocked with the same code. Latest Bidvia main-repo code inspection shows the self-service write path updates accepts_task_dispatches / accepted_task_dispatch_scopes on the in-memory registration, but the Postgres persistence and reload path for agent_registrations omits those fields entirely, which is consistent with a Core hard defect in persistence/reconstruction rather than an unmet claimant precondition."
+    },
+    {
+      "kind": "core-governed-read-projection-still-blocked-after-refresh",
+      "details": "Authorization refresh succeeded on the account-owned plane, but governed reads such as agent-readiness and agent-summary still returned active_role_binding_required in the current local-docker runtime."
+    },
+    {
+      "kind": "proof-lane-and-launch-observability-remain-gated",
+      "details": "The seeded V10 proof-lane route is readable with admin-session-backed seeded inputs, but V11 launch observability still requires an additional authorized principal context and does not open on the current claimant account-plane context. This confirms those deeper reads remain bounded/operator-principal surfaces rather than ordinary claimant continuation reads."
     }
   ]
 }
