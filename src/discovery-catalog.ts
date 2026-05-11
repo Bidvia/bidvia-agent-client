@@ -4,6 +4,7 @@ import type {
   BidviaMcpToolDescriptor,
   BidviaMcpToolOutputMode,
   BidviaPlaneExecutionGate,
+  BidviaRoleStageSemanticMetadata,
   BidviaRouteCapability,
 } from './contracts.js';
 import { buildCapabilityPlaneDiscoveryBoundary } from './capability-plane.js';
@@ -66,6 +67,15 @@ export interface BidviaLocalDiscoveryCatalogEntry extends Pick<
   | 'taskPlaneCapabilityMode'
   | 'eventNotificationPlaneCapabilityMode'
 > {
+  role?: BidviaRoleStageSemanticMetadata['role'];
+  stage?: BidviaRoleStageSemanticMetadata['stage'];
+  executability?: BidviaRoleStageSemanticMetadata['executability'];
+  ownershipClass?: BidviaRoleStageSemanticMetadata['ownershipClass'];
+  handoffClass?: BidviaRoleStageSemanticMetadata['handoffClass'];
+  canonicality?: BidviaRoleStageSemanticMetadata['canonicality'];
+  mayContinueHere?: boolean;
+  mayReadHere?: boolean;
+  mayNotDecideHere?: boolean;
   discoveryKind: BidviaLocalDiscoveryKind;
   recommendedOutputMode: BidviaLocalDiscoveryRecommendedOutputMode;
   sourceOfTruth: 'local-sdk-helpers';
@@ -98,6 +108,190 @@ export interface BidviaLocalMcpProductizationSnapshot {
     executionRequiresLocalExecutionClient: true;
   };
   tools: BidviaMcpOperatorToolDiscovery[];
+}
+
+
+const roleStageSemanticsByHelperKey: Readonly<Record<string, BidviaRoleStageSemanticMetadata>> = {
+  inspectClaimantPrecondition: {
+    role: 'claimant',
+    stage: 'entry',
+    executability: 'bounded-stop',
+    ownershipClass: 'claimant-entry',
+    handoffClass: 'none',
+    canonicality: 'bounded',
+    mayContinueHere: false,
+    mayReadHere: true,
+    mayNotDecideHere: true,
+  },
+  establishClaimantCanonicalCompanyPublicPrecondition: {
+    role: 'claimant',
+    stage: 'entry',
+    executability: 'canonical',
+    ownershipClass: 'claimant-entry',
+    handoffClass: 'none',
+    canonicality: 'canonical',
+    mayContinueHere: true,
+    mayReadHere: false,
+    mayNotDecideHere: false,
+  },
+  inspectClaimantReadiness: {
+    role: 'claimant',
+    stage: 'readiness',
+    executability: 'canonical',
+    ownershipClass: 'claimant-self-repair',
+    handoffClass: 'none',
+    canonicality: 'canonical',
+    mayContinueHere: false,
+    mayReadHere: true,
+    mayNotDecideHere: true,
+  },
+  repairClaimantReadiness: {
+    role: 'claimant',
+    stage: 'readiness',
+    executability: 'canonical',
+    ownershipClass: 'claimant-self-repair',
+    handoffClass: 'none',
+    canonicality: 'canonical',
+    mayContinueHere: true,
+    mayReadHere: false,
+    mayNotDecideHere: false,
+  },
+  runClaimantTaskEntry: {
+    role: 'claimant',
+    stage: 'task-entry',
+    executability: 'canonical',
+    ownershipClass: 'claimant-task-entry',
+    handoffClass: 'none',
+    canonicality: 'canonical',
+    mayContinueHere: true,
+    mayReadHere: false,
+    mayNotDecideHere: false,
+  },
+  inspectClaimantHandoff: {
+    role: 'claimant',
+    stage: 'handoff',
+    executability: 'executable-handoff',
+    ownershipClass: 'claimant-to-operator',
+    handoffClass: 'canonical-bridge',
+    canonicality: 'canonical',
+    mayContinueHere: false,
+    mayReadHere: true,
+    mayNotDecideHere: true,
+  },
+  consumeOperatorHandoff: {
+    role: 'operator',
+    stage: 'handoff',
+    executability: 'executable-handoff',
+    ownershipClass: 'operator-owned-progression',
+    handoffClass: 'canonical-bridge',
+    canonicality: 'canonical',
+    mayContinueHere: false,
+    mayReadHere: true,
+    mayNotDecideHere: true,
+  },
+  runOperatorMatching: {
+    role: 'operator',
+    stage: 'progression',
+    executability: 'canonical',
+    ownershipClass: 'operator-owned-progression',
+    handoffClass: 'none',
+    canonicality: 'canonical',
+    mayContinueHere: true,
+    mayReadHere: false,
+    mayNotDecideHere: false,
+  },
+  runOperatorConnectionContinuation: {
+    role: 'operator',
+    stage: 'progression',
+    executability: 'canonical',
+    ownershipClass: 'operator-owned-progression',
+    handoffClass: 'none',
+    canonicality: 'canonical',
+    mayContinueHere: true,
+    mayReadHere: false,
+    mayNotDecideHere: false,
+  },
+  runOperatorApprovalContinuation: {
+    role: 'operator',
+    stage: 'progression',
+    executability: 'canonical',
+    ownershipClass: 'operator-owned-progression',
+    handoffClass: 'none',
+    canonicality: 'canonical',
+    mayContinueHere: true,
+    mayReadHere: false,
+    mayNotDecideHere: false,
+  },
+  runOperatorPackageExport: {
+    role: 'operator',
+    stage: 'progression',
+    executability: 'canonical',
+    ownershipClass: 'operator-owned-progression',
+    handoffClass: 'none',
+    canonicality: 'canonical',
+    mayContinueHere: true,
+    mayReadHere: false,
+    mayNotDecideHere: false,
+  },
+  runOperatorCommercialAction: {
+    role: 'operator',
+    stage: 'closure',
+    executability: 'canonical',
+    ownershipClass: 'operator-owned-closure',
+    handoffClass: 'none',
+    canonicality: 'canonical',
+    mayContinueHere: true,
+    mayReadHere: false,
+    mayNotDecideHere: false,
+  },
+  inspectOperatorCommercialAction: {
+    role: 'operator',
+    stage: 'closure',
+    executability: 'canonical',
+    ownershipClass: 'operator-owned-closure',
+    handoffClass: 'none',
+    canonicality: 'canonical',
+    mayContinueHere: false,
+    mayReadHere: true,
+    mayNotDecideHere: true,
+  },
+  inspectPlatformManagedEntry: {
+    role: 'platform-managed',
+    stage: 'entry',
+    executability: 'later-wave-stop',
+    ownershipClass: 'platform-managed-bounded-entry',
+    handoffClass: 'none',
+    canonicality: 'later-wave',
+    mayContinueHere: false,
+    mayReadHere: true,
+    mayNotDecideHere: true,
+  },
+  inspectPlatformManagedReadiness: {
+    role: 'platform-managed',
+    stage: 'readiness',
+    executability: 'later-wave-stop',
+    ownershipClass: 'platform-managed-bounded-readiness',
+    handoffClass: 'none',
+    canonicality: 'later-wave',
+    mayContinueHere: false,
+    mayReadHere: true,
+    mayNotDecideHere: true,
+  },
+  runPlatformManagedProgression: {
+    role: 'platform-managed',
+    stage: 'progression',
+    executability: 'later-wave-stop',
+    ownershipClass: 'platform-managed-bounded-progression',
+    handoffClass: 'none',
+    canonicality: 'later-wave',
+    mayContinueHere: false,
+    mayReadHere: false,
+    mayNotDecideHere: true,
+  },
+};
+
+function getRoleStageSemantics(helperKey: string): BidviaRoleStageSemanticMetadata | undefined {
+  return roleStageSemanticsByHelperKey[helperKey];
 }
 
 const localCliBindings: readonly BidviaLocalDiscoveryCliBinding[] = [
@@ -169,6 +363,23 @@ const localCliBindings: readonly BidviaLocalDiscoveryCliBinding[] = [
   { command: 'opportunity-package-handoff-plan', helperKey: 'buildOpportunityPackageHandoffPlan', recommendedOutputMode: 'plan-preview' },
   { command: 'opportunity-package-handoff-review-packet-preview', helperKey: 'buildOpportunityPackageHandoffPlan', recommendedOutputMode: 'review-packet-preview' },
   { command: 'opportunity-package-handoff-review-packet-export', helperKey: 'buildOpportunityPackageHandoffPlan', recommendedOutputMode: 'review-packet-export' },
+  { command: 'claimant-precondition-inspect', helperKey: 'inspectClaimantPrecondition', recommendedOutputMode: 'truth-fetch-result' },
+  { command: 'claimant-precondition-establish-canonical-company-public', helperKey: 'establishClaimantCanonicalCompanyPublicPrecondition', recommendedOutputMode: 'execution-result' },
+  { command: 'claimant-readiness-inspect', helperKey: 'inspectClaimantReadiness', recommendedOutputMode: 'truth-fetch-result' },
+  { command: 'claimant-readiness-repair', helperKey: 'repairClaimantReadiness', recommendedOutputMode: 'execution-result' },
+  { command: 'claimant-task-entry-inspect', helperKey: 'inspectClaimantReadiness', recommendedOutputMode: 'truth-fetch-result' },
+  { command: 'claimant-task-entry-run', helperKey: 'runClaimantTaskEntry', recommendedOutputMode: 'execution-result' },
+  { command: 'claimant-handoff-inspect', helperKey: 'inspectClaimantHandoff', recommendedOutputMode: 'truth-fetch-result' },
+  { command: 'operator-handoff-consume', helperKey: 'consumeOperatorHandoff', recommendedOutputMode: 'truth-fetch-result' },
+  { command: 'operator-progression-match', helperKey: 'runOperatorMatching', recommendedOutputMode: 'execution-result' },
+  { command: 'operator-progression-connect', helperKey: 'runOperatorConnectionContinuation', recommendedOutputMode: 'execution-result' },
+  { command: 'operator-progression-approve', helperKey: 'runOperatorApprovalContinuation', recommendedOutputMode: 'execution-result' },
+  { command: 'operator-progression-package-export', helperKey: 'runOperatorPackageExport', recommendedOutputMode: 'execution-result' },
+  { command: 'operator-closure-commercial-action-run', helperKey: 'runOperatorCommercialAction', recommendedOutputMode: 'execution-result' },
+  { command: 'operator-closure-inspect', helperKey: 'inspectOperatorCommercialAction', recommendedOutputMode: 'truth-fetch-result' },
+  { command: 'platform-managed entry inspect', helperKey: 'inspectPlatformManagedEntry', recommendedOutputMode: 'truth-fetch-result' },
+  { command: 'platform-managed readiness inspect', helperKey: 'inspectPlatformManagedReadiness', recommendedOutputMode: 'truth-fetch-result' },
+  { command: 'platform-managed progression run', helperKey: 'runPlatformManagedProgression', recommendedOutputMode: 'execution-result' },
   { command: 'heartbeat', helperKey: 'postHeartbeat', recommendedOutputMode: 'execution-result' },
   { command: 'sync-upload', helperKey: 'uploadSync', recommendedOutputMode: 'execution-result' },
   { command: 'evidence', helperKey: 'submitEvidence', recommendedOutputMode: 'execution-result' },
@@ -239,6 +450,62 @@ const widenedShippedReadMcpBindings: readonly BidviaLocalDiscoveryMcpBinding[] =
     outputMode: 'truth-fetch-result',
     helperKey: 'getAgentReadiness',
     capabilityKey: 'getAgentReadiness',
+  },
+  {
+    toolName: 'claimant-precondition-inspect-read',
+    description: 'Inspects the claimant canonical precondition through the productized claimant facade.',
+    inputSchemaKey: 'BidviaTruthFetchEmptyInput',
+    outputMode: 'truth-fetch-result',
+    helperKey: 'inspectClaimantPrecondition',
+    capabilityKey: 'inspectClaimantPrecondition',
+  },
+  {
+    toolName: 'claimant-readiness-inspect-read',
+    description: 'Inspects claimant readiness through the productized claimant facade.',
+    inputSchemaKey: 'BidviaAccountAgentIdentifierInput',
+    outputMode: 'truth-fetch-result',
+    helperKey: 'inspectClaimantReadiness',
+    capabilityKey: 'inspectClaimantReadiness',
+  },
+  {
+    toolName: 'operator-handoff-consume-read',
+    description: 'Consumes the canonical operator handoff through the operator product facade.',
+    inputSchemaKey: 'BidviaOperatorMatchesListInput',
+    outputMode: 'truth-fetch-result',
+    helperKey: 'consumeOperatorHandoff',
+    capabilityKey: 'consumeOperatorHandoff',
+  },
+  {
+    toolName: 'operator-closure-inspect-read',
+    description: 'Reads operator commercial-action closure status, receipt, and audit through the operator product facade.',
+    inputSchemaKey: 'BidviaOperatorCommercialActionInspectInput',
+    outputMode: 'truth-fetch-result',
+    helperKey: 'inspectOperatorCommercialAction',
+    capabilityKey: 'inspectOperatorCommercialAction',
+  },
+  {
+    toolName: 'platform-managed-entry-inspect-read',
+    description: 'Inspects the bounded platform-managed entry surface through the productized platform-managed facade.',
+    inputSchemaKey: 'BidviaTruthFetchEmptyInput',
+    outputMode: 'truth-fetch-result',
+    helperKey: 'inspectPlatformManagedEntry',
+    capabilityKey: 'inspectPlatformManagedEntry',
+  },
+  {
+    toolName: 'platform-managed-readiness-inspect-read',
+    description: 'Inspects the bounded platform-managed readiness surface through the productized platform-managed facade.',
+    inputSchemaKey: 'BidviaTruthFetchEmptyInput',
+    outputMode: 'truth-fetch-result',
+    helperKey: 'inspectPlatformManagedReadiness',
+    capabilityKey: 'inspectPlatformManagedReadiness',
+  },
+  {
+    toolName: 'claimant-handoff-inspect-read',
+    description: 'Inspects claimant handoff truth through the productized claimant facade.',
+    inputSchemaKey: 'BidviaAccountAgentExecutionListingIdentifierInput',
+    outputMode: 'truth-fetch-result',
+    helperKey: 'inspectClaimantHandoff',
+    capabilityKey: 'inspectClaimantHandoff',
   },
   {
     toolName: 'agent-summary-read',
@@ -434,6 +701,78 @@ const widenedShippedExecutionMcpBindings: readonly BidviaLocalDiscoveryMcpBindin
     outputMode: 'execution-result',
     helperKey: 'account-agent-execution-listing-activate-execution',
     capabilityKey: 'activateAccountAgentExecutionListing',
+  },
+  {
+    toolName: 'claimant-precondition-establish-canonical-company-public-execution',
+    description: 'Establishes the claimant canonical company-public precondition through the productized claimant facade.',
+    inputSchemaKey: 'BidviaClaimantCanonicalPreconditionInput',
+    outputMode: 'execution-result',
+    helperKey: 'establishClaimantCanonicalCompanyPublicPrecondition',
+    capabilityKey: 'establishClaimantCanonicalCompanyPublicPrecondition',
+  },
+  {
+    toolName: 'claimant-readiness-repair-execution',
+    description: 'Repairs claimant readiness through the productized claimant facade.',
+    inputSchemaKey: 'BidviaClaimantReadinessRepairExecutionInput',
+    outputMode: 'execution-result',
+    helperKey: 'repairClaimantReadiness',
+    capabilityKey: 'repairClaimantReadiness',
+  },
+  {
+    toolName: 'operator-progression-match-execution',
+    description: 'Runs operator matching progression through the operator product facade.',
+    inputSchemaKey: 'BidviaOperatorExecutionMatchCandidatesInput',
+    outputMode: 'execution-result',
+    helperKey: 'runOperatorMatching',
+    capabilityKey: 'runOperatorMatching',
+  },
+  {
+    toolName: 'operator-progression-connect-execution',
+    description: 'Runs operator connection progression through the operator product facade.',
+    inputSchemaKey: 'BidviaOperatorConnectionExecutionInput',
+    outputMode: 'execution-result',
+    helperKey: 'runOperatorConnectionContinuation',
+    capabilityKey: 'runOperatorConnectionContinuation',
+  },
+  {
+    toolName: 'operator-progression-approve-execution',
+    description: 'Runs operator approval continuation through the operator product facade.',
+    inputSchemaKey: 'BidviaApproveConnectionRequestInput',
+    outputMode: 'execution-result',
+    helperKey: 'runOperatorApprovalContinuation',
+    capabilityKey: 'runOperatorApprovalContinuation',
+  },
+  {
+    toolName: 'operator-progression-package-export-execution',
+    description: 'Runs operator package export through the operator product facade.',
+    inputSchemaKey: 'BidviaExportOpportunityPackageInput',
+    outputMode: 'execution-result',
+    helperKey: 'runOperatorPackageExport',
+    capabilityKey: 'runOperatorPackageExport',
+  },
+  {
+    toolName: 'operator-closure-commercial-action-run-execution',
+    description: 'Runs operator commercial-action closure through the operator product facade.',
+    inputSchemaKey: 'BidviaCommercialActionScenarioPlanInput',
+    outputMode: 'execution-result',
+    helperKey: 'runOperatorCommercialAction',
+    capabilityKey: 'runOperatorCommercialAction',
+  },
+  {
+    toolName: 'platform-managed-progression-run-execution',
+    description: 'Runs the bounded platform-managed progression surface through the productized platform-managed facade.',
+    inputSchemaKey: 'BidviaTruthFetchEmptyInput',
+    outputMode: 'execution-result',
+    helperKey: 'runPlatformManagedProgression',
+    capabilityKey: 'runPlatformManagedProgression',
+  },
+  {
+    toolName: 'claimant-task-entry-run-execution',
+    description: 'Runs claimant task entry through the productized claimant facade.',
+    inputSchemaKey: 'BidviaTaskDispatchExecutionInput',
+    outputMode: 'execution-result',
+    helperKey: 'runClaimantTaskEntry',
+    capabilityKey: 'runClaimantTaskEntry',
   },
   {
     toolName: 'account-agent-authorization-refresh-execution',
@@ -930,6 +1269,7 @@ function createLocalMcpToolDescriptor(binding: BidviaLocalDiscoveryMcpBinding): 
   const contextSemantic = capability.contextSemantic !== capability.accessContextFamily
     ? capability.contextSemantic
     : undefined;
+  const roleStageSemantics = getRoleStageSemantics(binding.helperKey);
 
   return {
     toolName: binding.toolName,
@@ -971,6 +1311,7 @@ function createLocalMcpToolDescriptor(binding: BidviaLocalDiscoveryMcpBinding): 
     ...(capability.eventNotificationPlaneCapabilityMode === undefined
       ? {}
       : { eventNotificationPlaneCapabilityMode: capability.eventNotificationPlaneCapabilityMode }),
+    ...(roleStageSemantics ?? {}),
   };
 }
 
@@ -1014,6 +1355,7 @@ export function buildLocalDiscoveryCatalog(): BidviaLocalDiscoveryCatalogEntry[]
     const executionDiscoverability = capability.scope === 'read' || capability.localCapabilityRiskTier === 'review-safe'
       ? undefined
       : buildExecutionDiscoverability(capability.helperKey);
+    const roleStageSemantics = getRoleStageSemantics(capability.helperKey);
 
     return {
       helperKey: capability.helperKey,
@@ -1053,6 +1395,7 @@ export function buildLocalDiscoveryCatalog(): BidviaLocalDiscoveryCatalogEntry[]
       ...(capability.eventNotificationPlaneCapabilityMode === undefined
         ? {}
         : { eventNotificationPlaneCapabilityMode: capability.eventNotificationPlaneCapabilityMode }),
+      ...(roleStageSemantics ?? {}),
       cliCommands: cliBindings.map((binding) => binding.command),
       mcpTools: mcpBindings.map((binding) => ({
         toolName: binding.toolName,
