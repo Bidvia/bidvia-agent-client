@@ -35,6 +35,7 @@ The V1 boundary is agent-first but login-capable. Bounded account/session prereq
 ## What this repo owns
 
 - CLI and SDK ergonomics
+- the **product-facing role-stage layer** that groups shipped behavior as `client.claimant.*`, `client.operator.*`, `client.platformManaged.*`, and `client.universe.*` without changing Core-owned truth
 - example implementations
 - local validation helpers
 - bounded account/session prerequisite support commands such as `sign-up-personal`, `sign-up-enterprise`, `sign-in`, `account-me`, `select-org`, `session-refresh`, and `session-revoke`
@@ -145,3 +146,9 @@ Compatibility-only enterprise integration seams:
 - `adminSessionId` is optional on some detail routes, not the primary gate for the widened read family
 - credential-less local or sim probes can prove route wiring, transport behavior, reachability, or auth-guard posture only
 - full governed semantics still require real operator credentials and context
+
+## Product-facing role-stage layer
+
+The product-facing role-stage layer is owned here as an ergonomic shell, not as a source of new platform truth. It exists so agents can use `client.claimant.*`, `client.operator.*`, `client.platformManaged.*`, and `client.universe.*` as the bounded entrypoints, while the underlying Core-owned routes, payloads, and fail-close semantics remain unchanged.
+
+That means the role-stage layer may reorganize already-shipped helpers into outward claimant/operator/platform-managed/universe surfaces, but it must not reinterpret blocked Core truth as success and must not invent platform-managed universality where current truth still says later-wave-stop. For migration from helper-first usage to role-stage product entry, use `docs/AGENT_FIRST_MIGRATION.md`.
