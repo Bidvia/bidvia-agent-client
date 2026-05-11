@@ -114,6 +114,34 @@ import {
 } from './local-onboarding-state.js';
 import { runLocalMcpServerMain } from './mcp-server.js';
 import {
+  establishClaimantCanonicalCompanyPublicPrecondition,
+  inspectClaimantHandoff,
+  inspectClaimantPrecondition,
+  inspectClaimantReadiness,
+  repairClaimantReadiness,
+  runClaimantTaskEntry,
+} from './business-universe/claimant.js';
+import {
+  explainUniverse,
+  inspectUniverse,
+  runUniverse,
+} from './business-universe/orchestrator.js';
+import {
+  inspectPlatformManagedEntry,
+  inspectPlatformManagedReadiness,
+  runPlatformManagedProgression,
+} from './business-universe/platform-managed.js';
+import { buildProductEvidenceEnvelope } from './business-universe/evidence.js';
+import {
+  consumeOperatorHandoff,
+  inspectOperatorCommercialAction,
+  runOperatorApprovalContinuation,
+  runOperatorCommercialAction,
+  runOperatorConnectionContinuation,
+  runOperatorMatching,
+  runOperatorPackageExport,
+} from './business-universe/operator.js';
+import {
   buildBidviaSurfaceRuntimeIdentityContext,
   runBidviaSurfaceCapability,
 } from './runtime/surface-runtime.js';
@@ -343,6 +371,34 @@ type BidviaCliIdentitySessionCommand =
   | 'operator-dispatch-authority-decision'
   | 'session-refresh'
   | 'session-revoke';
+
+type BidviaCliClaimantCommand =
+  | 'claimant-precondition-inspect'
+  | 'claimant-precondition-establish-canonical-company-public'
+  | 'claimant-readiness-inspect'
+  | 'claimant-readiness-repair'
+  | 'claimant-task-entry-inspect'
+  | 'claimant-task-entry-run'
+  | 'claimant-handoff-inspect';
+
+type BidviaCliOperatorCommand =
+  | 'operator-handoff-consume'
+  | 'operator-progression-match'
+  | 'operator-progression-connect'
+  | 'operator-progression-approve'
+  | 'operator-progression-package-export'
+  | 'operator-closure-commercial-action-run'
+  | 'operator-closure-inspect';
+
+type BidviaCliUniverseCommand =
+  | 'universe inspect'
+  | 'universe run'
+  | 'universe explain';
+
+type BidviaCliPlatformManagedCommand =
+  | 'platform-managed entry inspect'
+  | 'platform-managed readiness inspect'
+  | 'platform-managed progression run';
 
 type BidviaCliTaskPlaneWriteCommand =
   | 'create-lease'
@@ -635,6 +691,58 @@ const identitySessionRequiredContextByCommand = {
   readonly ('tenantId' | 'sessionId' | 'adminSessionId')[]
 >;
 
+const claimantSupportedFlagsByCommand = {
+  'claimant-precondition-inspect': ['--output'],
+  'claimant-precondition-establish-canonical-company-public': ['--input', '--output'],
+  'claimant-readiness-inspect': ['--agent-id', '--output'],
+  'claimant-readiness-repair': ['--agent-id', '--input', '--output'],
+  'claimant-task-entry-inspect': ['--agent-id', '--output'],
+  'claimant-task-entry-run': ['--agent-id', '--input', '--output'],
+  'claimant-handoff-inspect': ['--agent-id', '--listing-id', '--output'],
+} as const satisfies Record<BidviaCliClaimantCommand, readonly BidviaCliSupportedValueFlag[]>;
+
+const claimantRequiredContextByCommand = {
+  'claimant-precondition-inspect': ['sessionId'],
+  'claimant-precondition-establish-canonical-company-public': ['sessionId'],
+  'claimant-readiness-inspect': ['tenantId', 'sessionId'],
+  'claimant-readiness-repair': ['tenantId', 'sessionId'],
+  'claimant-task-entry-inspect': ['tenantId', 'sessionId'],
+  'claimant-task-entry-run': ['tenantId', 'sessionId', 'principalId', 'companyId'],
+  'claimant-handoff-inspect': ['tenantId', 'sessionId'],
+} as const satisfies Record<BidviaCliClaimantCommand, readonly ('tenantId' | 'sessionId' | 'principalId' | 'companyId')[]>;
+
+const operatorSupportedFlagsByCommand = {
+  'operator-handoff-consume': ['--listing-id', '--output'],
+  'operator-progression-match': ['--input', '--output'],
+  'operator-progression-connect': ['--input', '--output'],
+  'operator-progression-approve': ['--input', '--output'],
+  'operator-progression-package-export': ['--input', '--output'],
+  'operator-closure-commercial-action-run': ['--input', '--output'],
+  'operator-closure-inspect': ['--input', '--output'],
+} as const satisfies Record<BidviaCliOperatorCommand, readonly BidviaCliSupportedValueFlag[]>;
+
+const operatorRequiredContextByCommand = {
+  'operator-handoff-consume': ['tenantId', 'adminSessionId'],
+  'operator-progression-match': ['tenantId', 'adminSessionId'],
+  'operator-progression-connect': ['tenantId', 'adminSessionId'],
+  'operator-progression-approve': ['tenantId', 'adminSessionId'],
+  'operator-progression-package-export': ['tenantId', 'adminSessionId'],
+  'operator-closure-commercial-action-run': ['tenantId', 'adminSessionId'],
+  'operator-closure-inspect': ['tenantId', 'adminSessionId'],
+} as const satisfies Record<BidviaCliOperatorCommand, readonly ('tenantId' | 'adminSessionId')[]>;
+
+const universeSupportedFlagsByCommand = {
+  'universe inspect': ['--input', '--output'],
+  'universe run': ['--input', '--output'],
+  'universe explain': ['--input', '--output'],
+} as const satisfies Record<BidviaCliUniverseCommand, readonly BidviaCliSupportedValueFlag[]>;
+
+const platformManagedSupportedFlagsByCommand = {
+  'platform-managed entry inspect': ['--output'],
+  'platform-managed readiness inspect': ['--output'],
+  'platform-managed progression run': ['--output'],
+} as const satisfies Record<BidviaCliPlatformManagedCommand, readonly BidviaCliSupportedValueFlag[]>;
+
 const taskPlaneWriteSupportedFlagsByCommand = {
   'create-lease': ['--agent-id', '--input'],
   'create-task-dispatch': ['--agent-id', '--input'],
@@ -660,6 +768,59 @@ const taskPlaneWriteRequiredContextByCommand = {
   'accept-claim': ['tenantId', 'sessionId', 'principalId', 'companyId'],
   'reject-claim': ['tenantId', 'sessionId', 'principalId', 'companyId'],
 } as const satisfies Record<BidviaCliTaskPlaneWriteCommand, readonly ('tenantId' | 'sessionId' | 'principalId' | 'companyId')[]>;
+
+
+function printProductSurfaceResult(
+  command: string,
+  input: unknown,
+  result: unknown,
+  outputMode: string | undefined,
+  dependencies: BidviaCliDependencies,
+): number {
+  if (outputMode === undefined) {
+    dependencies.printJson(result);
+    return 0;
+  }
+
+  if (outputMode !== 'evidence') {
+    return printStructuredFailure(
+      dependencies,
+      buildStructuredFailure(command, 'invalid-input', `Unsupported --output value for ${command}: ${outputMode}.`, {
+        details: ['evidence'],
+      }),
+    );
+  }
+
+  dependencies.printJson(buildProductEvidenceEnvelope({
+    command,
+    input,
+    result,
+  }));
+  return 0;
+}
+
+function readRequiredObjectInput(
+  commandName: string,
+  input: Record<string, unknown>,
+  fieldName: string,
+): Record<string, unknown> {
+  const value = input[fieldName];
+  if (typeof value !== 'object' || value === null) {
+    throw new Error(`Missing required ${fieldName} object for ${commandName}.`);
+  }
+  return value as Record<string, unknown>;
+}
+
+function readOptionalObjectInput(
+  input: Record<string, unknown>,
+  fieldName: string,
+): Record<string, unknown> | undefined {
+  const value = input[fieldName];
+  if (typeof value !== 'object' || value === null) {
+    return undefined;
+  }
+  return value as Record<string, unknown>;
+}
 
 function readOnboardingResultString(
   value: unknown,
@@ -1765,6 +1926,209 @@ const identitySessionCommandDefinitions = {
   }
 >;
 
+const claimantCommandDefinitions = {
+  'claimant-precondition-inspect': {
+    run: (client: BidviaClient) => inspectClaimantPrecondition(client),
+  },
+  'claimant-precondition-establish-canonical-company-public': {
+    run: (client: BidviaClient, parsedArgs: BidviaCliParsedArgs) => {
+      const input = parseCliJsonInput('claimant-precondition-establish-canonical-company-public', parsedArgs.input);
+      return establishClaimantCanonicalCompanyPublicPrecondition(client, {
+        invitationToken: typeof input.invitationToken === 'string' ? input.invitationToken : undefined,
+        canonicalOrgId: typeof input.canonicalOrgId === 'string' ? input.canonicalOrgId : undefined,
+        now: readRequiredStringInput('claimant-precondition-establish-canonical-company-public', input, 'now'),
+      });
+    },
+  },
+  'claimant-readiness-inspect': {
+    run: (client: BidviaClient, parsedArgs: BidviaCliParsedArgs) => inspectClaimantReadiness(
+      client,
+      readRequiredAgentId('claimant-readiness-inspect', parsedArgs),
+    ),
+  },
+  'claimant-readiness-repair': {
+    run: (client: BidviaClient, parsedArgs: BidviaCliParsedArgs) => {
+      const input = parseCliJsonInput('claimant-readiness-repair', parsedArgs.input);
+      return repairClaimantReadiness(client, {
+        agentId: readRequiredAgentId('claimant-readiness-repair', parsedArgs),
+        now: readRequiredStringInput('claimant-readiness-repair', input, 'now'),
+        ...(input.capabilityProfile === undefined ? {} : { capabilityProfile: input.capabilityProfile as any }),
+        ...(input.participationState === undefined ? {} : { participationState: input.participationState as any }),
+        ...(input.externalBinding === undefined ? {} : { externalBinding: input.externalBinding as any }),
+      });
+    },
+  },
+  'claimant-task-entry-inspect': {
+    run: (client: BidviaClient, parsedArgs: BidviaCliParsedArgs) => inspectClaimantReadiness(
+      client,
+      readRequiredAgentId('claimant-task-entry-inspect', parsedArgs),
+    ),
+  },
+  'claimant-task-entry-run': {
+    run: (client: BidviaClient, parsedArgs: BidviaCliParsedArgs) => {
+      const input = parseCliJsonInput('claimant-task-entry-run', parsedArgs.input);
+      return runClaimantTaskEntry(
+        client,
+        readRequiredAgentId('claimant-task-entry-run', parsedArgs),
+        {
+          taskKind: readRequiredStringInput('claimant-task-entry-run', input, 'taskKind'),
+          taskRef: readRequiredStringInput('claimant-task-entry-run', input, 'taskRef'),
+          reason: readRequiredStringInput('claimant-task-entry-run', input, 'reason'),
+          now: readRequiredStringInput('claimant-task-entry-run', input, 'now'),
+        },
+      );
+    },
+  },
+  'claimant-handoff-inspect': {
+    run: (client: BidviaClient, parsedArgs: BidviaCliParsedArgs) => inspectClaimantHandoff(
+      client,
+      readRequiredAgentId('claimant-handoff-inspect', parsedArgs),
+      parsedArgs.flagValues['--listing-id']!,
+    ),
+  },
+} as const satisfies Record<
+  BidviaCliClaimantCommand,
+  { run: (client: BidviaClient, parsedArgs: BidviaCliParsedArgs, now: string) => Promise<unknown> }
+>;
+
+const operatorCommandDefinitions = {
+  'operator-handoff-consume': {
+    run: (client: BidviaClient, parsedArgs: BidviaCliParsedArgs) => consumeOperatorHandoff(client, {
+      sourceListingId: parsedArgs.flagValues['--listing-id']!,
+    }),
+  },
+  'operator-progression-match': {
+    run: (client: BidviaClient, parsedArgs: BidviaCliParsedArgs) => {
+      const input = parseCliJsonInput('operator-progression-match', parsedArgs.input);
+      return runOperatorMatching(client, {
+        sourceListingId: readRequiredStringInput('operator-progression-match', input, 'sourceListingId'),
+        candidateListing: readRequiredObjectInput('operator-progression-match', input, 'candidateListing') as never,
+        candidateActivation: readRequiredObjectInput('operator-progression-match', input, 'candidateActivation') as never,
+        matchCandidates: readRequiredObjectInput('operator-progression-match', input, 'matchCandidates') as never,
+      });
+    },
+  },
+  'operator-progression-connect': {
+    run: (client: BidviaClient, parsedArgs: BidviaCliParsedArgs) => {
+      const input = parseCliJsonInput('operator-progression-connect', parsedArgs.input);
+      const connection = {
+        companyId: readRequiredStringInput('operator-progression-connect', input, 'companyId'),
+        sourceMatchId: readRequiredStringInput('operator-progression-connect', input, 'sourceMatchId'),
+        requesterActorId: readRequiredStringInput('operator-progression-connect', input, 'requesterActorId'),
+        requesterCompanyId: readRequiredStringInput('operator-progression-connect', input, 'requesterCompanyId'),
+        riskTier: readRequiredStringInput('operator-progression-connect', input, 'riskTier') as 'HIGH' | 'CRITICAL',
+        policyVersion: readRequiredStringInput('operator-progression-connect', input, 'policyVersion'),
+        approvalMatrixVersion: readRequiredStringInput('operator-progression-connect', input, 'approvalMatrixVersion'),
+        actionType: readRequiredStringInput('operator-progression-connect', input, 'actionType') as 'CONTACT_SHARE',
+        now: readRequiredStringInput('operator-progression-connect', input, 'now'),
+      };
+      const approval = readOptionalObjectInput(input, 'approval');
+      if (!approval) {
+        return client.createOperatorConnection(connection);
+      }
+      return runOperatorConnectionContinuation(client, {
+        connection,
+        approval: {
+          approvalRequestId: readRequiredStringInput('operator-progression-connect', approval, 'approvalRequestId'),
+          actorId: readRequiredStringInput('operator-progression-connect', approval, 'actorId'),
+          decision: readRequiredStringInput('operator-progression-connect', approval, 'decision'),
+          now: readRequiredStringInput('operator-progression-connect', approval, 'now'),
+        },
+      });
+    },
+  },
+  'operator-progression-approve': {
+    run: (client: BidviaClient, parsedArgs: BidviaCliParsedArgs) => {
+      const input = parseCliJsonInput('operator-progression-approve', parsedArgs.input);
+      return runOperatorApprovalContinuation(client, {
+        approvalRequestId: readRequiredStringInput('operator-progression-approve', input, 'approvalRequestId'),
+        actorId: readRequiredStringInput('operator-progression-approve', input, 'actorId'),
+        decision: readRequiredStringInput('operator-progression-approve', input, 'decision'),
+        now: readRequiredStringInput('operator-progression-approve', input, 'now'),
+      });
+    },
+  },
+  'operator-progression-package-export': {
+    run: (client: BidviaClient, parsedArgs: BidviaCliParsedArgs) => {
+      const input = parseCliJsonInput('operator-progression-package-export', parsedArgs.input);
+      return runOperatorPackageExport(client, {
+        opportunityId: readRequiredStringInput('operator-progression-package-export', input, 'opportunityId'),
+        renderTemplateId: readRequiredStringInput('operator-progression-package-export', input, 'renderTemplateId'),
+        contentRef: readRequiredStringInput('operator-progression-package-export', input, 'contentRef'),
+        redactionProfile: readRequiredStringInput('operator-progression-package-export', input, 'redactionProfile'),
+        targetSystem: readRequiredStringInput('operator-progression-package-export', input, 'targetSystem'),
+        operationType: readRequiredStringInput('operator-progression-package-export', input, 'operationType'),
+        nodeId: readRequiredStringInput('operator-progression-package-export', input, 'nodeId'),
+        runtimeId: readRequiredStringInput('operator-progression-package-export', input, 'runtimeId'),
+        agentId: readRequiredStringInput('operator-progression-package-export', input, 'agentId'),
+        boundAccountId: readRequiredStringInput('operator-progression-package-export', input, 'boundAccountId'),
+        now: readRequiredStringInput('operator-progression-package-export', input, 'now'),
+      });
+    },
+  },
+  'operator-closure-commercial-action-run': {
+    run: (client: BidviaClient, parsedArgs: BidviaCliParsedArgs) => {
+      const input = parseCliJsonInput('operator-closure-commercial-action-run', parsedArgs.input);
+      return runOperatorCommercialAction(client, {
+        create: readRequiredObjectInput('operator-closure-commercial-action-run', input, 'create') as never,
+        policyCheck: readRequiredObjectInput('operator-closure-commercial-action-run', input, 'policyCheck') as never,
+        requestApproval: readRequiredObjectInput('operator-closure-commercial-action-run', input, 'requestApproval') as never,
+        execute: readRequiredObjectInput('operator-closure-commercial-action-run', input, 'execute') as never,
+      });
+    },
+  },
+  'operator-closure-inspect': {
+    run: (client: BidviaClient, parsedArgs: BidviaCliParsedArgs) => {
+      const input = parseCliJsonInput('operator-closure-inspect', parsedArgs.input);
+      return inspectOperatorCommercialAction(client, {
+        commercialActionRequestId: readRequiredStringInput('operator-closure-inspect', input, 'commercialActionRequestId'),
+      });
+    },
+  },
+} as const satisfies Record<
+  BidviaCliOperatorCommand,
+  { run: (client: BidviaClient, parsedArgs: BidviaCliParsedArgs) => Promise<unknown> }
+>;
+
+const platformManagedCommandDefinitions = {
+  'platform-managed entry inspect': {
+    run: () => inspectPlatformManagedEntry(),
+  },
+  'platform-managed readiness inspect': {
+    run: () => inspectPlatformManagedReadiness(),
+  },
+  'platform-managed progression run': {
+    run: () => runPlatformManagedProgression(),
+  },
+} as const satisfies Record<
+  BidviaCliPlatformManagedCommand,
+  { run: () => Promise<unknown> }
+>;
+
+const universeCommandDefinitions = {
+  'universe inspect': {
+    run: (client: BidviaClient, parsedArgs: BidviaCliParsedArgs) => {
+      const input = parseCliJsonInput('universe inspect', parsedArgs.input);
+      return inspectUniverse(client, input as never);
+    },
+  },
+  'universe run': {
+    run: (client: BidviaClient, parsedArgs: BidviaCliParsedArgs) => {
+      const input = parseCliJsonInput('universe run', parsedArgs.input);
+      return runUniverse(client, input as never);
+    },
+  },
+  'universe explain': {
+    run: (client: BidviaClient, parsedArgs: BidviaCliParsedArgs) => {
+      const input = parseCliJsonInput('universe explain', parsedArgs.input);
+      return explainUniverse(client, input as never);
+    },
+  },
+} as const satisfies Record<
+  BidviaCliUniverseCommand,
+  { run: (client: BidviaClient, parsedArgs: BidviaCliParsedArgs) => Promise<unknown> }
+>;
+
 const taskPlaneWriteCommandDefinitions = {
   'create-lease': {
     run: (client: BidviaClient, parsedArgs: BidviaCliParsedArgs) => {
@@ -2248,6 +2612,34 @@ function getSupportedValueFlagsForCommand(command: string): readonly BidviaCliSu
     return ['--input'];
   }
 
+  const claimantSupportedFlags = claimantSupportedFlagsByCommand[
+    command as BidviaCliClaimantCommand
+  ];
+  if (claimantSupportedFlags) {
+    return claimantSupportedFlags;
+  }
+
+  const operatorSupportedFlags = operatorSupportedFlagsByCommand[
+    command as BidviaCliOperatorCommand
+  ];
+  if (operatorSupportedFlags) {
+    return operatorSupportedFlags;
+  }
+
+  const universeSupportedFlags = universeSupportedFlagsByCommand[
+    command as BidviaCliUniverseCommand
+  ];
+  if (universeSupportedFlags) {
+    return universeSupportedFlags;
+  }
+
+  const platformManagedSupportedFlags = platformManagedSupportedFlagsByCommand[
+    command as BidviaCliPlatformManagedCommand
+  ];
+  if (platformManagedSupportedFlags) {
+    return platformManagedSupportedFlags;
+  }
+
   const taskPlaneWriteSupportedFlags = taskPlaneWriteSupportedFlagsByCommand[
     command as BidviaCliTaskPlaneWriteCommand
   ];
@@ -2284,7 +2676,15 @@ type BidviaVerificationBundleInput = typeof verificationBundleInputValues[number
 function parseCliArgs(argv: string[]): BidviaCliParsedArgs {
   const normalizedArgv = argv[0] === 'context' && argv[1] === 'show'
     ? ['context show', ...argv.slice(2)]
-    : argv;
+    : argv[0] === 'universe' && ['inspect', 'run', 'explain'].includes(argv[1] ?? '')
+      ? [`universe ${argv[1]}`, ...argv.slice(2)]
+      : argv[0] === 'platform-managed' && argv[1] === 'entry' && argv[2] === 'inspect'
+        ? ['platform-managed entry inspect', ...argv.slice(3)]
+        : argv[0] === 'platform-managed' && argv[1] === 'readiness' && argv[2] === 'inspect'
+          ? ['platform-managed readiness inspect', ...argv.slice(3)]
+          : argv[0] === 'platform-managed' && argv[1] === 'progression' && argv[2] === 'run'
+            ? ['platform-managed progression run', ...argv.slice(3)]
+            : argv;
 
   if (normalizedArgv.length === 0) {
     return {
@@ -2621,6 +3021,30 @@ function printHelp(printLine: (value: string) => void): void {
   printLine('  create-provisional-agent --provisional-agent-ref ...');
   printLine('  query-provisional-agent --provisional-agent-ref ...');
   printLine('  claim-provisional-agent --provisional-agent-ref ... --claim-token ...');
+  printLine('Claimant Product Entry:');
+  printLine('  claimant-precondition-inspect');
+  printLine('  claimant-precondition-establish-canonical-company-public --input ...');
+  printLine('  claimant-readiness-inspect --agent-id ...');
+  printLine('  claimant-readiness-repair --agent-id ... --input ...');
+  printLine('  claimant-task-entry-inspect --agent-id ...');
+  printLine('  claimant-task-entry-run --agent-id ... --input ...');
+  printLine('  claimant-handoff-inspect --agent-id ... --listing-id ...');
+  printLine('Operator Product Entry:');
+  printLine('  operator-handoff-consume --listing-id ...');
+  printLine('  operator-progression-match --input ...');
+  printLine('  operator-progression-connect --input ...');
+  printLine('  operator-progression-approve --input ...');
+  printLine('  operator-progression-package-export --input ...');
+  printLine('  operator-closure-commercial-action-run --input ...');
+  printLine('  operator-closure-inspect --input ...');
+  printLine('Universe Orchestrator:');
+  printLine('  universe inspect --input ...');
+  printLine('  universe run --input ...');
+  printLine('  universe explain --input ...');
+  printLine('Platform-Managed Product Entry:');
+  printLine('  platform-managed entry inspect');
+  printLine('  platform-managed readiness inspect');
+  printLine('  platform-managed progression run');
   printLine('Agent Runtime (Run):');
   printLine('  route-context-matrix');
   printLine('  registration-lifecycle-plan');
@@ -3060,6 +3484,139 @@ export async function runCli(
   if (command === 'mcp-server') {
     dependencies.runLocalMcpServer();
     return 0;
+  }
+
+  const platformManagedCommand = platformManagedCommandDefinitions[
+    command as BidviaCliPlatformManagedCommand
+  ];
+  if (platformManagedCommand) {
+    try {
+      const result = await platformManagedCommand.run();
+      return printProductSurfaceResult(command, parsedArgs.flagValues, result, parsedArgs.flagValues['--output'], dependencies);
+    } catch (error) {
+      if (error instanceof Error && !(error instanceof BidviaClientTransportError)) {
+        return printStructuredFailure(dependencies, buildStructuredFailure(command, 'invalid-input', error.message));
+      }
+      const normalizedFailure = normalizeOnboardingActionTransportFailure(error);
+      return printStructuredFailure(
+        dependencies,
+        buildStructuredFailure(command, 'transport-error', normalizedFailure.message, { details: [normalizedFailure.transport.name], transport: normalizedFailure.transport }),
+      );
+    }
+  }
+
+  const universeCommand = universeCommandDefinitions[
+    command as BidviaCliUniverseCommand
+  ];
+  if (universeCommand) {
+    const env = dependencies.resolveProcessEnv();
+    try {
+      const client = dependencies.createClient(env, dependencies.resolveExecutionContext());
+      const result = await universeCommand.run(client, parsedArgs);
+      return printProductSurfaceResult(command, parseCliJsonInput(command, parsedArgs.input), result, parsedArgs.flagValues['--output'], dependencies);
+    } catch (error) {
+      if (error instanceof Error && !(error instanceof BidviaClientTransportError)) {
+        return printStructuredFailure(dependencies, buildStructuredFailure(command, 'invalid-input', error.message));
+      }
+      const normalizedFailure = normalizeOnboardingActionTransportFailure(error);
+      return printStructuredFailure(
+        dependencies,
+        buildStructuredFailure(command, 'transport-error', normalizedFailure.message, { details: [normalizedFailure.transport.name], transport: normalizedFailure.transport }),
+      );
+    }
+  }
+
+  const operatorCommand = operatorCommandDefinitions[
+    command as BidviaCliOperatorCommand
+  ];
+  if (operatorCommand) {
+    const env = dependencies.resolveProcessEnv();
+    const baseExecutionContext = dependencies.resolveExecutionContext();
+    const executionContext = {
+      tenantId: baseExecutionContext.tenantId,
+      adminSessionId: baseExecutionContext.adminSessionId,
+      principalId: baseExecutionContext.principalId,
+      companyId: baseExecutionContext.companyId,
+      principalType: baseExecutionContext.principalType,
+      authorizedRole: baseExecutionContext.authorizedRole,
+    };
+    const requiredContext = operatorRequiredContextByCommand[command as BidviaCliOperatorCommand];
+    const missingContext = requiredContext.filter((contextKey) => !executionContext[contextKey]);
+    if (missingContext.length > 0) {
+      return printStructuredFailure(
+        dependencies,
+        buildStructuredFailure(command, 'missing-context', buildCliMissingContextMessage(command, missingContext), { details: [...missingContext] }),
+      );
+    }
+    try {
+      const client = dependencies.createClient(env, executionContext);
+      const result = await operatorCommand.run(client, parsedArgs);
+      return printProductSurfaceResult(command, parsedArgs.input ? parseCliJsonInput(command, parsedArgs.input) : parsedArgs.flagValues, result, parsedArgs.flagValues['--output'], dependencies);
+    } catch (error) {
+      if (error instanceof Error && !(error instanceof BidviaClientTransportError)) {
+        return printStructuredFailure(dependencies, buildStructuredFailure(command, 'invalid-input', error.message));
+      }
+      const normalizedFailure = normalizeOnboardingActionTransportFailure(error);
+      return printStructuredFailure(
+        dependencies,
+        buildStructuredFailure(command, 'transport-error', normalizedFailure.message, { details: [normalizedFailure.transport.name], transport: normalizedFailure.transport }),
+      );
+    }
+  }
+
+  const claimantCommand = claimantCommandDefinitions[
+    command as BidviaCliClaimantCommand
+  ];
+  if (claimantCommand) {
+    const env = dependencies.resolveProcessEnv();
+    const localStateResult = await readCliLocalOnboardingState(dependencies);
+    const localState = localStateResult.state;
+    const baseExecutionContext = dependencies.resolveExecutionContext();
+    const executionContext = {
+      tenantId: baseExecutionContext.tenantId ?? localState?.tenantId,
+      principalId: baseExecutionContext.principalId ?? localState?.principalId,
+      companyId: baseExecutionContext.companyId ?? localState?.companyId,
+      registrationId: baseExecutionContext.registrationId ?? localState?.registrationId,
+      sessionId: baseExecutionContext.sessionId ?? localState?.sessionId,
+      adminSessionId: baseExecutionContext.adminSessionId,
+      principalType: baseExecutionContext.principalType,
+      authorizedRole: baseExecutionContext.authorizedRole,
+    };
+    const requiredContext = claimantRequiredContextByCommand[command as BidviaCliClaimantCommand];
+    const missingContext = requiredContext.filter((contextKey) => !executionContext[contextKey]);
+    if (missingContext.length > 0) {
+      return printStructuredFailure(
+        dependencies,
+        buildStructuredFailure(
+          command,
+          'missing-context',
+          buildCliMissingContextMessage(command, missingContext),
+          { details: [...missingContext] },
+        ),
+      );
+    }
+
+    try {
+      const client = dependencies.createClient(env, executionContext);
+      const result = await claimantCommand.run(client, parsedArgs);
+      dependencies.printJson(result);
+      return 0;
+    } catch (error) {
+      if (error instanceof Error && !(error instanceof BidviaClientTransportError)) {
+        return printStructuredFailure(
+          dependencies,
+          buildStructuredFailure(command, 'invalid-input', error.message),
+        );
+      }
+      const normalizedFailure = normalizeOnboardingActionTransportFailure(error);
+      return printStructuredFailure(
+        dependencies,
+        buildStructuredFailure(command, 'transport-error', normalizedFailure.message, {
+          details: [normalizedFailure.transport.name],
+          transport: normalizedFailure.transport,
+        }),
+      );
+    }
   }
 
   const taskPlaneWriteCommand = taskPlaneWriteCommandDefinitions[
