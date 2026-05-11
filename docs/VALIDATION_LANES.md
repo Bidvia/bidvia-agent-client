@@ -27,7 +27,7 @@ bidvia validation-smoke
 bidvia diagnostic-bundle-export --output ./bidvia-diagnostic-bundle
 ```
 
-Those commands stay fail-closed. `install-integrity` is the local install-path self-check, `validation-smoke` is the bounded external-user validation lane, and `diagnostic-bundle-export` packages bounded smoke evidence into shareable artifacts without turning this lane into a Core-owned certification flow.
+Those commands stay fail-closed. `install-integrity` is the local install-path self-check, `validation-smoke` is the bounded external-user validation lane, and `diagnostic-bundle-export` packages bounded smoke evidence into shareable artifacts without turning this lane into a Core-owned certification flow. For role-stage regression checks, also run `npx tsx scripts/validate-agent-first-business-universe.ts`.
 
 ## 2. Proof-lane / admin-session validation
 
@@ -81,3 +81,9 @@ If account-plane continuation is already succeeding but governed reads still ret
 For claimant/account-plane continuation checks in any lane, prefer `agentId` as the canonical account-plane identifier. Treat `registrationId` on that plane as compatibility only.
 
 If a flow needs admin/operator context, say so explicitly. If a flow needs self-generated runtime data instead of fixed ids, say so explicitly. If a flow remains blocked by a Core-owned progression gap, keep that gap visible rather than faking success.
+
+## 6. Role-stage evidence output
+
+The agent-first role-stage surface may emit **evidence output** when you need machine-consumable diagnostics instead of the default business result. Use that mode when you need a frozen evidence packet plus stable result taxonomy for claimant, operator, platform-managed, or universe outputs without rewriting the result by hand.
+
+This lane stays bounded and local-first: evidence output does not turn the client into a hosted certification service, and it does not override the normal role-stage result. It simply packages the same role-stage truth into a machine-readable evidence shape.

@@ -12,6 +12,8 @@ Bidvia is the governed platform for onboarding, running, and integrating agents.
 
 The package is agent-first but login-capable: external users may need bounded account/session setup before they continue, but the product promise stays centered on the governed agent path rather than on a general account-admin or platform-auth shell.
 
+This repo now presents itself as an **agent-first operating entry** organized around a **role-stage** model rather than a helper bundle. The product-facing surfaces are `client.claimant.*`, `client.operator.*`, `client.platformManaged.*`, and `client.universe.*`, and the CLI/MCP surfaces mirror the same role-stage operating entry.
+
 For the next-version role of this repo, use one explicit three-layer client architecture: atomic helpers, executable scenario runners, and productized CLI/MCP surfaces.
 
 ## Current version and release maturity
@@ -52,7 +54,7 @@ npm run validate:release-readiness
 npm run validate:release-gate
 ```
 
-Those validator commands must stay green together before any human release packet can describe public closure. This README treats validator commands to stay green together as a formal `1.0.0` release requirement, not as optional evidence.
+Those validator commands must stay green together before any human release packet can describe public closure. This README treats validator commands to stay green together as a formal `1.0.0` release requirement, not as optional evidence. For product-wave regression, also run `npx tsx scripts/validate-agent-first-business-universe.ts` so the role-stage status artifacts stay machine-checkable.
 
 For bounded external-user validation, start with these local-first commands before assuming the problem is deeper than the current machine or shell state:
 
@@ -78,7 +80,7 @@ Before validating runtime behavior, choose the right lane:
 - **proof-lane / admin-session** for deterministic admin-scoped walkthroughs
 - **seeded / runtime-generated object validation** when you need to create your own business objects rather than relying on fixed proof ids
 
-See `docs/VALIDATION_LANES.md` for the full lane guide. Fixed proof ids are not assumed in default local docker, self-generated runtime data is the preferred path for business-universe closure, and task-write-ready progression is a distinct surfaced path rather than an implied side effect of claim.
+See `docs/VALIDATION_LANES.md` for the full lane guide. Fixed proof ids are not assumed in default local docker, self-generated runtime data is the preferred path for business-universe closure, and task-write-ready progression is a distinct surfaced path rather than an implied side effect of claim. When you need machine-consumable diagnostics instead of the default business result, the role-stage product commands may emit evidence output with `--output evidence`.
 
 That surfaced progression is bounded task closure, not full business closure.
 
@@ -189,6 +191,8 @@ console.log(heartbeat);
 
 The shipped SDK includes:
 
+- product-facing role-stage facades such as `client.claimant.precondition.inspect(...)`, `client.operator.handoff.consume(...)`, `client.platformManaged.entry.inspect(...)`, and `client.universe.inspect(...)`
+
 - bounded account/session prerequisite support
 - bounded membership lifecycle support for invitation create/accept, admin transfer, and removal
 - bounded account-agent dispatch-authority read/request support on the canonical `/runtime/account/agents/:agentId/...` continuation family
@@ -243,7 +247,7 @@ The current helper-level payload model matters:
 Examples of shipped governed read surfaces include `authority-profiles`, the singular per-registration `capability-profile`, and the participation/task family around `task-dispatch` visibility.
 
 For the plane-by-plane adoption view, use `docs/CORE_AGENT_CLIENT_PLANE_CONTRACT_GAPS.md`. For the full guided onboarding flow, use `docs/ONBOARDING.md`.
-For the lane-by-lane validation guide, use `docs/VALIDATION_LANES.md`.
+For the lane-by-lane validation guide, use `docs/VALIDATION_LANES.md`. For migration from helper-first usage into the role-stage product entry, use `docs/AGENT_FIRST_MIGRATION.md`.
 
 ## License
 

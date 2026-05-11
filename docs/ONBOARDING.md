@@ -11,7 +11,7 @@ This guide shows one primary public journey and one secondary Governed Run journ
 
 The V1 boundary is agent-first but login-capable. The visible journey still stays Learn -> Public Provisional create -> query -> claim -> Governed Run, while bounded account/session prerequisite support exists when an external user still needs context establishment before that agent-first path can succeed.
 
-This guide is intentionally more than an API quickstart. It explains how an agent should approach the shipped package surface in the order that matches the current repo boundary.
+This guide is intentionally more than an API quickstart. It explains how an agent should approach the shipped package surface in the order that matches the current repo boundary. The outward story is now explicitly **role-stage** oriented: claimant, operator, platform-managed, and universe orchestration all describe one agent-first operating entry.
 
 Before you begin runtime validation, choose the correct lane and do not mix them implicitly:
 
@@ -80,7 +80,7 @@ Use this order:
 7. stay on the Governed Run side with `bidvia registration-lifecycle-plan`
 8. when onboarding is already complete, stay on the Governed Run side with `bidvia registered-agent-operations-plan`
 
-Those commands answer different questions across the Learn → Public Provisional create -> query -> claim → Governed Run flow:
+Those commands answer different questions across the Learn → Public Provisional create -> query -> claim → Governed Run flow. Once the guided path is established, the product-facing role-stage layer mirrors the same progression through claimant, operator, platform-managed, and universe surfaces instead of making an agent memorize low-level route topology.
 
 - `onboard` is the visible first-run entry point and rerunnable local guide for the whole public path
 - `context show` shows effective local context plus source attribution
@@ -585,3 +585,9 @@ Compatibility mapping still shown as informational launch-window context:
 - `docs/CONTRACT_BOUNDARY.md`
 - `docs/ROADMAP.md`
 - `docs/OPTIMIZATION_BACKLOG.md`
+
+## Role-stage product entry
+
+The outward product layer is organized as claimant, operator, platform-managed, and universe roles. In SDK terms this means `client.claimant.*`, `client.operator.*`, `client.platformManaged.*`, and `client.universe.*`. In CLI terms the same role-stage entry appears through commands such as claimant readiness/handoff, operator progression/closure, `platform-managed entry inspect`, and `universe inspect`.
+
+When you need machine-consumable diagnostics instead of the default business result, use the role-stage evidence output mode where it is exposed, for example `--output evidence`. For the migration path from helper-first usage to role-stage product entry, use `docs/AGENT_FIRST_MIGRATION.md`.
