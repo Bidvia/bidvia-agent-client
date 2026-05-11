@@ -40,6 +40,78 @@ import {
   runBidviaSurfaceCapability,
 } from './runtime/surface-runtime.js';
 import { isBlockedCapabilityExecutionError } from './runtime/capability-orchestration.js';
+import {
+  establishClaimantCanonicalCompanyPublicPrecondition,
+  inspectClaimantHandoff,
+  inspectClaimantPrecondition,
+  inspectClaimantReadiness,
+  repairClaimantReadiness,
+  runClaimantTaskEntry,
+} from './business-universe/claimant.js';
+import {
+  consumeOperatorHandoff,
+  inspectOperatorCommercialAction,
+  runOperatorApprovalContinuation,
+  runOperatorCommercialAction,
+  runOperatorConnectionContinuation,
+  runOperatorMatching,
+  runOperatorPackageExport,
+} from './business-universe/operator.js';
+import {
+  inspectPlatformManagedEntry,
+  inspectPlatformManagedReadiness,
+  runPlatformManagedProgression,
+} from './business-universe/platform-managed.js';
+import { buildProductEvidenceEnvelope } from './business-universe/evidence.js';
+
+
+function buildFallbackStageSnapshotFromDescriptor(descriptor: BidviaMcpToolDescriptor): import('./business-universe/contracts.js').BidviaStageSnapshot | undefined {
+  if (!descriptor.role || !descriptor.stage || !descriptor.executability || !descriptor.canonicality) {
+    return undefined;
+  }
+
+  return {
+    roleWorkspace: {
+      role: descriptor.role,
+      sessionPresent: false,
+      adminSessionPresent: false,
+      canonicality: descriptor.canonicality,
+    },
+    stage: descriptor.stage,
+    state: descriptor.executability === 'later-wave-stop' ? 'later-wave-stop' : 'completed',
+    executability: descriptor.executability,
+    action: {
+      kind: descriptor.mayReadHere ? 'read' : 'continue',
+      owner: descriptor.role,
+      executability: descriptor.executability,
+    },
+    ...(descriptor.executability === 'later-wave-stop'
+      ? {
+          boundary: {
+            boundaryClass: 'later-wave-stop',
+            reasonCodes: ['product-evidence-fallback'],
+          },
+        }
+      : {}),
+  };
+}
+
+function buildMcpProductEvidence(
+  descriptor: BidviaMcpToolDescriptor,
+  input: unknown,
+  result: unknown,
+): Pick<BidviaMcpDispatchResult, 'evidencePacket' | 'resultTaxonomy'> {
+  const envelope = buildProductEvidenceEnvelope({
+    command: descriptor.toolName,
+    input,
+    result,
+    fallbackStageSnapshot: buildFallbackStageSnapshotFromDescriptor(descriptor),
+  });
+  return {
+    evidencePacket: envelope.evidencePacket,
+    resultTaxonomy: envelope.resultTaxonomy,
+  };
+}
 
 function cloneMcpToolCatalog(catalog: ReadonlyArray<BidviaMcpToolDescriptor>): BidviaMcpToolDescriptor[] {
   return structuredClone([...catalog]);
@@ -65,6 +137,8 @@ type BidviaMcpDispatchResult = {
   exportedReviewPacket?: unknown;
   truthFetchResult?: unknown;
   executionResult?: unknown;
+  evidencePacket?: unknown;
+  resultTaxonomy?: unknown;
 };
 
 type BidviaMcpDispatchDependencies = {
@@ -158,6 +232,106 @@ function requireExecutionStringInput(
 }
 
 const widenedExecutionDispatchersByCapabilityKey: Record<string, BidviaGenericExecutionDispatch> = {
+  establishClaimantCanonicalCompanyPublicPrecondition(client, input) {
+    const objectInput = requireObjectInput(input, 'claimant canonical precondition input is required for MCP execution');
+    return establishClaimantCanonicalCompanyPublicPrecondition(client, {
+      invitationToken: typeof objectInput.invitationToken === 'string' ? objectInput.invitationToken : undefined,
+      canonicalOrgId: typeof objectInput.canonicalOrgId === 'string' ? objectInput.canonicalOrgId : undefined,
+      now: requireExecutionStringInput(objectInput, ['now'], 'now is required for claimant canonical precondition execution'),
+    });
+  },
+  repairClaimantReadiness(client, input) {
+    const objectInput = requireObjectInput(input, 'claimant readiness repair input is required for MCP execution');
+    return repairClaimantReadiness(client, {
+      agentId: requireAccountAgentId(objectInput),
+      now: requireExecutionStringInput(objectInput, ['now'], 'now is required for claimant readiness repair execution'),
+      ...(objectInput.capabilityProfile === undefined ? {} : { capabilityProfile: objectInput.capabilityProfile as any }),
+      ...(objectInput.participationState === undefined ? {} : { participationState: objectInput.participationState as any }),
+      ...(objectInput.externalBinding === undefined ? {} : { externalBinding: objectInput.externalBinding as any }),
+    });
+  },
+  runClaimantTaskEntry(client, input) {
+    const objectInput = requireObjectInput(input, 'claimant task entry input is required for MCP execution');
+    return runClaimantTaskEntry(client, requireAccountAgentId(objectInput), {
+      taskKind: requireExecutionStringInput(objectInput, ['taskKind'], 'taskKind is required for claimant task entry execution'),
+      taskRef: requireExecutionStringInput(objectInput, ['taskRef'], 'taskRef is required for claimant task entry execution'),
+      reason: requireExecutionStringInput(objectInput, ['reason'], 'reason is required for claimant task entry execution'),
+      now: requireExecutionStringInput(objectInput, ['now'], 'now is required for claimant task entry execution'),
+    });
+  },
+  runOperatorMatching(client, input) {
+    const objectInput = requireObjectInput(input, 'operator matching input is required for MCP execution');
+    return runOperatorMatching(client, {
+      sourceListingId: requireExecutionStringInput(objectInput, ['sourceListingId'], 'sourceListingId is required for operator progression match'),
+      candidateListing: requireObjectInput(objectInput.candidateListing, 'candidateListing is required for operator progression match') as never,
+      candidateActivation: requireObjectInput(objectInput.candidateActivation, 'candidateActivation is required for operator progression match') as never,
+      matchCandidates: requireObjectInput(objectInput.matchCandidates, 'matchCandidates is required for operator progression match') as never,
+    });
+  },
+  runOperatorConnectionContinuation(client, input) {
+    const objectInput = requireObjectInput(input, 'operator connection continuation input is required for MCP execution');
+    const connection = {
+      companyId: requireExecutionStringInput(objectInput, ['companyId'], 'companyId is required for operator progression connect'),
+      sourceMatchId: requireExecutionStringInput(objectInput, ['sourceMatchId'], 'sourceMatchId is required for operator progression connect'),
+      requesterActorId: requireExecutionStringInput(objectInput, ['requesterActorId'], 'requesterActorId is required for operator progression connect'),
+      requesterCompanyId: requireExecutionStringInput(objectInput, ['requesterCompanyId'], 'requesterCompanyId is required for operator progression connect'),
+      riskTier: requireExecutionStringInput(objectInput, ['riskTier'], 'riskTier is required for operator progression connect') as 'HIGH' | 'CRITICAL',
+      policyVersion: requireExecutionStringInput(objectInput, ['policyVersion'], 'policyVersion is required for operator progression connect'),
+      approvalMatrixVersion: requireExecutionStringInput(objectInput, ['approvalMatrixVersion'], 'approvalMatrixVersion is required for operator progression connect'),
+      actionType: requireExecutionStringInput(objectInput, ['actionType'], 'actionType is required for operator progression connect') as 'CONTACT_SHARE',
+      now: requireExecutionStringInput(objectInput, ['now'], 'now is required for operator progression connect'),
+    };
+    if (objectInput.approval === undefined) {
+      return client.createOperatorConnection(connection);
+    }
+    const approvalInput = requireObjectInput(objectInput.approval, 'approval is required for operator progression connect continuation');
+    return runOperatorConnectionContinuation(client, {
+      connection,
+      approval: {
+        approvalRequestId: requireExecutionStringInput(approvalInput, ['approvalRequestId'], 'approvalRequestId is required for operator progression connect continuation'),
+        actorId: requireExecutionStringInput(approvalInput, ['actorId'], 'actorId is required for operator progression connect continuation'),
+        decision: requireExecutionStringInput(approvalInput, ['decision'], 'decision is required for operator progression connect continuation'),
+        now: requireExecutionStringInput(approvalInput, ['now'], 'now is required for operator progression connect continuation'),
+      },
+    });
+  },
+  runOperatorApprovalContinuation(client, input) {
+    const objectInput = requireObjectInput(input, 'operator approval continuation input is required for MCP execution');
+    return runOperatorApprovalContinuation(client, {
+      approvalRequestId: requireExecutionStringInput(objectInput, ['approvalRequestId'], 'approvalRequestId is required for operator progression approve'),
+      actorId: requireExecutionStringInput(objectInput, ['actorId'], 'actorId is required for operator progression approve'),
+      decision: requireExecutionStringInput(objectInput, ['decision'], 'decision is required for operator progression approve'),
+      now: requireExecutionStringInput(objectInput, ['now'], 'now is required for operator progression approve'),
+    });
+  },
+  runOperatorPackageExport(client, input) {
+    const objectInput = requireObjectInput(input, 'operator package export input is required for MCP execution');
+    return runOperatorPackageExport(client, {
+      opportunityId: requireExecutionStringInput(objectInput, ['opportunityId'], 'opportunityId is required for operator package export'),
+      renderTemplateId: requireExecutionStringInput(objectInput, ['renderTemplateId'], 'renderTemplateId is required for operator package export'),
+      contentRef: requireExecutionStringInput(objectInput, ['contentRef'], 'contentRef is required for operator package export'),
+      redactionProfile: requireExecutionStringInput(objectInput, ['redactionProfile'], 'redactionProfile is required for operator package export'),
+      targetSystem: requireExecutionStringInput(objectInput, ['targetSystem'], 'targetSystem is required for operator package export'),
+      operationType: requireExecutionStringInput(objectInput, ['operationType'], 'operationType is required for operator package export'),
+      nodeId: requireExecutionStringInput(objectInput, ['nodeId'], 'nodeId is required for operator package export'),
+      runtimeId: requireExecutionStringInput(objectInput, ['runtimeId'], 'runtimeId is required for operator package export'),
+      agentId: requireExecutionStringInput(objectInput, ['agentId'], 'agentId is required for operator package export'),
+      boundAccountId: requireExecutionStringInput(objectInput, ['boundAccountId'], 'boundAccountId is required for operator package export'),
+      now: requireExecutionStringInput(objectInput, ['now'], 'now is required for operator package export'),
+    });
+  },
+  runOperatorCommercialAction(client, input) {
+    const objectInput = requireObjectInput(input, 'operator commercial action input is required for MCP execution');
+    return runOperatorCommercialAction(client, {
+      create: requireObjectInput(objectInput.create, 'create is required for operator commercial action') as never,
+      policyCheck: requireObjectInput(objectInput.policyCheck, 'policyCheck is required for operator commercial action') as never,
+      requestApproval: requireObjectInput(objectInput.requestApproval, 'requestApproval is required for operator commercial action') as never,
+      execute: requireObjectInput(objectInput.execute, 'execute is required for operator commercial action') as never,
+    });
+  },
+  runPlatformManagedProgression() {
+    return runPlatformManagedProgression();
+  },
   createProvisionalAgent(client, input) {
     return client.createProvisionalAgent(
       requireObjectInput(input, 'createProvisionalAgent input is required for MCP execution') as never,
@@ -706,6 +880,7 @@ async function dispatchRegisteredAgentExecutionTool(
     preflight,
     result: {
       executionResult,
+      ...((descriptor.role && descriptor.stage) ? buildMcpProductEvidence(descriptor, input, executionResult) : {}),
     },
   };
 }
@@ -1181,6 +1356,100 @@ async function dispatchGovernanceTruthFetchTool(
     };
   }
 
+  if (descriptor.helperRef.helperKey === 'consumeOperatorHandoff') {
+    return {
+      toolName: descriptor.toolName,
+      outputMode: descriptor.outputMode,
+      result: {
+        truthFetchResult: await consumeOperatorHandoff(client, {
+          sourceListingId: requireExecutionStringInput(
+            input,
+            ['sourceListingId'],
+            'sourceListingId is required for operator handoff consume',
+          ),
+        }),
+      },
+    };
+  }
+
+  if (descriptor.helperRef.helperKey === 'inspectOperatorCommercialAction') {
+    return {
+      toolName: descriptor.toolName,
+      outputMode: descriptor.outputMode,
+      result: {
+        truthFetchResult: await inspectOperatorCommercialAction(client, {
+          commercialActionRequestId: requireExecutionStringInput(
+            input,
+            ['commercialActionRequestId'],
+            'commercialActionRequestId is required for operator commercial action inspection',
+          ),
+        }),
+      },
+    };
+  }
+
+  if (descriptor.helperRef.helperKey === 'inspectPlatformManagedEntry') {
+    return {
+      toolName: descriptor.toolName,
+      outputMode: descriptor.outputMode,
+      result: {
+        truthFetchResult: await inspectPlatformManagedEntry(),
+        ...buildMcpProductEvidence(descriptor, input, await inspectPlatformManagedEntry()),
+      },
+    };
+  }
+
+  if (descriptor.helperRef.helperKey === 'inspectPlatformManagedReadiness') {
+    return {
+      toolName: descriptor.toolName,
+      outputMode: descriptor.outputMode,
+      result: {
+        truthFetchResult: await inspectPlatformManagedReadiness(),
+        ...buildMcpProductEvidence(descriptor, input, await inspectPlatformManagedReadiness()),
+      },
+    };
+  }
+
+  if (descriptor.helperRef.helperKey === 'inspectClaimantPrecondition') {
+    return {
+      toolName: descriptor.toolName,
+      outputMode: descriptor.outputMode,
+      result: {
+        truthFetchResult: await inspectClaimantPrecondition(client),
+      },
+    };
+  }
+
+  if (descriptor.helperRef.helperKey === 'inspectClaimantReadiness') {
+    const agentId = requireAccountAgentId(input);
+    return {
+      toolName: descriptor.toolName,
+      outputMode: descriptor.outputMode,
+      result: {
+        truthFetchResult: await inspectClaimantReadiness(client, agentId),
+      },
+    };
+  }
+
+  if (descriptor.helperRef.helperKey === 'inspectClaimantHandoff') {
+    const agentId = requireAccountAgentId(input);
+    return {
+      toolName: descriptor.toolName,
+      outputMode: descriptor.outputMode,
+      result: {
+        truthFetchResult: await inspectClaimantHandoff(
+          client,
+          agentId,
+          requireExecutionStringInput(
+            input,
+            ['listingId'],
+            'listingId is required for claimant handoff inspection',
+          ),
+        ),
+      },
+    };
+  }
+
   if (descriptor.helperRef.helperKey === 'getAgentAuthorityProfile') {
     const registrationId = requireAgentRegistrationId(input);
     return {
@@ -1334,6 +1603,18 @@ export async function dispatchMcpToolCall(
 
   if (descriptor.helperRef.helperKey === 'buildOpportunityPackageHandoffPlan') {
     return dispatchOpportunityPackageHandoffTool(descriptor, request.arguments);
+  }
+
+  if (descriptor.helperRef.helperKey === 'establishClaimantCanonicalCompanyPublicPrecondition') {
+    return dispatchRegisteredAgentExecutionTool(descriptor, request.arguments, dependencies);
+  }
+
+  if (descriptor.helperRef.helperKey === 'repairClaimantReadiness') {
+    return dispatchRegisteredAgentExecutionTool(descriptor, request.arguments, dependencies);
+  }
+
+  if (descriptor.helperRef.helperKey === 'runClaimantTaskEntry') {
+    return dispatchRegisteredAgentExecutionTool(descriptor, request.arguments, dependencies);
   }
 
   if (descriptor.helperRef.helperKey === 'executeIndustryUniverseScenario') {
