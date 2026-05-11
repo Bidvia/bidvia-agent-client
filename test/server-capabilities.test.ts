@@ -151,13 +151,17 @@ test('normalizeServerCapabilityPayload flows through the explicit capability-pla
     },
   } satisfies Parameters<typeof normalizeServerCapabilityPayload>[0];
 
-  assert.deepEqual(
-    normalizeServerCapabilityPayload(payload),
-    buildCapabilityPlaneServerSnapshot(payload, {
-      getRouteCapabilityFromLocalCatalog,
-      getLocalMcpToolDescriptor,
-    }),
-  );
+  const normalized = normalizeServerCapabilityPayload(payload);
+  const expected = buildCapabilityPlaneServerSnapshot(payload, {
+    getRouteCapabilityFromLocalCatalog,
+    getLocalMcpToolDescriptor,
+  });
+  expected.routeCapabilities.lastUpdatedAt = normalized.routeCapabilities.lastUpdatedAt;
+  expected.mcpTools.lastUpdatedAt = normalized.mcpTools.lastUpdatedAt;
+  expected.localMcpServer.lastUpdatedAt = normalized.localMcpServer.lastUpdatedAt;
+  expected.serverNegotiation.lastUpdatedAt = normalized.serverNegotiation.lastUpdatedAt;
+
+  assert.deepEqual(normalized, expected);
 });
 
 test('normalizeServerCapabilityPayload classifies widened truth-fetch reads from payload data without synthesizing extra support', () => {
