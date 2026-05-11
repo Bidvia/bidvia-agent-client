@@ -87,6 +87,10 @@ import {
   buildNotificationRetryBody,
 } from './event-notification-plane.js';
 import { buildEnterpriseIntegrationPlaneView } from './enterprise-integration-plane.js';
+import { createBidviaClaimantFacade } from './business-universe/claimant.js';
+import { createBidviaOperatorFacade } from './business-universe/operator.js';
+import { createBidviaPlatformManagedFacade } from './business-universe/platform-managed.js';
+import { createBidviaUniverseFacade } from './business-universe/orchestrator.js';
 
 export interface BidviaClientOptions {
   baseUrl: string;
@@ -128,6 +132,10 @@ interface BidviaRequestTransport {
 
 export class BidviaClient implements BidviaTaskRuntimeClientPort {
   private readonly fetchImpl: typeof fetch;
+  readonly claimant = createBidviaClaimantFacade(this);
+  readonly operator = createBidviaOperatorFacade(this);
+  readonly platformManaged = createBidviaPlatformManagedFacade(this);
+  readonly universe = createBidviaUniverseFacade(this);
 
   constructor(private readonly options: BidviaClientOptions) {
     this.fetchImpl = options.fetchImpl ?? fetch;
@@ -712,6 +720,204 @@ export class BidviaClient implements BidviaTaskRuntimeClientPort {
         requestPolicy,
       },
     );
+  }
+
+  async createOperatorExecutionListing(
+    input: import('./contracts.js').BidviaOperatorExecutionListingCreateInput,
+    requestPolicy?: BidviaClientRequestPolicy,
+  ) {
+    const context = this.resolveRequestContext(requestPolicy);
+    return this.request(`/operator/execution/listings?tenant_id=${encodeURIComponent(this.requireTenantId(context))}`, {
+      context,
+      method: 'POST',
+      headers: this.requireAdminSessionHeaders(context),
+      body: {
+        listing_id: input.listingId,
+        listing_type: input.listingType,
+        company_id: input.companyId,
+        actor_id: input.actorId,
+        category: input.category,
+        sku: input.sku,
+        quantity_value: input.quantityValue,
+        quantity_unit: input.quantityUnit,
+        region_summary: input.regionSummary,
+        verification_status: input.verificationStatus,
+        freshness_ts: input.freshnessTs,
+        trace_id: input.traceId,
+        idempotency_key: input.idempotencyKey,
+        now: input.now,
+      },
+      requestPolicy,
+    });
+  }
+
+  async activateOperatorExecutionListing(
+    listingId: string,
+    input: import('./contracts.js').BidviaOperatorExecutionListingActivateInput,
+    requestPolicy?: BidviaClientRequestPolicy,
+  ) {
+    const context = this.resolveRequestContext(requestPolicy);
+    return this.request(`/operator/execution/listings/${encodeURIComponent(listingId)}/activate?tenant_id=${encodeURIComponent(this.requireTenantId(context))}`, {
+      context,
+      method: 'POST',
+      headers: this.requireAdminSessionHeaders(context),
+      body: {
+        company_id: input.companyId,
+        actor_id: input.actorId,
+        ...(input.verificationStatus === undefined ? {} : { verification_status: input.verificationStatus }),
+        now: input.now,
+      },
+      requestPolicy,
+    });
+  }
+
+  async generateOperatorMatchCandidates(
+    listingId: string,
+    input: import('./contracts.js').BidviaOperatorExecutionMatchCandidatesInput,
+    requestPolicy?: BidviaClientRequestPolicy,
+  ) {
+    const context = this.resolveRequestContext(requestPolicy);
+    return this.request(`/operator/execution/listings/${encodeURIComponent(listingId)}/match-candidates?tenant_id=${encodeURIComponent(this.requireTenantId(context))}`, {
+      context,
+      method: 'POST',
+      headers: this.requireAdminSessionHeaders(context),
+      body: {
+        workflow_run_id: input.workflowRunId,
+        trigger_event_id: input.triggerEventId,
+        upstream_decision: input.upstreamDecision,
+        detected_evidence_level: input.detectedEvidenceLevel,
+        required_evidence_level: input.requiredEvidenceLevel,
+        missing_fields: input.missingFields,
+        freshness_ts: input.freshnessTs,
+        trace_id: input.traceId,
+        idempotency_key: input.idempotencyKey,
+        now: input.now,
+      },
+      requestPolicy,
+    });
+  }
+
+  async listOperatorMatches(
+    input: import('./contracts.js').BidviaOperatorMatchesListInput,
+    requestPolicy?: BidviaClientRequestPolicy,
+  ) {
+    const context = this.resolveRequestContext(requestPolicy);
+    const search = new URLSearchParams({
+      tenant_id: this.requireTenantId(context),
+      source_listing_id: input.sourceListingId,
+    });
+    return this.request(`/operator/matches?${search.toString()}`, {
+      context,
+      method: 'GET',
+      headers: this.requireAdminSessionHeaders(context),
+      requestPolicy,
+    });
+  }
+
+  async createOperatorConnection(
+    input: import('./contracts.js').BidviaCreateConnectionRequestInput & { companyId: string },
+    requestPolicy?: BidviaClientRequestPolicy,
+  ) {
+    const context = this.resolveRequestContext(requestPolicy);
+    return this.request(`/operator/connections?tenant_id=${encodeURIComponent(this.requireTenantId(context))}`, {
+      context,
+      method: 'POST',
+      headers: this.requireAdminSessionHeaders(context),
+      body: {
+        company_id: input.companyId,
+        source_match_id: input.sourceMatchId,
+        requester_actor_id: input.requesterActorId,
+        requester_company_id: input.requesterCompanyId,
+        risk_tier: input.riskTier,
+        policy_version: input.policyVersion,
+        approval_matrix_version: input.approvalMatrixVersion,
+        action_type: input.actionType,
+        now: input.now,
+      },
+      requestPolicy,
+    });
+  }
+
+  async approveOperatorConnection(
+    input: import('./contracts.js').BidviaApproveConnectionRequestInput,
+    requestPolicy?: BidviaClientRequestPolicy,
+  ) {
+    const context = this.resolveRequestContext(requestPolicy);
+    return this.request(`/operator/approvals/${encodeURIComponent(input.approvalRequestId)}/decision?tenant_id=${encodeURIComponent(this.requireTenantId(context))}`, {
+      context,
+      method: 'POST',
+      headers: this.requireAdminSessionHeaders(context),
+      body: {
+        actor_id: input.actorId,
+        decision: input.decision,
+        now: input.now,
+      },
+      requestPolicy,
+    });
+  }
+
+  async exportOperatorOpportunityPackage(
+    input: import('./contracts.js').BidviaExportOpportunityPackageInput,
+    requestPolicy?: BidviaClientRequestPolicy,
+  ) {
+    const context = this.resolveRequestContext(requestPolicy);
+    return this.request(`/operator/opportunities/${encodeURIComponent(input.opportunityId)}/package-export?tenant_id=${encodeURIComponent(this.requireTenantId(context))}`, {
+      context,
+      method: 'POST',
+      headers: this.requireAdminSessionHeaders(context),
+      body: {
+        render_template_id: input.renderTemplateId,
+        content_ref: input.contentRef,
+        redaction_profile: input.redactionProfile,
+        target_system: input.targetSystem,
+        operation_type: input.operationType,
+        node_id: input.nodeId,
+        runtime_id: input.runtimeId,
+        agent_id: input.agentId,
+        bound_account_id: input.boundAccountId,
+        now: input.now,
+      },
+      requestPolicy,
+    });
+  }
+
+  async getOperatorCommercialActionStatus(
+    input: import('./contracts.js').BidviaCommercialActionStatusInput,
+    requestPolicy?: BidviaClientRequestPolicy,
+  ) {
+    const context = this.resolveRequestContext(requestPolicy);
+    return this.request(`/runtime/commercial-actions/${encodeURIComponent(input.commercialActionRequestId)}/status?tenant_id=${encodeURIComponent(this.requireTenantId(context))}`, {
+      context,
+      method: 'GET',
+      headers: this.requireAdminSessionHeaders(context),
+      requestPolicy,
+    });
+  }
+
+  async getOperatorCommercialActionReceipt(
+    input: import('./contracts.js').BidviaCommercialActionStatusInput,
+    requestPolicy?: BidviaClientRequestPolicy,
+  ) {
+    const context = this.resolveRequestContext(requestPolicy);
+    return this.request(`/runtime/commercial-actions/${encodeURIComponent(input.commercialActionRequestId)}/receipt?tenant_id=${encodeURIComponent(this.requireTenantId(context))}`, {
+      context,
+      method: 'GET',
+      headers: this.requireAdminSessionHeaders(context),
+      requestPolicy,
+    });
+  }
+
+  async getOperatorCommercialActionAudit(
+    input: import('./contracts.js').BidviaCommercialActionStatusInput,
+    requestPolicy?: BidviaClientRequestPolicy,
+  ) {
+    const context = this.resolveRequestContext(requestPolicy);
+    return this.request(`/runtime/commercial-actions/${encodeURIComponent(input.commercialActionRequestId)}/audit?tenant_id=${encodeURIComponent(this.requireTenantId(context))}`, {
+      context,
+      method: 'GET',
+      headers: this.requireAdminSessionHeaders(context),
+      requestPolicy,
+    });
   }
 
   async postHeartbeat(input: BidviaHeartbeatInput, requestPolicy?: BidviaClientRequestPolicy) {
