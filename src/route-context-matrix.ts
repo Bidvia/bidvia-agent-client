@@ -70,6 +70,25 @@ export interface BidviaRouteContextMatrixRow {
   recommendedOutputMode: BidviaMcpToolOutputMode;
 }
 
+export interface BidviaRoleStageGuidanceEntry {
+  helperKey: string;
+  role: string;
+  stage: string;
+  executability: string;
+  ownershipClass: string;
+  handoffClass: string;
+  canonicality: string;
+  mayContinueHere: boolean;
+  mayReadHere: boolean;
+  mayNotDecideHere: boolean;
+  cliCommands: string[];
+  mcpTools: Array<{
+    toolName: string;
+    outputMode: BidviaMcpToolOutputMode;
+  }>;
+  recommendedOutputMode: BidviaMcpToolOutputMode;
+}
+
 export interface BidviaRouteContextMatrix {
   defaults: {
     baseUrl: string;
@@ -88,6 +107,7 @@ export interface BidviaRouteContextMatrix {
   };
   stage3ReleaseGate: import('./contracts.js').BidviaStage3ReleaseGate;
   executionGuidance: BidviaExecutionGuidanceEntry[];
+  roleStageGuidance: BidviaRoleStageGuidanceEntry[];
   agentLifecycleGuidance: BidviaAgentLifecycleGuidance;
   rows: BidviaRouteContextMatrixRow[];
   firstSuccessNextSteps: Record<
@@ -128,6 +148,47 @@ function requireRouteCapability(helperKey: string): BidviaRouteCapability {
 
 function buildDiscoveryCatalogMap(): Map<string, BidviaLocalDiscoveryCatalogEntry> {
   return new Map(buildLocalDiscoveryCatalog().map((entry) => [entry.helperKey, entry]));
+}
+
+
+function buildRoleStageGuidance(
+  discoveryCatalogMap: Map<string, BidviaLocalDiscoveryCatalogEntry>,
+): BidviaRoleStageGuidanceEntry[] {
+  return [...discoveryCatalogMap.values()]
+    .filter((entry): entry is BidviaLocalDiscoveryCatalogEntry & {
+      role: string;
+      stage: string;
+      executability: string;
+      ownershipClass: string;
+      handoffClass: string;
+      canonicality: string;
+      mayContinueHere: boolean;
+      mayReadHere: boolean;
+      mayNotDecideHere: boolean;
+    } => entry.role !== undefined
+      && entry.stage !== undefined
+      && entry.executability !== undefined
+      && entry.ownershipClass !== undefined
+      && entry.handoffClass !== undefined
+      && entry.canonicality !== undefined
+      && entry.mayContinueHere !== undefined
+      && entry.mayReadHere !== undefined
+      && entry.mayNotDecideHere !== undefined)
+    .map((entry) => ({
+      helperKey: entry.helperKey,
+      role: entry.role,
+      stage: entry.stage,
+      executability: entry.executability,
+      ownershipClass: entry.ownershipClass,
+      handoffClass: entry.handoffClass,
+      canonicality: entry.canonicality,
+      mayContinueHere: entry.mayContinueHere,
+      mayReadHere: entry.mayReadHere,
+      mayNotDecideHere: entry.mayNotDecideHere,
+      cliCommands: [...entry.cliCommands],
+      mcpTools: entry.mcpTools.map((tool) => ({ ...tool })),
+      recommendedOutputMode: entry.recommendedOutputMode,
+    }));
 }
 
 function buildPublicDefaults(): BidviaRouteContextMatrix['defaults'] {
@@ -226,6 +287,7 @@ export function buildRouteContextMatrix(): BidviaRouteContextMatrix {
     governedReadPosture: identitySessionPlane.governedReadPosture,
     stage3ReleaseGate: buildStage3ReleaseGate(),
     executionGuidance: buildExecutionGuidanceEntries(),
+    roleStageGuidance: buildRoleStageGuidance(discoveryCatalogMap),
     agentLifecycleGuidance: buildAgentLifecycleGuidance(),
     rows: journeys.flatMap((journey) => (
       journey.helperSteps.map(({ helperKey }) => buildMatrixRow(journey, helperKey, discoveryCatalogMap))
