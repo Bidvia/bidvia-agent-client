@@ -646,6 +646,35 @@ export interface BidviaGenerateMatchCandidatesInput {
   now: string;
 }
 
+export interface BidviaOperatorExecutionListingCreateInput extends BidviaCreateListingInput {
+  companyId: string;
+  actorId: string;
+}
+
+export interface BidviaOperatorExecutionListingActivateInput {
+  companyId: string;
+  actorId: string;
+  verificationStatus?: string;
+  now: string;
+}
+
+export interface BidviaOperatorExecutionMatchCandidatesInput {
+  workflowRunId: string;
+  triggerEventId: string;
+  upstreamDecision: string;
+  detectedEvidenceLevel: number;
+  requiredEvidenceLevel: number;
+  missingFields: string[];
+  freshnessTs: string;
+  traceId: string;
+  idempotencyKey: string;
+  now: string;
+}
+
+export interface BidviaOperatorMatchesListInput {
+  sourceListingId: string;
+}
+
 export interface BidviaCreateConnectionRequestInput {
   sourceMatchId: string;
   requesterActorId: string;
@@ -664,6 +693,10 @@ export type BidviaConnectionRiskTier = (typeof bidviaConnectionRiskTiers)[number
 export const bidviaConnectionActionTypes = ['CONTACT_SHARE'] as const;
 
 export type BidviaConnectionActionType = (typeof bidviaConnectionActionTypes)[number];
+
+export interface BidviaOperatorConnectionExecutionInput extends BidviaCreateConnectionRequestInput {
+  companyId: string;
+}
 
 export interface BidviaApproveConnectionRequestInput {
   approvalRequestId: string;
@@ -688,6 +721,10 @@ export interface BidviaConnectionApprovalScenarioPlan {
   createConnectionRequestInput: BidviaCreateConnectionRequestInput;
   approveConnectionRequestInput: BidviaApproveConnectionRequestInput;
   closureGuidance: BidviaClosureGuidance;
+}
+
+export interface BidviaOperatorCommercialActionInspectInput {
+  commercialActionRequestId: string;
 }
 
 export interface BidviaExportOpportunityPackageInput {
@@ -1100,6 +1137,42 @@ export interface BidviaMcpToolHelperRef {
   capabilityKey?: string;
 }
 
+
+export const bidviaProductSurfaceRoles = ['claimant', 'operator', 'platform-managed'] as const;
+
+export type BidviaProductSurfaceRole = (typeof bidviaProductSurfaceRoles)[number];
+
+export const bidviaProductSurfaceStages = ['entry', 'readiness', 'task-entry', 'handoff', 'progression', 'closure'] as const;
+
+export type BidviaProductSurfaceStage = (typeof bidviaProductSurfaceStages)[number];
+
+export const bidviaProductSurfaceExecutabilityClasses = [
+  'canonical',
+  'metadata-only-handoff',
+  'executable-handoff',
+  'non-canonical-fail-close',
+  'bounded-stop',
+  'later-wave-stop',
+] as const;
+
+export type BidviaProductSurfaceExecutabilityClass = (typeof bidviaProductSurfaceExecutabilityClasses)[number];
+
+export const bidviaProductSurfaceCanonicalityClasses = ['canonical', 'bounded', 'non-canonical', 'later-wave'] as const;
+
+export type BidviaProductSurfaceCanonicalityClass = (typeof bidviaProductSurfaceCanonicalityClasses)[number];
+
+export interface BidviaRoleStageSemanticMetadata {
+  role: BidviaProductSurfaceRole;
+  stage: BidviaProductSurfaceStage;
+  executability: BidviaProductSurfaceExecutabilityClass;
+  ownershipClass: string;
+  handoffClass: string;
+  canonicality: BidviaProductSurfaceCanonicalityClass;
+  mayContinueHere: boolean;
+  mayReadHere: boolean;
+  mayNotDecideHere: boolean;
+}
+
 export interface BidviaMcpToolDescriptor {
   toolName: string;
   description: string;
@@ -1118,6 +1191,15 @@ export interface BidviaMcpToolDescriptor {
   governedRunAuthorizationDerivedFromCapabilityReadTruth?: false;
   taskPlaneCapabilityMode?: BidviaTaskPlaneCapabilityMode;
   eventNotificationPlaneCapabilityMode?: BidviaEventNotificationPlaneCapabilityMode;
+  role?: BidviaProductSurfaceRole;
+  stage?: BidviaProductSurfaceStage;
+  executability?: BidviaProductSurfaceExecutabilityClass;
+  ownershipClass?: string;
+  handoffClass?: string;
+  canonicality?: BidviaProductSurfaceCanonicalityClass;
+  mayContinueHere?: boolean;
+  mayReadHere?: boolean;
+  mayNotDecideHere?: boolean;
 }
 
 export interface BidviaMcpToolCallRequest {
