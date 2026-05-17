@@ -2,6 +2,27 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import {
+  runBootstrapClaimantLocalDocker,
+  type BootstrapClaimantLocalDockerReport,
+} from './live-probes/bootstrap-claimant-local-docker.js';
+import {
+  runP1IntegrationLifecycle,
+  type RunP1IntegrationLifecycleReport,
+} from './live-probes/run-p1-integration-lifecycle.js';
+import {
+  runP1OperatorDeeperChain,
+  type RunP1OperatorDeeperChainReport,
+} from './live-probes/run-p1-operator-deeper-chain.js';
+import {
+  runPackBTaskProgression,
+  type RunPackBTaskProgressionReport,
+} from './live-probes/run-pack-b-task-progression.js';
+import {
+  runPlatformManagedIntegrationHandoff,
+  type RunPlatformManagedIntegrationHandoffReport,
+} from './live-probes/run-platform-managed-integration-handoff.js';
+
 export interface VerifyClientBoundedMatrixArgs {
   baseUrl: string;
   outputPath: string;
@@ -22,6 +43,9 @@ export interface BoundedMatrixScenarioEvidence {
     | 'commercial-and-integration-readback';
   lane: 'default-local-docker';
   status: 'passed' | 'blocked' | 'failed';
+  resultClass: 'pass' | 'bounded-stop' | 'contradiction' | 'blocked';
+  coveredFamilies: string[];
+  proofClass: 'baseline-interpretation' | 'direct-executable' | 'partial-executable' | 'bounded-stop-proof';
   blockedBy: string[];
   notes: string[];
   returnedIds: Record<string, string>;
@@ -51,6 +75,8 @@ export interface ClientBoundedMatrixEvidence {
     passedCount: number;
     blockedCount: number;
     failedCount: number;
+    boundedStopCount: number;
+    contradictionCount: number;
     blockedScenarioKeys: string[];
     failedScenarioKeys: string[];
   };
@@ -58,12 +84,37 @@ export interface ClientBoundedMatrixEvidence {
 
 interface RunClientBoundedMatrixOptions {
   baseUrl: string;
+  artifactRootPath?: string;
 }
 
 interface RunClientBoundedMatrixDependencies {
   fetchImpl?: typeof fetch;
   env?: Record<string, string | undefined>;
   now?: () => string;
+  bootstrapClaimantLocalDocker?: (args: {
+    baseUrl: string;
+    statePath: string;
+  }) => Promise<BootstrapClaimantLocalDockerReport>;
+  runP1OperatorDeeperChain?: (args: {
+    baseUrl: string;
+    statePath: string;
+    outputPath: string;
+  }) => Promise<RunP1OperatorDeeperChainReport>;
+  runP1IntegrationLifecycle?: (args: {
+    baseUrl: string;
+    statePath: string;
+    outputPath: string;
+  }) => Promise<RunP1IntegrationLifecycleReport>;
+  runPackBTaskProgression?: (args: {
+    baseUrl: string;
+    statePath: string;
+    outputPath: string;
+  }) => Promise<RunPackBTaskProgressionReport>;
+  runPlatformManagedIntegrationHandoff?: (args: {
+    baseUrl: string;
+    statePath: string;
+    outputPath: string;
+  }) => Promise<RunPlatformManagedIntegrationHandoffReport>;
 }
 
 const requiredClaimantEnvFields = [
@@ -132,6 +183,8 @@ function buildActorContext(
 
 function buildBlockedScenario(
   scenarioKey: BoundedMatrixScenarioEvidence['scenarioKey'],
+  coveredFamilies: string[],
+  proofClass: BoundedMatrixScenarioEvidence['proofClass'],
   blockedBy: string[],
   notes: string[],
 ): BoundedMatrixScenarioEvidence {
@@ -139,11 +192,360 @@ function buildBlockedScenario(
     scenarioKey,
     lane: 'default-local-docker',
     status: 'blocked',
+    resultClass: 'blocked',
+    coveredFamilies,
+    proofClass,
     blockedBy,
     notes,
     returnedIds: {},
     readbacks: {},
   };
+}
+
+function buildPassedScenario(
+  scenarioKey: BoundedMatrixScenarioEvidence['scenarioKey'],
+  coveredFamilies: string[],
+  proofClass: BoundedMatrixScenarioEvidence['proofClass'],
+  notes: string[],
+  returnedIds: Record<string, string>,
+  readbacks: Record<string, unknown>,
+): BoundedMatrixScenarioEvidence {
+  return {
+    scenarioKey,
+    lane: 'default-local-docker',
+    status: 'passed',
+    resultClass: 'pass',
+    coveredFamilies,
+    proofClass,
+    blockedBy: [],
+    notes,
+    returnedIds,
+    readbacks,
+  };
+}
+
+function buildBoundedStopScenario(
+  scenarioKey: BoundedMatrixScenarioEvidence['scenarioKey'],
+  coveredFamilies: string[],
+  proofClass: BoundedMatrixScenarioEvidence['proofClass'],
+  blockedBy: string[],
+  notes: string[],
+  returnedIds: Record<string, string>,
+  readbacks: Record<string, unknown>,
+): BoundedMatrixScenarioEvidence {
+  return {
+    scenarioKey,
+    lane: 'default-local-docker',
+    status: 'blocked',
+    resultClass: 'bounded-stop',
+    coveredFamilies,
+    proofClass,
+    blockedBy,
+    notes,
+    returnedIds,
+    readbacks,
+  };
+}
+
+function buildContradictionScenario(
+  scenarioKey: BoundedMatrixScenarioEvidence['scenarioKey'],
+  coveredFamilies: string[],
+  proofClass: BoundedMatrixScenarioEvidence['proofClass'],
+  notes: string[],
+  returnedIds: Record<string, string>,
+  readbacks: Record<string, unknown>,
+): BoundedMatrixScenarioEvidence {
+  return {
+    scenarioKey,
+    lane: 'default-local-docker',
+    status: 'failed',
+    resultClass: 'contradiction',
+    coveredFamilies,
+    proofClass,
+    blockedBy: [],
+    notes,
+    returnedIds,
+    readbacks,
+  };
+}
+
+function buildArtifactPath(rootPath: string, fileName: string): string {
+  return path.join(rootPath, fileName);
+}
+
+function summarizeBootstrap(
+  bootstrap: BootstrapClaimantLocalDockerReport,
+): Pick<BoundedMatrixScenarioEvidence, 'returnedIds' | 'readbacks'> {
+  return {
+    returnedIds: {
+      agentId: bootstrap.claimant.agentId,
+      principalId: bootstrap.claimant.principalId,
+      registrationId: bootstrap.claimant.registrationId,
+      dispatchAuthorityRequestId: bootstrap.dispatchAuthority.requestId,
+      externalBindingId: bootstrap.externalBinding.bindingId,
+    },
+    readbacks: {
+      claimant: bootstrap.claimant,
+      dispatchAuthority: bootstrap.dispatchAuthority,
+      externalBinding: bootstrap.externalBinding,
+    },
+  };
+}
+
+async function buildExecutableScenarioCluster(
+  options: RunClientBoundedMatrixOptions,
+  dependencies: RunClientBoundedMatrixDependencies,
+): Promise<BoundedMatrixScenarioEvidence[]> {
+  if (!options.artifactRootPath?.trim()) {
+    return [
+      buildBlockedScenario(
+        'platform-managed-onboarding',
+        ['identity-entry'],
+        'direct-executable',
+        ['fresh-bootstrap-state-required'],
+        ['This scenario becomes executable only when the bounded matrix has a writable artifact root for fresh bootstrap state.'],
+      ),
+      buildBlockedScenario(
+        'dispatch-ready-progression',
+        ['account-plane-readiness-and-repair', 'operator-review-boundary'],
+        'direct-executable',
+        ['fresh-bootstrap-state-required'],
+        ['This scenario becomes executable only when the bounded matrix can create a fresh bootstrap state file.'],
+      ),
+      buildBlockedScenario(
+        'role-collaboration-handoff',
+        ['selected-claimant-execution-and-materialization-readback', 'opportunity-continuation-and-end-state'],
+        'partial-executable',
+        ['probe-artifacts-not-configured'],
+        ['This scenario requires the checked-in operator deeper-chain probe and fresh artifact paths.'],
+      ),
+      buildBlockedScenario(
+        'continuous-task-governed-work-closure',
+        ['bounded-task-plane-progression'],
+        'direct-executable',
+        ['probe-artifacts-not-configured'],
+        ['This scenario becomes executable only when the bounded matrix has a writable artifact root for the checked-in Pack B progression probe.'],
+      ),
+      buildBlockedScenario(
+        'commercial-and-integration-readback',
+        ['integration-center-lifecycle-and-retired-seam-validation'],
+        'bounded-stop-proof',
+        ['probe-artifacts-not-configured'],
+        ['This scenario requires the checked-in integration lifecycle and platform-managed handoff probes plus fresh artifact paths.'],
+      ),
+    ];
+  }
+
+  const bootstrapClaimant = dependencies.bootstrapClaimantLocalDocker
+    ?? (async (args: { baseUrl: string; statePath: string }) => runBootstrapClaimantLocalDocker(args));
+  const operatorProbe = dependencies.runP1OperatorDeeperChain
+    ?? (async (args: { baseUrl: string; statePath: string; outputPath: string }) => runP1OperatorDeeperChain(args));
+  const integrationProbe = dependencies.runP1IntegrationLifecycle
+    ?? (async (args: { baseUrl: string; statePath: string; outputPath: string }) => runP1IntegrationLifecycle(args));
+  const packBProbe = dependencies.runPackBTaskProgression
+    ?? (async (args: { baseUrl: string; statePath: string; outputPath: string }) => runPackBTaskProgression(args));
+  const platformManagedProbe = dependencies.runPlatformManagedIntegrationHandoff
+    ?? (async (args: { baseUrl: string; statePath: string; outputPath: string }) => runPlatformManagedIntegrationHandoff(args));
+
+  const bootstrapStatePath = buildArtifactPath(options.artifactRootPath, 'bounded-matrix-bootstrap-state.json');
+  const bootstrap = await bootstrapClaimant({
+    baseUrl: options.baseUrl,
+    statePath: bootstrapStatePath,
+  });
+  const bootstrapSummary = summarizeBootstrap(bootstrap);
+  const onboardingScenario = buildPassedScenario(
+    'platform-managed-onboarding',
+    ['identity-entry'],
+    'direct-executable',
+    ['Fresh bootstrap claimant state was created successfully for the bounded matrix executor.'],
+    bootstrapSummary.returnedIds,
+    bootstrapSummary.readbacks,
+  );
+  const dispatchReadyScenario = bootstrap.dispatchAuthority.status === 'APPROVED' && bootstrap.externalBinding.status === 'active'
+    ? buildPassedScenario(
+        'dispatch-ready-progression',
+        ['account-plane-readiness-and-repair', 'operator-review-boundary'],
+        'direct-executable',
+        ['Fresh bootstrap evidence confirms approved dispatch authority and an active external binding.'],
+        bootstrapSummary.returnedIds,
+        bootstrapSummary.readbacks,
+      )
+    : buildBoundedStopScenario(
+        'dispatch-ready-progression',
+        ['account-plane-readiness-and-repair', 'operator-review-boundary'],
+        'direct-executable',
+        ['dispatch-ready-truth-not-confirmed'],
+        ['Fresh bootstrap completed, but returned truth did not confirm both approved dispatch authority and active external binding.'],
+        bootstrapSummary.returnedIds,
+        bootstrapSummary.readbacks,
+      );
+
+  const operatorReport = await operatorProbe({
+    baseUrl: options.baseUrl,
+    statePath: buildArtifactPath(options.artifactRootPath, 'bounded-matrix-operator-state.json'),
+    outputPath: buildArtifactPath(options.artifactRootPath, 'bounded-matrix-operator-report.json'),
+  });
+  const roleCollaborationScenario = (operatorReport.claimantReadbacks.endState as { closure_class?: string }).closure_class === 'product_closed'
+    ? buildPassedScenario(
+        'role-collaboration-handoff',
+        ['selected-claimant-execution-and-materialization-readback', 'opportunity-continuation-and-end-state'],
+        'partial-executable',
+        ['The checked-in operator deeper-chain probe reached claimant opportunity readback and product-closed end-state evidence.'],
+        {
+          matchId: operatorReport.ids.matchId ?? '',
+          connectionRequestId: operatorReport.ids.connectionRequestId ?? '',
+          opportunityId: operatorReport.ids.opportunityId ?? '',
+          packageId: operatorReport.ids.packageId ?? '',
+        },
+        {
+          claimantReadbacks: operatorReport.claimantReadbacks,
+          steps: operatorReport.steps,
+        },
+      )
+    : buildBoundedStopScenario(
+        'role-collaboration-handoff',
+        ['selected-claimant-execution-and-materialization-readback', 'opportunity-continuation-and-end-state'],
+        'partial-executable',
+        ['operator-deeper-chain-not-closed'],
+        ['The checked-in operator deeper-chain probe did not reach the expected claimant end-state closure evidence.'],
+        {
+          matchId: operatorReport.ids.matchId ?? '',
+          connectionRequestId: operatorReport.ids.connectionRequestId ?? '',
+          opportunityId: operatorReport.ids.opportunityId ?? '',
+          packageId: operatorReport.ids.packageId ?? '',
+        },
+        {
+          claimantReadbacks: operatorReport.claimantReadbacks,
+          steps: operatorReport.steps,
+        },
+      );
+
+  const packBReport = await packBProbe({
+    baseUrl: options.baseUrl,
+    statePath: buildArtifactPath(options.artifactRootPath, 'bounded-matrix-pack-b-state.json'),
+    outputPath: buildArtifactPath(options.artifactRootPath, 'bounded-matrix-pack-b-report.json'),
+  });
+  const packBScenario = packBReport.successBranch.dispatchId !== null
+    && packBReport.successBranch.outcomeRef !== null
+    && packBReport.successBranch.confirmationCycleRef !== null
+    && packBReport.successBranch.closureRefs.dispatchRef !== null
+    && packBReport.successBranch.closureRefs.outcomeRef !== null
+    && packBReport.successBranch.closureRefs.evidenceBundleRef !== null
+    && packBReport.successBranch.closureRefs.confirmationCycleRef !== null
+    ? buildPassedScenario(
+        'continuous-task-governed-work-closure',
+        ['bounded-task-plane-progression'],
+        'direct-executable',
+        ['The checked-in Pack B progression probe reached bounded governed-work closure with canonical refs.'],
+        {
+          dispatchRef: packBReport.successBranch.closureRefs.dispatchRef,
+          outcomeRef: packBReport.successBranch.closureRefs.outcomeRef,
+          evidenceBundleRef: packBReport.successBranch.closureRefs.evidenceBundleRef,
+          confirmationCycleRef: packBReport.successBranch.closureRefs.confirmationCycleRef,
+        },
+        {
+          successBranch: packBReport.successBranch,
+          failureBranch: packBReport.failureBranch,
+        },
+      )
+    : buildBoundedStopScenario(
+        'continuous-task-governed-work-closure',
+        ['bounded-task-plane-progression'],
+        'direct-executable',
+        ['pack-b-governed-work-closure-not-confirmed'],
+        ['The checked-in Pack B progression probe did not confirm the full bounded governed-work closure chain.'],
+        {
+          dispatchRef: packBReport.successBranch.closureRefs.dispatchRef ?? '',
+          outcomeRef: packBReport.successBranch.closureRefs.outcomeRef ?? '',
+          evidenceBundleRef: packBReport.successBranch.closureRefs.evidenceBundleRef ?? '',
+          confirmationCycleRef: packBReport.successBranch.closureRefs.confirmationCycleRef ?? '',
+        },
+        {
+          successBranch: packBReport.successBranch,
+          failureBranch: packBReport.failureBranch,
+        },
+      );
+
+  const integrationReport = await integrationProbe({
+    baseUrl: options.baseUrl,
+    statePath: buildArtifactPath(options.artifactRootPath, 'bounded-matrix-integration-state.json'),
+    outputPath: buildArtifactPath(options.artifactRootPath, 'bounded-matrix-integration-report.json'),
+  });
+  const platformManagedReport = await platformManagedProbe({
+    baseUrl: options.baseUrl,
+    statePath: buildArtifactPath(options.artifactRootPath, 'bounded-matrix-platform-managed-state.json'),
+    outputPath: buildArtifactPath(options.artifactRootPath, 'bounded-matrix-platform-managed-report.json'),
+  });
+
+  const platformManagedEligibility = platformManagedReport.platformManagedEligibility as {
+    eligibility?: {
+      readiness_state?: string;
+      invocation_route?: string | null;
+    };
+  };
+  const inboundAttempt = platformManagedReport.inboundAttempt as {
+    error?: {
+      code?: string;
+    };
+  };
+  const integrationEligibilityStep = integrationReport.steps.find((step) => step.stepKey === 'account-agent-integration-eligibility');
+  const integrationEligibility = integrationEligibilityStep?.responseBody as {
+    availability_state?: string;
+  } | undefined;
+  const commercialReturnedIds = {
+    integrationAppId: integrationReport.ids.integrationAppId ?? '',
+    integrationInstallationId: integrationReport.ids.integrationInstallationId ?? '',
+    platformManagedAgentId: platformManagedReport.platformManagedAgentId ?? '',
+    installationId: platformManagedReport.installationId ?? '',
+    connectionId: platformManagedReport.connectionId ?? '',
+  };
+  const commercialReadbacks = {
+    integrationLifecycle: integrationReport,
+    platformManagedHandoff: platformManagedReport,
+  };
+
+  const commercialScenario = platformManagedEligibility.eligibility?.readiness_state === 'configured_invokable'
+    && platformManagedEligibility.eligibility.invocation_route === null
+    && inboundAttempt.error?.code !== 'connector_dispatcher_not_configured'
+    && inboundAttempt.error?.code !== 'connector_inbound_not_supported'
+    ? buildContradictionScenario(
+        'commercial-and-integration-readback',
+        ['integration-center-lifecycle-and-retired-seam-validation'],
+        'bounded-stop-proof',
+        ['Platform-managed eligibility reported configured_invokable while the invocation route was null without the known bounded dispatcher stop.'],
+        commercialReturnedIds,
+        commercialReadbacks,
+      )
+    : inboundAttempt.error?.code === 'connector_dispatcher_not_configured'
+      || inboundAttempt.error?.code === 'connector_inbound_not_supported'
+      || (platformManagedEligibility.eligibility?.readiness_state === 'configured_not_invokable'
+        && platformManagedEligibility.eligibility.invocation_route === null)
+      || integrationEligibility?.availability_state === 'configured_actor_ineligible'
+      ? buildBoundedStopScenario(
+          'commercial-and-integration-readback',
+          ['integration-center-lifecycle-and-retired-seam-validation'],
+          'bounded-stop-proof',
+          [inboundAttempt.error?.code === 'connector_inbound_not_supported' ? 'connector_inbound_not_supported' : 'connector_dispatcher_not_configured'],
+          ['The checked-in integration probes reached the maintained bounded stop at the configured-but-not-invokable connector boundary instead of contradicting readiness truth.'],
+          commercialReturnedIds,
+          commercialReadbacks,
+        )
+      : buildPassedScenario(
+          'commercial-and-integration-readback',
+          ['integration-center-lifecycle-and-retired-seam-validation'],
+          'bounded-stop-proof',
+          ['The checked-in integration lifecycle and platform-managed handoff probes completed without the known bounded dispatcher stop.'],
+          commercialReturnedIds,
+          commercialReadbacks,
+        );
+
+  return [
+    onboardingScenario,
+    dispatchReadyScenario,
+    roleCollaborationScenario,
+    packBScenario,
+    commercialScenario,
+  ];
 }
 
 async function fetchJson(
@@ -176,6 +578,9 @@ export async function runClientBoundedMatrix(
       scenarioKey: 'runtime-baseline',
       lane: 'default-local-docker',
       status: healthz.httpStatus === 200 && readyz.httpStatus === 200 ? 'passed' : 'failed',
+      resultClass: healthz.httpStatus === 200 && readyz.httpStatus === 200 ? 'pass' : 'contradiction',
+      coveredFamilies: ['public-runtime-interpretation'],
+      proofClass: 'baseline-interpretation',
       blockedBy: [],
       notes: [
         'Verifies only the local docker runtime baseline through /healthz and /readyz.',
@@ -186,41 +591,7 @@ export async function runClientBoundedMatrix(
         readyz: readyz.body,
       },
     },
-    buildBlockedScenario(
-      'platform-managed-onboarding',
-      [...claimantContext.missingFields, 'valid_invitation_or_bootstrap_input'],
-      [
-        'This scenario requires self-bootstrap or provided claimant credentials plus invitation/bootstrap inputs that are not available from the current shell alone.',
-      ],
-    ),
-    buildBlockedScenario(
-      'dispatch-ready-progression',
-      claimantContext.missingFields,
-      [
-        'This scenario requires claimant account-plane context and runtime-generated claimed-agent identifiers to verify task-write-ready and dispatch-eligibility truth.',
-      ],
-    ),
-    buildBlockedScenario(
-      'role-collaboration-handoff',
-      [...new Set([...claimantContext.missingFields, ...adminContext.missingFields])],
-      [
-        'This scenario requires claimant plus operator/admin context and runtime-generated handoff identifiers for the approval-to-opportunity seam.',
-      ],
-    ),
-    buildBlockedScenario(
-      'continuous-task-governed-work-closure',
-      claimantContext.missingFields,
-      [
-        'This scenario requires claimant context plus fresh runtime-generated task-dispatch identifiers to verify bounded governed-work closure.',
-      ],
-    ),
-    buildBlockedScenario(
-      'commercial-and-integration-readback',
-      [...new Set([...claimantContext.missingFields, ...adminContext.missingFields])],
-      [
-        'This scenario requires governed claimant/operator identifiers for commercial-action status or integration ownership readback, which are not derivable from the current shell alone.',
-      ],
-    ),
+    ...(await buildExecutableScenarioCluster(options, dependencies)),
   ];
 
   const blockedScenarioKeys = scenarios
@@ -229,6 +600,8 @@ export async function runClientBoundedMatrix(
   const failedScenarioKeys = scenarios
     .filter((scenario) => scenario.status === 'failed')
     .map((scenario) => scenario.scenarioKey);
+  const boundedStopCount = scenarios.filter((scenario) => scenario.resultClass === 'bounded-stop').length;
+  const contradictionCount = scenarios.filter((scenario) => scenario.resultClass === 'contradiction').length;
 
   return {
     schemaVersion: '2026-05-06',
@@ -247,6 +620,8 @@ export async function runClientBoundedMatrix(
       passedCount: scenarios.filter((scenario) => scenario.status === 'passed').length,
       blockedCount: blockedScenarioKeys.length,
       failedCount: failedScenarioKeys.length,
+      boundedStopCount,
+      contradictionCount,
       blockedScenarioKeys,
       failedScenarioKeys,
     },
@@ -274,6 +649,7 @@ export async function main(argv: string[] = process.argv.slice(2)): Promise<void
   const args = parseVerifyClientBoundedMatrixArgs(argv);
   const evidence = await runClientBoundedMatrix({
     baseUrl: args.baseUrl,
+    artifactRootPath: path.join(path.dirname(args.outputPath), 'bounded-matrix-artifacts'),
   });
   const result = await writeClientBoundedMatrixEvidence(args.outputPath, evidence);
   process.stdout.write(`${JSON.stringify({
