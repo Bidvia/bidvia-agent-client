@@ -1,5 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { mkdtempSync, mkdirSync, realpathSync, symlinkSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -54,6 +56,90 @@ test('buildInstallIntegritySnapshot flags install-path mismatch and points to a 
     blockerKind: 'install-path-mismatch',
     recommendedNextStep: 'Reinstall or relink the active bidvia binary so it points at the intended package root before rerunning runtime validation.',
   });
+});
+
+test('buildInstallIntegritySnapshot resolves npm bin symlink wrappers to the real dist cli target before checking path drift', () => {
+  const tempRoot = mkdtempSync(path.join(tmpdir(), 'bidvia-install-integrity-'));
+  const packageRoot = path.join(tempRoot, 'node_modules', '@bidvia', 'client');
+  const distRoot = path.join(packageRoot, 'dist');
+  const realCliPath = path.join(distRoot, 'cli.js');
+  const binRoot = path.join(tempRoot, 'node_modules', '.bin');
+  const shimPath = path.join(binRoot, 'bidvia');
+
+  mkdirSync(distRoot, { recursive: true });
+  mkdirSync(binRoot, { recursive: true });
+  writeFileSync(realCliPath, '#!/usr/bin/env node\n');
+  symlinkSync('../@bidvia/client/dist/cli.js', shimPath);
+
+  const resolvedPackageRoot = realpathSync(packageRoot);
+  const resolvedDistRoot = realpathSync(distRoot);
+  const resolvedCliPath = realpathSync(realCliPath);
+
+  const report = buildInstallIntegritySnapshot({
+    activeExecutablePath: shimPath,
+    packageRoot,
+    packageVersion: '1.0.0',
+    npmGlobalPrefix: null,
+  });
+
+  assert.deepEqual(report, {
+    command: 'install-integrity',
+    scope: 'local-only',
+    activeExecutablePath: resolvedCliPath,
+    resolvedPackageRoot: resolvedPackageRoot,
+    resolvedDistRoot: resolvedDistRoot,
+    packageName: '@bidvia/client',
+    packageVersion: '1.0.0',
+    pathDriftDetected: false,
+    driftSignals: [],
+    blockerKind: null,
+    recommendedNextStep: null,
+  });
+});
+
+test('buildInstallIntegritySnapshot resolves the default argvEntry symlink wrapper before checking path drift', () => {
+  const tempRoot = mkdtempSync(path.join(tmpdir(), 'bidvia-install-integrity-argv-'));
+  const packageRoot = path.join(tempRoot, 'node_modules', '@bidvia', 'client');
+  const distRoot = path.join(packageRoot, 'dist');
+  const realCliPath = path.join(distRoot, 'cli.js');
+  const binRoot = path.join(tempRoot, 'node_modules', '.bin');
+  const shimPath = path.join(binRoot, 'bidvia');
+  const previousArgvEntry = process.argv[1];
+
+  mkdirSync(distRoot, { recursive: true });
+  mkdirSync(binRoot, { recursive: true });
+  writeFileSync(realCliPath, '#!/usr/bin/env node\n');
+  symlinkSync('../@bidvia/client/dist/cli.js', shimPath);
+
+  const resolvedPackageRoot = realpathSync(packageRoot);
+  const resolvedDistRoot = realpathSync(distRoot);
+  const resolvedCliPath = realpathSync(realCliPath);
+
+  process.argv[1] = shimPath;
+
+  try {
+    const report = buildInstallIntegritySnapshot({
+      packageRoot,
+      packageVersion: '1.0.0',
+      npmGlobalPrefix: null,
+    });
+
+    assert.deepEqual(report, {
+      command: 'install-integrity',
+      scope: 'local-only',
+      activeExecutablePath: resolvedCliPath,
+      resolvedPackageRoot: resolvedPackageRoot,
+      resolvedDistRoot: resolvedDistRoot,
+      packageName: '@bidvia/client',
+      packageVersion: '1.0.0',
+      pathDriftDetected: false,
+      driftSignals: [],
+      blockerKind: null,
+      recommendedNextStep: null,
+    });
+  } finally {
+    process.argv[1] = previousArgvEntry;
+  }
 });
 
 test('runCli install-integrity prints the local-only install report', async () => {

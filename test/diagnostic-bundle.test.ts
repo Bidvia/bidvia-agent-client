@@ -73,3 +73,139 @@ test('runCli diagnostic-bundle-export writes the bounded export report', async (
   assert.equal(report.outputPath, outputPath);
   assert.deepEqual(report.writtenFiles, ['diagnostic-bundle.json', 'diagnostic-summary.md']);
 });
+
+test('exportDiagnosticBundle includes rerun metadata and phase-classified partial failures for probe-backed diagnostics', async () => {
+  const outputPath = await mkdtemp(path.join(os.tmpdir(), 'bidvia-diagnostic-bundle-rerun-'));
+
+  const report = await exportDiagnosticBundle(outputPath, {
+    env: {
+      BIDVIA_BASE_URL: 'http://127.0.0.1:8787',
+      BIDVIA_TENANT_ID: 'tenant-a',
+      BIDVIA_SESSION_ID: 'sess-1',
+      BIDVIA_PRINCIPAL_ID: 'principal-a',
+    },
+    localOnboardingState: null,
+    installIntegrity: {
+      activeExecutablePath: '/usr/local/lib/node_modules/@bidvia/client/dist/cli.js',
+      packageRoot: '/usr/local/lib/node_modules/@bidvia/client',
+      packageVersion: '1.0.0',
+    },
+    probeRuns: [
+      {
+        probeKey: 'run-pack-b-task-progression',
+        statePath: '/tmp/chunk3-pack-b-state-a.json',
+        outputPath: '/tmp/chunk3-pack-b-report-a.json',
+        generatedIds: ['dispatch-a', 'outcome-a'],
+        phases: [
+          {
+            phaseKey: 'bootstrap',
+            status: 'passed',
+            classification: 'pass',
+            detail: 'bootstrap completed',
+          },
+          {
+            phaseKey: 'continuation',
+            status: 'blocked',
+            classification: 'bounded-stop',
+            detail: 'known bounded stop while awaiting downstream closure',
+          },
+        ],
+      },
+      {
+        probeKey: 'run-pack-b-task-progression',
+        statePath: '/tmp/chunk3-pack-b-state-b.json',
+        outputPath: '/tmp/chunk3-pack-b-report-b.json',
+        generatedIds: ['dispatch-b', 'outcome-b'],
+        phases: [
+          {
+            phaseKey: 'bootstrap',
+            status: 'passed',
+            classification: 'pass',
+            detail: 'bootstrap completed',
+          },
+        ],
+      },
+    ],
+  } as never);
+
+  assert.deepEqual((report as typeof report & {
+    rerunSafety: {
+      uniqueStatePaths: boolean;
+      uniqueOutputPaths: boolean;
+      duplicateGeneratedIds: string[];
+      partialFailureCount: number;
+    };
+    probeRuns: Array<{
+      probeKey: string;
+      statePath: string;
+      outputPath: string;
+      phases: Array<{
+        phaseKey: string;
+        status: string;
+        classification: string;
+      }>;
+    }>;
+  }).rerunSafety, {
+    uniqueStatePaths: true,
+    uniqueOutputPaths: true,
+    duplicateGeneratedIds: [],
+    partialFailureCount: 1,
+  });
+
+  assert.deepEqual((report as typeof report & {
+    probeRuns: Array<{
+      probeKey: string;
+      statePath: string;
+      outputPath: string;
+      phases: Array<{
+        phaseKey: string;
+        status: string;
+        classification: string;
+      }>;
+    }>;
+  }).probeRuns.map((probe) => ({
+    probeKey: probe.probeKey,
+    statePath: probe.statePath,
+    outputPath: probe.outputPath,
+    phases: probe.phases.map((phase) => ({
+      phaseKey: phase.phaseKey,
+      status: phase.status,
+      classification: phase.classification,
+    })),
+  })), [
+    {
+      probeKey: 'run-pack-b-task-progression',
+      statePath: '/tmp/chunk3-pack-b-state-a.json',
+      outputPath: '/tmp/chunk3-pack-b-report-a.json',
+      phases: [
+        {
+          phaseKey: 'bootstrap',
+          status: 'passed',
+          classification: 'pass',
+        },
+        {
+          phaseKey: 'continuation',
+          status: 'blocked',
+          classification: 'bounded-stop',
+        },
+      ],
+    },
+    {
+      probeKey: 'run-pack-b-task-progression',
+      statePath: '/tmp/chunk3-pack-b-state-b.json',
+      outputPath: '/tmp/chunk3-pack-b-report-b.json',
+      phases: [
+        {
+          phaseKey: 'bootstrap',
+          status: 'passed',
+          classification: 'pass',
+        },
+      ],
+    },
+  ]);
+
+  const summaryMarkdown = await readFile(path.join(outputPath, 'diagnostic-summary.md'), 'utf8');
+  assert.match(summaryMarkdown, /unique state paths: yes/i);
+  assert.match(summaryMarkdown, /partial failures: 1/i);
+  assert.match(summaryMarkdown, /bounded-stop/i);
+});

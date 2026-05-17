@@ -1,5 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import { runCli } from '../src/cli.ts';
 import { dispatchMcpToolCall } from '../src/mcp.ts';
@@ -10,6 +13,11 @@ import {
 import {
   buildAgentFirstBusinessUniverseValidationReport,
 } from '../scripts/validate-agent-first-business-universe.ts';
+
+const workspaceRoot = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  '..',
+);
 
 test('product evidence helpers derive stable result taxonomy and evidence packet from role-stage outputs', () => {
   const envelope = buildProductEvidenceEnvelope({
@@ -80,7 +88,24 @@ test('dispatchMcpToolCall returns evidence packets for productized role-stage to
 });
 
 test('validate-agent-first-business-universe script reports completed waves and next-wave readiness', () => {
-  const report = buildAgentFirstBusinessUniverseValidationReport('/Users/liujiao/develop/Bidvia-agent-client/.worktrees/agent-first-business-universe');
+  const report = buildAgentFirstBusinessUniverseValidationReport('/Users/liujiao/develop/Bidvia-agent-client');
+
+  assert.equal(report.status, 'ok');
+  assert.equal(report.completedWaves.includes('wave-7-platform-managed-formal-entry'), true);
+  assert.equal(report.nextExpectedWave, 'wave-8-diagnostics-and-evidence-layer');
+});
+
+test('validate-agent-first-business-universe script prints the validation report when executed directly', () => {
+  const output = execFileSync('npx', ['tsx', 'scripts/validate-agent-first-business-universe.ts'], {
+    cwd: workspaceRoot,
+    encoding: 'utf8',
+  });
+
+  const report = JSON.parse(output) as {
+    status: string;
+    completedWaves: string[];
+    nextExpectedWave: string;
+  };
 
   assert.equal(report.status, 'ok');
   assert.equal(report.completedWaves.includes('wave-7-platform-managed-formal-entry'), true);

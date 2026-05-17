@@ -1,3 +1,4 @@
+import { realpathSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import packageJson from '../package.json' with { type: 'json' };
@@ -21,7 +22,13 @@ function resolveDefaultPackageRoot(): string {
 function resolveDefaultActiveExecutablePath(packageRoot: string): string {
   const argvEntry = process.argv[1];
   if (argvEntry) {
-    return path.resolve(argvEntry);
+    const resolvedArgvEntry = path.resolve(argvEntry);
+
+    try {
+      return realpathSync(resolvedArgvEntry);
+    } catch {
+      return resolvedArgvEntry;
+    }
   }
 
   return path.join(packageRoot, 'dist', 'cli.js');
@@ -32,7 +39,13 @@ function normalizePath(value: string | undefined | null): string | null {
     return null;
   }
 
-  return path.resolve(value);
+  const resolvedPath = path.resolve(value);
+
+  try {
+    return realpathSync(resolvedPath);
+  } catch {
+    return resolvedPath;
+  }
 }
 
 function isWithinPath(candidatePath: string, parentPath: string): boolean {

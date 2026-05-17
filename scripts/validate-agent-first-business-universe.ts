@@ -1,5 +1,6 @@
 import path from 'node:path';
 import { existsSync, readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 
 export interface BidviaAgentFirstBusinessUniverseValidationReport {
   status: 'ok' | 'blocked';
@@ -49,4 +50,16 @@ export function buildAgentFirstBusinessUniverseValidationReport(
     missingArtifacts,
     nextExpectedWave: 'wave-8-diagnostics-and-evidence-layer',
   };
+}
+
+function main(): void {
+  const scriptDir = path.dirname(fileURLToPath(import.meta.url));
+  const workspaceRoot = path.resolve(scriptDir, '..');
+  const report = buildAgentFirstBusinessUniverseValidationReport(workspaceRoot);
+
+  process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
+}
+
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  main();
 }
