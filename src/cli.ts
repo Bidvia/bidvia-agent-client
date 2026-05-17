@@ -1773,6 +1773,14 @@ function readOptionalStringArrayInput(input: Record<string, unknown>, key: strin
   return value;
 }
 
+function readRequiredBooleanInput(command: string, input: Record<string, unknown>, key: string): boolean {
+  const value = input[key];
+  if (typeof value !== 'boolean') {
+    throw new Error(`The ${key} field must be a boolean when provided.`);
+  }
+  return value;
+}
+
 function readCanonicalAccountAgentId(command: string, parsedArgs: BidviaCliParsedArgs): string {
   const agentId = parsedArgs.flagValues['--agent-id'] ?? parsedArgs.flagValues['--registration-id'];
   if (!agentId) {
@@ -1885,7 +1893,7 @@ const identitySessionCommandDefinitions = {
         displayName: readRequiredStringInput('create-account-integration-app', input, 'displayName'),
         shortDescription: readRequiredStringInput('create-account-integration-app', input, 'shortDescription'),
         systemClass: readRequiredStringInput('create-account-integration-app', input, 'systemClass'),
-        publicDisplayOptIn: Boolean(input.publicDisplayOptIn),
+        publicDisplayOptIn: readRequiredBooleanInput('create-account-integration-app', input, 'publicDisplayOptIn'),
         now: readRequiredStringInput('create-account-integration-app', input, 'now'),
       });
     },

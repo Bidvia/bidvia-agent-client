@@ -11,6 +11,7 @@ import {
 
 export interface RunU5TaskContinuityControlArgs extends BootstrapClaimantLocalDockerArgs {
   outputPath: string;
+  assignedToRegistrationId: string;
 }
 
 export interface U5TaskContinuityControlStepResult {
@@ -61,21 +62,31 @@ interface RunU5TaskContinuityControlDependencies {
 export function parseRunU5TaskContinuityControlArgs(argv: string[]): RunU5TaskContinuityControlArgs {
   const bootstrapArgs = parseBootstrapClaimantLocalDockerArgs(argv);
   let outputPath: string | undefined;
+  let assignedToRegistrationId: string | undefined;
 
   for (let index = 0; index < argv.length; index += 1) {
     if (argv[index] === '--output') {
       outputPath = argv[index + 1];
-      break;
+      index += 1;
+      continue;
+    }
+    if (argv[index] === '--assigned-to-registration-id') {
+      assignedToRegistrationId = argv[index + 1];
+      index += 1;
     }
   }
 
   if (!outputPath?.trim()) {
     throw new Error('--output is required');
   }
+  if (!assignedToRegistrationId?.trim()) {
+    throw new Error('--assigned-to-registration-id is required');
+  }
 
   return {
     ...bootstrapArgs,
     outputPath: outputPath.trim(),
+    assignedToRegistrationId: assignedToRegistrationId.trim(),
   };
 }
 
@@ -208,7 +219,7 @@ export async function runU5TaskContinuityControl(
   });
 
   const taskDispatchId = (createTaskDispatch.body as { dispatch?: { agent_task_dispatch_id?: string } }).dispatch?.agent_task_dispatch_id ?? null;
-  const assignedToRegistrationId = bootstrap.claimant.registrationId === 'areg-1' ? 'areg-2' : 'areg-2';
+  const assignedToRegistrationId = args.assignedToRegistrationId;
 
   const assignBody = {
     assigned_to_registration_id: assignedToRegistrationId,

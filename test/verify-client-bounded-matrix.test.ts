@@ -523,6 +523,151 @@ test('runClientBoundedMatrix marks contradictory platform-managed readiness as a
   assert.equal(evidence.summary.contradictionCount, 0);
 });
 
+test('runClientBoundedMatrix captures probe failures as contradiction evidence instead of aborting', async () => {
+  const fetchImpl: typeof fetch = async () => new Response(JSON.stringify({ ok: true }), {
+    status: 200,
+    headers: { 'content-type': 'application/json' },
+  });
+
+  const evidence = await runClientBoundedMatrix(
+    {
+      baseUrl: 'http://127.0.0.1:8787',
+      artifactRootPath: '/tmp/bounded-matrix-artifacts',
+    },
+    {
+      fetchImpl,
+      env: {},
+      now: () => '2026-05-16T12:00:00.000Z',
+      bootstrapClaimantLocalDocker: async () => ({
+        command: 'bootstrap-claimant-local-docker',
+        baseUrl: 'http://127.0.0.1:8787',
+        statePath: '/tmp/bootstrap-state.json',
+        admin: {
+          email: 'ops-admin@example.com',
+          adminSessionId: 'admin-session-1',
+          adminAccountId: 'admin-acct-1',
+        },
+        invitation: {
+          invitationId: 'invite-1',
+          invitationType: 'ENTERPRISE_ACCOUNT',
+          status: 'ACTIVE',
+        },
+        claimant: {
+          email: 'live@example.com',
+          accountId: 'acct-1',
+          sessionId: 'sess-1',
+          tenantId: 'tenant-public',
+          companyId: 'company-public',
+          membershipRole: 'enterprise_admin',
+          agentOnboardingAllowed: true,
+          agentId: 'agent-1',
+          principalId: 'claimed:agent-1',
+          registrationId: 'areg-1',
+        },
+        dispatchAuthority: {
+          requestId: 'daar-1',
+          status: 'APPROVED',
+          authorityProfileId: 'authp-1',
+        },
+        externalBinding: {
+          bindingId: 'eab-1',
+          status: 'active',
+          systemName: 'bootstrap-live-seeded',
+          externalAccountRef: 'ext-seeded',
+        },
+      }),
+      runP1OperatorDeeperChain: async () => {
+        throw new Error('operator deeper-chain probe crashed unexpectedly');
+      },
+      runPackBTaskProgression: async () => ({
+        command: 'run-pack-b-task-progression',
+        generatedAt: '2026-05-16T12:00:00.000Z',
+        baseUrl: 'http://127.0.0.1:8787',
+        statePath: '/tmp/pack-b-state.json',
+        outputPath: '/tmp/pack-b-report.json',
+        bootstrap: {} as never,
+        selfServicePatch: { recommended_next_step: 'dispatch_ready' },
+        successBranch: {
+          dispatchId: 'dispatch-success-1',
+          outcomeRef: 'outcome://success-1',
+          confirmationCycleRef: 'cycle-success-1',
+          closureRefs: {
+            dispatchRef: 'dispatch-success-1',
+            outcomeRef: 'outcome://success-1',
+            evidenceBundleRef: 'evidence-bundle://success-1',
+            confirmationCycleRef: 'cycle-success-1',
+          },
+          steps: [],
+        },
+        failureBranch: {
+          dispatchId: 'dispatch-fail-1',
+          outcomeRef: 'outcome://fail-1',
+          confirmationCycleRef: 'cycle-fail-1',
+          closureRefs: {
+            dispatchRef: 'dispatch-fail-1',
+            outcomeRef: 'outcome://fail-1',
+            evidenceBundleRef: 'evidence-bundle://fail-1',
+            confirmationCycleRef: 'cycle-fail-1',
+          },
+          steps: [],
+        },
+      }),
+      runP1IntegrationLifecycle: async () => ({
+        command: 'run-p1-integration-lifecycle',
+        generatedAt: '2026-05-16T12:00:00.000Z',
+        baseUrl: 'http://127.0.0.1:8787',
+        statePath: '/tmp/integration-state.json',
+        outputPath: '/tmp/integration-report.json',
+        claimant: {
+          email: 'live@example.com',
+          sessionId: 'sess-1',
+          tenantId: 'tenant-public',
+          companyId: 'company-public',
+          agentOnboardingAllowed: true,
+        },
+        ids: {
+          integrationAppId: 'iapp-1',
+          integrationInstallationId: 'iinst-1',
+        },
+        steps: [],
+      }),
+      runPlatformManagedIntegrationHandoff: async () => ({
+        command: 'run-platform-managed-integration-handoff',
+        generatedAt: '2026-05-16T12:00:00.000Z',
+        baseUrl: 'http://127.0.0.1:8787',
+        statePath: '/tmp/platform-state.json',
+        outputPath: '/tmp/platform-report.json',
+        integrationCode: 'haisi-wms',
+        bootstrap: {} as never,
+        ordinaryAgentId: 'agent-1',
+        platformManagedAgentId: 'pm-agent-1',
+        selectedApp: { integration_app_id: 'iapp-1' },
+        installationId: 'iinst-1',
+        connectionId: 'iiconn-1',
+        ordinaryExternalEligibility: { eligibility: { readiness_state: 'configured_actor_ineligible' } },
+        platformManagedEligibility: {
+          eligibility: {
+            readiness_state: 'configured_not_invokable',
+            invocation_route: null,
+          },
+        },
+        inboundAttempt: {
+          error: {
+            code: 'connector_inbound_not_supported',
+          },
+        },
+        steps: [],
+      }),
+    },
+  );
+
+  const operatorScenario = evidence.scenarios.find((scenario) => scenario.scenarioKey === 'role-collaboration-handoff');
+  assert.equal(operatorScenario?.status, 'failed');
+  assert.equal(operatorScenario?.resultClass, 'contradiction');
+  assert.match(JSON.stringify(operatorScenario), /operator deeper-chain probe crashed unexpectedly/);
+  assert.equal(evidence.summary.contradictionCount, 1);
+});
+
 test('writeClientBoundedMatrixEvidence persists pretty-printed machine-readable evidence', async () => {
   const outputDirectory = mkdtempSync(path.join(tmpdir(), 'bidvia-bounded-matrix-'));
   const outputPath = path.join(outputDirectory, 'client-bounded-matrix.json');

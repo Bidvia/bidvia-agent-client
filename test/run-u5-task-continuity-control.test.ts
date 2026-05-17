@@ -27,12 +27,21 @@ test('parseRunU5TaskContinuityControlArgs requires base-url, state-path, and out
     () => parseRunU5TaskContinuityControlArgs(['--base-url', 'http://127.0.0.1:8787', '--state-path', '/tmp/state.json']),
     /--output is required/,
   );
+  assert.throws(
+    () => parseRunU5TaskContinuityControlArgs([
+      '--base-url', 'http://127.0.0.1:8787',
+      '--state-path', '/tmp/state.json',
+      '--output', '/tmp/report.json',
+    ]),
+    /--assigned-to-registration-id is required/,
+  );
 
   assert.deepEqual(
     parseRunU5TaskContinuityControlArgs([
       '--base-url', ' http://127.0.0.1:8787 ',
       '--state-path', ' /tmp/state.json ',
       '--output', ' /tmp/report.json ',
+      '--assigned-to-registration-id', ' areg-2 ',
       '--email', ' user@example.com ',
       '--password', ' secret-live-1 ',
       '--company-name', ' Example Co ',
@@ -41,6 +50,7 @@ test('parseRunU5TaskContinuityControlArgs requires base-url, state-path, and out
       baseUrl: 'http://127.0.0.1:8787',
       statePath: '/tmp/state.json',
       outputPath: '/tmp/report.json',
+      assignedToRegistrationId: 'areg-2',
       email: 'user@example.com',
       password: 'secret-live-1',
       companyName: 'Example Co',
@@ -64,6 +74,7 @@ test('runU5TaskContinuityControl executes continuity-control steps and returns m
     baseUrl: 'http://127.0.0.1:8787',
     statePath: '/tmp/u5-state.json',
     outputPath: '/tmp/u5-report.json',
+    assignedToRegistrationId: 'areg-2',
   }, {
     fetchImpl: fetchStub,
     now: () => '2026-05-16T13:00:00Z',
@@ -288,6 +299,7 @@ test('runU5TaskContinuityControl marks the report blocked when continuity-contro
     baseUrl: 'http://127.0.0.1:8787',
     statePath: '/tmp/u5-state.json',
     outputPath: '/tmp/u5-report.json',
+    assignedToRegistrationId: 'areg-2',
   }, {
     fetchImpl: fetchStub,
     now: () => '2026-05-16T13:00:00Z',
@@ -360,6 +372,7 @@ test('runU5TaskContinuityControl stops after assignment is forbidden and skips l
     baseUrl: 'http://127.0.0.1:8787',
     statePath: '/tmp/u5-state.json',
     outputPath: '/tmp/u5-report.json',
+    assignedToRegistrationId: 'areg-2',
   }, {
     fetchImpl: fetchStub,
     now: () => '2026-05-16T13:00:00Z',

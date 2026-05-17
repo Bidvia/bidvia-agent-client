@@ -269,6 +269,29 @@ function buildContradictionScenario(
   };
 }
 
+function buildProbeFailureScenario(
+  scenarioKey: BoundedMatrixScenarioEvidence['scenarioKey'],
+  coveredFamilies: string[],
+  proofClass: BoundedMatrixScenarioEvidence['proofClass'],
+  note: string,
+  error: unknown,
+): BoundedMatrixScenarioEvidence {
+  const message = error instanceof Error ? error.message : 'unknown probe failure';
+  return buildContradictionScenario(
+    scenarioKey,
+    coveredFamilies,
+    proofClass,
+    [`${note}: ${message}`],
+    {},
+    {
+      error: {
+        code: 'probe_execution_failed',
+        message,
+      },
+    },
+  );
+}
+
 function buildArtifactPath(rootPath: string, fileName: string): string {
   return path.join(rootPath, fileName);
 }
@@ -348,196 +371,249 @@ async function buildExecutableScenarioCluster(
     ?? (async (args: { baseUrl: string; statePath: string; outputPath: string }) => runPlatformManagedIntegrationHandoff(args));
 
   const bootstrapStatePath = buildArtifactPath(options.artifactRootPath, 'bounded-matrix-bootstrap-state.json');
-  const bootstrap = await bootstrapClaimant({
-    baseUrl: options.baseUrl,
-    statePath: bootstrapStatePath,
-  });
-  const bootstrapSummary = summarizeBootstrap(bootstrap);
-  const onboardingScenario = buildPassedScenario(
-    'platform-managed-onboarding',
-    ['identity-entry'],
-    'direct-executable',
-    ['Fresh bootstrap claimant state was created successfully for the bounded matrix executor.'],
-    bootstrapSummary.returnedIds,
-    bootstrapSummary.readbacks,
-  );
-  const dispatchReadyScenario = bootstrap.dispatchAuthority.status === 'APPROVED' && bootstrap.externalBinding.status === 'active'
-    ? buildPassedScenario(
-        'dispatch-ready-progression',
-        ['account-plane-readiness-and-repair', 'operator-review-boundary'],
-        'direct-executable',
-        ['Fresh bootstrap evidence confirms approved dispatch authority and an active external binding.'],
-        bootstrapSummary.returnedIds,
-        bootstrapSummary.readbacks,
-      )
-    : buildBoundedStopScenario(
-        'dispatch-ready-progression',
-        ['account-plane-readiness-and-repair', 'operator-review-boundary'],
-        'direct-executable',
-        ['dispatch-ready-truth-not-confirmed'],
-        ['Fresh bootstrap completed, but returned truth did not confirm both approved dispatch authority and active external binding.'],
-        bootstrapSummary.returnedIds,
-        bootstrapSummary.readbacks,
-      );
+  let onboardingScenario: BoundedMatrixScenarioEvidence;
+  let dispatchReadyScenario: BoundedMatrixScenarioEvidence;
 
-  const operatorReport = await operatorProbe({
-    baseUrl: options.baseUrl,
-    statePath: buildArtifactPath(options.artifactRootPath, 'bounded-matrix-operator-state.json'),
-    outputPath: buildArtifactPath(options.artifactRootPath, 'bounded-matrix-operator-report.json'),
-  });
-  const roleCollaborationScenario = (operatorReport.claimantReadbacks.endState as { closure_class?: string }).closure_class === 'product_closed'
-    ? buildPassedScenario(
-        'role-collaboration-handoff',
-        ['selected-claimant-execution-and-materialization-readback', 'opportunity-continuation-and-end-state'],
-        'partial-executable',
-        ['The checked-in operator deeper-chain probe reached claimant opportunity readback and product-closed end-state evidence.'],
-        {
-          matchId: operatorReport.ids.matchId ?? '',
-          connectionRequestId: operatorReport.ids.connectionRequestId ?? '',
-          opportunityId: operatorReport.ids.opportunityId ?? '',
-          packageId: operatorReport.ids.packageId ?? '',
-        },
-        {
-          claimantReadbacks: operatorReport.claimantReadbacks,
-          steps: operatorReport.steps,
-        },
-      )
-    : buildBoundedStopScenario(
-        'role-collaboration-handoff',
-        ['selected-claimant-execution-and-materialization-readback', 'opportunity-continuation-and-end-state'],
-        'partial-executable',
-        ['operator-deeper-chain-not-closed'],
-        ['The checked-in operator deeper-chain probe did not reach the expected claimant end-state closure evidence.'],
-        {
-          matchId: operatorReport.ids.matchId ?? '',
-          connectionRequestId: operatorReport.ids.connectionRequestId ?? '',
-          opportunityId: operatorReport.ids.opportunityId ?? '',
-          packageId: operatorReport.ids.packageId ?? '',
-        },
-        {
-          claimantReadbacks: operatorReport.claimantReadbacks,
-          steps: operatorReport.steps,
-        },
-      );
+  try {
+    const bootstrap = await bootstrapClaimant({
+      baseUrl: options.baseUrl,
+      statePath: bootstrapStatePath,
+    });
+    const bootstrapSummary = summarizeBootstrap(bootstrap);
+    onboardingScenario = buildPassedScenario(
+      'platform-managed-onboarding',
+      ['identity-entry'],
+      'direct-executable',
+      ['Fresh bootstrap claimant state was created successfully for the bounded matrix executor.'],
+      bootstrapSummary.returnedIds,
+      bootstrapSummary.readbacks,
+    );
+    dispatchReadyScenario = bootstrap.dispatchAuthority.status === 'APPROVED' && bootstrap.externalBinding.status === 'active'
+      ? buildPassedScenario(
+          'dispatch-ready-progression',
+          ['account-plane-readiness-and-repair', 'operator-review-boundary'],
+          'direct-executable',
+          ['Fresh bootstrap evidence confirms approved dispatch authority and an active external binding.'],
+          bootstrapSummary.returnedIds,
+          bootstrapSummary.readbacks,
+        )
+      : buildBoundedStopScenario(
+          'dispatch-ready-progression',
+          ['account-plane-readiness-and-repair', 'operator-review-boundary'],
+          'direct-executable',
+          ['dispatch-ready-truth-not-confirmed'],
+          ['Fresh bootstrap completed, but returned truth did not confirm both approved dispatch authority and active external binding.'],
+          bootstrapSummary.returnedIds,
+          bootstrapSummary.readbacks,
+        );
+  } catch (error) {
+    onboardingScenario = buildProbeFailureScenario(
+      'platform-managed-onboarding',
+      ['identity-entry'],
+      'direct-executable',
+      'Bootstrap claimant probe failed before onboarding evidence could be recorded',
+      error,
+    );
+    dispatchReadyScenario = buildProbeFailureScenario(
+      'dispatch-ready-progression',
+      ['account-plane-readiness-and-repair', 'operator-review-boundary'],
+      'direct-executable',
+      'Bootstrap claimant probe failed before dispatch-ready truth could be evaluated',
+      error,
+    );
+  }
 
-  const packBReport = await packBProbe({
-    baseUrl: options.baseUrl,
-    statePath: buildArtifactPath(options.artifactRootPath, 'bounded-matrix-pack-b-state.json'),
-    outputPath: buildArtifactPath(options.artifactRootPath, 'bounded-matrix-pack-b-report.json'),
-  });
-  const packBScenario = packBReport.successBranch.dispatchId !== null
-    && packBReport.successBranch.outcomeRef !== null
-    && packBReport.successBranch.confirmationCycleRef !== null
-    && packBReport.successBranch.closureRefs.dispatchRef !== null
-    && packBReport.successBranch.closureRefs.outcomeRef !== null
-    && packBReport.successBranch.closureRefs.evidenceBundleRef !== null
-    && packBReport.successBranch.closureRefs.confirmationCycleRef !== null
-    ? buildPassedScenario(
-        'continuous-task-governed-work-closure',
-        ['bounded-task-plane-progression'],
-        'direct-executable',
-        ['The checked-in Pack B progression probe reached bounded governed-work closure with canonical refs.'],
-        {
-          dispatchRef: packBReport.successBranch.closureRefs.dispatchRef,
-          outcomeRef: packBReport.successBranch.closureRefs.outcomeRef,
-          evidenceBundleRef: packBReport.successBranch.closureRefs.evidenceBundleRef,
-          confirmationCycleRef: packBReport.successBranch.closureRefs.confirmationCycleRef,
-        },
-        {
-          successBranch: packBReport.successBranch,
-          failureBranch: packBReport.failureBranch,
-        },
-      )
-    : buildBoundedStopScenario(
-        'continuous-task-governed-work-closure',
-        ['bounded-task-plane-progression'],
-        'direct-executable',
-        ['pack-b-governed-work-closure-not-confirmed'],
-        ['The checked-in Pack B progression probe did not confirm the full bounded governed-work closure chain.'],
-        {
-          dispatchRef: packBReport.successBranch.closureRefs.dispatchRef ?? '',
-          outcomeRef: packBReport.successBranch.closureRefs.outcomeRef ?? '',
-          evidenceBundleRef: packBReport.successBranch.closureRefs.evidenceBundleRef ?? '',
-          confirmationCycleRef: packBReport.successBranch.closureRefs.confirmationCycleRef ?? '',
-        },
-        {
-          successBranch: packBReport.successBranch,
-          failureBranch: packBReport.failureBranch,
-        },
-      );
+  let roleCollaborationScenario: BoundedMatrixScenarioEvidence;
+  try {
+    const operatorReport = await operatorProbe({
+      baseUrl: options.baseUrl,
+      statePath: buildArtifactPath(options.artifactRootPath, 'bounded-matrix-operator-state.json'),
+      outputPath: buildArtifactPath(options.artifactRootPath, 'bounded-matrix-operator-report.json'),
+    });
+    roleCollaborationScenario = (operatorReport.claimantReadbacks.endState as { closure_class?: string }).closure_class === 'product_closed'
+      ? buildPassedScenario(
+          'role-collaboration-handoff',
+          ['selected-claimant-execution-and-materialization-readback', 'opportunity-continuation-and-end-state'],
+          'partial-executable',
+          ['The checked-in operator deeper-chain probe reached claimant opportunity readback and product-closed end-state evidence.'],
+          {
+            matchId: operatorReport.ids.matchId ?? '',
+            connectionRequestId: operatorReport.ids.connectionRequestId ?? '',
+            opportunityId: operatorReport.ids.opportunityId ?? '',
+            packageId: operatorReport.ids.packageId ?? '',
+          },
+          {
+            claimantReadbacks: operatorReport.claimantReadbacks,
+            steps: operatorReport.steps,
+          },
+        )
+      : buildBoundedStopScenario(
+          'role-collaboration-handoff',
+          ['selected-claimant-execution-and-materialization-readback', 'opportunity-continuation-and-end-state'],
+          'partial-executable',
+          ['operator-deeper-chain-not-closed'],
+          ['The checked-in operator deeper-chain probe did not reach the expected claimant end-state closure evidence.'],
+          {
+            matchId: operatorReport.ids.matchId ?? '',
+            connectionRequestId: operatorReport.ids.connectionRequestId ?? '',
+            opportunityId: operatorReport.ids.opportunityId ?? '',
+            packageId: operatorReport.ids.packageId ?? '',
+          },
+          {
+            claimantReadbacks: operatorReport.claimantReadbacks,
+            steps: operatorReport.steps,
+          },
+        );
+  } catch (error) {
+    roleCollaborationScenario = buildProbeFailureScenario(
+      'role-collaboration-handoff',
+      ['selected-claimant-execution-and-materialization-readback', 'opportunity-continuation-and-end-state'],
+      'partial-executable',
+      'Operator deeper-chain probe failed before claimant handoff evidence could be classified',
+      error,
+    );
+  }
 
-  const integrationReport = await integrationProbe({
-    baseUrl: options.baseUrl,
-    statePath: buildArtifactPath(options.artifactRootPath, 'bounded-matrix-integration-state.json'),
-    outputPath: buildArtifactPath(options.artifactRootPath, 'bounded-matrix-integration-report.json'),
-  });
-  const platformManagedReport = await platformManagedProbe({
-    baseUrl: options.baseUrl,
-    statePath: buildArtifactPath(options.artifactRootPath, 'bounded-matrix-platform-managed-state.json'),
-    outputPath: buildArtifactPath(options.artifactRootPath, 'bounded-matrix-platform-managed-report.json'),
-  });
+  let packBScenario: BoundedMatrixScenarioEvidence;
+  try {
+    const packBReport = await packBProbe({
+      baseUrl: options.baseUrl,
+      statePath: buildArtifactPath(options.artifactRootPath, 'bounded-matrix-pack-b-state.json'),
+      outputPath: buildArtifactPath(options.artifactRootPath, 'bounded-matrix-pack-b-report.json'),
+    });
+    packBScenario = packBReport.successBranch.dispatchId !== null
+      && packBReport.successBranch.outcomeRef !== null
+      && packBReport.successBranch.confirmationCycleRef !== null
+      && packBReport.successBranch.closureRefs.dispatchRef !== null
+      && packBReport.successBranch.closureRefs.outcomeRef !== null
+      && packBReport.successBranch.closureRefs.evidenceBundleRef !== null
+      && packBReport.successBranch.closureRefs.confirmationCycleRef !== null
+      ? buildPassedScenario(
+          'continuous-task-governed-work-closure',
+          ['bounded-task-plane-progression'],
+          'direct-executable',
+          ['The checked-in Pack B progression probe reached bounded governed-work closure with canonical refs.'],
+          {
+            dispatchRef: packBReport.successBranch.closureRefs.dispatchRef,
+            outcomeRef: packBReport.successBranch.closureRefs.outcomeRef,
+            evidenceBundleRef: packBReport.successBranch.closureRefs.evidenceBundleRef,
+            confirmationCycleRef: packBReport.successBranch.closureRefs.confirmationCycleRef,
+          },
+          {
+            successBranch: packBReport.successBranch,
+            failureBranch: packBReport.failureBranch,
+          },
+        )
+      : buildBoundedStopScenario(
+          'continuous-task-governed-work-closure',
+          ['bounded-task-plane-progression'],
+          'direct-executable',
+          ['pack-b-governed-work-closure-not-confirmed'],
+          ['The checked-in Pack B progression probe did not confirm the full bounded governed-work closure chain.'],
+          {
+            dispatchRef: packBReport.successBranch.closureRefs.dispatchRef ?? '',
+            outcomeRef: packBReport.successBranch.closureRefs.outcomeRef ?? '',
+            evidenceBundleRef: packBReport.successBranch.closureRefs.evidenceBundleRef ?? '',
+            confirmationCycleRef: packBReport.successBranch.closureRefs.confirmationCycleRef ?? '',
+          },
+          {
+            successBranch: packBReport.successBranch,
+            failureBranch: packBReport.failureBranch,
+          },
+        );
+  } catch (error) {
+    packBScenario = buildProbeFailureScenario(
+      'continuous-task-governed-work-closure',
+      ['bounded-task-plane-progression'],
+      'direct-executable',
+      'Pack B progression probe failed before governed-work closure evidence could be classified',
+      error,
+    );
+  }
 
-  const platformManagedEligibility = platformManagedReport.platformManagedEligibility as {
-    eligibility?: {
-      readiness_state?: string;
-      invocation_route?: string | null;
+  let commercialScenario: BoundedMatrixScenarioEvidence;
+  try {
+    const integrationReport = await integrationProbe({
+      baseUrl: options.baseUrl,
+      statePath: buildArtifactPath(options.artifactRootPath, 'bounded-matrix-integration-state.json'),
+      outputPath: buildArtifactPath(options.artifactRootPath, 'bounded-matrix-integration-report.json'),
+    });
+    const platformManagedReport = await platformManagedProbe({
+      baseUrl: options.baseUrl,
+      statePath: buildArtifactPath(options.artifactRootPath, 'bounded-matrix-platform-managed-state.json'),
+      outputPath: buildArtifactPath(options.artifactRootPath, 'bounded-matrix-platform-managed-report.json'),
+    });
+
+    const platformManagedEligibility = platformManagedReport.platformManagedEligibility as {
+      eligibility?: {
+        readiness_state?: string;
+        invocation_route?: string | null;
+      };
     };
-  };
-  const inboundAttempt = platformManagedReport.inboundAttempt as {
-    error?: {
-      code?: string;
+    const inboundAttempt = platformManagedReport.inboundAttempt as {
+      error?: {
+        code?: string;
+      };
     };
-  };
-  const integrationEligibilityStep = integrationReport.steps.find((step) => step.stepKey === 'account-agent-integration-eligibility');
-  const integrationEligibility = integrationEligibilityStep?.responseBody as {
-    availability_state?: string;
-  } | undefined;
-  const commercialReturnedIds = {
-    integrationAppId: integrationReport.ids.integrationAppId ?? '',
-    integrationInstallationId: integrationReport.ids.integrationInstallationId ?? '',
-    platformManagedAgentId: platformManagedReport.platformManagedAgentId ?? '',
-    installationId: platformManagedReport.installationId ?? '',
-    connectionId: platformManagedReport.connectionId ?? '',
-  };
-  const commercialReadbacks = {
-    integrationLifecycle: integrationReport,
-    platformManagedHandoff: platformManagedReport,
-  };
+    const integrationEligibilityStep = integrationReport.steps.find((step) => step.stepKey === 'account-agent-integration-eligibility');
+    const integrationEligibility = integrationEligibilityStep?.responseBody as {
+      availability_state?: string;
+    } | undefined;
+    const commercialReturnedIds = {
+      integrationAppId: integrationReport.ids.integrationAppId ?? '',
+      integrationInstallationId: integrationReport.ids.integrationInstallationId ?? '',
+      platformManagedAgentId: platformManagedReport.platformManagedAgentId ?? '',
+      installationId: platformManagedReport.installationId ?? '',
+      connectionId: platformManagedReport.connectionId ?? '',
+    };
+    const commercialReadbacks = {
+      integrationLifecycle: integrationReport,
+      platformManagedHandoff: platformManagedReport,
+    };
 
-  const commercialScenario = platformManagedEligibility.eligibility?.readiness_state === 'configured_invokable'
-    && platformManagedEligibility.eligibility.invocation_route === null
-    && inboundAttempt.error?.code !== 'connector_dispatcher_not_configured'
-    && inboundAttempt.error?.code !== 'connector_inbound_not_supported'
-    ? buildContradictionScenario(
-        'commercial-and-integration-readback',
-        ['integration-center-lifecycle-and-retired-seam-validation'],
-        'bounded-stop-proof',
-        ['Platform-managed eligibility reported configured_invokable while the invocation route was null without the known bounded dispatcher stop.'],
-        commercialReturnedIds,
-        commercialReadbacks,
-      )
-    : inboundAttempt.error?.code === 'connector_dispatcher_not_configured'
-      || inboundAttempt.error?.code === 'connector_inbound_not_supported'
-      || (platformManagedEligibility.eligibility?.readiness_state === 'configured_not_invokable'
-        && platformManagedEligibility.eligibility.invocation_route === null)
-      || integrationEligibility?.availability_state === 'configured_actor_ineligible'
-      ? buildBoundedStopScenario(
+    commercialScenario = platformManagedEligibility.eligibility?.readiness_state === 'configured_invokable'
+      && platformManagedEligibility.eligibility.invocation_route === null
+      && inboundAttempt.error?.code !== 'connector_dispatcher_not_configured'
+      && inboundAttempt.error?.code !== 'connector_inbound_not_supported'
+      ? buildContradictionScenario(
           'commercial-and-integration-readback',
           ['integration-center-lifecycle-and-retired-seam-validation'],
           'bounded-stop-proof',
-          [inboundAttempt.error?.code === 'connector_inbound_not_supported' ? 'connector_inbound_not_supported' : 'connector_dispatcher_not_configured'],
-          ['The checked-in integration probes reached the maintained bounded stop at the configured-but-not-invokable connector boundary instead of contradicting readiness truth.'],
+          ['Platform-managed eligibility reported configured_invokable while the invocation route was null without the known bounded dispatcher stop.'],
           commercialReturnedIds,
           commercialReadbacks,
         )
-      : buildPassedScenario(
-          'commercial-and-integration-readback',
-          ['integration-center-lifecycle-and-retired-seam-validation'],
-          'bounded-stop-proof',
-          ['The checked-in integration lifecycle and platform-managed handoff probes completed without the known bounded dispatcher stop.'],
-          commercialReturnedIds,
-          commercialReadbacks,
-        );
+      : inboundAttempt.error?.code === 'connector_dispatcher_not_configured'
+        || inboundAttempt.error?.code === 'connector_inbound_not_supported'
+        || (platformManagedEligibility.eligibility?.readiness_state === 'configured_not_invokable'
+          && platformManagedEligibility.eligibility.invocation_route === null)
+        || integrationEligibility?.availability_state === 'configured_actor_ineligible'
+        ? buildBoundedStopScenario(
+            'commercial-and-integration-readback',
+            ['integration-center-lifecycle-and-retired-seam-validation'],
+            'bounded-stop-proof',
+            [inboundAttempt.error?.code === 'connector_inbound_not_supported' ? 'connector_inbound_not_supported' : 'connector_dispatcher_not_configured'],
+            ['The checked-in integration probes reached the maintained bounded stop at the configured-but-not-invokable connector boundary instead of contradicting readiness truth.'],
+            commercialReturnedIds,
+            commercialReadbacks,
+          )
+        : buildPassedScenario(
+            'commercial-and-integration-readback',
+            ['integration-center-lifecycle-and-retired-seam-validation'],
+            'bounded-stop-proof',
+            ['The checked-in integration lifecycle and platform-managed handoff probes completed without the known bounded dispatcher stop.'],
+            commercialReturnedIds,
+            commercialReadbacks,
+          );
+  } catch (error) {
+    commercialScenario = buildProbeFailureScenario(
+      'commercial-and-integration-readback',
+      ['integration-center-lifecycle-and-retired-seam-validation'],
+      'bounded-stop-proof',
+      'Integration lifecycle or platform-managed handoff probe failed before connector-boundary evidence could be classified',
+      error,
+    );
+  }
 
   return [
     onboardingScenario,

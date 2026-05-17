@@ -1554,3 +1554,44 @@ test('runCli returns a structured actionable invalid-input failure for verificat
   assert.deepEqual(errors, []);
   assert.deepEqual(lines, []);
 });
+
+test('runCli rejects non-boolean publicDisplayOptIn for create-account-integration-app', async () => {
+  const printed: unknown[] = [];
+  const restoreTenant = setEnvVar('BIDVIA_TENANT_ID', 'tenant-public');
+  const restoreSession = setEnvVar('BIDVIA_SESSION_ID', 'sess-1');
+
+  try {
+    const exitCode = await runCli([
+      'create-account-integration-app',
+      '--input',
+      JSON.stringify({
+        integrationCode: 'haisi-wms',
+        displayName: 'Haisi WMS',
+        shortDescription: 'integration app',
+        systemClass: 'WMS',
+        publicDisplayOptIn: 'false',
+        now: '2026-05-18T10:00:00Z',
+      }),
+    ], {
+      createClient: () => ({}) as never,
+      printJson: (value) => {
+        printed.push(value);
+      },
+      printLine: () => {
+        throw new Error('invalid-input failures should not print help');
+      },
+    });
+
+    assert.equal(exitCode, 1);
+    assert.deepEqual(printed, [{
+      error: {
+        code: 'invalid-input',
+        command: 'create-account-integration-app',
+        message: 'The publicDisplayOptIn field must be a boolean when provided.',
+      },
+    }]);
+  } finally {
+    restoreSession();
+    restoreTenant();
+  }
+});

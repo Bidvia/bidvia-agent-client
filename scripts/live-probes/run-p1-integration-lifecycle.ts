@@ -91,6 +91,18 @@ export interface RunP1IntegrationLifecycleReport {
   steps: IntegrationLifecycleStepResult[];
 }
 
+type RetiredSeamRoute =
+  | '/runtime/integrations/:integrationCode/onboarding-contract'
+  | '/runtime/integrations/:integrationCode/login'
+  | '/runtime/integrations/:integrationCode/inbound'
+  | '/runtime/wms/warehouses';
+
+type RetiredSeamResult<Route extends RetiredSeamRoute> = {
+  status: 'expected-fail-closed' | 'unexpected';
+  code: string | null;
+  route: Route;
+};
+
 interface RunP1IntegrationLifecycleDependencies {
   fetchImpl?: typeof fetch;
   now?: () => string;
@@ -181,15 +193,11 @@ async function requestJson(
   };
 }
 
-function buildRetiredSeamResult(
-  route: '/runtime/integrations/:integrationCode/onboarding-contract' | '/runtime/integrations/:integrationCode/login' | '/runtime/integrations/:integrationCode/inbound' | '/runtime/wms/warehouses',
+function buildRetiredSeamResult<Route extends RetiredSeamRoute>(
+  route: Route,
   payload: unknown,
   expectedCode: 'integration_legacy_surface_removed' | 'wms_legacy_surface_removed',
-): {
-  status: 'expected-fail-closed' | 'unexpected';
-  code: string | null;
-  route: typeof route;
-} {
+): RetiredSeamResult<Route> {
   const errorCode = (payload as { error?: { code?: string } }).error?.code ?? null;
   return {
     status: errorCode === expectedCode ? 'expected-fail-closed' : 'unexpected',
