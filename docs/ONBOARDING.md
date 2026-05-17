@@ -144,18 +144,20 @@ After that guided path is clear, use the supporting diagnostics and review-safe 
 1. `environment-mode` when you need read-only confirmation of the current base URL classification
 2. `install-integrity` when you need a local install-path self-check before assuming the wrong `bidvia` binary is active
 3. `validation-smoke` when you need one external-user-facing bounded smoke pass over install, environment, runtime capability, server-capability normalization, and local context diagnostics
-4. `runtime-capabilities` when you need one local JSON view of repo-known runtime-facing facts, including the blocked-or-complete Stage 3 release gate
-5. `diagnostic-bundle-export --output ...` when the bounded smoke result should be packaged for support/Core escalation
-6. truth-fetch CLI or SDK reads when you need approved frozen Core reads for account, richer governance deep-read, semantic, pricing, or asset facts
-7. `verification-bundle-preview` or `verification-bundle-export` when the bounded run should be reviewable later
-8. explicit local execution commands when you need payload preview for `heartbeat`, `sync-upload`, `evidence`, or `proposal`
+4. `public-runtime-interpretation-probe` when you need a live `/healthz` and `/readyz` runtime-baseline interpretation readback without jumping to the full bounded-matrix regression lane
+5. `runtime-capabilities` when you need one local JSON view of repo-known runtime-facing facts, including the blocked-or-complete Stage 3 release gate
+6. `diagnostic-bundle-export --output ...` when the bounded smoke result should be packaged for support/Core escalation
+7. truth-fetch CLI or SDK reads when you need approved frozen Core reads for account, richer governance deep-read, semantic, pricing, or asset facts
+8. `verification-bundle-preview` or `verification-bundle-export` when the bounded run should be reviewable later
+9. explicit local execution commands when you need payload preview for `heartbeat`, `sync-upload`, `evidence`, or `proposal`
 
 Keep the unchanged fail-closed boundary lines explicit while you use those tools:
 
 - `install-integrity` is local and observational only
 - `validation-smoke` is a bounded external-user lane, not a Core-owned certification flow
+- `public-runtime-interpretation-probe` stays bounded to runtime-baseline interpretation only
 - `diagnostic-bundle-export` packages bounded user-facing evidence only
-- all three remain fail-closed and do not turn local checks into full business closure claims
+- all four remain fail-closed and do not turn local checks into full business closure claims
 
 When the current lane needs shipped bounded task-plane writes from CLI, use the canonical account-plane command family on `--agent-id`: `create-lease`, `create-task-dispatch`, `assign-task-dispatch`, `suspend-task-dispatch`, `resume-task-dispatch`, `complete-task-dispatch`, `fail-task-dispatch`, `create-claim`, `accept-claim`, and `reject-claim`. Those commands only expose already-shipped helpers and do not widen deeper operator-owned continuation seams.
 

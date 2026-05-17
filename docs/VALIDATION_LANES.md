@@ -25,9 +25,18 @@ For bounded local-first tooling on this lane, start with:
 bidvia install-integrity
 bidvia validation-smoke
 bidvia diagnostic-bundle-export --output ./bidvia-diagnostic-bundle
+bidvia public-runtime-interpretation-probe
 ```
 
-Those commands stay fail-closed. `install-integrity` is the local install-path self-check, `validation-smoke` is the bounded external-user validation lane, and `diagnostic-bundle-export` packages bounded smoke evidence into shareable artifacts without turning this lane into a Core-owned certification flow. For role-stage regression checks, also run `npx tsx scripts/validate-agent-first-business-universe.ts`.
+Those commands stay fail-closed. `install-integrity` is the local install-path self-check, `validation-smoke` is the bounded external-user validation lane, `diagnostic-bundle-export` packages bounded smoke evidence into shareable artifacts, and `public-runtime-interpretation-probe` reads live `/healthz` and `/readyz` to produce bounded runtime-baseline interpretation evidence only. None of them turns this lane into a Core-owned certification flow. For role-stage regression checks, also run `npx tsx scripts/validate-agent-first-business-universe.ts`.
+
+When you need a deeper local-docker artifact that exercises the checked-in live probes instead of only bounded smoke checks, run:
+
+```bash
+npx tsx scripts/verify-client-bounded-matrix.ts --base-url http://127.0.0.1:8787 --output ./bidvia-bounded-matrix.json
+```
+
+This bounded matrix is still review-safe rather than a hosted certification surface. It may return a mix of `pass`, `bounded-stop`, `contradiction`, and `blocked` scenario classes, because the honest output is to show which proven slices executed, which ones hit known bounded platform stops, which ones remain blocked, and which ones would indicate contradictory surfaced truth.
 
 ## 2. Proof-lane / admin-session validation
 

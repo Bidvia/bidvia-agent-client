@@ -221,6 +221,7 @@ test('public docs explain bounded validation tooling and new bounded task-plane 
     assert.match(document, /install-integrity/i);
     assert.match(document, /validation-smoke/i);
     assert.match(document, /diagnostic-bundle-export/i);
+    assert.match(document, /public-runtime-interpretation-probe/i);
   }
 
   for (const document of [readme, onboardingGuide, roadmap]) {
@@ -232,6 +233,7 @@ test('public docs explain bounded validation tooling and new bounded task-plane 
 
   assert.match(releaseChecklist, /validation-smoke/i);
   assert.match(releaseChecklist, /diagnostic-bundle-export/i);
+  assert.match(releaseChecklist, /public-runtime-interpretation-probe/i);
   assert.doesNotMatch(readme, /internal Core acceptance harness/i);
   assert.doesNotMatch(onboardingGuide, /internal Core acceptance harness/i);
   assert.doesNotMatch(roadmap, /internal Core acceptance harness/i);

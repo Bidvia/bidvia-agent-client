@@ -62,13 +62,23 @@ For bounded external-user validation, start with these local-first commands befo
 bidvia install-integrity
 bidvia validation-smoke
 bidvia diagnostic-bundle-export --output ./bidvia-diagnostic-bundle
+bidvia public-runtime-interpretation-probe
 ```
 
 - `install-integrity` is the local install-path self-check
 - `validation-smoke` is the bounded external-user smoke lane
 - `diagnostic-bundle-export` packages that smoke report into machine-readable JSON plus a shareable markdown summary
+- `public-runtime-interpretation-probe` reads live `/healthz` and `/readyz` and exports bounded runtime-baseline interpretation evidence without overclaiming release truth
 
-These commands stay fail-closed. They do not become a Core-owned certification flow, do not claim hosted runtime truth, and do not turn bounded local diagnostics into full business closure claims.
+These commands stay fail-closed. They do not become a Core-owned certification flow, do not claim hosted runtime truth, and do not turn bounded local diagnostics into full business closure claims. `public-runtime-interpretation-probe` stays narrower than the bounded matrix: it proves only the surfaced runtime baseline and does not claim business closure.
+
+When you need a probe-backed local-docker regression artifact instead of the lighter smoke lane, run:
+
+```bash
+npx tsx scripts/verify-client-bounded-matrix.ts --base-url http://127.0.0.1:8787 --output ./bidvia-bounded-matrix.json
+```
+
+That bounded matrix stays local-first and review-safe. It can execute the checked-in proven slices when fresh artifact paths are available, and it reports a bounded mix of `pass`, `bounded-stop`, `contradiction`, and `blocked` results instead of pretending the entire business chain is either fully open or fully closed.
 
 ## Quick start
 

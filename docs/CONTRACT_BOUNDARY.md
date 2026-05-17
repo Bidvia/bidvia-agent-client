@@ -44,6 +44,7 @@ The V1 boundary is agent-first but login-capable. Bounded account/session prereq
 - local ergonomic surfacing of canonical `agentId` account-plane continuation without inventing new Core-owned workflows
 - onboarding guidance for internal team agents and seed-user agents
 - scenario packaging and verification-bundle export on the agent side
+- bounded matrix validation that can execute checked-in local-docker probes and report review-safe `pass`, `bounded-stop`, `contradiction`, and `blocked` scenario classes without redefining Core-owned closure truth
 - agent-side operating guidance for how to use frozen production contracts safely
 - OpenClaw local operator guidance for `openclaw-mcp-config`, companion bundle export, and local stdio MCP handoff
 

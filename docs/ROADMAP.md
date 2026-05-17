@@ -28,7 +28,7 @@ Today the mainline already includes:
 - shipped account-scoped task-dispatch and notification helper families where the downstream packets are already frozen and adopted here
 - shipped local scenario-envelope builders plus bounded scenario families for registration lifecycle, registered-agent operations, industry-universe, connection approval, commercial-action continuation, and one honest cross-chain coordinator path across shipped slices
 - shipped local review-packet, verification-bundle, CLI preview/export, static capability metadata, local runtime snapshot, server-capability normalization, static MCP catalog, bounded local stdio MCP server, and environment-mode visibility surfaces
-- shipped local install-integrity, validation-smoke, and diagnostic-bundle-export tooling for external-user-facing bounded diagnostics and escalation packaging
+- shipped local install-integrity, validation-smoke, diagnostic-bundle-export, and public-runtime-interpretation-probe tooling for external-user-facing bounded diagnostics, runtime-baseline interpretation, and escalation packaging
 
 This is meaningful progress, but it is still not the full operating-kit destination. The repo remains bounded by frozen Core contracts and must not claim platform authority, hosted runtime behavior, integrated Core truth, platform-auth ownership, or a general workflow engine.
 
@@ -57,6 +57,7 @@ That outward diagnostic story should now stay explicit in roadmap language too:
 - `install-integrity` is the local install-path self-check
 - `validation-smoke` is the bounded external-user validation lane
 - `diagnostic-bundle-export` packages bounded smoke evidence into shareable artifacts
+- `public-runtime-interpretation-probe` stays bounded to live runtime-baseline interpretation over `/healthz` and `/readyz`
 - bounded task-plane CLI parity commands such as `create-task-dispatch`, `assign-task-dispatch`, `complete-task-dispatch`, `create-claim`, `accept-claim`, and `reject-claim` stay limited to already-shipped helper semantics only
 - all of those surfaces remain fail-closed and do not turn the client into a Core-owned certification flow
 

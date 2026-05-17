@@ -88,10 +88,14 @@ test('client docs distinguish local validation lanes and task-write-ready guidan
   assert.match(readme, /install-integrity/i);
   assert.match(readme, /validation-smoke/i);
   assert.match(readme, /diagnostic-bundle-export/i);
+  assert.match(readme, /public-runtime-interpretation-probe/i);
   assert.match(onboarding, /install-integrity/i);
   assert.match(onboarding, /validation-smoke/i);
+  assert.match(onboarding, /public-runtime-interpretation-probe/i);
   assert.match(validationLanes, /validation-smoke/i);
   assert.match(validationLanes, /diagnostic-bundle-export/i);
+  assert.match(validationLanes, /public-runtime-interpretation-probe/i);
   assert.match(roadmap, /install-integrity/i);
   assert.match(roadmap, /validation-smoke/i);
+  assert.match(roadmap, /public-runtime-interpretation-probe/i);
 });

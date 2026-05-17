@@ -69,9 +69,10 @@ The same bounded validation story now applies on the Gateway/operator path too:
 bidvia install-integrity
 bidvia validation-smoke
 bidvia diagnostic-bundle-export --output ./bidvia-diagnostic-bundle
+bidvia public-runtime-interpretation-probe
 ```
 
-Those commands stay fail-closed. `install-integrity` is an install-path self-check, `validation-smoke` is the bounded external-user smoke lane, and `diagnostic-bundle-export` packages shareable user-facing evidence. None of them turns this guide into a Core-owned certification flow.
+Those commands stay fail-closed. `install-integrity` is an install-path self-check, `validation-smoke` is the bounded external-user smoke lane, `diagnostic-bundle-export` packages shareable user-facing evidence, and `public-runtime-interpretation-probe` stays bounded to live runtime-baseline interpretation over `/healthz` and `/readyz`. None of them turns this guide into a Core-owned certification flow.
 
 ## Step 1 — install and build
 

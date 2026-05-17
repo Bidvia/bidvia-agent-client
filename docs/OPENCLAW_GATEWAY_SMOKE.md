@@ -55,9 +55,10 @@ For the current bounded external-user validation layer, the same smoke flow can 
 bidvia install-integrity
 bidvia validation-smoke
 bidvia diagnostic-bundle-export --output ./bidvia-diagnostic-bundle
+bidvia public-runtime-interpretation-probe
 ```
 
-Those commands stay fail-closed. They help prove local install/configuration state, but they do not become a Core-owned certification flow and they do not overclaim full governed or business closure.
+Those commands stay fail-closed. They help prove local install/configuration state, and `public-runtime-interpretation-probe` adds a bounded live runtime-baseline readback, but they do not become a Core-owned certification flow and they do not overclaim full governed or business closure.
 
 ## 1. Build check
 

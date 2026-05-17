@@ -39,7 +39,7 @@ Do **not** continue if any metadata value has drifted or become contradictory.
     - OpenClaw-compatible config export through `openclaw-mcp-config`
      - the principal-governed read posture, `tenantId` plus `principalId`, with optional admin-session companionship on some routes
      - the boundary that credential-less local or sim probes prove wiring, transport behavior, reachability, or auth-posture only
-     - the bounded validation tooling story through `install-integrity`, `validation-smoke`, and `diagnostic-bundle-export`
+     - the bounded validation tooling story through `install-integrity`, `validation-smoke`, `diagnostic-bundle-export`, and `public-runtime-interpretation-probe`
      - the bounded task-plane CLI parity story through `create-lease`, `create-task-dispatch`, `assign-task-dispatch`, `suspend-task-dispatch`, `resume-task-dispatch`, `complete-task-dispatch`, `fail-task-dispatch`, `create-claim`, `accept-claim`, and `reject-claim`
      - the current Bidvia Core downstream contract center (`docs/downstream-contract-center/**` in the main Bidvia repo) remains the frozen source of downstream truth for any Stage 2 / Stage 3 claims
 3. Confirm the changelog does **not** overclaim hosted runtime, hosted MCP, remote registry/discovery, login, or Core truth closure.
@@ -56,6 +56,7 @@ Do **not** continue if any metadata value has drifted or become contradictory.
    - `bidvia install-integrity`
    - `bidvia validation-smoke`
    - `bidvia diagnostic-bundle-export --output ...`
+   - `bidvia public-runtime-interpretation-probe`
 5. Confirm the release gate still treats repo-local `node dist/mcp-server.js` only as the developer fallback, not the primary public install story.
 6. Confirm `bidvia runtime-capabilities`, `bidvia route-context-matrix`, and `bidvia operator-discovery` still agree on the same blocked-or-complete Stage 3 release gate status.
 7. Confirm docs and help keep the unchanged fail-closed boundary lines explicit: the validation tooling is external-user-facing and local-first, not a Core-owned certification flow.
