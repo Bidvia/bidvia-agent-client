@@ -1,4 +1,4 @@
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { chmod, mkdir, readFile, writeFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import path from 'node:path';
 
@@ -166,6 +166,7 @@ export async function writeLocalOnboardingState(
     encoding: 'utf8',
     mode: 0o600,
   });
+  await chmod(filePath, 0o600);
 
   return {
     path: filePath,
