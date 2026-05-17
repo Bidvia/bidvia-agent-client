@@ -25,6 +25,36 @@ function buildProbeUrl(baseUrl: string, pathname: '/healthz' | '/readyz'): strin
   return new URL(pathname, baseUrl).toString();
 }
 
+function buildFailedReport(
+  baseUrl: string,
+  generatedAt: string,
+  message: string,
+): BidviaPublicRuntimeInterpretationReport {
+  return {
+    command: 'public-runtime-interpretation-probe',
+    scope: 'local-only',
+    generatedAt,
+    baseUrl,
+    family: 'public-runtime-interpretation',
+    proofClass: 'baseline-interpretation',
+    status: 'failed',
+    summary: {
+      healthzStatus: null,
+      readyzStatus: null,
+      releaseClosureState: null,
+      terminalReleaseConvergenceState: null,
+    },
+    readbacks: {
+      healthz: {},
+      readyz: {},
+    },
+    failure: {
+      code: 'runtime_probe_failed',
+      message,
+    },
+  };
+}
+
 async function readJson(
   fetchImpl: typeof fetch,
   url: string,
@@ -53,30 +83,37 @@ export async function buildPublicRuntimeInterpretationReport(
   dependencies: BidviaPublicRuntimeInterpretationProbeDependencies = {},
 ): Promise<BidviaPublicRuntimeInterpretationReport> {
   const fetchImpl = resolveFetchImplementation(dependencies.fetchImpl);
-  const healthz = await readJson(fetchImpl, buildProbeUrl(input.baseUrl, '/healthz'));
-  const readyz = await readJson(fetchImpl, buildProbeUrl(input.baseUrl, '/readyz'));
+  const generatedAt = dependencies.now?.() ?? new Date().toISOString();
 
-  return {
-    command: 'public-runtime-interpretation-probe',
-    scope: 'local-only',
-    generatedAt: dependencies.now?.() ?? new Date().toISOString(),
-    baseUrl: input.baseUrl,
-    family: 'public-runtime-interpretation',
-    proofClass: 'baseline-interpretation',
-    status: 'passed',
-    summary: {
-      healthzStatus: readStringField(healthz, 'status'),
-      readyzStatus: readStringField(readyz, 'status'),
-      releaseClosureState: readStringField(healthz, 'release_closure_state'),
-      terminalReleaseConvergenceState: readStringField(healthz, 'terminal_release_convergence_state'),
-    },
-    readbacks: {
-      healthz: {
-        ...healthz,
+  try {
+    const healthz = await readJson(fetchImpl, buildProbeUrl(input.baseUrl, '/healthz'));
+    const readyz = await readJson(fetchImpl, buildProbeUrl(input.baseUrl, '/readyz'));
+
+    return {
+      command: 'public-runtime-interpretation-probe',
+      scope: 'local-only',
+      generatedAt,
+      baseUrl: input.baseUrl,
+      family: 'public-runtime-interpretation',
+      proofClass: 'baseline-interpretation',
+      status: 'passed',
+      summary: {
+        healthzStatus: readStringField(healthz, 'status'),
+        readyzStatus: readStringField(readyz, 'status'),
+        releaseClosureState: readStringField(healthz, 'release_closure_state'),
+        terminalReleaseConvergenceState: readStringField(healthz, 'terminal_release_convergence_state'),
       },
-      readyz: {
-        ...readyz,
+      readbacks: {
+        healthz: {
+          ...healthz,
+        },
+        readyz: {
+          ...readyz,
+        },
       },
-    },
-  };
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'public-runtime-interpretation-probe failed unexpectedly.';
+    return buildFailedReport(input.baseUrl, generatedAt, message);
+  }
 }

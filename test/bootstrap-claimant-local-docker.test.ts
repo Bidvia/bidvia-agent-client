@@ -31,6 +31,11 @@ test('parseBootstrapClaimantLocalDockerArgs requires base-url and state-path', (
     /--state-path is required/,
   );
 
+  assert.throws(
+    () => parseBootstrapClaimantLocalDockerArgs(['--base-url', 'https://api.bidvia.cn', '--state-path', '/tmp/bidvia-state.json']),
+    /--base-url must target a loopback local-docker runtime/,
+  );
+
   assert.deepEqual(
     parseBootstrapClaimantLocalDockerArgs([
       '--base-url',

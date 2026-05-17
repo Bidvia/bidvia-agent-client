@@ -132,3 +132,38 @@ test('runCli public-runtime-interpretation-probe prints the bounded runtime inte
     globalThis.fetch = originalFetch;
   }
 });
+
+test('buildPublicRuntimeInterpretationReport returns a failed bounded report when runtime fetch fails', async () => {
+  const report = await buildPublicRuntimeInterpretationReport({
+    baseUrl: 'http://127.0.0.1:65534',
+  }, {
+    fetchImpl: async () => {
+      throw new TypeError('fetch failed');
+    },
+    now: () => '2026-05-17T08:10:00.000Z',
+  });
+
+  assert.deepEqual(report, {
+    command: 'public-runtime-interpretation-probe',
+    scope: 'local-only',
+    generatedAt: '2026-05-17T08:10:00.000Z',
+    baseUrl: 'http://127.0.0.1:65534',
+    family: 'public-runtime-interpretation',
+    proofClass: 'baseline-interpretation',
+    status: 'failed',
+    summary: {
+      healthzStatus: null,
+      readyzStatus: null,
+      releaseClosureState: null,
+      terminalReleaseConvergenceState: null,
+    },
+    readbacks: {
+      healthz: {},
+      readyz: {},
+    },
+    failure: {
+      code: 'runtime_probe_failed',
+      message: 'fetch failed',
+    },
+  });
+});

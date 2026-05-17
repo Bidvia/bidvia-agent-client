@@ -154,8 +154,14 @@ export function parseVerifyClientBoundedMatrixArgs(argv: string[]): VerifyClient
     throw new Error('--output is required');
   }
 
+  const normalizedBaseUrl = baseUrl.trim();
+  const parsedBaseUrl = new URL(normalizedBaseUrl);
+  if (!['127.0.0.1', 'localhost', '::1'].includes(parsedBaseUrl.hostname)) {
+    throw new Error('--base-url must target a loopback local-docker runtime.');
+  }
+
   return {
-    baseUrl: baseUrl.trim(),
+    baseUrl: normalizedBaseUrl,
     outputPath: outputPath.trim(),
   };
 }
@@ -714,7 +720,10 @@ export async function writeClientBoundedMatrixEvidence(
   }
 
   await mkdir(path.dirname(normalizedOutputPath), { recursive: true });
-  await writeFile(normalizedOutputPath, `${JSON.stringify(evidence, null, 2)}\n`, 'utf8');
+  await writeFile(normalizedOutputPath, `${JSON.stringify(evidence, null, 2)}\n`, {
+    encoding: 'utf8',
+    mode: 0o600,
+  });
 
   return {
     outputPath: normalizedOutputPath,

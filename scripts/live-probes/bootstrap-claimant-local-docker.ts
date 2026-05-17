@@ -63,6 +63,15 @@ interface BootstrapClaimantLocalDockerDependencies {
 const seededAdminEmail = 'ops-admin@example.com';
 const seededAdminPassword = 'pw-admin-ops';
 
+function requireLoopbackBaseUrl(baseUrl: string): string {
+  const normalized = baseUrl.trim();
+  const url = new URL(normalized);
+  if (!['127.0.0.1', 'localhost', '::1'].includes(url.hostname)) {
+    throw new Error('--base-url must target a loopback local-docker runtime.');
+  }
+  return normalized;
+}
+
 export function parseBootstrapClaimantLocalDockerArgs(argv: string[]): BootstrapClaimantLocalDockerArgs {
   let baseUrl: string | undefined;
   let statePath: string | undefined;
@@ -107,7 +116,7 @@ export function parseBootstrapClaimantLocalDockerArgs(argv: string[]): Bootstrap
   }
 
   return {
-    baseUrl: baseUrl.trim(),
+    baseUrl: requireLoopbackBaseUrl(baseUrl),
     statePath: statePath.trim(),
     ...(email?.trim() ? { email: email.trim() } : {}),
     ...(password?.trim() ? { password: password.trim() } : {}),

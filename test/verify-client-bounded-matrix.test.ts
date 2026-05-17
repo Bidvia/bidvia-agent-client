@@ -55,6 +55,10 @@ test('parseVerifyClientBoundedMatrixArgs requires base-url and output', () => {
     () => parseVerifyClientBoundedMatrixArgs(['--output', 'out.json']),
     /--base-url is required/,
   );
+  assert.throws(
+    () => parseVerifyClientBoundedMatrixArgs(['--base-url', 'https://api.bidvia.cn', '--output', 'out.json']),
+    /--base-url must target a loopback local-docker runtime/,
+  );
 });
 
 test('runClientBoundedMatrix records baseline health and machine-readable blocked scenarios when actor context is absent', async () => {

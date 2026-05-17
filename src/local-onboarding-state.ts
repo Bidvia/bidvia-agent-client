@@ -162,7 +162,10 @@ export async function writeLocalOnboardingState(
   const persistedState = buildPersistedLocalOnboardingState(state);
 
   await mkdir(path.dirname(filePath), { recursive: true });
-  await writeFile(filePath, JSON.stringify(persistedState, null, 2), 'utf8');
+  await writeFile(filePath, JSON.stringify(persistedState, null, 2), {
+    encoding: 'utf8',
+    mode: 0o600,
+  });
 
   return {
     path: filePath,

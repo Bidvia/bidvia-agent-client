@@ -88,7 +88,10 @@ async function defaultWriteReport(
   report: RunPackBTaskProgressionReport,
 ): Promise<{ outputPath: string }> {
   await mkdir(path.dirname(outputPath), { recursive: true });
-  await writeFile(outputPath, `${JSON.stringify(report, null, 2)}\n`, 'utf8');
+  await writeFile(outputPath, `${JSON.stringify(report, null, 2)}\n`, {
+    encoding: 'utf8',
+    mode: 0o600,
+  });
   return { outputPath };
 }
 

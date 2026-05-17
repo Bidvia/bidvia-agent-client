@@ -1648,7 +1648,7 @@ export interface BidviaPublicRuntimeInterpretationReport {
   baseUrl: string;
   family: 'public-runtime-interpretation';
   proofClass: 'baseline-interpretation';
-  status: 'passed';
+  status: 'passed' | 'failed';
   summary: {
     healthzStatus: string | null;
     readyzStatus: string | null;
@@ -1658,6 +1658,10 @@ export interface BidviaPublicRuntimeInterpretationReport {
   readbacks: {
     healthz: Record<string, unknown>;
     readyz: Record<string, unknown>;
+  };
+  failure?: {
+    code: 'runtime_probe_failed';
+    message: string;
   };
 }
 

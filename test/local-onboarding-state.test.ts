@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
@@ -114,6 +114,8 @@ test('writeLocalOnboardingState persists minimal continuation fields while still
       createdAt: '2026-04-02T10:00:00.000Z',
       updatedAt: '2026-04-02T10:05:00.000Z',
     });
+
+    assert.equal(statSync(statePath).mode & 0o777, 0o600);
 
     const reloaded = await readLocalOnboardingState();
 
