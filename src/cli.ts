@@ -2055,6 +2055,9 @@ const claimantCommandDefinitions = {
         agentId: readRequiredAgentId('claimant-readiness-repair', parsedArgs),
         now: readRequiredStringInput('claimant-readiness-repair', input, 'now'),
         ...(input.capabilityProfile === undefined ? {} : { capabilityProfile: input.capabilityProfile as any }),
+        ...(input.taskDispatchAcceptance === undefined
+          ? {}
+          : { taskDispatchAcceptance: input.taskDispatchAcceptance as any }),
         ...(input.participationState === undefined ? {} : { participationState: input.participationState as any }),
         ...(input.externalBinding === undefined ? {} : { externalBinding: input.externalBinding as any }),
       });

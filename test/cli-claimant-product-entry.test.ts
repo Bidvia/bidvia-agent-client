@@ -169,6 +169,59 @@ test('runCli claimant-readiness-repair routes to external binding when closure-s
   assert.equal((printed[0] as any).actionTaken, 'complete_external_binding');
 });
 
+test('runCli claimant-readiness-repair forwards taskDispatchAcceptance when closure-status says complete_task_dispatch_opt_in', async () => {
+  const printed: unknown[] = [];
+  const calls: unknown[] = [];
+  const exitCode = await runCli([
+    'claimant-readiness-repair',
+    '--agent-id',
+    'agent-2',
+    '--input',
+    '{"now":"2026-05-10T12:15:00.000Z","taskDispatchAcceptance":{"acceptsTaskDispatches":true,"acceptedTaskDispatchScopes":["COMMERCIAL_ACTION_REVIEW"]}}',
+  ], {
+    createClient: () => ({
+      getAccountAgent: async () => ({
+        registration: {
+          tenant_id: 'tenant-public',
+          principal_id: 'claimed:agent-2',
+          owner_account_id: 'company-public',
+        },
+      }),
+      getAccountAgentClosureStatus: async () => ({
+        recommended_next_step: 'complete_task_dispatch_opt_in',
+        next_step_kind: 'task_dispatch_acceptance',
+        dispatch_eligibility: {
+          allowed: false,
+          reason_codes: ['task_dispatch_opt_in_missing'],
+        },
+      }),
+      patchAgentSelfService: async (_agentId: string, input: unknown) => {
+        calls.push(input);
+        return { ok: true };
+      },
+      createAccountAgentExternalBinding: async () => {
+        throw new Error('unexpected external binding');
+      },
+      createAccountAgentDispatchAuthorityRequest: async () => {
+        throw new Error('unexpected dispatch authority request');
+      },
+    }) as never,
+    resolveExecutionContext: () => ({ sessionId: 'sess-1', tenantId: 'tenant-public' }),
+    readLocalOnboardingState: async () => ({ sessionId: 'sess-1', tenantId: 'tenant-public' }),
+    printJson: (value) => { printed.push(value); },
+    printLine: () => {},
+  });
+
+  assert.equal(exitCode, 0);
+  assert.equal(calls.length, 1);
+  assert.equal((calls[0] as any).now, '2026-05-10T12:15:00.000Z');
+  assert.deepEqual((calls[0] as any).taskDispatchAcceptance, {
+    acceptsTaskDispatches: true,
+    acceptedTaskDispatchScopes: ['COMMERCIAL_ACTION_REVIEW'],
+  });
+  assert.equal((printed[0] as any).actionTaken, 'complete_task_dispatch_opt_in');
+});
+
 test('runCli claimant-task-entry-run routes through the claimant task entry facade and prints dispatch json', async () => {
   const printed: unknown[] = [];
   const calls: string[] = [];

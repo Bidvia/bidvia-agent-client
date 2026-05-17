@@ -248,6 +248,7 @@ const widenedExecutionDispatchersByCapabilityKey: Record<string, BidviaGenericEx
       agentId: requireAccountAgentId(objectInput),
       now: requireExecutionStringInput(objectInput, ['now'], 'now is required for claimant readiness repair execution'),
       ...(objectInput.capabilityProfile === undefined ? {} : { capabilityProfile: objectInput.capabilityProfile as any }),
+      ...(objectInput.taskDispatchAcceptance === undefined ? {} : { taskDispatchAcceptance: objectInput.taskDispatchAcceptance as any }),
       ...(objectInput.participationState === undefined ? {} : { participationState: objectInput.participationState as any }),
       ...(objectInput.externalBinding === undefined ? {} : { externalBinding: objectInput.externalBinding as any }),
     });
