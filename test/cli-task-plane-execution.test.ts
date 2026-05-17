@@ -8,6 +8,9 @@ type TaskPlaneWriteClientStub = Pick<
   BidviaClient,
   | 'createLease'
   | 'createTaskDispatch'
+  | 'createTaskDispatchOutcome'
+  | 'createTaskDispatchEvidenceBundle'
+  | 'createTaskDispatchConfirmationCycle'
   | 'assignTaskDispatch'
   | 'suspendTaskDispatch'
   | 'resumeTaskDispatch'
@@ -40,6 +43,18 @@ test('runCli routes approved task-plane write commands through the matching clie
     createTaskDispatch: async (...args: Parameters<BidviaClient['createTaskDispatch']>) => {
       calls.push({ command: 'create-task-dispatch', args });
       return { ok: true, command: 'create-task-dispatch' };
+    },
+    createTaskDispatchOutcome: async (...args: Parameters<BidviaClient['createTaskDispatchOutcome']>) => {
+      calls.push({ command: 'create-task-dispatch-outcome', args });
+      return { ok: true, command: 'create-task-dispatch-outcome' };
+    },
+    createTaskDispatchEvidenceBundle: async (...args: Parameters<BidviaClient['createTaskDispatchEvidenceBundle']>) => {
+      calls.push({ command: 'create-task-dispatch-evidence-bundle', args });
+      return { ok: true, command: 'create-task-dispatch-evidence-bundle' };
+    },
+    createTaskDispatchConfirmationCycle: async (...args: Parameters<BidviaClient['createTaskDispatchConfirmationCycle']>) => {
+      calls.push({ command: 'create-task-dispatch-confirmation-cycle', args });
+      return { ok: true, command: 'create-task-dispatch-confirmation-cycle' };
     },
     assignTaskDispatch: async (...args: Parameters<BidviaClient['assignTaskDispatch']>) => {
       calls.push({ command: 'assign-task-dispatch', args });
@@ -100,12 +115,15 @@ test('runCli routes approved task-plane write commands through the matching clie
     await runCli(['resume-task-dispatch', '--agent-id', 'agent-1', '--task-dispatch-id', 'dispatch-1', '--input', '{"now":"2026-05-06T17:04:00Z","reason":"dependency resolved"}'], sharedOverrides),
     await runCli(['complete-task-dispatch', '--agent-id', 'agent-1', '--task-dispatch-id', 'dispatch-1', '--input', '{"now":"2026-05-06T17:05:00Z","reason":"task finished","outcomeRef":"outcome://dispatch/1"}'], sharedOverrides),
     await runCli(['fail-task-dispatch', '--agent-id', 'agent-1', '--task-dispatch-id', 'dispatch-1', '--input', '{"now":"2026-05-06T17:06:00Z","reason":"task failed","outcomeRef":"outcome://dispatch/1/failure"}'], sharedOverrides),
+    await runCli(['create-task-dispatch-outcome', '--agent-id', 'agent-1', '--task-dispatch-id', 'dispatch-1', '--input', '{"outcomeRef":"outcome://dispatch/1","reason":"bounded completion evidence recorded","now":"2026-05-06T17:01:30Z"}'], sharedOverrides),
+    await runCli(['create-task-dispatch-evidence-bundle', '--agent-id', 'agent-1', '--task-dispatch-id', 'dispatch-1', '--input', '{"now":"2026-05-06T17:01:40Z","evidenceRefs":["evidence://dispatch/1/receipt"],"rationaleSummary":"provider receipt attached","confidence":"high"}'], sharedOverrides),
+    await runCli(['create-task-dispatch-confirmation-cycle', '--agent-id', 'agent-1', '--task-dispatch-id', 'dispatch-1', '--input', '{"requiredEvidenceProfile":"hybrid-machine-plus-human","startedAt":"2026-05-06T17:01:50Z","slaWindowRef":"sla://dispatch/1"}'], sharedOverrides),
     await runCli(['create-claim', '--agent-id', 'agent-1', '--input', '{"claimKind":"ownership","claimRef":"claim://1","taskDispatchId":"dispatch-1","now":"2026-05-06T17:07:00Z"}'], sharedOverrides),
     await runCli(['accept-claim', '--agent-id', 'agent-1', '--claim-id', 'claim-1', '--input', '{"taskDispatchId":"dispatch-1","now":"2026-05-06T17:08:00Z"}'], sharedOverrides),
     await runCli(['reject-claim', '--agent-id', 'agent-1', '--claim-id', 'claim-1', '--input', '{"taskDispatchId":"dispatch-1","reason":"claim conflicts with active lease","now":"2026-05-06T17:09:00Z"}'], sharedOverrides),
   ];
 
-  assert.deepEqual(exitCodes, [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
+  assert.deepEqual(exitCodes, [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
   assert.deepEqual(calls, [
     { command: 'create-lease', args: ['agent-1', { leaseScope: 'dispatch-window', now: '2026-05-06T17:00:00Z', expiresAt: '2026-05-06T17:05:00Z' }] },
     { command: 'create-task-dispatch', args: ['agent-1', { taskKind: 'notification-review', taskRef: 'task://dispatch/1', now: '2026-05-06T17:01:00Z', reason: 'new notification work' }] },
@@ -114,6 +132,9 @@ test('runCli routes approved task-plane write commands through the matching clie
     { command: 'resume-task-dispatch', args: ['agent-1', 'dispatch-1', { now: '2026-05-06T17:04:00Z', reason: 'dependency resolved' }] },
     { command: 'complete-task-dispatch', args: ['agent-1', 'dispatch-1', { now: '2026-05-06T17:05:00Z', reason: 'task finished', outcomeRef: 'outcome://dispatch/1' }] },
     { command: 'fail-task-dispatch', args: ['agent-1', 'dispatch-1', { now: '2026-05-06T17:06:00Z', reason: 'task failed', outcomeRef: 'outcome://dispatch/1/failure' }] },
+    { command: 'create-task-dispatch-outcome', args: ['agent-1', 'dispatch-1', { outcomeRef: 'outcome://dispatch/1', reason: 'bounded completion evidence recorded', now: '2026-05-06T17:01:30Z' }] },
+    { command: 'create-task-dispatch-evidence-bundle', args: ['agent-1', 'dispatch-1', { now: '2026-05-06T17:01:40Z', evidenceRefs: ['evidence://dispatch/1/receipt'], rationaleSummary: 'provider receipt attached', confidence: 'high' }] },
+    { command: 'create-task-dispatch-confirmation-cycle', args: ['agent-1', 'dispatch-1', { requiredEvidenceProfile: 'hybrid-machine-plus-human', startedAt: '2026-05-06T17:01:50Z', slaWindowRef: 'sla://dispatch/1' }] },
     { command: 'create-claim', args: ['agent-1', { claimKind: 'ownership', claimRef: 'claim://1', taskDispatchId: 'dispatch-1', now: '2026-05-06T17:07:00Z' }] },
     { command: 'accept-claim', args: ['agent-1', 'claim-1', { taskDispatchId: 'dispatch-1', now: '2026-05-06T17:08:00Z' }] },
     { command: 'reject-claim', args: ['agent-1', 'claim-1', { taskDispatchId: 'dispatch-1', reason: 'claim conflicts with active lease', now: '2026-05-06T17:09:00Z' }] },
@@ -126,6 +147,9 @@ test('runCli routes approved task-plane write commands through the matching clie
     { ok: true, command: 'resume-task-dispatch' },
     { ok: true, command: 'complete-task-dispatch' },
     { ok: true, command: 'fail-task-dispatch' },
+    { ok: true, command: 'create-task-dispatch-outcome' },
+    { ok: true, command: 'create-task-dispatch-evidence-bundle' },
+    { ok: true, command: 'create-task-dispatch-confirmation-cycle' },
     { ok: true, command: 'create-claim' },
     { ok: true, command: 'accept-claim' },
     { ok: true, command: 'reject-claim' },

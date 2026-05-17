@@ -67,12 +67,17 @@ const expectedBidviaMcpToolNames = [
   'sync-upload-execution',
   'evidence-execution',
   'proposal-execution',
+  'public-integration-apps-read',
+  'account-integration-apps-read',
+  'account-integration-installations-read',
   'account-integration-capabilities-read',
   'account-agent-integration-eligibility-read',
   'query-provisional-agent-read',
   'account-agent-closure-status-read',
   'account-agent-execution-status-read',
   'account-agent-execution-listing-status-read',
+  'account-agent-execution-opportunity-status-read',
+  'account-agent-execution-opportunity-end-state-read',
   'account-agent-execution-materialization-status-read',
   'agent-readiness-read',
   'claimant-precondition-inspect-read',
@@ -82,6 +87,8 @@ const expectedBidviaMcpToolNames = [
   'platform-managed-entry-inspect-read',
   'platform-managed-readiness-inspect-read',
   'claimant-handoff-inspect-read',
+  'claimant-handoff-opportunity-status-read',
+  'claimant-handoff-opportunity-end-state-read',
   'agent-summary-read',
   'agent-registrations-read',
   'agent-registration-read',
@@ -99,6 +106,9 @@ const expectedBidviaMcpToolNames = [
   'acknowledge-notification-execution',
   'create-provisional-agent-execution',
   'claim-provisional-agent-execution',
+  'create-account-integration-app-execution',
+  'create-account-integration-installation-execution',
+  'connect-account-integration-installation-execution',
   'account-agent-execution-presence-execution',
   'account-agent-execution-sync-upload-execution',
   'account-agent-execution-sync-download-execution',
@@ -106,6 +116,9 @@ const expectedBidviaMcpToolNames = [
   'account-agent-execution-proposal-execution',
   'account-agent-execution-listing-create-execution',
   'account-agent-execution-listing-activate-execution',
+  'create-task-dispatch-outcome-execution',
+  'create-task-dispatch-evidence-bundle-execution',
+  'create-task-dispatch-confirmation-cycle-execution',
   'claimant-precondition-establish-canonical-company-public-execution',
   'claimant-readiness-repair-execution',
   'operator-progression-match-execution',
@@ -259,6 +272,9 @@ test('MCP tool catalog covers the current bounded preview, truth-fetch, export, 
   assert.equal(bidviaMcpTools.some((tool) => tool.toolName === 'agent-readiness-read'), true);
   assert.equal(bidviaMcpTools.some((tool) => tool.toolName === 'agent-capability-profile-read'), true);
   assert.equal(bidviaMcpTools.some((tool) => tool.toolName === 'create-task-dispatch-execution'), true);
+  assert.equal(bidviaMcpTools.some((tool) => tool.toolName === 'create-task-dispatch-outcome-execution'), true);
+  assert.equal(bidviaMcpTools.some((tool) => tool.toolName === 'create-task-dispatch-evidence-bundle-execution'), true);
+  assert.equal(bidviaMcpTools.some((tool) => tool.toolName === 'create-task-dispatch-confirmation-cycle-execution'), true);
   assert.equal(bidviaMcpTools.some((tool) => tool.toolName === 'create-commercial-action-execution'), false);
   assert.equal(bidviaMcpTools.some((tool) => tool.toolName === 'request-commercial-action-approval-execution'), false);
   assert.equal(bidviaMcpTools.some((tool) => tool.toolName === 'execute-commercial-action-execution'), false);
@@ -1608,6 +1624,14 @@ test('dispatchMcpToolCall routes first-class account-plane continuation tools th
       calls.push({ helper: 'getAccountAgentGovernedWorkClosure', args: [agentId, taskDispatchId] });
       return { taskDispatchId };
     },
+    async listTaskDispatches(agentId: string) {
+      calls.push({ helper: 'listTaskDispatches', args: [agentId] });
+      return { items: [{ agent_task_dispatch_id: 'dispatch-1' }] };
+    },
+    async getTaskDispatch(agentId: string, taskDispatchId: string) {
+      calls.push({ helper: 'getTaskDispatch', args: [agentId, taskDispatchId] });
+      return { dispatch: { agent_task_dispatch_id: taskDispatchId } };
+    },
   };
 
   const results = [
@@ -1616,6 +1640,8 @@ test('dispatchMcpToolCall routes first-class account-plane continuation tools th
     await dispatchMcpToolCallWithExecution({ toolName: 'account-agent-external-binding-execution', arguments: { agentId: 'agent-1', systemType: 'wms', systemName: 'integration-smoke', externalAccountRef: 'wms-agent-1', now: '2026-05-01T12:01:00Z' } }, { createExecutionClient: () => client as never }),
     await dispatchMcpToolCallWithExecution({ toolName: 'operator-dispatch-authority-decision-execution', arguments: { requestId: 'daar-1', decision: 'APPROVE', resolutionReason: 'approve-for-live-run', now: '2026-05-01T12:02:00Z' } }, { createExecutionClient: () => client as never }),
     await dispatchMcpToolCallWithExecution({ toolName: 'governed-work-closure-read', arguments: { agentId: 'agent-1', taskDispatchId: 'dispatch-1' } }, { createExecutionClient: () => client as never }),
+    await dispatchMcpToolCallWithExecution({ toolName: 'task-dispatches-read', arguments: { agentId: 'agent-1' } }, { createExecutionClient: () => client as never }),
+    await dispatchMcpToolCallWithExecution({ toolName: 'task-dispatch-read', arguments: { agentId: 'agent-1', taskDispatchId: 'dispatch-1' } }, { createExecutionClient: () => client as never }),
   ];
 
   assert.deepEqual(calls, [
@@ -1624,6 +1650,8 @@ test('dispatchMcpToolCall routes first-class account-plane continuation tools th
     { helper: 'createAccountAgentExternalBinding', args: ['agent-1', { systemType: 'wms', systemName: 'integration-smoke', externalAccountRef: 'wms-agent-1', now: '2026-05-01T12:01:00Z' }] },
     { helper: 'decideDispatchAuthorityRequest', args: ['daar-1', { decision: 'APPROVE', resolutionReason: 'approve-for-live-run', now: '2026-05-01T12:02:00Z' }] },
     { helper: 'getAccountAgentGovernedWorkClosure', args: ['agent-1', 'dispatch-1'] },
+    { helper: 'listTaskDispatches', args: ['agent-1'] },
+    { helper: 'getTaskDispatch', args: ['agent-1', 'dispatch-1'] },
   ]);
   assert.deepEqual(results.map((result) => result.result), [
     { truthFetchResult: { currentStage: 'dispatch_ready' } },
@@ -1631,6 +1659,8 @@ test('dispatchMcpToolCall routes first-class account-plane continuation tools th
     { executionResult: { surfaceStatus: 'account_scoped_binding_completed' } },
     { executionResult: { status: 'APPROVED' } },
     { truthFetchResult: { taskDispatchId: 'dispatch-1' } },
+    { truthFetchResult: { items: [{ agent_task_dispatch_id: 'dispatch-1' }] } },
+    { truthFetchResult: { dispatch: { agent_task_dispatch_id: 'dispatch-1' } } },
   ]);
 });
 

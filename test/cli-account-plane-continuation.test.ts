@@ -103,9 +103,47 @@ test('runCli routes first-class account-plane continuation commands through the 
           throw new Error('governed-work-closure should not print help lines');
         },
     }),
+    await runCli(['task-dispatches', '--agent-id', 'agent-1'], {
+      createClient: () => ({
+        listTaskDispatches: async (...args: unknown[]) => {
+          calls.push({ command: 'task-dispatches', args });
+          return { ok: true, command: 'task-dispatches' };
+        },
+      }) as never,
+      resolveProcessEnv: () => ({
+        BIDVIA_TENANT_ID: 'tenant-a',
+        BIDVIA_SESSION_ID: 'sess-1',
+      }),
+      readLocalOnboardingState: async () => null,
+      printJson: (value) => {
+        printed.push(value);
+      },
+      printLine: () => {
+        throw new Error('task-dispatches should not print help lines');
+      },
+    }),
+    await runCli(['task-dispatch', '--agent-id', 'agent-1', '--task-dispatch-id', 'dispatch-1'], {
+      createClient: () => ({
+        getTaskDispatch: async (...args: unknown[]) => {
+          calls.push({ command: 'task-dispatch', args });
+          return { ok: true, command: 'task-dispatch' };
+        },
+      }) as never,
+      resolveProcessEnv: () => ({
+        BIDVIA_TENANT_ID: 'tenant-a',
+        BIDVIA_SESSION_ID: 'sess-1',
+      }),
+      readLocalOnboardingState: async () => null,
+      printJson: (value) => {
+        printed.push(value);
+      },
+      printLine: () => {
+        throw new Error('task-dispatch should not print help lines');
+      },
+    }),
   ];
 
-  assert.deepEqual(exitCodes, [0, 0, 0, 0, 0]);
+  assert.deepEqual(exitCodes, [0, 0, 0, 0, 0, 0, 0]);
   assert.deepEqual(calls, [
     { command: 'account-agent-closure-status', args: ['agent-1'] },
     { command: 'account-agent-authorization-refresh', args: ['agent-1', { now: '2026-05-01T12:00:00Z' }] },
@@ -127,6 +165,8 @@ test('runCli routes first-class account-plane continuation commands through the 
       }],
     },
     { command: 'governed-work-closure', args: ['agent-1', 'dispatch-1'] },
+    { command: 'task-dispatches', args: ['agent-1'] },
+    { command: 'task-dispatch', args: ['agent-1', 'dispatch-1'] },
   ]);
   assert.deepEqual(printed, [
     { ok: true, command: 'account-agent-closure-status' },
@@ -134,5 +174,7 @@ test('runCli routes first-class account-plane continuation commands through the 
     { ok: true, command: 'account-agent-external-binding' },
     { ok: true, command: 'operator-dispatch-authority-decision' },
     { ok: true, command: 'governed-work-closure' },
+    { ok: true, command: 'task-dispatches' },
+    { ok: true, command: 'task-dispatch' },
   ]);
 });

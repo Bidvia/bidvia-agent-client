@@ -26,4 +26,10 @@ test('local discovery catalog exposes claimant product entry commands through ro
   assert.deepEqual(byHelperKey.get('inspectClaimantHandoff')?.cliCommands, [
     'claimant-handoff-inspect',
   ]);
+  assert.deepEqual(byHelperKey.get('inspectClaimantOpportunityStatus')?.cliCommands, [
+    'claimant-handoff-opportunity-status',
+  ]);
+  assert.deepEqual(byHelperKey.get('inspectClaimantOpportunityEndState')?.cliCommands, [
+    'claimant-handoff-opportunity-end-state',
+  ]);
 });

@@ -43,6 +43,8 @@ import { isBlockedCapabilityExecutionError } from './runtime/capability-orchestr
 import {
   establishClaimantCanonicalCompanyPublicPrecondition,
   inspectClaimantHandoff,
+  inspectClaimantOpportunityEndState,
+  inspectClaimantOpportunityStatus,
   inspectClaimantPrecondition,
   inspectClaimantReadiness,
   repairClaimantReadiness,
@@ -491,6 +493,30 @@ const widenedExecutionDispatchersByCapabilityKey: Record<string, BidviaGenericEx
       ) as never,
     );
   },
+  createAccountIntegrationApp(client, input) {
+    return client.createAccountIntegrationApp(
+      buildExecutionPayload(input, [], 'integration app creation input is required') as never,
+    );
+  },
+  createAccountIntegrationInstallation(client, input) {
+    return client.createAccountIntegrationInstallation(
+      buildExecutionPayload(input, [], 'integration installation creation input is required') as never,
+    );
+  },
+  connectAccountIntegrationInstallation(client, input) {
+    return client.connectAccountIntegrationInstallation(
+      requireExecutionStringInput(
+        input,
+        ['integrationInstallationId'],
+        'integrationInstallationId is required for integration installation connection execution',
+      ),
+      buildExecutionPayload(
+        input,
+        ['integrationInstallationId'],
+        'integrationInstallationId is required for integration installation connection execution',
+      ) as never,
+    );
+  },
   decideDispatchAuthorityRequest(client, input) {
     return client.decideDispatchAuthorityRequest(
       requireExecutionStringInput(
@@ -535,6 +561,51 @@ const widenedExecutionDispatchersByCapabilityKey: Record<string, BidviaGenericEx
         input,
         ['agentId', 'agentRegistrationId', 'registrationId'],
         'agentId is required for canonical account-plane governed task dispatch execution',
+      ) as never,
+    );
+  },
+  createTaskDispatchOutcome(client, input) {
+    return client.createTaskDispatchOutcome(
+      requireAccountAgentId(input),
+      requireExecutionStringInput(
+        input,
+        ['taskDispatchId'],
+        'taskDispatchId is required for bounded task outcome execution',
+      ),
+      buildExecutionPayload(
+        input,
+        ['agentId', 'agentRegistrationId', 'registrationId', 'taskDispatchId'],
+        'agentId and taskDispatchId are required for canonical account-plane bounded task outcome execution',
+      ) as never,
+    );
+  },
+  createTaskDispatchEvidenceBundle(client, input) {
+    return client.createTaskDispatchEvidenceBundle(
+      requireAccountAgentId(input),
+      requireExecutionStringInput(
+        input,
+        ['taskDispatchId'],
+        'taskDispatchId is required for bounded task evidence-bundle execution',
+      ),
+      buildExecutionPayload(
+        input,
+        ['agentId', 'agentRegistrationId', 'registrationId', 'taskDispatchId'],
+        'agentId and taskDispatchId are required for canonical account-plane bounded task evidence-bundle execution',
+      ) as never,
+    );
+  },
+  createTaskDispatchConfirmationCycle(client, input) {
+    return client.createTaskDispatchConfirmationCycle(
+      requireAccountAgentId(input),
+      requireExecutionStringInput(
+        input,
+        ['taskDispatchId'],
+        'taskDispatchId is required for bounded task confirmation-cycle execution',
+      ),
+      buildExecutionPayload(
+        input,
+        ['agentId', 'agentRegistrationId', 'registrationId', 'taskDispatchId'],
+        'agentId and taskDispatchId are required for canonical account-plane bounded task confirmation-cycle execution',
       ) as never,
     );
   },
@@ -1051,6 +1122,64 @@ async function dispatchGovernanceTruthFetchTool(
     };
   }
 
+  if (descriptor.helperRef.helperKey === 'getAccountAgentExecutionOpportunityStatus') {
+    const agentId = requireAccountAgentId(input);
+    return {
+      toolName: descriptor.toolName,
+      outputMode: descriptor.outputMode,
+      result: {
+        truthFetchResult: await client.getAccountAgentExecutionOpportunityStatus(
+          agentId,
+          requireStringInput(input, 'targetRef', 'targetRef is required for claimant opportunity status reads'),
+        ),
+      },
+    };
+  }
+
+  if (descriptor.helperRef.helperKey === 'getAccountAgentExecutionOpportunityEndState') {
+    const agentId = requireAccountAgentId(input);
+    return {
+      toolName: descriptor.toolName,
+      outputMode: descriptor.outputMode,
+      result: {
+        truthFetchResult: await client.getAccountAgentExecutionOpportunityEndState(
+          agentId,
+          requireStringInput(input, 'targetRef', 'targetRef is required for claimant opportunity end-state reads'),
+        ),
+      },
+    };
+  }
+
+  if (descriptor.helperRef.helperKey === 'listPublicIntegrationApps') {
+    return {
+      toolName: descriptor.toolName,
+      outputMode: descriptor.outputMode,
+      result: {
+        truthFetchResult: await client.listPublicIntegrationApps(),
+      },
+    };
+  }
+
+  if (descriptor.helperRef.helperKey === 'listAccountIntegrationApps') {
+    return {
+      toolName: descriptor.toolName,
+      outputMode: descriptor.outputMode,
+      result: {
+        truthFetchResult: await client.listAccountIntegrationApps(),
+      },
+    };
+  }
+
+  if (descriptor.helperRef.helperKey === 'listAccountIntegrationInstallations') {
+    return {
+      toolName: descriptor.toolName,
+      outputMode: descriptor.outputMode,
+      result: {
+        truthFetchResult: await client.listAccountIntegrationInstallations(),
+      },
+    };
+  }
+
   if (descriptor.helperRef.helperKey === 'listAccountIntegrationCapabilities') {
     return {
       toolName: descriptor.toolName,
@@ -1444,6 +1573,44 @@ async function dispatchGovernanceTruthFetchTool(
             input,
             ['listingId'],
             'listingId is required for claimant handoff inspection',
+          ),
+        ),
+      },
+    };
+  }
+
+  if (descriptor.helperRef.helperKey === 'inspectClaimantOpportunityStatus') {
+    const agentId = requireAccountAgentId(input);
+    return {
+      toolName: descriptor.toolName,
+      outputMode: descriptor.outputMode,
+      result: {
+        truthFetchResult: await inspectClaimantOpportunityStatus(
+          client,
+          agentId,
+          requireExecutionStringInput(
+            input,
+            ['targetRef', 'opportunityId'],
+            'targetRef is required for claimant opportunity status inspection',
+          ),
+        ),
+      },
+    };
+  }
+
+  if (descriptor.helperRef.helperKey === 'inspectClaimantOpportunityEndState') {
+    const agentId = requireAccountAgentId(input);
+    return {
+      toolName: descriptor.toolName,
+      outputMode: descriptor.outputMode,
+      result: {
+        truthFetchResult: await inspectClaimantOpportunityEndState(
+          client,
+          agentId,
+          requireExecutionStringInput(
+            input,
+            ['targetRef', 'opportunityId'],
+            'targetRef is required for claimant opportunity end-state inspection',
           ),
         ),
       },

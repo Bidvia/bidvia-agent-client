@@ -77,6 +77,7 @@ import {
 import { buildLocalRuntimeCapabilitySnapshot } from './runtime-capabilities.js';
 import { buildInstallIntegritySnapshot } from './install-integrity.js';
 import { buildValidationSmokeSnapshot } from './validation-smoke.js';
+import { buildPublicRuntimeInterpretationReport } from './public-runtime-interpretation.js';
 import { exportDiagnosticBundle } from './diagnostic-bundle.js';
 import {
   writeOpenClawCompanionBundle,
@@ -116,6 +117,8 @@ import { runLocalMcpServerMain } from './mcp-server.js';
 import {
   establishClaimantCanonicalCompanyPublicPrecondition,
   inspectClaimantHandoff,
+  inspectClaimantOpportunityEndState,
+  inspectClaimantOpportunityStatus,
   inspectClaimantPrecondition,
   inspectClaimantReadiness,
   repairClaimantReadiness,
@@ -297,7 +300,12 @@ type BidviaCliTruthFetchCommand =
   | 'account-agent-closure-status'
   | 'account-agent-execution-status'
   | 'account-agent-execution-listing-status'
+  | 'account-agent-execution-opportunity-status'
+  | 'account-agent-execution-opportunity-end-state'
   | 'account-agent-execution-materialization-status'
+  | 'public-integration-apps'
+  | 'account-integration-apps'
+  | 'account-integration-installations'
   | 'account-integration-capabilities'
   | 'account-agent-integration-eligibility'
   | 'account-agent-bindings'
@@ -364,6 +372,9 @@ type BidviaCliIdentitySessionCommand =
   | 'sign-in'
   | 'account-me'
   | 'select-org'
+  | 'create-account-integration-app'
+  | 'create-account-integration-installation'
+  | 'connect-account-integration-installation'
   | 'agent-self-service'
   | 'account-agent-authorization-refresh'
   | 'account-agent-external-binding'
@@ -379,7 +390,9 @@ type BidviaCliClaimantCommand =
   | 'claimant-readiness-repair'
   | 'claimant-task-entry-inspect'
   | 'claimant-task-entry-run'
-  | 'claimant-handoff-inspect';
+  | 'claimant-handoff-inspect'
+  | 'claimant-handoff-opportunity-status'
+  | 'claimant-handoff-opportunity-end-state';
 
 type BidviaCliOperatorCommand =
   | 'operator-handoff-consume'
@@ -403,6 +416,9 @@ type BidviaCliPlatformManagedCommand =
 type BidviaCliTaskPlaneWriteCommand =
   | 'create-lease'
   | 'create-task-dispatch'
+  | 'create-task-dispatch-outcome'
+  | 'create-task-dispatch-evidence-bundle'
+  | 'create-task-dispatch-confirmation-cycle'
   | 'assign-task-dispatch'
   | 'suspend-task-dispatch'
   | 'resume-task-dispatch'
@@ -421,6 +437,8 @@ type BidviaCliSupportedValueFlag =
   | '--participation-state-id'
   | '--task-dispatch-id'
   | '--listing-id'
+  | '--integration-app-id'
+  | '--integration-installation-id'
   | '--integration-code'
   | '--request-id'
   | '--claim-id'
@@ -454,6 +472,8 @@ const bidviaCliSupportedValueFlags = new Set<BidviaCliSupportedValueFlag>([
   '--participation-state-id',
   '--task-dispatch-id',
   '--listing-id',
+  '--integration-app-id',
+  '--integration-installation-id',
   '--integration-code',
   '--request-id',
   '--claim-id',
@@ -484,6 +504,8 @@ const truthFetchVisibilityHelpLines = [
   '  account-agent-closure-status --agent-id ...',
   '  account-agent-execution-status --agent-id ...',
   '  account-agent-execution-listing-status --agent-id ... --listing-id ...',
+  '  account-agent-execution-opportunity-status --agent-id ... --target-ref ...',
+  '  account-agent-execution-opportunity-end-state --agent-id ... --target-ref ...',
   '  account-agent-execution-materialization-status --agent-id ... --listing-id ...',
   '  account-integration-capabilities',
   '  account-agent-integration-eligibility --agent-id ... --integration-code ...',
@@ -539,6 +561,8 @@ const truthFetchSupportedFlagsByCommand = {
   'account-agent-closure-status': ['--agent-id', '--registration-id'],
   'account-agent-execution-status': ['--agent-id', '--registration-id'],
   'account-agent-execution-listing-status': ['--agent-id', '--registration-id', '--listing-id'],
+  'account-agent-execution-opportunity-status': ['--agent-id', '--registration-id', '--target-ref'],
+  'account-agent-execution-opportunity-end-state': ['--agent-id', '--registration-id', '--target-ref'],
   'account-agent-execution-materialization-status': ['--agent-id', '--registration-id', '--listing-id'],
   'account-integration-capabilities': [],
   'account-agent-integration-eligibility': ['--agent-id', '--registration-id', '--integration-code'],
@@ -586,6 +610,8 @@ const truthFetchRequiredFlagsByCommand = {
   'participation-state': ['--registration-id', '--participation-state-id'],
   'account-agent-execution-status': ['--agent-id'],
   'account-agent-execution-listing-status': ['--agent-id', '--listing-id'],
+  'account-agent-execution-opportunity-status': ['--agent-id', '--target-ref'],
+  'account-agent-execution-opportunity-end-state': ['--agent-id', '--target-ref'],
   'account-agent-execution-materialization-status': ['--agent-id', '--listing-id'],
   'account-agent-integration-eligibility': ['--agent-id', '--integration-code'],
   'task-dispatches': ['--agent-id'],
@@ -655,6 +681,9 @@ const identitySessionSupportedFlagsByCommand = {
   'sign-in': ['--input'],
   'account-me': [],
   'select-org': ['--input'],
+  'create-account-integration-app': ['--input'],
+  'create-account-integration-installation': ['--input'],
+  'connect-account-integration-installation': ['--integration-installation-id', '--input'],
   'agent-self-service': ['--registration-id', '--agent-id', '--input'],
   'account-agent-authorization-refresh': ['--agent-id', '--registration-id', '--input'],
   'account-agent-external-binding': ['--agent-id', '--registration-id', '--input'],
@@ -679,6 +708,9 @@ const identitySessionRequiredContextByCommand = {
   'sign-in': [],
   'account-me': ['tenantId', 'sessionId'],
   'select-org': ['tenantId', 'sessionId'],
+  'create-account-integration-app': ['tenantId', 'sessionId'],
+  'create-account-integration-installation': ['tenantId', 'sessionId'],
+  'connect-account-integration-installation': ['tenantId', 'sessionId'],
   'agent-self-service': ['tenantId', 'sessionId'],
   'account-agent-authorization-refresh': ['tenantId', 'sessionId'],
   'account-agent-external-binding': ['tenantId', 'sessionId'],
@@ -699,6 +731,8 @@ const claimantSupportedFlagsByCommand = {
   'claimant-task-entry-inspect': ['--agent-id', '--output'],
   'claimant-task-entry-run': ['--agent-id', '--input', '--output'],
   'claimant-handoff-inspect': ['--agent-id', '--listing-id', '--output'],
+  'claimant-handoff-opportunity-status': ['--agent-id', '--target-ref', '--output'],
+  'claimant-handoff-opportunity-end-state': ['--agent-id', '--target-ref', '--output'],
 } as const satisfies Record<BidviaCliClaimantCommand, readonly BidviaCliSupportedValueFlag[]>;
 
 const claimantRequiredContextByCommand = {
@@ -709,6 +743,8 @@ const claimantRequiredContextByCommand = {
   'claimant-task-entry-inspect': ['tenantId', 'sessionId'],
   'claimant-task-entry-run': ['tenantId', 'sessionId', 'principalId', 'companyId'],
   'claimant-handoff-inspect': ['tenantId', 'sessionId'],
+  'claimant-handoff-opportunity-status': ['tenantId', 'sessionId'],
+  'claimant-handoff-opportunity-end-state': ['tenantId', 'sessionId'],
 } as const satisfies Record<BidviaCliClaimantCommand, readonly ('tenantId' | 'sessionId' | 'principalId' | 'companyId')[]>;
 
 const operatorSupportedFlagsByCommand = {
@@ -746,6 +782,9 @@ const platformManagedSupportedFlagsByCommand = {
 const taskPlaneWriteSupportedFlagsByCommand = {
   'create-lease': ['--agent-id', '--input'],
   'create-task-dispatch': ['--agent-id', '--input'],
+  'create-task-dispatch-outcome': ['--agent-id', '--task-dispatch-id', '--input'],
+  'create-task-dispatch-evidence-bundle': ['--agent-id', '--task-dispatch-id', '--input'],
+  'create-task-dispatch-confirmation-cycle': ['--agent-id', '--task-dispatch-id', '--input'],
   'assign-task-dispatch': ['--agent-id', '--task-dispatch-id', '--input'],
   'suspend-task-dispatch': ['--agent-id', '--task-dispatch-id', '--input'],
   'resume-task-dispatch': ['--agent-id', '--task-dispatch-id', '--input'],
@@ -759,6 +798,9 @@ const taskPlaneWriteSupportedFlagsByCommand = {
 const taskPlaneWriteRequiredContextByCommand = {
   'create-lease': ['tenantId', 'sessionId', 'principalId', 'companyId'],
   'create-task-dispatch': ['tenantId', 'sessionId', 'principalId', 'companyId'],
+  'create-task-dispatch-outcome': ['tenantId', 'sessionId', 'principalId', 'companyId'],
+  'create-task-dispatch-evidence-bundle': ['tenantId', 'sessionId', 'principalId', 'companyId'],
+  'create-task-dispatch-confirmation-cycle': ['tenantId', 'sessionId', 'principalId', 'companyId'],
   'assign-task-dispatch': ['tenantId', 'sessionId', 'principalId', 'companyId'],
   'suspend-task-dispatch': ['tenantId', 'sessionId', 'principalId', 'companyId'],
   'resume-task-dispatch': ['tenantId', 'sessionId', 'principalId', 'companyId'],
@@ -1720,6 +1762,17 @@ function readRequiredStringInput(command: string, input: Record<string, unknown>
   return value;
 }
 
+function readOptionalStringArrayInput(input: Record<string, unknown>, key: string): string[] | undefined {
+  const value = input[key];
+  if (value === undefined) {
+    return undefined;
+  }
+  if (!Array.isArray(value) || !value.every((item) => typeof item === 'string')) {
+    throw new Error(`The ${key} field must be an array of strings when provided.`);
+  }
+  return value;
+}
+
 function readCanonicalAccountAgentId(command: string, parsedArgs: BidviaCliParsedArgs): string {
   const agentId = parsedArgs.flagValues['--agent-id'] ?? parsedArgs.flagValues['--registration-id'];
   if (!agentId) {
@@ -1820,6 +1873,47 @@ const identitySessionCommandDefinitions = {
       const input = parseCliJsonInput('select-org', parsedArgs.input);
       return client.selectOrg({
         orgId: readRequiredStringInput('select-org', input, 'orgId'),
+      });
+    },
+  },
+  'create-account-integration-app': {
+    helperKey: 'createAccountIntegrationApp',
+    run: (client, parsedArgs) => {
+      const input = parseCliJsonInput('create-account-integration-app', parsedArgs.input);
+      return client.createAccountIntegrationApp({
+        integrationCode: readRequiredStringInput('create-account-integration-app', input, 'integrationCode'),
+        displayName: readRequiredStringInput('create-account-integration-app', input, 'displayName'),
+        shortDescription: readRequiredStringInput('create-account-integration-app', input, 'shortDescription'),
+        systemClass: readRequiredStringInput('create-account-integration-app', input, 'systemClass'),
+        publicDisplayOptIn: Boolean(input.publicDisplayOptIn),
+        now: readRequiredStringInput('create-account-integration-app', input, 'now'),
+      });
+    },
+  },
+  'create-account-integration-installation': {
+    helperKey: 'createAccountIntegrationInstallation',
+    run: (client, parsedArgs) => {
+      const input = parseCliJsonInput('create-account-integration-installation', parsedArgs.input);
+      return client.createAccountIntegrationInstallation({
+        integrationAppId: readRequiredStringInput('create-account-integration-installation', input, 'integrationAppId'),
+        now: readRequiredStringInput('create-account-integration-installation', input, 'now'),
+      });
+    },
+  },
+  'connect-account-integration-installation': {
+    helperKey: 'connectAccountIntegrationInstallation',
+    run: (client, parsedArgs) => {
+      const integrationInstallationId = parsedArgs.flagValues['--integration-installation-id'];
+      if (!integrationInstallationId) {
+        throw new Error('Missing required --integration-installation-id for connect-account-integration-installation.');
+      }
+      const input = parseCliJsonInput('connect-account-integration-installation', parsedArgs.input);
+      return client.connectAccountIntegrationInstallation(integrationInstallationId, {
+        endpointBaseUrl: readRequiredStringInput('connect-account-integration-installation', input, 'endpointBaseUrl'),
+        authMode: readRequiredStringInput('connect-account-integration-installation', input, 'authMode'),
+        clientIdentifier: readRequiredStringInput('connect-account-integration-installation', input, 'clientIdentifier'),
+        credentialSecretRef: readRequiredStringInput('connect-account-integration-installation', input, 'credentialSecretRef'),
+        now: readRequiredStringInput('connect-account-integration-installation', input, 'now'),
       });
     },
   },
@@ -1986,6 +2080,20 @@ const claimantCommandDefinitions = {
       parsedArgs.flagValues['--listing-id']!,
     ),
   },
+  'claimant-handoff-opportunity-status': {
+    run: (client: BidviaClient, parsedArgs: BidviaCliParsedArgs) => inspectClaimantOpportunityStatus(
+      client,
+      readRequiredAgentId('claimant-handoff-opportunity-status', parsedArgs),
+      parsedArgs.flagValues['--target-ref']!,
+    ),
+  },
+  'claimant-handoff-opportunity-end-state': {
+    run: (client: BidviaClient, parsedArgs: BidviaCliParsedArgs) => inspectClaimantOpportunityEndState(
+      client,
+      readRequiredAgentId('claimant-handoff-opportunity-end-state', parsedArgs),
+      parsedArgs.flagValues['--target-ref']!,
+    ),
+  },
 } as const satisfies Record<
   BidviaCliClaimantCommand,
   { run: (client: BidviaClient, parsedArgs: BidviaCliParsedArgs, now: string) => Promise<unknown> }
@@ -2148,6 +2256,49 @@ const taskPlaneWriteCommandDefinitions = {
         taskRef: readRequiredStringInput('create-task-dispatch', input, 'taskRef'),
         now: readRequiredStringInput('create-task-dispatch', input, 'now'),
         reason: readRequiredStringInput('create-task-dispatch', input, 'reason'),
+      });
+    },
+  },
+  'create-task-dispatch-outcome': {
+    run: (client: BidviaClient, parsedArgs: BidviaCliParsedArgs) => {
+      const taskDispatchId = parsedArgs.flagValues['--task-dispatch-id'];
+      if (!taskDispatchId) {
+        throw new Error('Missing required --task-dispatch-id for create-task-dispatch-outcome.');
+      }
+      const input = parseCliJsonInput('create-task-dispatch-outcome', parsedArgs.input);
+      return client.createTaskDispatchOutcome(readRequiredAgentId('create-task-dispatch-outcome', parsedArgs), taskDispatchId, {
+        outcomeRef: readRequiredStringInput('create-task-dispatch-outcome', input, 'outcomeRef'),
+        reason: readRequiredStringInput('create-task-dispatch-outcome', input, 'reason'),
+        now: readRequiredStringInput('create-task-dispatch-outcome', input, 'now'),
+      });
+    },
+  },
+  'create-task-dispatch-evidence-bundle': {
+    run: (client: BidviaClient, parsedArgs: BidviaCliParsedArgs) => {
+      const taskDispatchId = parsedArgs.flagValues['--task-dispatch-id'];
+      if (!taskDispatchId) {
+        throw new Error('Missing required --task-dispatch-id for create-task-dispatch-evidence-bundle.');
+      }
+      const input = parseCliJsonInput('create-task-dispatch-evidence-bundle', parsedArgs.input);
+      return client.createTaskDispatchEvidenceBundle(readRequiredAgentId('create-task-dispatch-evidence-bundle', parsedArgs), taskDispatchId, {
+        now: readRequiredStringInput('create-task-dispatch-evidence-bundle', input, 'now'),
+        evidenceRefs: readOptionalStringArrayInput(input, 'evidenceRefs'),
+        rationaleSummary: typeof input.rationaleSummary === 'string' ? input.rationaleSummary : undefined,
+        confidence: typeof input.confidence === 'string' ? input.confidence : undefined,
+      });
+    },
+  },
+  'create-task-dispatch-confirmation-cycle': {
+    run: (client: BidviaClient, parsedArgs: BidviaCliParsedArgs) => {
+      const taskDispatchId = parsedArgs.flagValues['--task-dispatch-id'];
+      if (!taskDispatchId) {
+        throw new Error('Missing required --task-dispatch-id for create-task-dispatch-confirmation-cycle.');
+      }
+      const input = parseCliJsonInput('create-task-dispatch-confirmation-cycle', parsedArgs.input);
+      return client.createTaskDispatchConfirmationCycle(readRequiredAgentId('create-task-dispatch-confirmation-cycle', parsedArgs), taskDispatchId, {
+        requiredEvidenceProfile: readRequiredStringInput('create-task-dispatch-confirmation-cycle', input, 'requiredEvidenceProfile'),
+        startedAt: readRequiredStringInput('create-task-dispatch-confirmation-cycle', input, 'startedAt'),
+        slaWindowRef: typeof input.slaWindowRef === 'string' ? input.slaWindowRef : undefined,
       });
     },
   },
@@ -2401,11 +2552,32 @@ const truthFetchCommandDefinitions: Record<BidviaCliTruthFetchCommand, BidviaCli
       parsedArgs.flagValues['--listing-id']!,
     ),
   },
+  'account-agent-execution-opportunity-status': {
+    run: (client, parsedArgs) => client.getAccountAgentExecutionOpportunityStatus(
+      readCanonicalAccountAgentId('account-agent-execution-opportunity-status', parsedArgs),
+      parsedArgs.flagValues['--target-ref']!,
+    ),
+  },
+  'account-agent-execution-opportunity-end-state': {
+    run: (client, parsedArgs) => client.getAccountAgentExecutionOpportunityEndState(
+      readCanonicalAccountAgentId('account-agent-execution-opportunity-end-state', parsedArgs),
+      parsedArgs.flagValues['--target-ref']!,
+    ),
+  },
   'account-agent-execution-materialization-status': {
     run: (client, parsedArgs) => client.getAccountAgentExecutionListingMaterializationStatus(
       readCanonicalAccountAgentId('account-agent-execution-materialization-status', parsedArgs),
       parsedArgs.flagValues['--listing-id']!,
     ),
+  },
+  'public-integration-apps': {
+    run: (client) => client.listPublicIntegrationApps(),
+  },
+  'account-integration-apps': {
+    run: (client) => client.listAccountIntegrationApps(),
+  },
+  'account-integration-installations': {
+    run: (client) => client.listAccountIntegrationInstallations(),
   },
   'account-integration-capabilities': {
     run: (client) => client.listAccountIntegrationCapabilities(),
@@ -3010,6 +3182,9 @@ function printHelp(printLine: (value: string) => void): void {
   printLine('  sign-up-enterprise --input ...');
   printLine('  account-me');
   printLine('  select-org --input ...');
+  printLine('  create-account-integration-app --input ...');
+  printLine('  create-account-integration-installation --input ...');
+  printLine('  connect-account-integration-installation --integration-installation-id ... --input ...');
   printLine('  agent-self-service --agent-id ... --input ...');
   printLine('  account-agent-dispatch-authority-request --agent-id ...');
   printLine('  session-refresh');
@@ -3029,6 +3204,8 @@ function printHelp(printLine: (value: string) => void): void {
   printLine('  claimant-task-entry-inspect --agent-id ...');
   printLine('  claimant-task-entry-run --agent-id ... --input ...');
   printLine('  claimant-handoff-inspect --agent-id ... --listing-id ...');
+  printLine('  claimant-handoff-opportunity-status --agent-id ... --target-ref ...');
+  printLine('  claimant-handoff-opportunity-end-state --agent-id ... --target-ref ...');
   printLine('Operator Product Entry:');
   printLine('  operator-handoff-consume --listing-id ...');
   printLine('  operator-progression-match --input ...');
@@ -3058,6 +3235,9 @@ function printHelp(printLine: (value: string) => void): void {
   printLine('  resume-task-dispatch --agent-id ... --task-dispatch-id ... --input ...');
   printLine('  complete-task-dispatch --agent-id ... --task-dispatch-id ... --input ...');
   printLine('  fail-task-dispatch --agent-id ... --task-dispatch-id ... --input ...');
+  printLine('  create-task-dispatch-outcome --agent-id ... --task-dispatch-id ... --input ...');
+  printLine('  create-task-dispatch-evidence-bundle --agent-id ... --task-dispatch-id ... --input ...');
+  printLine('  create-task-dispatch-confirmation-cycle --agent-id ... --task-dispatch-id ... --input ...');
   printLine('  create-claim --agent-id ... --input ...');
   printLine('  accept-claim --agent-id ... --claim-id ... --input ...');
   printLine('  reject-claim --agent-id ... --claim-id ... --input ...');
@@ -3070,6 +3250,7 @@ function printHelp(printLine: (value: string) => void): void {
   printLine('  install-integrity');
   printLine('  validation-smoke');
   printLine('  diagnostic-bundle-export --output ...');
+  printLine('  public-runtime-interpretation-probe');
   printLine('  runtime-capabilities');
   printLine('  launch-topology-smoke');
   printLine('  server-capabilities');
@@ -3361,6 +3542,13 @@ export async function runCli(
       localOnboardingState: localStateResult.state,
     });
     dependencies.printJson(report);
+    return 0;
+  }
+
+  if (command === 'public-runtime-interpretation-probe') {
+    dependencies.printJson(await buildPublicRuntimeInterpretationReport({
+      baseUrl: dependencies.resolveBaseUrl(),
+    }));
     return 0;
   }
 

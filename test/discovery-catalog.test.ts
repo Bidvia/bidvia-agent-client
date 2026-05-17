@@ -424,6 +424,31 @@ test('buildLocalDiscoveryCatalog returns operator-readable local mappings withou
   assert.equal(catalog.some((entry) => entry.helperKey === 'listCanonicalSemanticLineageLinks'), false);
 });
 
+test('buildLocalDiagnosticCommandCatalog exposes a first-class public runtime interpretation probe command', () => {
+  assert.deepEqual(buildLocalDiagnosticCommandCatalog(), [
+    {
+      command: 'install-integrity',
+      scope: 'local-only',
+      summary: 'Reports the active bidvia binary, local package roots, package version, and likely install-path drift.',
+    },
+    {
+      command: 'validation-smoke',
+      scope: 'local-only',
+      summary: 'Runs a bounded local-first smoke pass over install, environment, runtime capability, server capability, and context diagnostics.',
+    },
+    {
+      command: 'diagnostic-bundle-export',
+      scope: 'local-only',
+      summary: 'Exports the bounded smoke report as machine-readable JSON plus a shareable markdown summary.',
+    },
+    {
+      command: 'public-runtime-interpretation-probe',
+      scope: 'local-only',
+      summary: 'Probes live /healthz and /readyz and exports bounded runtime interpretation evidence without overclaiming release truth.',
+    },
+  ]);
+});
+
 test('discovery catalog freezes the approved task-plane CLI parity candidates with explicit CLI bindings', () => {
   for (const [helperKey, mcpToolName] of approvedTaskPlaneCliParityMatrix) {
     const entry = requireDiscoveryEntry(helperKey);
@@ -487,6 +512,87 @@ test('discovery catalog marks the canonical downstream task consumer routes as a
     mcpTools: [
       {
         toolName: 'create-lease-execution',
+        outputMode: 'execution-result',
+      },
+    ],
+  });
+
+  assert.deepEqual(requireDiscoveryEntry('createTaskDispatchOutcome'), {
+    helperKey: 'createTaskDispatchOutcome',
+    routePathTemplate: '/runtime/account/agents/:agentId/task-dispatches/:task_dispatch_id/outcomes',
+    httpMethod: 'POST',
+    accessContextFamily: 'operator-company',
+    requiredContext: ['tenantId', 'principalId', 'companyId'],
+    scope: 'write',
+    level: 'atomic-route',
+    localCapabilityTier: 'L3-governed-commercial',
+    localCapabilityRiskTier: 'governed-commercial',
+    discoveryKind: 'execute',
+    recommendedOutputMode: 'execution-result',
+    sourceOfTruth: 'local-sdk-helpers',
+    localOnly: true,
+    remoteDiscovery: false,
+    runnable: true,
+    blockedBy: null,
+    taskPlaneCapabilityMode: 'packet-grounded-execution',
+    cliCommands: ['create-task-dispatch-outcome'],
+    mcpTools: [
+      {
+        toolName: 'create-task-dispatch-outcome-execution',
+        outputMode: 'execution-result',
+      },
+    ],
+  });
+
+  assert.deepEqual(requireDiscoveryEntry('createTaskDispatchEvidenceBundle'), {
+    helperKey: 'createTaskDispatchEvidenceBundle',
+    routePathTemplate: '/runtime/account/agents/:agentId/task-dispatches/:task_dispatch_id/evidence-bundles',
+    httpMethod: 'POST',
+    accessContextFamily: 'operator-company',
+    requiredContext: ['tenantId', 'principalId', 'companyId'],
+    scope: 'write',
+    level: 'atomic-route',
+    localCapabilityTier: 'L3-governed-commercial',
+    localCapabilityRiskTier: 'governed-commercial',
+    discoveryKind: 'execute',
+    recommendedOutputMode: 'execution-result',
+    sourceOfTruth: 'local-sdk-helpers',
+    localOnly: true,
+    remoteDiscovery: false,
+    runnable: true,
+    blockedBy: null,
+    taskPlaneCapabilityMode: 'packet-grounded-execution',
+    cliCommands: ['create-task-dispatch-evidence-bundle'],
+    mcpTools: [
+      {
+        toolName: 'create-task-dispatch-evidence-bundle-execution',
+        outputMode: 'execution-result',
+      },
+    ],
+  });
+
+  assert.deepEqual(requireDiscoveryEntry('createTaskDispatchConfirmationCycle'), {
+    helperKey: 'createTaskDispatchConfirmationCycle',
+    routePathTemplate: '/runtime/account/agents/:agentId/task-dispatches/:task_dispatch_id/confirmation-cycles',
+    httpMethod: 'POST',
+    accessContextFamily: 'operator-company',
+    requiredContext: ['tenantId', 'principalId', 'companyId'],
+    scope: 'write',
+    level: 'atomic-route',
+    localCapabilityTier: 'L3-governed-commercial',
+    localCapabilityRiskTier: 'governed-commercial',
+    discoveryKind: 'execute',
+    recommendedOutputMode: 'execution-result',
+    sourceOfTruth: 'local-sdk-helpers',
+    localOnly: true,
+    remoteDiscovery: false,
+    runnable: true,
+    blockedBy: null,
+    taskPlaneCapabilityMode: 'packet-grounded-execution',
+    cliCommands: ['create-task-dispatch-confirmation-cycle'],
+    mcpTools: [
+      {
+        toolName: 'create-task-dispatch-confirmation-cycle-execution',
         outputMode: 'execution-result',
       },
     ],
@@ -945,6 +1051,11 @@ test('buildLocalDiagnosticCommandCatalog exposes install-integrity as an explici
       command: 'diagnostic-bundle-export',
       scope: 'local-only',
       summary: 'Exports the bounded smoke report as machine-readable JSON plus a shareable markdown summary.',
+    },
+    {
+      command: 'public-runtime-interpretation-probe',
+      scope: 'local-only',
+      summary: 'Probes live /healthz and /readyz and exports bounded runtime interpretation evidence without overclaiming release truth.',
     },
   ]);
 });
