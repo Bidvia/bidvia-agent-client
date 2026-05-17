@@ -5,6 +5,8 @@ import {
   CANONICAL_COMPANY_PUBLIC_ORG_ID,
   establishClaimantCanonicalCompanyPublicPrecondition,
   inspectClaimantHandoff,
+  inspectClaimantOpportunityEndState,
+  inspectClaimantOpportunityStatus,
   inspectClaimantPrecondition,
   inspectClaimantReadiness,
   repairClaimantReadiness,
@@ -350,4 +352,38 @@ test('inspectClaimantHandoff marks company-public materialization as executable 
 
   assert.equal(result.stageSnapshot.executability, 'executable-handoff');
   assert.equal(result.stageSnapshot.handoff?.mode, 'executable');
+});
+
+test('inspectClaimantOpportunityStatus routes claimant deeper readback through the claimant product helper', async () => {
+  const result = await inspectClaimantOpportunityStatus({
+    async getAccountAgentExecutionOpportunityStatus() {
+      return {
+        continuation_state: 'ALLOCATED',
+        operator_handoff: {
+          owner: 'operator',
+          opportunity_id: 'opp-1',
+        },
+      };
+    },
+  } as never, 'agent-5', 'opp-1');
+
+  assert.equal((result as { continuation_state: string }).continuation_state, 'ALLOCATED');
+  assert.equal((result as { operator_handoff: { opportunity_id: string } }).operator_handoff.opportunity_id, 'opp-1');
+});
+
+test('inspectClaimantOpportunityEndState routes claimant deeper end-state readback through the claimant product helper', async () => {
+  const result = await inspectClaimantOpportunityEndState({
+    async getAccountAgentExecutionOpportunityEndState() {
+      return {
+        closure_class: 'product_closed',
+        operator_handoff: {
+          owner: 'operator',
+          opportunity_id: 'opp-1',
+        },
+      };
+    },
+  } as never, 'agent-5', 'opp-1');
+
+  assert.equal((result as { closure_class: string }).closure_class, 'product_closed');
+  assert.equal((result as { operator_handoff: { opportunity_id: string } }).operator_handoff.opportunity_id, 'opp-1');
 });

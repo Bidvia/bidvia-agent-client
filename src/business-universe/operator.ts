@@ -11,7 +11,6 @@ import type {
   BidviaOperatorExecutionListingActivateInput,
   BidviaOperatorExecutionListingCreateInput,
   BidviaOperatorExecutionMatchCandidatesInput,
-  BidviaOperatorMatchesListInput,
 } from '../contracts.js';
 import type { BidviaStageSnapshot } from './contracts.js';
 import { normalizeOperatorHandoffFailure } from './normalize.js';
@@ -94,12 +93,28 @@ type CommercialActionCreationResult = {
   commercialActionRequestId?: string;
 };
 
+type CommercialActionApprovalRequestResult = {
+  approval_binding?: {
+    approval_request_id?: string;
+    approvalRequestId?: string;
+  };
+};
+
 function extractCommercialActionRequestId(value: CommercialActionCreationResult): string {
   return value.request?.commercial_action_request_id
     ?? value.request?.commercialActionRequestId
     ?? value.commercial_action_request_id
     ?? value.commercialActionRequestId
     ?? '';
+}
+
+function extractCommercialActionApprovalRequestId(
+  value: CommercialActionApprovalRequestResult,
+  fallbackApprovalRequestId: string,
+): string {
+  return value.approval_binding?.approval_request_id
+    ?? value.approval_binding?.approvalRequestId
+    ?? fallbackApprovalRequestId;
 }
 
 export async function runOperatorCommercialAction(
@@ -129,9 +144,14 @@ export async function runOperatorCommercialAction(
     ...input.requestApproval,
     commercialActionRequestId,
   });
+  const returnedApprovalRequestId = extractCommercialActionApprovalRequestId(
+    requestApproval as CommercialActionApprovalRequestResult,
+    input.execute.approvalRequestId,
+  );
   const execute = await client.executeCommercialAction({
     ...input.execute,
     commercialActionRequestId,
+    approvalRequestId: returnedApprovalRequestId,
   });
   const status = await client.getOperatorCommercialActionStatus({ commercialActionRequestId });
   const receipt = await client.getOperatorCommercialActionReceipt({ commercialActionRequestId });

@@ -195,3 +195,163 @@ test('runCli claimant-task-entry-run routes through the claimant task entry faca
   assert.deepEqual(calls, ['agent-3:COMMERCIAL_ACTION_REVIEW']);
   assert.equal((printed[0] as any).dispatch.agent_task_dispatch_id, 'dispatch-1');
 });
+
+
+test('runCli account-agent-execution-opportunity-status routes through the claimant opportunity status helper', async () => {
+  const printed: unknown[] = [];
+  const exitCode = await runCli([
+    'account-agent-execution-opportunity-status',
+    '--agent-id',
+    'agent-1',
+    '--target-ref',
+    'opp-1',
+  ], {
+    createClient: () => ({
+      getAccountAgentExecutionOpportunityStatus: async () => ({ continuation_state: 'ALLOCATED' }),
+    }) as never,
+    resolveExecutionContext: () => ({ sessionId: 'sess-1', tenantId: 'tenant-public' }),
+    readLocalOnboardingState: async () => ({ sessionId: 'sess-1', tenantId: 'tenant-public' }),
+    printJson: (value) => { printed.push(value); },
+    printLine: () => {},
+  });
+
+  assert.equal(exitCode, 0);
+  assert.equal((printed[0] as any).continuation_state, 'ALLOCATED');
+});
+
+test('runCli account-agent-execution-opportunity-end-state routes through the claimant opportunity end-state helper', async () => {
+  const printed: unknown[] = [];
+  const exitCode = await runCli([
+    'account-agent-execution-opportunity-end-state',
+    '--agent-id',
+    'agent-1',
+    '--target-ref',
+    'opp-1',
+  ], {
+    createClient: () => ({
+      getAccountAgentExecutionOpportunityEndState: async () => ({ closure_class: 'product_closed' }),
+    }) as never,
+    resolveExecutionContext: () => ({ sessionId: 'sess-1', tenantId: 'tenant-public' }),
+    readLocalOnboardingState: async () => ({ sessionId: 'sess-1', tenantId: 'tenant-public' }),
+    printJson: (value) => { printed.push(value); },
+    printLine: () => {},
+  });
+
+  assert.equal(exitCode, 0);
+  assert.equal((printed[0] as any).closure_class, 'product_closed');
+});
+
+test('runCli claimant deeper readbacks preserve bounded operator handoff and proof-class wording', async () => {
+  const printed: unknown[] = [];
+  const statusExitCode = await runCli([
+    'account-agent-execution-opportunity-status',
+    '--agent-id',
+    'agent-1',
+    '--target-ref',
+    'opp-1',
+  ], {
+    createClient: () => ({
+      getAccountAgentExecutionOpportunityStatus: async () => ({
+        continuation_state: 'ALLOCATED',
+        completion_class: 'handoff-to-operator',
+        operator_handoff: {
+          owner: 'operator',
+          route: '/operator/opportunities/opp-1?tenant_id=tenant-public&company_id=company-public',
+          opportunity_id: 'opp-1',
+        },
+      }),
+      getAccountAgentExecutionOpportunityEndState: async () => ({
+        closure_class: 'product_closed',
+        proof_class: 'product_closure_only',
+        operator_handoff: {
+          owner: 'operator',
+          route: '/operator/end-state/opportunities/opp-1?tenant_id=tenant-public&company_id=company-public',
+          opportunity_id: 'opp-1',
+        },
+        recommended_next_step: 'await_operator_end_state',
+      }),
+    }) as never,
+    resolveExecutionContext: () => ({ sessionId: 'sess-1', tenantId: 'tenant-public' }),
+    readLocalOnboardingState: async () => ({ sessionId: 'sess-1', tenantId: 'tenant-public' }),
+    printJson: (value) => { printed.push(value); },
+    printLine: () => {},
+  });
+  const endStateExitCode = await runCli([
+    'account-agent-execution-opportunity-end-state',
+    '--agent-id',
+    'agent-1',
+    '--target-ref',
+    'opp-1',
+  ], {
+    createClient: () => ({
+      getAccountAgentExecutionOpportunityStatus: async () => ({
+        continuation_state: 'ALLOCATED',
+      }),
+      getAccountAgentExecutionOpportunityEndState: async () => ({
+        closure_class: 'product_closed',
+        proof_class: 'product_closure_only',
+        operator_handoff: {
+          owner: 'operator',
+          route: '/operator/end-state/opportunities/opp-1?tenant_id=tenant-public&company_id=company-public',
+          opportunity_id: 'opp-1',
+        },
+        recommended_next_step: 'await_operator_end_state',
+      }),
+    }) as never,
+    resolveExecutionContext: () => ({ sessionId: 'sess-1', tenantId: 'tenant-public' }),
+    readLocalOnboardingState: async () => ({ sessionId: 'sess-1', tenantId: 'tenant-public' }),
+    printJson: (value) => { printed.push(value); },
+    printLine: () => {},
+  });
+
+  assert.equal(statusExitCode, 0);
+  assert.equal(endStateExitCode, 0);
+  assert.equal((printed[0] as any).completion_class, 'handoff-to-operator');
+  assert.equal((printed[0] as any).operator_handoff.owner, 'operator');
+  assert.equal((printed[1] as any).proof_class, 'product_closure_only');
+  assert.equal((printed[1] as any).recommended_next_step, 'await_operator_end_state');
+});
+
+test('runCli claimant-handoff-opportunity-status routes through the claimant product helper', async () => {
+  const printed: unknown[] = [];
+  const exitCode = await runCli([
+    'claimant-handoff-opportunity-status',
+    '--agent-id',
+    'agent-1',
+    '--target-ref',
+    'opp-1',
+  ], {
+    createClient: () => ({
+      getAccountAgentExecutionOpportunityStatus: async () => ({ continuation_state: 'ALLOCATED' }),
+    }) as never,
+    resolveExecutionContext: () => ({ sessionId: 'sess-1', tenantId: 'tenant-public' }),
+    readLocalOnboardingState: async () => ({ sessionId: 'sess-1', tenantId: 'tenant-public' }),
+    printJson: (value) => { printed.push(value); },
+    printLine: () => {},
+  });
+
+  assert.equal(exitCode, 0);
+  assert.equal((printed[0] as any).continuation_state, 'ALLOCATED');
+});
+
+test('runCli claimant-handoff-opportunity-end-state routes through the claimant product helper', async () => {
+  const printed: unknown[] = [];
+  const exitCode = await runCli([
+    'claimant-handoff-opportunity-end-state',
+    '--agent-id',
+    'agent-1',
+    '--target-ref',
+    'opp-1',
+  ], {
+    createClient: () => ({
+      getAccountAgentExecutionOpportunityEndState: async () => ({ closure_class: 'product_closed' }),
+    }) as never,
+    resolveExecutionContext: () => ({ sessionId: 'sess-1', tenantId: 'tenant-public' }),
+    readLocalOnboardingState: async () => ({ sessionId: 'sess-1', tenantId: 'tenant-public' }),
+    printJson: (value) => { printed.push(value); },
+    printLine: () => {},
+  });
+
+  assert.equal(exitCode, 0);
+  assert.equal((printed[0] as any).closure_class, 'product_closed');
+});

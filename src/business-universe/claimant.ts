@@ -257,6 +257,22 @@ export async function inspectClaimantHandoff(
   };
 }
 
+export async function inspectClaimantOpportunityStatus(
+  client: Pick<BidviaClient, 'getAccountAgentExecutionOpportunityStatus'>,
+  agentId: string,
+  opportunityId: string,
+) {
+  return client.getAccountAgentExecutionOpportunityStatus(agentId, opportunityId);
+}
+
+export async function inspectClaimantOpportunityEndState(
+  client: Pick<BidviaClient, 'getAccountAgentExecutionOpportunityEndState'>,
+  agentId: string,
+  opportunityId: string,
+) {
+  return client.getAccountAgentExecutionOpportunityEndState(agentId, opportunityId);
+}
+
 
 export interface BidviaClaimantFacade {
   precondition: {
@@ -290,6 +306,23 @@ export interface BidviaClaimantFacade {
         stageSnapshot: BidviaStageSnapshot;
       };
     }>;
+    updateListing: (
+      agentId: string,
+      listingId: string,
+      input: {
+        category?: string;
+        sku?: string;
+        quantityValue?: string;
+        quantityUnit?: string;
+        regionSummary?: string;
+        verificationStatus?: string;
+        freshnessTs?: string;
+        traceId?: string;
+        now: string;
+      },
+    ) => Promise<unknown>;
+    readOpportunityStatus: (agentId: string, opportunityId: string) => Promise<unknown>;
+    readOpportunityEndState: (agentId: string, opportunityId: string) => Promise<unknown>;
   };
 }
 
@@ -314,6 +347,9 @@ export function createBidviaClaimantFacade(client: BidviaClient): BidviaClaimant
         activation: { verificationStatus?: string; now: string },
         canonicalOrgId?: string,
       ) => runClaimantHandoffPreparation(client, agentId, listing, activation, canonicalOrgId),
+      updateListing: (agentId, listingId, input) => client.updateAccountAgentExecutionListing(agentId, listingId, input),
+      readOpportunityStatus: (agentId, opportunityId) => inspectClaimantOpportunityStatus(client, agentId, opportunityId),
+      readOpportunityEndState: (agentId, opportunityId) => inspectClaimantOpportunityEndState(client, agentId, opportunityId),
     },
   };
 }

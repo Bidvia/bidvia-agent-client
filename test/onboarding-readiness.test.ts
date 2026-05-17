@@ -65,6 +65,7 @@ test('buildOnboardingReadiness keeps official onboarding focused on public provi
         lane: 'default-local-docker',
         appliesWhen: 'route-exists-but-subject-not-runnable',
         signal: 'authority_class_not_dispatchable',
+        errorCategory: 'expected-bounded-behavior',
         nextStepOwner: 'operator-or-admin',
         nextStepAction: 'Follow the surfaced task-write-ready progression and keep unresolved Core-owned progression visible instead of assuming claim is sufficient.',
         checkpoints: [
@@ -222,6 +223,7 @@ test('buildOnboardingReadiness keeps official onboarding focused on public provi
         lane: 'default-local-docker',
         appliesWhen: 'account-plane-succeeds-but-governed-runtime-still-denied',
         signal: 'active_role_binding_required',
+        errorCategory: 'probable-core-contradiction',
         nextStepOwner: 'enterprise-admin',
         nextStepAction: 'Keep claimant continuation on the account-owned plane, use only the allowed account/session/org repair actions surfaced by Core, and if the gate still remains after those repairs, treat it as an unresolved Core-owned authorization projection issue rather than inventing a new claimant or operator workflow.',
       },

@@ -42,6 +42,7 @@ export * from './runtime-capabilities.js';
 export * from './runtime/index.js';
 export * from './server-capabilities.js';
 export * from './diagnostic-bundle.js';
+export * from './public-runtime-interpretation.js';
 export * from './task-participation.js';
 export * from './onboarding-readiness.js';
 export * from './openclaw-bundle-export.js';

@@ -26,13 +26,38 @@ test('BidviaClient exposes claimant role-stage facade methods without requiring 
     async getAccountAgentClosureStatus() {
       return { dispatch_eligibility: { allowed: true }, recommended_next_step: 'dispatch_ready', next_step_kind: 'task_entry_ready' };
     },
+    async updateAccountAgentExecutionListing() {
+      return { listing: { listing_id: 'listing-1', status: 'draft' } };
+    },
+    async getAccountAgentExecutionOpportunityStatus() {
+      return { continuation_state: 'ALLOCATED' };
+    },
+    async getAccountAgentExecutionOpportunityEndState() {
+      return { closure_class: 'product_closed' };
+    },
   });
 
   const precondition = await client.claimant.precondition.inspect();
   const readiness = await client.claimant.readiness.inspect('agent-1');
+  const listingUpdate = await client.claimant.handoff.updateListing('agent-1', 'listing-1', {
+    category: 'basic inorganic industrial chemical',
+    sku: 'sodium-carbonate-soda-ash-light',
+    quantityValue: '18',
+    quantityUnit: 'tons',
+    regionSummary: 'China -> Vietnam',
+    verificationStatus: 'verified',
+    freshnessTs: '2026-05-12T11:00:00Z',
+    traceId: 'trace-1',
+    now: '2026-05-12T11:00:00Z',
+  });
+  const opportunityStatus = await client.claimant.handoff.readOpportunityStatus('agent-1', 'opp-1');
+  const opportunityEndState = await client.claimant.handoff.readOpportunityEndState('agent-1', 'opp-1');
 
   assert.equal(precondition.stageSnapshot.stage, 'entry');
   assert.equal(readiness.stageSnapshot.stage, 'task-entry');
+  assert.equal(listingUpdate.listing.listing_id, 'listing-1');
+  assert.equal(opportunityStatus.continuation_state, 'ALLOCATED');
+  assert.equal(opportunityEndState.closure_class, 'product_closed');
 });
 
 test('BidviaClient exposes operator progression and closure facades', async () => {
