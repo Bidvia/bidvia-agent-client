@@ -137,6 +137,32 @@ export interface BidviaSignInInput {
   now: string;
 }
 
+export interface BidviaCreateAccountIntegrationAppInput {
+  integrationCode: string;
+  displayName: string;
+  shortDescription: string;
+  systemClass: string;
+  publicDisplayOptIn: boolean;
+  now: string;
+}
+
+export interface BidviaCreateAccountIntegrationInstallationInput {
+  integrationAppId: string;
+  now: string;
+}
+
+export interface BidviaConnectAccountIntegrationInstallationInput {
+  endpointBaseUrl: string;
+  authMode: string;
+  clientIdentifier: string;
+  credentialSecretRef: string;
+  now: string;
+}
+
+export interface BidviaIntegrationInstallationIdentifierInput {
+  integrationInstallationId: string;
+}
+
 export interface BidviaIntegrationIdentityMappingSourceInput {
   principalId: string;
   scopeId: string;
@@ -472,6 +498,27 @@ export interface BidviaAccountAgentExecutionListingActivateExecutionInput
   now: string;
 }
 
+export interface BidviaAccountAgentExecutionListingUpdateInput {
+  category?: string;
+  sku?: string;
+  quantityValue?: string;
+  quantityUnit?: string;
+  regionSummary?: string;
+  verificationStatus?: string;
+  freshnessTs?: string;
+  traceId?: string;
+  now: string;
+}
+
+export interface BidviaAccountAgentExecutionListingUpdateExecutionInput
+  extends BidviaAccountAgentExecutionListingIdentifierInput,
+    BidviaAccountAgentExecutionListingUpdateInput {}
+
+export interface BidviaAccountAgentExecutionOpportunityIdentifierInput extends BidviaAccountAgentIdentifierInput {
+  opportunityId?: string;
+  targetRef?: string;
+}
+
 export interface BidviaLeaseWriteInput {
   leaseScope: string;
   now: string;
@@ -544,6 +591,37 @@ export interface BidviaTaskDispatchFailInput {
 export interface BidviaTaskDispatchFailExecutionInput
   extends BidviaTaskDispatchIdentifierInput,
     BidviaTaskDispatchFailInput {}
+
+export interface BidviaTaskDispatchOutcomeInput {
+  outcomeRef: string;
+  reason: string;
+  now: string;
+}
+
+export interface BidviaTaskDispatchOutcomeExecutionInput
+  extends BidviaTaskDispatchIdentifierInput,
+    BidviaTaskDispatchOutcomeInput {}
+
+export interface BidviaTaskDispatchEvidenceBundleInput {
+  now: string;
+  evidenceRefs?: string[];
+  rationaleSummary?: string;
+  confidence?: string;
+}
+
+export interface BidviaTaskDispatchEvidenceBundleExecutionInput
+  extends BidviaTaskDispatchIdentifierInput,
+    BidviaTaskDispatchEvidenceBundleInput {}
+
+export interface BidviaTaskDispatchConfirmationCycleInput {
+  requiredEvidenceProfile: string;
+  startedAt: string;
+  slaWindowRef?: string;
+}
+
+export interface BidviaTaskDispatchConfirmationCycleExecutionInput
+  extends BidviaTaskDispatchIdentifierInput,
+    BidviaTaskDispatchConfirmationCycleInput {}
 
 export interface BidviaClaimWriteInput {
   claimKind: string;
@@ -1554,9 +1632,33 @@ export interface BidviaLocalMcpServerAvailability extends BidviaLocalCapabilityS
 }
 
 export interface BidviaLocalDiagnosticCommandDescriptor {
-  command: 'install-integrity' | 'validation-smoke' | 'diagnostic-bundle-export';
+  command:
+    | 'install-integrity'
+    | 'validation-smoke'
+    | 'diagnostic-bundle-export'
+    | 'public-runtime-interpretation-probe';
   scope: 'local-only';
   summary: string;
+}
+
+export interface BidviaPublicRuntimeInterpretationReport {
+  command: 'public-runtime-interpretation-probe';
+  scope: 'local-only';
+  generatedAt: string;
+  baseUrl: string;
+  family: 'public-runtime-interpretation';
+  proofClass: 'baseline-interpretation';
+  status: 'passed';
+  summary: {
+    healthzStatus: string | null;
+    readyzStatus: string | null;
+    releaseClosureState: string | null;
+    terminalReleaseConvergenceState: string | null;
+  };
+  readbacks: {
+    healthz: Record<string, unknown>;
+    readyz: Record<string, unknown>;
+  };
 }
 
 export interface BidviaDeferredServerCapabilityNegotiation
@@ -1632,6 +1734,30 @@ export interface BidviaDiagnosticBundleReport {
   writtenFiles: string[];
   summaryFormat: 'markdown';
   smokeReport: BidviaValidationSmokeReport;
+  probeRuns?: BidviaDiagnosticProbeRun[];
+  rerunSafety?: BidviaDiagnosticRerunSafetySummary;
+}
+
+export interface BidviaDiagnosticProbePhase {
+  phaseKey: 'bootstrap' | 'continuation' | 'bounded-stop' | 'contradiction';
+  status: 'passed' | 'blocked' | 'failed';
+  classification: 'pass' | 'bounded-stop' | 'contradiction' | 'blocked';
+  detail: string;
+}
+
+export interface BidviaDiagnosticProbeRun {
+  probeKey: string;
+  statePath: string;
+  outputPath: string;
+  generatedIds: string[];
+  phases: BidviaDiagnosticProbePhase[];
+}
+
+export interface BidviaDiagnosticRerunSafetySummary {
+  uniqueStatePaths: boolean;
+  uniqueOutputPaths: boolean;
+  duplicateGeneratedIds: string[];
+  partialFailureCount: number;
 }
 
 function cloneInstallIntegrityReport(report: BidviaInstallIntegrityReport): BidviaInstallIntegrityReport {
@@ -1677,6 +1803,23 @@ export function buildDiagnosticBundleReport(report: BidviaDiagnosticBundleReport
     ...report,
     writtenFiles: [...report.writtenFiles],
     smokeReport: cloneValidationSmokeReport(report.smokeReport),
+    ...(report.probeRuns === undefined
+      ? {}
+      : {
+          probeRuns: report.probeRuns.map((probeRun) => ({
+            ...probeRun,
+            generatedIds: [...probeRun.generatedIds],
+            phases: probeRun.phases.map((phase) => ({ ...phase })),
+          })),
+        }),
+    ...(report.rerunSafety === undefined
+      ? {}
+      : {
+          rerunSafety: {
+            ...report.rerunSafety,
+            duplicateGeneratedIds: [...report.rerunSafety.duplicateGeneratedIds],
+          },
+        }),
   };
 }
 
@@ -1685,6 +1828,7 @@ export interface BidviaExecutionGuidanceEntry {
   lane: 'default-local-docker' | 'proof-lane-admin-session' | 'runtime-generated';
   appliesWhen: string;
   signal: string;
+  errorCategory: 'client-misuse' | 'expected-bounded-behavior' | 'probable-core-contradiction';
   nextStepOwner: string;
   nextStepAction: string;
   checkpoints?: BidviaExecutionGuidanceCheckpoint[];

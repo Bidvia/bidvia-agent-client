@@ -7,15 +7,54 @@ import {
   listCorePayloadContractEntriesForPlane,
 } from '../src/core-payload-contract-matrix.ts';
 
-test('enterprise integration matrix keeps a single canonical eligibility route entry with the camelCase integration token', () => {
+test('enterprise integration matrix exposes the current canonical integration-app lifecycle subset plus bounded eligibility routes', () => {
   const ownershipEntries = listCorePayloadContractEntriesForPlane('enterprise-integration').filter((entry) =>
-    entry.helperKey === 'listAccountIntegrationCapabilities'
+    entry.helperKey === 'listPublicIntegrationApps'
+    || entry.helperKey === 'createAccountIntegrationApp'
+    || entry.helperKey === 'listAccountIntegrationApps'
+    || entry.helperKey === 'createAccountIntegrationInstallation'
+    || entry.helperKey === 'listAccountIntegrationInstallations'
+    || entry.helperKey === 'connectAccountIntegrationInstallation'
+    || entry.helperKey === 'listAccountIntegrationCapabilities'
     || entry.helperKey === 'getAccountAgentIntegrationEligibility'
   );
 
   assert.deepEqual(
     ownershipEntries.map((entry) => entry.helperKey),
-    ['listAccountIntegrationCapabilities', 'getAccountAgentIntegrationEligibility'],
+    [
+      'listPublicIntegrationApps',
+      'listAccountIntegrationApps',
+      'listAccountIntegrationInstallations',
+      'listAccountIntegrationCapabilities',
+      'getAccountAgentIntegrationEligibility',
+      'createAccountIntegrationApp',
+      'createAccountIntegrationInstallation',
+      'connectAccountIntegrationInstallation',
+    ],
+  );
+  assert.equal(
+    getCorePayloadContractMatrixEntry('listPublicIntegrationApps')?.routePathTemplate,
+    '/runtime/public/integration-apps',
+  );
+  assert.equal(
+    getCorePayloadContractMatrixEntry('createAccountIntegrationApp')?.routePathTemplate,
+    '/runtime/account/integration-apps',
+  );
+  assert.equal(
+    getCorePayloadContractMatrixEntry('listAccountIntegrationApps')?.routePathTemplate,
+    '/runtime/account/integration-apps',
+  );
+  assert.equal(
+    getCorePayloadContractMatrixEntry('createAccountIntegrationInstallation')?.routePathTemplate,
+    '/runtime/account/integration-installations',
+  );
+  assert.equal(
+    getCorePayloadContractMatrixEntry('listAccountIntegrationInstallations')?.routePathTemplate,
+    '/runtime/account/integration-installations',
+  );
+  assert.equal(
+    getCorePayloadContractMatrixEntry('connectAccountIntegrationInstallation')?.routePathTemplate,
+    '/runtime/account/integration-installations/:integrationInstallationId/connection',
   );
   assert.equal(
     getCorePayloadContractMatrixEntry('getAccountAgentIntegrationEligibility')?.routePathTemplate,
@@ -88,18 +127,42 @@ test('enterprise integration plane adapter centers the canonical core integratio
     groupKey: 'integration-ownership-slice',
     label: 'Canonical account integration ownership slice',
     helperKeys: [
+      'listPublicIntegrationApps',
+      'createAccountIntegrationApp',
+      'listAccountIntegrationApps',
+      'createAccountIntegrationInstallation',
+      'listAccountIntegrationInstallations',
+      'connectAccountIntegrationInstallation',
       'listAccountIntegrationCapabilities',
       'getAccountAgentIntegrationEligibility',
     ],
     clientMethods: [
+      'listPublicIntegrationApps',
+      'createAccountIntegrationApp',
+      'listAccountIntegrationApps',
+      'createAccountIntegrationInstallation',
+      'listAccountIntegrationInstallations',
+      'connectAccountIntegrationInstallation',
       'listAccountIntegrationCapabilities',
       'getAccountAgentIntegrationEligibility',
     ],
     cliCommands: [
+      'public-integration-apps',
+      'create-account-integration-app',
+      'account-integration-apps',
+      'create-account-integration-installation',
+      'account-integration-installations',
+      'connect-account-integration-installation',
       'account-integration-capabilities',
       'account-agent-integration-eligibility',
     ],
     discoveryHelperKeys: [
+      'listPublicIntegrationApps',
+      'createAccountIntegrationApp',
+      'listAccountIntegrationApps',
+      'createAccountIntegrationInstallation',
+      'listAccountIntegrationInstallations',
+      'connectAccountIntegrationInstallation',
       'listAccountIntegrationCapabilities',
       'getAccountAgentIntegrationEligibility',
     ],
@@ -108,7 +171,7 @@ test('enterprise integration plane adapter centers the canonical core integratio
     payloadPacketStatus: 'packet-grounded',
     blockedBy: null,
     notes: [
-      'The V14 canonical integration trunk is the account integration capability directory plus bounded account-agent eligibility truth.',
+      'The V14 canonical integration trunk includes the public and account integration-app directory, installation, installation-connection, capability, and bounded account-agent eligibility truth.',
       'The bounded inbound invocation route remains canonical ownership metadata but stays fail-closed here until Core freezes an open-client request body.',
     ],
   });

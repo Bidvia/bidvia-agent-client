@@ -57,6 +57,47 @@ test('BidviaClient exposes account-plane closure-status and governed-work-closur
   assert.equal((calls[1]?.init?.headers as Record<string, string>)['x-bidvia-session-id'], 'sess-1');
 });
 
+test('BidviaClient exposes account-plane task reads as session-bound GET wrappers', async () => {
+  const listResponse = {
+    items: [{ agent_task_dispatch_id: 'dispatch-1' }],
+  };
+  const detailResponse = {
+    dispatch: {
+      agent_task_dispatch_id: 'dispatch-1',
+    },
+  };
+  const { calls, fetchStub } = createFetchStub([
+    listResponse,
+    detailResponse,
+  ]);
+  const client = new BidviaClient({
+    baseUrl: 'http://127.0.0.1:8787',
+    context: {
+      tenantId: 'tenant-a',
+      sessionId: 'sess-1',
+    },
+    fetchImpl: fetchStub,
+  });
+
+  const listTaskDispatches = Reflect.get(client, 'listTaskDispatches');
+  const getTaskDispatch = Reflect.get(client, 'getTaskDispatch');
+
+  assert.equal(typeof listTaskDispatches, 'function');
+  assert.equal(typeof getTaskDispatch, 'function');
+
+  const list = await Reflect.apply(listTaskDispatches, client, ['agent-1']);
+  const detail = await Reflect.apply(getTaskDispatch, client, ['agent-1', 'dispatch-1']);
+
+  assert.deepEqual(list, listResponse);
+  assert.deepEqual(detail, detailResponse);
+  assert.equal(String(calls[0]?.input), 'http://127.0.0.1:8787/runtime/account/agents/agent-1/task-dispatches?tenant_id=tenant-a');
+  assert.equal(String(calls[1]?.input), 'http://127.0.0.1:8787/runtime/account/agents/agent-1/task-dispatches/dispatch-1?tenant_id=tenant-a');
+  assert.equal(calls[0]?.init?.method, 'GET');
+  assert.equal(calls[1]?.init?.method, 'GET');
+  assert.equal((calls[0]?.init?.headers as Record<string, string>)['x-bidvia-session-id'], 'sess-1');
+  assert.equal((calls[1]?.init?.headers as Record<string, string>)['x-bidvia-session-id'], 'sess-1');
+});
+
 test('BidviaClient exposes account-plane authorization refresh and external binding writes as session-bound POST wrappers', async () => {
   const authorizationRefreshResponse = {
     surface_status: 'governed_runtime_authorization_refreshed',
@@ -149,4 +190,94 @@ test('BidviaClient exposes operator dispatch-authority decision as an admin-sess
     resolution_reason: 'bounded-review-approve',
     now: '2026-05-01T11:47:00Z',
   });
+});
+
+
+test('BidviaClient exposes account-plane execution listing update as a session-bound PATCH wrapper', async () => {
+  const responseBody = {
+    listing: {
+      listing_id: 'listing-1',
+      status: 'draft',
+    },
+  };
+  const { calls, fetchStub } = createFetchStub([responseBody]);
+  const client = new BidviaClient({
+    baseUrl: 'http://127.0.0.1:8787',
+    context: {
+      tenantId: 'tenant-a',
+      sessionId: 'sess-1',
+    },
+    fetchImpl: fetchStub,
+  });
+
+  const updateAccountAgentExecutionListing = Reflect.get(client, 'updateAccountAgentExecutionListing');
+
+  assert.equal(typeof updateAccountAgentExecutionListing, 'function');
+
+  const result = await Reflect.apply(updateAccountAgentExecutionListing, client, ['agent-1', 'listing-1', {
+    category: 'basic inorganic industrial chemical',
+    sku: 'sodium-carbonate-soda-ash-light',
+    quantityValue: '18',
+    quantityUnit: 'tons',
+    regionSummary: 'China -> Vietnam',
+    verificationStatus: 'verified',
+    freshnessTs: '2026-05-12T11:00:00Z',
+    traceId: 'trace-1',
+    now: '2026-05-12T11:00:00Z',
+  }]);
+
+  assert.deepEqual(result, responseBody);
+  assert.equal(String(calls[0]?.input), 'http://127.0.0.1:8787/runtime/account/agents/agent-1/execution/listings/listing-1?tenant_id=tenant-a');
+  assert.equal(calls[0]?.init?.method, 'PATCH');
+  assert.equal((calls[0]?.init?.headers as Record<string, string>)['x-bidvia-session-id'], 'sess-1');
+  assert.deepEqual(JSON.parse(String(calls[0]?.init?.body)), {
+    category: 'basic inorganic industrial chemical',
+    sku: 'sodium-carbonate-soda-ash-light',
+    quantity_value: '18',
+    quantity_unit: 'tons',
+    region_summary: 'China -> Vietnam',
+    verification_status: 'verified',
+    freshness_ts: '2026-05-12T11:00:00Z',
+    trace_id: 'trace-1',
+    now: '2026-05-12T11:00:00Z',
+  });
+});
+
+test('BidviaClient exposes claimant opportunity status and end-state readbacks as session-bound GET wrappers', async () => {
+  const statusResponse = {
+    continuation_state: 'ALLOCATED',
+  };
+  const endStateResponse = {
+    closure_class: 'product_closed',
+  };
+  const { calls, fetchStub } = createFetchStub([
+    statusResponse,
+    endStateResponse,
+  ]);
+  const client = new BidviaClient({
+    baseUrl: 'http://127.0.0.1:8787',
+    context: {
+      tenantId: 'tenant-a',
+      sessionId: 'sess-1',
+    },
+    fetchImpl: fetchStub,
+  });
+
+  const getAccountAgentExecutionOpportunityStatus = Reflect.get(client, 'getAccountAgentExecutionOpportunityStatus');
+  const getAccountAgentExecutionOpportunityEndState = Reflect.get(client, 'getAccountAgentExecutionOpportunityEndState');
+
+  assert.equal(typeof getAccountAgentExecutionOpportunityStatus, 'function');
+  assert.equal(typeof getAccountAgentExecutionOpportunityEndState, 'function');
+
+  const status = await Reflect.apply(getAccountAgentExecutionOpportunityStatus, client, ['agent-1', 'opp-1']);
+  const endState = await Reflect.apply(getAccountAgentExecutionOpportunityEndState, client, ['agent-1', 'opp-1']);
+
+  assert.deepEqual(status, statusResponse);
+  assert.deepEqual(endState, endStateResponse);
+  assert.equal(String(calls[0]?.input), 'http://127.0.0.1:8787/runtime/account/agents/agent-1/execution/opportunities/opp-1/status?tenant_id=tenant-a');
+  assert.equal(String(calls[1]?.input), 'http://127.0.0.1:8787/runtime/account/agents/agent-1/execution/opportunities/opp-1/end-state?tenant_id=tenant-a');
+  assert.equal(calls[0]?.init?.method, 'GET');
+  assert.equal(calls[1]?.init?.method, 'GET');
+  assert.equal((calls[0]?.init?.headers as Record<string, string>)['x-bidvia-session-id'], 'sess-1');
+  assert.equal((calls[1]?.init?.headers as Record<string, string>)['x-bidvia-session-id'], 'sess-1');
 });

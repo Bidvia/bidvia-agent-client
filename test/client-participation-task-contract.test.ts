@@ -25,6 +25,7 @@ test('BidviaClient uses governed read headers for canonical participation-state 
       tenantId: 'tenant-a',
       principalId: 'actor-1',
       adminSessionId: 'admin-sess-1',
+      sessionId: 'sess-1',
     },
     fetchImpl: fetchStub,
   });
@@ -42,6 +43,11 @@ test('BidviaClient uses governed read headers for canonical participation-state 
   assert.equal((calls[0]?.init?.headers as Record<string, string>)['x-authorized-tenant-id'], 'tenant-a');
   assert.equal((calls[0]?.init?.headers as Record<string, string>)['x-bidvia-principal-id'], 'actor-1');
   assert.equal((calls[0]?.init?.headers as Record<string, string>)['x-bidvia-admin-session-id'], 'admin-sess-1');
+  assert.equal((calls[1]?.init?.headers as Record<string, string>)['x-authorized-tenant-id'], 'tenant-a');
+  assert.equal((calls[1]?.init?.headers as Record<string, string>)['x-bidvia-principal-id'], 'actor-1');
+  assert.equal((calls[1]?.init?.headers as Record<string, string>)['x-bidvia-admin-session-id'], 'admin-sess-1');
+  assert.equal((calls[2]?.init?.headers as Record<string, string>)['x-bidvia-session-id'], 'sess-1');
+  assert.equal((calls[3]?.init?.headers as Record<string, string>)['x-bidvia-session-id'], 'sess-1');
 });
 
 test('BidviaClient uses operator action, claimant session headers, and frozen payloads for canonical participation-state and account-scoped task POST wrappers', async () => {

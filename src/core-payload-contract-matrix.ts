@@ -154,6 +154,9 @@ const corePayloadContractMatrixEntries: readonly BidviaCorePayloadContractMatrix
   ...[
     ['createParticipationState', '/runtime/agents/:agent_registration_id/participation-states'],
     ['createTaskDispatch', '/runtime/account/agents/:agentId/task-dispatches'],
+    ['createTaskDispatchOutcome', '/runtime/account/agents/:agentId/task-dispatches/:task_dispatch_id/outcomes'],
+    ['createTaskDispatchEvidenceBundle', '/runtime/account/agents/:agentId/task-dispatches/:task_dispatch_id/evidence-bundles'],
+    ['createTaskDispatchConfirmationCycle', '/runtime/account/agents/:agentId/task-dispatches/:task_dispatch_id/confirmation-cycles'],
     ['assignTaskDispatch', '/runtime/account/agents/:agentId/task-dispatches/:task_dispatch_id/assign'],
     ['suspendTaskDispatch', '/runtime/account/agents/:agentId/task-dispatches/:task_dispatch_id/suspend'],
     ['resumeTaskDispatch', '/runtime/account/agents/:agentId/task-dispatches/:task_dispatch_id/resume'],
@@ -235,6 +238,9 @@ const corePayloadContractMatrixEntries: readonly BidviaCorePayloadContractMatrix
     notes: ['Notification expiry stays compatibility-only in this wave and is excluded from canonical consumer execution truth.'],
   },
   ...[
+    ['listPublicIntegrationApps', '/runtime/public/integration-apps'],
+    ['listAccountIntegrationApps', '/runtime/account/integration-apps'],
+    ['listAccountIntegrationInstallations', '/runtime/account/integration-installations'],
     ['listAccountIntegrationCapabilities', '/runtime/account/integration-capabilities'],
     ['getAccountAgentIntegrationEligibility', '/runtime/account/agents/:agentId/integrations/:integrationCode/eligibility'],
   ].map(([helperKey, routePathTemplate]): BidviaCorePayloadContractMatrixEntry => ({
@@ -245,6 +251,19 @@ const corePayloadContractMatrixEntries: readonly BidviaCorePayloadContractMatrix
     routePathTemplate,
     blockedBy: null,
     notes: ['Canonical account-plane integration ownership reads now derive from frozen Core capability and eligibility payload truth.'],
+  })),
+  ...[
+    ['createAccountIntegrationApp', '/runtime/account/integration-apps'],
+    ['createAccountIntegrationInstallation', '/runtime/account/integration-installations'],
+    ['connectAccountIntegrationInstallation', '/runtime/account/integration-installations/:integrationInstallationId/connection'],
+  ].map(([helperKey, routePathTemplate]): BidviaCorePayloadContractMatrixEntry => ({
+    plane: 'enterprise-integration',
+    helperKey,
+    helperState: 'packet-grounded-execution',
+    stage3RouteModelWave: 'P2',
+    routePathTemplate,
+    blockedBy: null,
+    notes: ['Canonical account-plane integration app submission, installation, and configuration now derive from frozen Core payload truth.'],
   })),
   ...[
     ['submitIntegrationOnboardingContract', '/runtime/integrations/:integrationCode/onboarding-contract'],

@@ -223,6 +223,100 @@ test('BidviaClient uses the canonical account integration capability discovery a
   assert.equal((calls[1]?.init?.headers as Record<string, string>)['x-bidvia-session-id'], 'sess-1');
 });
 
+test('BidviaClient exposes the canonical integration-app lifecycle subset through dedicated account and public helpers', async () => {
+  const { calls, fetchStub } = createFetchStub();
+  const client = new BidviaClient({
+    baseUrl: 'http://127.0.0.1:8787',
+    context: {
+      tenantId: 'tenant-a',
+      sessionId: 'sess-1',
+    },
+    fetchImpl: fetchStub,
+  });
+
+  const listPublicIntegrationApps = Reflect.get(client, 'listPublicIntegrationApps');
+  const createAccountIntegrationApp = Reflect.get(client, 'createAccountIntegrationApp');
+  const listAccountIntegrationApps = Reflect.get(client, 'listAccountIntegrationApps');
+  const createAccountIntegrationInstallation = Reflect.get(client, 'createAccountIntegrationInstallation');
+  const listAccountIntegrationInstallations = Reflect.get(client, 'listAccountIntegrationInstallations');
+  const connectAccountIntegrationInstallation = Reflect.get(client, 'connectAccountIntegrationInstallation');
+
+  assert.equal(typeof listPublicIntegrationApps, 'function');
+  assert.equal(typeof createAccountIntegrationApp, 'function');
+  assert.equal(typeof listAccountIntegrationApps, 'function');
+  assert.equal(typeof createAccountIntegrationInstallation, 'function');
+  assert.equal(typeof listAccountIntegrationInstallations, 'function');
+  assert.equal(typeof connectAccountIntegrationInstallation, 'function');
+
+  assert.equal(calls.length, 0);
+});
+
+test('BidviaClient exposes bounded task progression outcome, evidence-bundle, and confirmation-cycle writes as account-plane helpers', async () => {
+  const { calls, fetchStub } = createFetchStub();
+  const client = new BidviaClient({
+    baseUrl: 'http://127.0.0.1:8787',
+    context: {
+      tenantId: 'tenant-a',
+      sessionId: 'sess-1',
+      principalId: 'actor-1',
+      companyId: 'company-a',
+    },
+    fetchImpl: fetchStub,
+  });
+
+  const createTaskDispatchOutcome = Reflect.get(client, 'createTaskDispatchOutcome');
+  const createTaskDispatchEvidenceBundle = Reflect.get(client, 'createTaskDispatchEvidenceBundle');
+  const createTaskDispatchConfirmationCycle = Reflect.get(client, 'createTaskDispatchConfirmationCycle');
+
+  assert.equal(typeof createTaskDispatchOutcome, 'function');
+  assert.equal(typeof createTaskDispatchEvidenceBundle, 'function');
+  assert.equal(typeof createTaskDispatchConfirmationCycle, 'function');
+
+  await Reflect.apply(createTaskDispatchOutcome, client, ['agent-1', 'dispatch-1', {
+    outcomeRef: 'outcome://dispatch/1',
+    reason: 'bounded completion evidence recorded',
+    now: '2026-05-14T12:00:00Z',
+  }]);
+  await Reflect.apply(createTaskDispatchEvidenceBundle, client, ['agent-1', 'dispatch-1', {
+    now: '2026-05-14T12:01:00Z',
+    evidenceRefs: ['evidence://dispatch/1/receipt'],
+    rationaleSummary: 'provider receipt attached',
+    confidence: 'high',
+  }]);
+  await Reflect.apply(createTaskDispatchConfirmationCycle, client, ['agent-1', 'dispatch-1', {
+    requiredEvidenceProfile: 'hybrid-machine-plus-human',
+    startedAt: '2026-05-14T12:02:00Z',
+    slaWindowRef: 'sla://dispatch/1',
+  }]);
+
+  assert.equal(calls.length, 3);
+  assert.equal(String(calls[0]?.input), 'http://127.0.0.1:8787/runtime/account/agents/agent-1/task-dispatches/dispatch-1/outcomes?tenant_id=tenant-a');
+  assert.equal(String(calls[1]?.input), 'http://127.0.0.1:8787/runtime/account/agents/agent-1/task-dispatches/dispatch-1/evidence-bundles?tenant_id=tenant-a');
+  assert.equal(String(calls[2]?.input), 'http://127.0.0.1:8787/runtime/account/agents/agent-1/task-dispatches/dispatch-1/confirmation-cycles?tenant_id=tenant-a');
+  assert.equal(calls[0]?.init?.method, 'POST');
+  assert.equal(calls[1]?.init?.method, 'POST');
+  assert.equal(calls[2]?.init?.method, 'POST');
+  assert.equal((calls[0]?.init?.headers as Record<string, string>)['x-bidvia-session-id'], 'sess-1');
+  assert.equal((calls[1]?.init?.headers as Record<string, string>)['x-bidvia-session-id'], 'sess-1');
+  assert.equal((calls[2]?.init?.headers as Record<string, string>)['x-bidvia-session-id'], 'sess-1');
+  assert.deepEqual(JSON.parse(String(calls[0]?.init?.body)), {
+    outcome_ref: 'outcome://dispatch/1',
+    reason: 'bounded completion evidence recorded',
+    now: '2026-05-14T12:00:00Z',
+  });
+  assert.deepEqual(JSON.parse(String(calls[1]?.init?.body)), {
+    now: '2026-05-14T12:01:00Z',
+    evidence_refs: ['evidence://dispatch/1/receipt'],
+    rationale_summary: 'provider receipt attached',
+    confidence: 'high',
+  });
+  assert.deepEqual(JSON.parse(String(calls[2]?.init?.body)), {
+    required_evidence_profile: 'hybrid-machine-plus-human',
+    started_at: '2026-05-14T12:02:00Z',
+    sla_window_ref: 'sla://dispatch/1',
+  });
+});
+
 test('BidviaClient uses the frozen registration-bound heartbeat/sync/evidence/proposal contract', async () => {
   const { calls, fetchStub } = createFetchStub();
   const client = new BidviaClient({

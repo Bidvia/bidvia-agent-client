@@ -46,7 +46,7 @@ test('buildLocalRuntimeCapabilitySnapshot defaults to the public china API while
     true,
   );
   assert.equal(snapshot.mcpTools.source, 'local-static');
-  assert.equal(snapshot.mcpTools.items.length, 97);
+  assert.equal(snapshot.mcpTools.items.length, 110);
   assert.equal(snapshot.mcpTools.schemaVersion, '2026-03-27');
   assert.equal(snapshot.mcpTools.version, 'local-runtime-capability-snapshot');
   assert.equal(snapshot.mcpTools.revision, 'repo-mcp-tools');
@@ -362,7 +362,7 @@ test('buildLocalRuntimeCapabilitySnapshot carries shared execution truth without
       {
         plane: 'enterprise-integration',
         descriptiveVisibility: 'descriptive-plane-visible',
-        executableHelperEligibility: 'packet-grounded-read',
+        executableHelperEligibility: 'packet-grounded-execution',
       },
     ],
   );
@@ -374,6 +374,7 @@ test('buildLocalRuntimeCapabilitySnapshot carries shared execution truth without
       lane: 'default-local-docker',
       appliesWhen: 'route-exists-but-subject-not-runnable',
       signal: 'authority_class_not_dispatchable',
+      errorCategory: 'expected-bounded-behavior',
       nextStepOwner: 'operator-or-admin',
       nextStepAction: 'Follow the surfaced task-write-ready progression and keep unresolved Core-owned progression visible instead of assuming claim is sufficient.',
       checkpoints: [
@@ -444,6 +445,7 @@ test('buildLocalRuntimeCapabilitySnapshot carries shared execution truth without
       lane: 'default-local-docker',
       appliesWhen: 'account-plane-succeeds-but-governed-runtime-still-denied',
       signal: 'active_role_binding_required',
+      errorCategory: 'probable-core-contradiction',
       nextStepOwner: 'enterprise-admin',
       nextStepAction: 'Keep claimant continuation on the account-owned plane, use only the allowed account/session/org repair actions surfaced by Core, and if the gate still remains after those repairs, treat it as an unresolved Core-owned authorization projection issue rather than inventing a new claimant or operator workflow.',
     },
@@ -452,6 +454,7 @@ test('buildLocalRuntimeCapabilitySnapshot carries shared execution truth without
       lane: 'proof-lane-admin-session',
       appliesWhen: 'deterministic-proof-validation',
       signal: 'admin-session-required',
+      errorCategory: 'client-misuse',
       nextStepOwner: 'admin',
       nextStepAction: 'Use a real admin session for proof-lane walkthroughs rather than assuming fixed proof ids are runnable on default local docker.',
     },
@@ -460,6 +463,7 @@ test('buildLocalRuntimeCapabilitySnapshot carries shared execution truth without
       lane: 'runtime-generated',
       appliesWhen: 'business-universe-closure',
       signal: 'fixed-fixture-not-required',
+      errorCategory: 'client-misuse',
       nextStepOwner: 'agent',
       nextStepAction: 'Create the required runtime objects yourself and continue with the returned ids instead of depending on fixed fixture identifiers.',
     },
