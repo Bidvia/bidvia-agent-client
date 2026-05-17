@@ -133,6 +133,35 @@ test('runCli public-runtime-interpretation-probe prints the bounded runtime inte
   }
 });
 
+test('runCli public-runtime-interpretation-probe exits non-zero when the runtime interpretation report is failed', async () => {
+  const printed: unknown[] = [];
+  const originalFetch = globalThis.fetch;
+
+  globalThis.fetch = (async () => {
+    throw new TypeError('fetch failed');
+  }) as typeof fetch;
+
+  try {
+    const exitCode = await runCli(['public-runtime-interpretation-probe'], {
+      printJson: (value: unknown) => {
+        printed.push(value);
+      },
+      printLine: () => {
+        throw new Error('public-runtime-interpretation-probe should not print help lines');
+      },
+      resolveBaseUrl: () => 'http://127.0.0.1:65534',
+      createClient: () => {
+        throw new Error('public-runtime-interpretation-probe should stay local/report-only');
+      },
+    });
+
+    assert.equal(exitCode, 1);
+    assert.equal((printed[0] as { status: string }).status, 'failed');
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
 test('buildPublicRuntimeInterpretationReport returns a failed bounded report when runtime fetch fails', async () => {
   const report = await buildPublicRuntimeInterpretationReport({
     baseUrl: 'http://127.0.0.1:65534',

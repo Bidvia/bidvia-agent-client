@@ -3557,10 +3557,11 @@ export async function runCli(
   }
 
   if (command === 'public-runtime-interpretation-probe') {
-    dependencies.printJson(await buildPublicRuntimeInterpretationReport({
+    const report = await buildPublicRuntimeInterpretationReport({
       baseUrl: dependencies.resolveBaseUrl(),
-    }));
-    return 0;
+    });
+    dependencies.printJson(report);
+    return report.status === 'failed' ? 1 : 0;
   }
 
   if (command === 'runtime-capabilities') {
