@@ -11,7 +11,7 @@ function readText(relativePath: string) {
   return readFileSync(path.join(workspaceRoot, relativePath), 'utf8');
 }
 
-test('README presents @bidvia/client as a customer-facing V1 entrypoint', () => {
+test('README presents @bidvia/client as a public package entrypoint without internal plan references', () => {
   const readme = readText('README.md');
   const packageJson = JSON.parse(readText('package.json')) as {
     description?: string;
@@ -28,66 +28,24 @@ test('README presents @bidvia/client as a customer-facing V1 entrypoint', () => 
   assert.match(readme, /^## CLI onboarding path/m);
   assert.match(readme, /^## SDK quick start/m);
   assert.match(readme, /^## OpenClaw and advanced integration/m);
-  assert.match(readme, /^## Boundaries, contract truth, and compatibility-only surfaces/m);
 
-  assert.match(readme, /Bidvia is the governed platform for onboarding, running, and integrating agents/i);
   assert.match(readme, /`@bidvia\/client` is the open-source Bidvia client project/i);
-  assert.match(readme, /current package version is `1\.0\.0`/i);
-  assert.match(readme, /customer-facing V1 entrypoint/i);
-  assert.match(readme, /`1\.0\.0` package state/i);
-  assert.match(readme, /Stage 3 release gate remains blocked/i);
-  assert.match(readme, /npm publication is still a separate final human step/i);
-  assert.match(readme, /Node\.js `>=20`/i);
   assert.match(readme, /npm install @bidvia\/client/);
-  assert.match(readme, /installs the `bidvia` CLI and the local `bidvia mcp-server` entrypoint/i);
-
-  assert.match(readme, /bidvia sign-up-personal/);
-  assert.match(readme, /bidvia sign-in/);
-  assert.match(readme, /bidvia select-org/);
+  assert.match(readme, /Node\.js `>=20`/i);
   assert.match(readme, /bidvia onboard/);
-  assert.match(readme, /bidvia whoami/);
-  assert.match(readme, /bidvia context show/);
-  assert.match(readme, /bidvia doctor/);
+  assert.match(readme, /bidvia sign-in/);
   assert.match(readme, /bidvia create-provisional-agent/);
-  assert.match(readme, /bidvia query-provisional-agent/);
-  assert.match(readme, /bidvia claim-provisional-agent/);
   assert.match(readme, /bidvia route-context-matrix/);
-  assert.match(readme, /bidvia registration-lifecycle-plan/);
-
-  assert(readme.indexOf('bidvia onboard') < readme.indexOf('bidvia sign-up-personal'));
-  assert(readme.indexOf('bidvia onboard') < readme.indexOf('bidvia sign-in'));
-  assert(readme.indexOf('bidvia onboard') < readme.indexOf('bidvia select-org'));
-  assert(readme.indexOf('bidvia onboard') < readme.indexOf('bidvia create-provisional-agent'));
-  assert(readme.indexOf('bidvia create-provisional-agent') < readme.indexOf('bidvia route-context-matrix'));
-
-  assert.match(readme, /import \{ BidviaClient, buildHeartbeatInput \} from '@bidvia\/client';/);
-  assert.match(readme, /baseUrl: 'https:\/\/api\.bidvia\.cn'/);
-  assert.match(readme, /tenantId/);
-  assert.match(readme, /principalId/);
-  assert.match(readme, /registrationId/);
-  assert.match(readme, /openclaw-mcp-config/);
-  assert.match(readme, /openclaw-bundle-export/);
-  assert.match(readme, /default local docker/i);
-  assert.match(readme, /proof-lane/i);
-  assert.match(readme, /seeded/i);
-  assert.match(readme, /runtime-generated/i);
-  assert.match(readme, /fixed proof ids are not assumed/i);
-  assert.match(readme, /self-generated runtime data is the preferred path/i);
-  assert.match(readme, /task-write-ready progression/i);
-  assert.match(readme, /self-service patch/i);
-  assert.match(readme, /dispatch-authority request/i);
-  assert.match(readme, /operator\/admin review closure/i);
-  assert.match(readme, /external binding/i);
-  assert.match(readme, /different body contracts/i);
-  assert.match(readme, /task-write-ready and dispatch-eligibility truth/i);
-  assert.match(readme, /three-layer client architecture/i);
-  assert.match(readme, /atomic helpers, executable scenario runners, and productized CLI\/MCP surfaces/i);
-  assert.match(readme, /executable, review-safe, and compatibility-only/i);
+  assert.match(readme, /bidvia install-integrity/);
+  assert.match(readme, /bidvia validation-smoke/);
+  assert.match(readme, /bidvia diagnostic-bundle-export/);
+  assert.match(readme, /bidvia public-runtime-interpretation-probe/);
   assert.match(readme, /bounded task closure, not full business closure/i);
-  assert.match(readme, /downstream contract center/i);
-  assert.match(readme, /compatibility-only/i);
-  assert.match(readme, /hosted runtime/i);
-  assert.match(readme, /platform-auth/i);
+
+  assert.doesNotMatch(readme, /docs\/superpowers\//i);
+  assert.doesNotMatch(readme, /INTERNAL_RELEASE_CHECKLIST/i);
+  assert.doesNotMatch(readme, /WEBSITE_FIRST_ACCESS_HANDOFF/i);
+  assert.doesNotMatch(readme, /OPTIMIZATION_BACKLOG/i);
 
   assert.equal(packageJson.version, '1.0.0');
   assert.equal(packageJson.engines?.node, '>=20');

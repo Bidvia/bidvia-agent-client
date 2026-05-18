@@ -38,7 +38,6 @@ test('agent-first outward docs present role-stage product entry and migration gu
   assert.match(boundary, /client\.platformManaged/i);
   assert.match(boundary, /client\.universe/i);
 
-  assert.match(validationLanes, /validate-agent-first-business-universe/i);
   assert.match(validationLanes, /evidence output/i);
   assert.match(validationLanes, /role-stage/i);
 

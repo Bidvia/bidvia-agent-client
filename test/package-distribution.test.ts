@@ -93,7 +93,7 @@ test('public package support files and release-readiness validation entrypoints 
   assert.equal(fileExists('CODE_OF_CONDUCT.md'), true);
   assert.equal(fileExists('scripts/validate-release-readiness.ts'), true);
   assert.equal(fileExists('scripts/validate-release-gate.ts'), true);
-  assert.equal(fileExists('docs/INTERNAL_RELEASE_CHECKLIST.md'), true);
+  assert.equal(fileExists('docs/INTERNAL_RELEASE_CHECKLIST.md'), false);
   assert.deepEqual(packageJson.files, [
     'dist',
     'README.md',
