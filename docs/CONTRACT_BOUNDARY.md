@@ -1,6 +1,6 @@
 # Contract Boundary
 
-This boundary reference supports the active truth-alignment execution plan at `docs/superpowers/plans/2026-04-30-client-truth-alignment-v3-implementation.md`. Read it as release-boundary guidance for the current shipped local-first surface, not as a competing roadmap.
+This boundary reference describes the current shipped local-first surface for `@bidvia/client`. Read it as public contract guidance for the package, not as an internal execution plan.
 
 For current downstream contract truth, use the Bidvia Core downstream contract center (`docs/downstream-contract-center/**` in the main Bidvia repo) as the frozen routine implementation source.
 
@@ -42,7 +42,7 @@ The V1 boundary is agent-first but login-capable. Bounded account/session prereq
 - bounded membership lifecycle helpers and documentation for the prerequisite surface only
 - bounded account-agent dispatch-authority helpers and account-scoped task/notification wrappers where downstream packets are already frozen
 - local ergonomic surfacing of canonical `agentId` account-plane continuation without inventing new Core-owned workflows
-- onboarding guidance for internal team agents and seed-user agents
+- onboarding guidance and local verification examples
 - scenario packaging and verification-bundle export on the agent side
 - bounded matrix validation that can execute checked-in local-docker probes and report review-safe `pass`, `bounded-stop`, `contradiction`, and `blocked` scenario classes without redefining Core-owned closure truth
 - agent-side operating guidance for how to use frozen production contracts safely

@@ -15,7 +15,7 @@ This smoke guide is intentionally bounded to the shipped local operator path:
 
 It does **not** assume any hosted Bidvia runtime, hosted MCP service, or remote registry behavior.
 
-The website first-access work for this release is documented separately as a handoff contract in `docs/WEBSITE_FIRST_ACCESS_HANDOFF.md`. It stays spec-only and does not change the local stdio MCP-first smoke order in this document.
+
 
 ## Scope boundary
 

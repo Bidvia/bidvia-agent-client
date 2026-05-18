@@ -28,7 +28,7 @@ bidvia diagnostic-bundle-export --output ./bidvia-diagnostic-bundle
 bidvia public-runtime-interpretation-probe
 ```
 
-Those commands stay fail-closed. `install-integrity` is the local install-path self-check, `validation-smoke` is the bounded external-user validation lane, `diagnostic-bundle-export` packages bounded smoke evidence into shareable artifacts, and `public-runtime-interpretation-probe` reads live `/healthz` and `/readyz` to produce bounded runtime-baseline interpretation evidence only. None of them turns this lane into a Core-owned certification flow. For role-stage regression checks, also run `npx tsx scripts/validate-agent-first-business-universe.ts`.
+Those commands stay fail-closed. `install-integrity` is the local install-path self-check, `validation-smoke` is the bounded external-user validation lane, `diagnostic-bundle-export` packages bounded smoke evidence into shareable artifacts, and `public-runtime-interpretation-probe` reads live `/healthz` and `/readyz` to produce bounded runtime-baseline interpretation evidence only. None of them turns this lane into a Core-owned certification flow.
 
 When you need a deeper local-docker artifact that exercises the checked-in live probes instead of only bounded smoke checks, run:
 
