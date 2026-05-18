@@ -63,12 +63,18 @@ type FirstAccessSnapshot = {
       blocked: boolean;
       blockedOn: string | null;
       lastCompletedStep: string | null;
+      requiredActor?: string;
+      recommendedNextStep?: string;
+      nextStepKind?: string;
+      canSelfResolve?: boolean;
+      boundaryMessage?: string;
     };
     nextCommands: Array<{ command: string; rationale: string }>;
     firstSuccessNextStep: {
       command: string;
       rationale: string;
       journeyStage: string;
+      journeyStageSemantics: string;
     };
   };
 };
@@ -83,6 +89,7 @@ function assertFirstSuccessNextStep(snapshot: FirstAccessSnapshot) {
     command: 'registration-lifecycle-plan',
     rationale: 'Use the lifecycle plan next so the first successful onboarding path stays aligned with the shipped provisional-to-registration chain.',
     journeyStage: 'governed-run-execution',
+    journeyStageSemantics: 'local-only',
   });
 }
 
@@ -102,7 +109,7 @@ test('runCli help lists doctor alongside other first-access visibility commands'
   assert(lines.includes('  doctor'));
 });
 
-test('runCli doctor fresh machine reports local blockers, reachability, and skips readiness live check', async () => {
+test('runCli doctor fresh machine keeps the visible journey agent-first while framing account/session commands as prerequisite support', async () => {
   const printed: unknown[] = [];
 
   const exitCode = await runCli(['doctor'], {
@@ -110,7 +117,7 @@ test('runCli doctor fresh machine reports local blockers, reachability, and skip
       throw new Error('doctor should not create a generic client');
     },
     resolveProcessEnv: () => ({}),
-    resolveBaseUrl: () => 'https://api.bidvia.ai',
+    resolveBaseUrl: () => 'https://api.bidvia.cn',
     resolveEnvironmentMode: () => 'production',
     readLocalOnboardingState: async () => null,
     probeReachability: async () => ({
@@ -133,7 +140,7 @@ test('runCli doctor fresh machine reports local blockers, reachability, and skip
   const snapshot = getSinglePrintedSnapshot<FirstAccessSnapshot>(printed);
   assert.equal(snapshot.command, 'doctor');
   assert.equal(snapshot.scope, 'local-first-read-only');
-  assert.equal(snapshot.localChecks?.baseUrl, 'https://api.bidvia.ai');
+  assert.equal(snapshot.localChecks?.baseUrl, 'https://api.bidvia.cn');
   assert.equal(snapshot.localChecks?.environmentMode, 'production');
   assert.equal(snapshot.localChecks?.localOnboardingState.present, false);
   assert.deepEqual(snapshot.localChecks?.completeness, {
@@ -159,7 +166,13 @@ test('runCli doctor fresh machine reports local blockers, reachability, and skip
   });
   assert.equal(snapshot.onboarding.currentStage.key, 'missing-tenant-context');
   assert.deepEqual(snapshot.onboarding.nextCommands.map((entry) => entry.command), [
+    'bidvia onboard',
+    'bidvia whoami',
     'bidvia context show',
+    'bidvia doctor',
+    'bidvia sign-in --input ...',
+    'bidvia sign-up-personal --input ...',
+    'bidvia sign-up-enterprise --input ...',
     'bidvia create-provisional-agent --provisional-agent-ref ...',
     'bidvia query-provisional-agent --provisional-agent-ref ...',
     'bidvia claim-provisional-agent --provisional-agent-ref ... --claim-token ...',
@@ -282,6 +295,7 @@ test('runCli doctor with readiness live check separates local diagnostics from t
     resolveEnvironmentMode: () => 'production',
     readLocalOnboardingState: async () => ({
       tenantId: 'tenant-local',
+      agentId: 'agent-local',
       principalId: 'principal-local',
       companyId: 'company-local',
       registrationId: 'areg-local',
@@ -335,8 +349,12 @@ test('runCli doctor with readiness live check separates local diagnostics from t
       authority: 'governed',
     },
   });
-  assert.equal(snapshot.onboarding.currentStage.key, 'ready-for-registration-lifecycle');
-  assert.deepEqual(snapshot.onboarding.nextCommands.map((entry) => entry.command), ['bidvia registration-lifecycle-plan']);
+  assert.equal(snapshot.onboarding.currentStage.key, 'ready-for-claimant-execution');
+  assert.deepEqual(snapshot.onboarding.nextCommands.map((entry) => entry.command), [
+    'bidvia account-agent --agent-id ...',
+    'bidvia doctor',
+    'bidvia route-context-matrix',
+  ]);
   assertFirstSuccessNextStep(snapshot);
 });
 
@@ -368,6 +386,11 @@ test('runCli doctor captures readiness live-check transport failures inside stru
         {
           responseBody: {
             code: 'active_role_binding_required',
+            required_actor: 'enterprise_admin',
+            boundary_message: 'governed runtime access remains blocked until an active tenant role binding is established for the acting principal',
+            recommended_next_step: 'request_role_binding_activation',
+            next_step_kind: 'role_binding_activation',
+            can_self_resolve: false,
           },
         },
       );
@@ -390,14 +413,222 @@ test('runCli doctor captures readiness live-check transport failures inside stru
     status: 403,
     responseBody: {
       code: 'active_role_binding_required',
+      required_actor: 'enterprise_admin',
+      boundary_message: 'governed runtime access remains blocked until an active tenant role binding is established for the acting principal',
+      recommended_next_step: 'request_role_binding_activation',
+      next_step_kind: 'role_binding_activation',
+      can_self_resolve: false,
     },
   });
-  assert.equal(snapshot.onboarding.currentStage.key, 'ready-for-registration-lifecycle');
-  assert.deepEqual(snapshot.onboarding.nextCommands.map((entry) => entry.command), ['bidvia registration-lifecycle-plan']);
+  assert.equal(snapshot.onboarding.currentStage.key, 'active-role-binding-required');
+  assert.equal(snapshot.onboarding.currentStage.blocked, true);
+  assert.equal(snapshot.onboarding.currentStage.blockedOn, 'active-role-binding');
+  assert.equal(snapshot.onboarding.currentStage.requiredActor, 'enterprise_admin');
+  assert.equal(snapshot.onboarding.currentStage.recommendedNextStep, 'request_role_binding_activation');
+  assert.equal(snapshot.onboarding.currentStage.nextStepKind, 'role_binding_activation');
+  assert.equal(snapshot.onboarding.currentStage.canSelfResolve, false);
+  assert.equal(snapshot.onboarding.currentStage.boundaryMessage, 'governed runtime access remains blocked until an active tenant role binding is established for the acting principal');
+  assert.deepEqual(snapshot.onboarding.nextCommands.map((entry) => entry.command), [
+    'bidvia select-org --input ...',
+    'bidvia account-me',
+    'bidvia doctor',
+    'bidvia context show',
+    'bidvia route-context-matrix',
+    'bidvia account-agent --agent-id ...',
+  ]);
   assertFirstSuccessNextStep(snapshot);
 });
 
-test('runCli onboard fresh machine reports the first ordered create-claim-run commands', async () => {
+test('runCli doctor surfaces a canonical claimant-owned self-service continuation when Core returns a supported post-approval next step', async () => {
+  const printed: unknown[] = [];
+
+  const exitCode = await runCli(['doctor'], {
+    resolveProcessEnv: () => ({
+      BIDVIA_TENANT_ID: 'tenant-env',
+      BIDVIA_PRINCIPAL_ID: 'principal-env',
+    }),
+    resolveBaseUrl: () => 'https://api.bidvia.ai',
+    resolveEnvironmentMode: () => 'production',
+    readLocalOnboardingState: async () => ({
+      agentId: 'agent-local',
+      registrationId: 'areg-local',
+      lastCompletedStep: 'claim-provisional-agent',
+    }),
+    probeReachability: async () => ({
+      reachable: true,
+      statusCode: 200,
+      error: null,
+    }),
+    runDoctorReadinessCheck: async () => {
+      throw new BidviaClientTransportError(
+        'governed readiness denied',
+        'permission',
+        403,
+        {
+          responseBody: {
+            code: 'active_role_binding_required',
+            required_actor: 'user',
+            boundary_message: 'claimant continuation must complete before governed runtime can proceed',
+            recommended_next_step: 'patch_agent_self_service',
+            next_step_kind: 'self_service_patch',
+            can_self_resolve: true,
+          },
+        },
+      );
+    },
+    printJson: (value) => {
+      printed.push(value);
+    },
+    printLine: () => {
+      throw new Error('doctor should not print help lines');
+    },
+  });
+
+  assert.equal(exitCode, 0);
+  const snapshot = getSinglePrintedSnapshot<FirstAccessSnapshot>(printed);
+  assert.equal(snapshot.onboarding.currentStage.key, 'claimant-next-step-available');
+  assert.equal(snapshot.onboarding.currentStage.blocked, true);
+  assert.equal(snapshot.onboarding.currentStage.blockedOn, 'self-service-patch');
+  assert.equal(snapshot.onboarding.currentStage.requiredActor, 'user');
+  assert.equal(snapshot.onboarding.currentStage.recommendedNextStep, 'patch_agent_self_service');
+  assert.equal(snapshot.onboarding.currentStage.nextStepKind, 'self_service_patch');
+  assert.equal(snapshot.onboarding.currentStage.canSelfResolve, true);
+  assert.equal(snapshot.onboarding.currentStage.boundaryMessage, 'claimant continuation must complete before governed runtime can proceed');
+  assert.deepEqual(snapshot.onboarding.nextCommands.map((entry) => entry.command), [
+    'bidvia account-agent --agent-id ...',
+    'bidvia agent-self-service --agent-id ... --input ...',
+    'bidvia account-agent-dispatch-authority --agent-id ...',
+    'bidvia doctor',
+    'bidvia route-context-matrix',
+  ]);
+  assertFirstSuccessNextStep(snapshot);
+});
+
+test('runCli doctor fails closed when Core returns a broken post-approval claimant suggestion even if the step kind looks familiar', async () => {
+  const printed: unknown[] = [];
+
+  const exitCode = await runCli(['doctor'], {
+    resolveProcessEnv: () => ({
+      BIDVIA_TENANT_ID: 'tenant-env',
+      BIDVIA_PRINCIPAL_ID: 'principal-env',
+    }),
+    resolveBaseUrl: () => 'https://api.bidvia.ai',
+    resolveEnvironmentMode: () => 'production',
+    readLocalOnboardingState: async () => ({
+      agentId: 'agent-local',
+      registrationId: 'areg-local',
+      lastCompletedStep: 'claim-provisional-agent',
+    }),
+    probeReachability: async () => ({
+      reachable: true,
+      statusCode: 200,
+      error: null,
+    }),
+    runDoctorReadinessCheck: async () => {
+      throw new BidviaClientTransportError(
+        'governed readiness denied',
+        'permission',
+        403,
+        {
+          responseBody: {
+            code: 'active_role_binding_required',
+            required_actor: 'user',
+            boundary_message: 'the suggested claimant continuation could not be trusted as a runnable downstream path',
+            recommended_next_step: 'complete_task_dispatch_opt_in',
+            next_step_kind: 'self_service_patch',
+            can_self_resolve: true,
+          },
+        },
+      );
+    },
+    printJson: (value) => {
+      printed.push(value);
+    },
+    printLine: () => {
+      throw new Error('doctor should not print help lines');
+    },
+  });
+
+  assert.equal(exitCode, 0);
+  const snapshot = getSinglePrintedSnapshot<FirstAccessSnapshot>(printed);
+  assert.equal(snapshot.onboarding.currentStage.key, 'core-suggested-next-step-broken');
+  assert.equal(snapshot.onboarding.currentStage.blocked, true);
+  assert.equal(snapshot.onboarding.currentStage.blockedOn, 'post-approval-claimant-progression');
+  assert.equal(snapshot.onboarding.currentStage.requiredActor, 'user');
+  assert.equal(snapshot.onboarding.currentStage.recommendedNextStep, 'complete_task_dispatch_opt_in');
+  assert.equal(snapshot.onboarding.currentStage.nextStepKind, 'self_service_patch');
+  assert.equal(snapshot.onboarding.currentStage.canSelfResolve, true);
+  assert.equal(snapshot.onboarding.currentStage.boundaryMessage, 'the suggested claimant continuation could not be trusted as a runnable downstream path');
+  assert.deepEqual(snapshot.onboarding.nextCommands.map((entry) => entry.command), [
+    'bidvia account-agent --agent-id ...',
+    'bidvia route-context-matrix',
+    'bidvia doctor',
+    'bidvia context show',
+  ]);
+  assert.equal(
+    snapshot.onboarding.nextCommands.some((entry) => entry.command === 'bidvia agent-self-service --agent-id ... --input ...'),
+    false,
+  );
+  assertFirstSuccessNextStep(snapshot);
+});
+
+test('runCli doctor fails closed when Core suggests a claimant-shaped continuation but the required actor is not claimant-owned', async () => {
+  const printed: unknown[] = [];
+
+  const exitCode = await runCli(['doctor'], {
+    resolveProcessEnv: () => ({
+      BIDVIA_TENANT_ID: 'tenant-env',
+      BIDVIA_PRINCIPAL_ID: 'principal-env',
+    }),
+    resolveBaseUrl: () => 'https://api.bidvia.ai',
+    resolveEnvironmentMode: () => 'production',
+    readLocalOnboardingState: async () => ({
+      agentId: 'agent-local',
+      registrationId: 'areg-local',
+      lastCompletedStep: 'claim-provisional-agent',
+    }),
+    probeReachability: async () => ({
+      reachable: true,
+      statusCode: 200,
+      error: null,
+    }),
+    runDoctorReadinessCheck: async () => {
+      throw new BidviaClientTransportError(
+        'governed readiness denied',
+        'permission',
+        403,
+        {
+          responseBody: {
+            code: 'active_role_binding_required',
+            required_actor: 'enterprise_admin',
+            boundary_message: 'this next step is not claimant-owned even though the suggested step name looks familiar',
+            recommended_next_step: 'patch_agent_self_service',
+            next_step_kind: 'self_service_patch',
+            can_self_resolve: true,
+          },
+        },
+      );
+    },
+    printJson: (value) => {
+      printed.push(value);
+    },
+    printLine: () => {
+      throw new Error('doctor should not print help lines');
+    },
+  });
+
+  assert.equal(exitCode, 0);
+  const snapshot = getSinglePrintedSnapshot<FirstAccessSnapshot>(printed);
+  assert.equal(snapshot.onboarding.currentStage.key, 'core-suggested-next-step-broken');
+  assert.equal(snapshot.onboarding.currentStage.requiredActor, 'enterprise_admin');
+  assert.equal(snapshot.onboarding.currentStage.canSelfResolve, true);
+  assert.equal(
+    snapshot.onboarding.nextCommands.some((entry) => entry.command === 'bidvia agent-self-service --agent-id ... --input ...'),
+    false,
+  );
+});
+
+test('runCli onboard fresh machine keeps the primary guidance agent-first and leaves account/session commands as prerequisite support', async () => {
   const printed: unknown[] = [];
 
   const exitCode = await runCli(['onboard'], {
@@ -423,7 +654,12 @@ test('runCli onboard fresh machine reports the first ordered create-claim-run co
   assert.deepEqual(snapshot.effectiveContext?.registrationId, { value: null, source: 'missing' });
   assert.equal(snapshot.onboarding.currentStage.key, 'missing-tenant-context');
   assert.deepEqual(snapshot.onboarding.nextCommands.map((entry) => entry.command), [
+    'bidvia whoami',
     'bidvia context show',
+    'bidvia doctor',
+    'bidvia sign-in --input ...',
+    'bidvia sign-up-personal --input ...',
+    'bidvia sign-up-enterprise --input ...',
     'bidvia create-provisional-agent --provisional-agent-ref ...',
     'bidvia query-provisional-agent --provisional-agent-ref ...',
     'bidvia claim-provisional-agent --provisional-agent-ref ... --claim-token ...',
@@ -595,10 +831,10 @@ test('runCli onboard rerun after claim skips provisional actions and points to r
   assert.equal(snapshot.localOnboardingState?.present, true);
   assert.deepEqual(snapshot.effectiveContext?.principalId, { value: 'principal-local', source: 'local-state' });
   assert.deepEqual(snapshot.effectiveContext?.registrationId, { value: 'areg-local', source: 'local-state' });
-  assert.equal(snapshot.onboarding.currentStage.key, 'ready-for-registration-lifecycle');
+  assert.equal(snapshot.onboarding.currentStage.key, 'ready-for-claimant-execution');
   assert.deepEqual(snapshot.onboarding.nextCommands.map((entry) => entry.command), [
     'bidvia doctor',
-    'bidvia registration-lifecycle-plan',
+    'bidvia account-agent --agent-id ...',
   ]);
   assertFirstSuccessNextStep(snapshot);
 });

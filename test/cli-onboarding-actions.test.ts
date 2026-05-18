@@ -6,6 +6,22 @@ import path from 'node:path';
 
 import { BidviaClientTransportError } from '../src/client.ts';
 import { runCli } from '../src/cli.ts';
+import { buildIdentitySessionPlaneView, buildTaskPlaneView } from '../src/index.ts';
+
+function withRuntimeResultCommit<T>(client: T): T & {
+  commitRuntimeResult: () => Promise<{ outcomeRef: string }>;
+} {
+  return {
+    ...(client as object),
+    async commitRuntimeResult() {
+      return {
+        outcomeRef: 'outcome://test/runtime-commit',
+      };
+    },
+  } as T & {
+    commitRuntimeResult: () => Promise<{ outcomeRef: string }>;
+  };
+}
 
 function setEnvVar(name: string, value: string | undefined) {
   const previousValue = process.env[name];
@@ -31,7 +47,7 @@ test('runCli routes create-provisional-agent through the existing client helper 
   const createCalls: Array<{ provisionalAgentRef: string; now: string }> = [];
 
   const exitCode = await runCli(['create-provisional-agent', '--provisional-agent-ref', 'prov-agent-1'], {
-    createClient: () => ({
+    createClient: () => withRuntimeResultCommit({
       createProvisionalAgent: async (input: { provisionalAgentRef: string; now: string }) => {
         createCalls.push(input);
         return {
@@ -71,12 +87,12 @@ test('runCli create-provisional-agent executes with tenant context sourced from 
   const exitCode = await runCli(['create-provisional-agent', '--provisional-agent-ref', 'prov-agent-local-state'], {
     createClient: ((_env?: unknown, contextOverride?: unknown) => {
       createClientContexts.push(contextOverride);
-      return {
+      return withRuntimeResultCommit({
         createProvisionalAgent: async () => ({
           provisionalAgentRef: 'prov-agent-local-state',
           created: true,
         }),
-      } as never;
+      }) as never;
     }) as never,
     resolveProcessEnv: () => ({}),
     readLocalOnboardingState: async () => ({
@@ -98,6 +114,7 @@ test('runCli create-provisional-agent executes with tenant context sourced from 
   assert.equal(exitCode, 0);
   assert.deepEqual(createClientContexts, [{
     tenantId: 'tenant-local',
+    agentId: undefined,
     principalId: undefined,
     companyId: undefined,
     registrationId: undefined,
@@ -112,6 +129,7 @@ test('runCli create-provisional-agent executes with tenant context sourced from 
 test('runCli default onboarding-action client wiring honors injected env baseUrl and local-state execution context together', async () => {
   const printed: unknown[] = [];
   const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
+  const createClientCalls: Array<{ env: NodeJS.ProcessEnv; contextOverride: unknown }> = [];
   const restoreEnv = [
     setEnvVar('BIDVIA_BASE_URL', 'http://127.0.0.1:9999'),
     setEnvVar('BIDVIA_TENANT_ID', undefined),
@@ -132,6 +150,35 @@ test('runCli default onboarding-action client wiring honors injected env baseUrl
 
   try {
     const exitCode = await runCli(['create-provisional-agent', '--provisional-agent-ref', 'prov-agent-default-wiring'], {
+      createClient: ((env: NodeJS.ProcessEnv, contextOverride?: unknown) => {
+        createClientCalls.push({ env, contextOverride });
+        return {
+          async createProvisionalAgent(input: { provisionalAgentRef: string }) {
+            const baseUrl = env.BIDVIA_BASE_URL;
+
+            if (!baseUrl) {
+              throw new Error('expected injected BIDVIA_BASE_URL');
+            }
+
+            const response = await globalThis.fetch(`${baseUrl}/runtime/agents/provisional`, {
+              method: 'POST',
+              headers: {
+                'content-type': 'application/json',
+              },
+              body: JSON.stringify({
+                provisional_agent_ref: input.provisionalAgentRef,
+              }),
+            });
+
+            return response.json();
+          },
+          async commitRuntimeResult() {
+            return {
+              outcomeRef: 'outcome://test/runtime-commit',
+            };
+          },
+        } as never;
+      }) as never,
       resolveProcessEnv: () => ({
         BIDVIA_BASE_URL: 'http://127.0.0.1:8787',
       }),
@@ -155,6 +202,19 @@ test('runCli default onboarding-action client wiring honors injected env baseUrl
     }
   }
 
+  assert.deepEqual(createClientCalls, [{
+    env: {
+      BIDVIA_BASE_URL: 'http://127.0.0.1:8787',
+    },
+    contextOverride: {
+      tenantId: 'tenant-local-default-wiring',
+      agentId: undefined,
+      principalId: undefined,
+      companyId: undefined,
+      registrationId: undefined,
+      sessionId: undefined,
+    },
+  }]);
   assert.equal(calls.length, 1);
   assert.equal(String(calls[0]?.input), 'http://127.0.0.1:8787/runtime/agents/provisional');
   assert.deepEqual(printed, [{
@@ -169,12 +229,12 @@ test('runCli create/query strip stale claimed principal/company/registration con
   const createExitCode = await runCli(['create-provisional-agent', '--provisional-agent-ref', 'prov-agent-strip-create'], {
     createClient: ((_env?: unknown, contextOverride?: unknown) => {
       createClientContexts.push(contextOverride);
-      return {
+      return withRuntimeResultCommit({
         createProvisionalAgent: async () => ({
           provisionalAgentRef: 'prov-agent-strip-create',
           created: true,
         }),
-      } as never;
+      }) as never;
     }) as never,
     resolveProcessEnv: () => ({
       BIDVIA_TENANT_ID: 'tenant-strip',
@@ -196,12 +256,12 @@ test('runCli create/query strip stale claimed principal/company/registration con
   const queryExitCode = await runCli(['query-provisional-agent', '--provisional-agent-ref', 'prov-agent-strip-query'], {
     createClient: ((_env?: unknown, contextOverride?: unknown) => {
       createClientContexts.push(contextOverride);
-      return {
+      return withRuntimeResultCommit({
         queryProvisionalAgent: async () => ({
           provisionalAgentRef: 'prov-agent-strip-query',
           status: 'pending-claim',
         }),
-      } as never;
+      }) as never;
     }) as never,
     resolveProcessEnv: () => ({
       BIDVIA_TENANT_ID: 'tenant-strip',
@@ -224,12 +284,14 @@ test('runCli create/query strip stale claimed principal/company/registration con
   assert.equal(queryExitCode, 0);
   assert.deepEqual(createClientContexts, [{
     tenantId: 'tenant-strip',
+    agentId: undefined,
     principalId: undefined,
     companyId: undefined,
     registrationId: undefined,
     sessionId: undefined,
   }, {
     tenantId: 'tenant-strip',
+    agentId: undefined,
     principalId: undefined,
     companyId: undefined,
     registrationId: undefined,
@@ -242,7 +304,7 @@ test('runCli routes query-provisional-agent through the existing client helper w
   const queryCalls: Array<{ provisionalAgentRef: string }> = [];
 
   const exitCode = await runCli(['query-provisional-agent', '--provisional-agent-ref', 'prov-agent-2'], {
-    createClient: () => ({
+    createClient: () => withRuntimeResultCommit({
       queryProvisionalAgent: async (input: { provisionalAgentRef: string }) => {
         queryCalls.push(input);
         return {
@@ -288,7 +350,7 @@ test('runCli writes only non-secret local onboarding state after a successful cl
       '--claim-token',
       'claim-token-3',
     ], {
-      createClient: () => ({
+      createClient: () => withRuntimeResultCommit({
         claimProvisionalAgent: async (input: {
           provisionalAgentRef: string;
           claimToken: string;
@@ -297,6 +359,7 @@ test('runCli writes only non-secret local onboarding state after a successful cl
           claimCalls.push(input);
           return {
             provisionalAgentRef: input.provisionalAgentRef,
+            agentId: 'agent-3',
             registrationId: 'areg-3',
             principalId: 'principal-claimed',
             companyId: 'company-claimed',
@@ -334,6 +397,7 @@ test('runCli writes only non-secret local onboarding state after a successful cl
     }]);
     assert.deepEqual(printed, [{
       provisionalAgentRef: 'prov-agent-3',
+      agentId: 'agent-3',
       registrationId: 'areg-3',
       principalId: 'principal-claimed',
       companyId: 'company-claimed',
@@ -342,6 +406,7 @@ test('runCli writes only non-secret local onboarding state after a successful cl
     }]);
     assert.deepEqual(JSON.parse(readFileSync(statePath, 'utf8')), {
       tenantId: 'tenant-a',
+      agentId: 'agent-3',
       principalId: 'principal-claimed',
       companyId: 'company-claimed',
       registrationId: 'areg-3',
@@ -354,13 +419,67 @@ test('runCli writes only non-secret local onboarding state after a successful cl
   }
 });
 
+test('runCli claim-provisional-agent persists nested registration identity fields from the SIM claim response shape', async () => {
+  const tempDirectory = mkdtempSync(path.join(tmpdir(), 'bidvia-cli-onboarding-actions-claim-nested-'));
+  const statePath = path.join(tempDirectory, 'onboarding-state.json');
+
+  const exitCode = await runCli([
+    'claim-provisional-agent',
+    '--provisional-agent-ref',
+    'prov-agent-claim-nested',
+    '--claim-token',
+    'claim-token-nested',
+  ], {
+    createClient: () => withRuntimeResultCommit({
+      claimProvisionalAgent: async () => ({
+        provisionalAgentRef: 'prov-agent-claim-nested',
+        registration: {
+          agent_registration_id: 'areg-nested',
+          agent_id: 'agent-nested',
+          principal_id: 'principal-nested',
+          tenant_id: 'company-nested',
+        },
+        sessionId: 'session-secret-should-not-persist',
+      }),
+    }) as never,
+    resolveExecutionContext: () => ({
+      tenantId: 'tenant-nested',
+      sessionId: 'session-nested',
+    }),
+    resolveProcessEnv: () => ({
+      BIDVIA_TENANT_ID: 'tenant-nested',
+      BIDVIA_SESSION_ID: 'session-nested',
+      BIDVIA_STATE_PATH: statePath,
+    }),
+    readLocalOnboardingState: async () => null,
+    now: () => '2026-04-02T12:05:15.000Z',
+    printJson: () => {},
+    printLine: () => {
+      throw new Error('claim-provisional-agent should not print help lines');
+    },
+  });
+
+  assert.equal(exitCode, 0);
+    assert.deepEqual(JSON.parse(readFileSync(statePath, 'utf8')), {
+      tenantId: 'tenant-nested',
+      agentId: 'agent-nested',
+      principalId: 'principal-nested',
+      companyId: 'company-nested',
+      registrationId: 'areg-nested',
+    lastCompletedStep: 'claim-provisional-agent',
+    createdAt: '2026-04-02T12:05:15.000Z',
+    updatedAt: '2026-04-02T12:05:15.000Z',
+  });
+});
+
 test('runCli claim-provisional-agent does not persist stale claimed identity fields when current claim omits them', async () => {
   const tempDirectory = mkdtempSync(path.join(tmpdir(), 'bidvia-cli-onboarding-actions-claim-fresh-'));
   const statePath = path.join(tempDirectory, 'onboarding-state.json');
 
   writeFileSync(statePath, JSON.stringify({
-    tenantId: 'tenant-stale',
-    principalId: 'principal-stale',
+      tenantId: 'tenant-stale',
+      agentId: 'agent-stale',
+      principalId: 'principal-stale',
     companyId: 'company-stale',
     registrationId: 'areg-stale',
     lastCompletedStep: 'claim-provisional-agent',
@@ -375,7 +494,7 @@ test('runCli claim-provisional-agent does not persist stale claimed identity fie
     '--claim-token',
     'claim-token-fresh',
   ], {
-    createClient: () => ({
+    createClient: () => withRuntimeResultCommit({
       claimProvisionalAgent: async () => ({
         provisionalAgentRef: 'prov-agent-claim-fresh',
         sessionId: 'session-secret-should-not-persist',
@@ -417,7 +536,7 @@ test('runCli writes provisional create/query progress into local onboarding stat
       '--provisional-agent-ref',
       'prov-agent-progress',
     ], {
-      createClient: () => ({
+      createClient: () => withRuntimeResultCommit({
         createProvisionalAgent: async () => ({
           provisionalAgentRef: 'prov-agent-progress',
           created: true,
@@ -449,7 +568,7 @@ test('runCli writes provisional create/query progress into local onboarding stat
       '--provisional-agent-ref',
       'prov-agent-progress',
     ], {
-      createClient: () => ({
+      createClient: () => withRuntimeResultCommit({
         queryProvisionalAgent: async () => ({
           provisionalAgentRef: 'prov-agent-progress',
           status: 'pending-claim',
@@ -480,6 +599,172 @@ test('runCli writes provisional create/query progress into local onboarding stat
   }
 });
 
+test('runCli agent-self-service preserves existing claimed registration context when the response omits it', async () => {
+  const tempDirectory = mkdtempSync(path.join(tmpdir(), 'bidvia-cli-agent-self-service-state-'));
+  const statePath = path.join(tempDirectory, 'onboarding-state.json');
+
+  writeFileSync(statePath, JSON.stringify({
+      tenantId: 'tenant-existing',
+      agentId: 'agent-existing',
+      principalId: 'principal-existing',
+    companyId: 'company-existing',
+    registrationId: 'areg-existing',
+    sessionId: 'sess-existing',
+    lastCompletedStep: 'claim-provisional-agent',
+    createdAt: '2026-04-11T17:00:00Z',
+    updatedAt: '2026-04-11T17:01:00Z',
+  }, null, 2), 'utf8');
+
+  const exitCode = await runCli([
+    'agent-self-service',
+    '--registration-id',
+    'areg-existing',
+    '--input',
+    '{"now":"2026-04-11T17:26:00Z","taskDispatchAcceptance":{"acceptsTaskDispatches":true}}',
+  ], {
+    createClient: () => ({
+      patchAgentSelfService: async () => ({
+        taskDispatchAcceptance: {
+          accepts_task_dispatches: true,
+        },
+      }),
+    }) as never,
+    resolveProcessEnv: () => ({
+      BIDVIA_STATE_PATH: statePath,
+    }),
+    now: () => '2026-04-11T17:26:00Z',
+    printJson: () => {},
+    printLine: () => {},
+  });
+
+  assert.equal(exitCode, 0);
+    assert.deepEqual(JSON.parse(readFileSync(statePath, 'utf8')), {
+      tenantId: 'tenant-existing',
+      agentId: 'agent-existing',
+      principalId: 'principal-existing',
+    companyId: 'company-existing',
+    registrationId: 'areg-existing',
+    sessionId: 'sess-existing',
+    lastCompletedStep: 'agent-self-service',
+    createdAt: '2026-04-11T17:00:00Z',
+    updatedAt: '2026-04-11T17:26:00Z',
+  });
+});
+
+test('runCli account-agent-dispatch-authority-request preserves existing claimed continuation context when the response omits claimed identity fields', async () => {
+  const tempDirectory = mkdtempSync(path.join(tmpdir(), 'bidvia-cli-dispatch-authority-state-'));
+  const statePath = path.join(tempDirectory, 'onboarding-state.json');
+
+  writeFileSync(statePath, JSON.stringify({
+    tenantId: 'tenant-existing',
+    agentId: 'agent-existing',
+    principalId: 'principal-existing',
+    companyId: 'company-existing',
+    registrationId: 'areg-existing',
+    sessionId: 'sess-existing',
+    lastCompletedStep: 'claim-provisional-agent',
+    createdAt: '2026-04-11T17:00:00Z',
+    updatedAt: '2026-04-11T17:01:00Z',
+  }, null, 2), 'utf8');
+
+  const printed: unknown[] = [];
+
+  const exitCode = await runCli([
+    'account-agent-dispatch-authority-request',
+    '--agent-id',
+    'agent-existing',
+  ], {
+    createClient: () => ({
+      createAccountAgentDispatchAuthorityRequest: async () => ({
+        request: {
+          dispatch_authority_activation_request_id: 'daar-1',
+          status: 'OPEN',
+        },
+      }),
+    }) as never,
+    resolveProcessEnv: () => ({
+      BIDVIA_STATE_PATH: statePath,
+    }),
+    now: () => '2026-04-11T17:28:00Z',
+    printJson: (value) => {
+      printed.push(value);
+    },
+    printLine: () => {},
+  });
+
+  assert.equal(exitCode, 0);
+  assert.deepEqual(printed, [{
+    request: {
+      dispatch_authority_activation_request_id: 'daar-1',
+      status: 'OPEN',
+    },
+  }]);
+  assert.deepEqual(JSON.parse(readFileSync(statePath, 'utf8')), {
+    tenantId: 'tenant-existing',
+    agentId: 'agent-existing',
+    principalId: 'principal-existing',
+    companyId: 'company-existing',
+    registrationId: 'areg-existing',
+    sessionId: 'sess-existing',
+    lastCompletedStep: 'account-agent-dispatch-authority-request',
+    createdAt: '2026-04-11T17:00:00Z',
+    updatedAt: '2026-04-11T17:28:00Z',
+  });
+});
+
+test('runCli query-provisional-agent preserves existing claimed continuation context when the response omits claimed identity fields', async () => {
+  const tempDirectory = mkdtempSync(path.join(tmpdir(), 'bidvia-cli-query-preserve-'));
+  const statePath = path.join(tempDirectory, 'onboarding-state.json');
+
+  writeFileSync(statePath, JSON.stringify({
+    tenantId: 'tenant-existing',
+    agentId: 'agent-existing',
+    principalId: 'principal-existing',
+    companyId: 'company-existing',
+    registrationId: 'areg-existing',
+    sessionId: 'sess-existing',
+    lastCompletedStep: 'claim-provisional-agent',
+    createdAt: '2026-04-11T17:00:00Z',
+    updatedAt: '2026-04-11T17:01:00Z',
+  }, null, 2), 'utf8');
+
+  const exitCode = await runCli([
+    'query-provisional-agent',
+    '--provisional-agent-ref',
+    'prov-agent-preserve',
+  ], {
+    createClient: () => withRuntimeResultCommit({
+      queryProvisionalAgent: async () => ({
+        provisionalAgentRef: 'prov-agent-preserve',
+        status: 'pending-claim',
+      }),
+    }) as never,
+    resolveProcessEnv: () => ({
+      BIDVIA_TENANT_ID: 'tenant-existing',
+      BIDVIA_STATE_PATH: statePath,
+    }),
+    readLocalOnboardingState: async () => JSON.parse(readFileSync(statePath, 'utf8')) as Record<string, unknown>,
+    now: () => '2026-04-11T17:30:00Z',
+    printJson: () => {},
+    printLine: () => {
+      throw new Error('query-provisional-agent should not print help lines');
+    },
+  });
+
+  assert.equal(exitCode, 0);
+  assert.deepEqual(JSON.parse(readFileSync(statePath, 'utf8')), {
+    tenantId: 'tenant-existing',
+    agentId: 'agent-existing',
+    principalId: 'principal-existing',
+    companyId: 'company-existing',
+    registrationId: 'areg-existing',
+    sessionId: 'sess-existing',
+    lastCompletedStep: 'query-provisional-agent',
+    createdAt: '2026-04-11T17:00:00Z',
+    updatedAt: '2026-04-11T17:30:00Z',
+  });
+});
+
 test('runCli onboarding action writes honor injected BIDVIA_STATE_PATH instead of process env drift', async () => {
   const tempDirectory = mkdtempSync(path.join(tmpdir(), 'bidvia-cli-onboarding-actions-injected-path-'));
   const injectedStatePath = path.join(tempDirectory, 'injected-onboarding-state.json');
@@ -492,7 +777,7 @@ test('runCli onboarding action writes honor injected BIDVIA_STATE_PATH instead o
       '--provisional-agent-ref',
       'prov-agent-injected-path',
     ], {
-      createClient: () => ({
+      createClient: () => withRuntimeResultCommit({
         createProvisionalAgent: async () => ({
           provisionalAgentRef: 'prov-agent-injected-path',
           created: true,
@@ -535,7 +820,7 @@ test('runCli reports local onboarding state write failures separately from trans
       '--provisional-agent-ref',
       'prov-agent-write-failure',
     ], {
-      createClient: () => ({
+      createClient: () => withRuntimeResultCommit({
         createProvisionalAgent: async () => ({
           provisionalAgentRef: 'prov-agent-write-failure',
           created: true,
@@ -603,7 +888,7 @@ test('runCli create/query rerun after a prior claim preserves governed-run ident
       '--provisional-agent-ref',
       'prov-agent-reset',
     ], {
-      createClient: () => ({
+      createClient: () => withRuntimeResultCommit({
         createProvisionalAgent: async () => ({
           provisionalAgentRef: 'prov-agent-reset',
           created: true,
@@ -778,6 +1063,83 @@ test('runCli returns structured missing-context failures when provisional onboar
   }
 });
 
+test('runCli claim-provisional-agent can continue from locally persisted sign-in session context when env is absent', async () => {
+  const tempDirectory = mkdtempSync(path.join(tmpdir(), 'bidvia-cli-claim-from-sign-in-'));
+  const statePath = path.join(tempDirectory, 'onboarding-state.json');
+  const restoreStatePath = setEnvVar('BIDVIA_STATE_PATH', statePath);
+  const createClientContexts: unknown[] = [];
+  const claimCalls: Array<{ provisionalAgentRef: string; claimToken: string; now: string }> = [];
+
+  try {
+    const createClient = ((_env?: unknown, contextOverride?: unknown) => {
+      createClientContexts.push(contextOverride);
+      return {
+        signIn: async () => ({
+          tenantId: 'tenant-sign-in',
+          sessionId: 'session-sign-in',
+          principalId: 'principal-sign-in',
+        }),
+        claimProvisionalAgent: async (input: { provisionalAgentRef: string; claimToken: string; now: string }) => {
+          claimCalls.push(input);
+          return {
+            provisionalAgentRef: input.provisionalAgentRef,
+            registrationId: 'areg-claim-from-local-session',
+            principalId: 'principal-claim-from-local-session',
+            companyId: 'company-claim-from-local-session',
+          };
+        },
+      } as never;
+    }) as never;
+
+    const signInExitCode = await runCli([
+      'sign-in',
+      '--input',
+      '{"email":"person@example.com","password":"secret-1","now":"2026-04-10T10:02:00Z"}',
+    ], {
+      createClient,
+      resolveProcessEnv: () => ({
+        BIDVIA_STATE_PATH: statePath,
+      }),
+      now: () => '2026-04-10T10:02:30Z',
+      printJson: () => {},
+      printLine: () => {
+        throw new Error('sign-in should not print help lines');
+      },
+    });
+    const claimExitCode = await runCli([
+      'claim-provisional-agent',
+      '--provisional-agent-ref',
+      'prov-agent-claim-from-local-session',
+      '--claim-token',
+      'claim-token-claim-from-local-session',
+    ], {
+      createClient,
+      resolveProcessEnv: () => ({
+        BIDVIA_STATE_PATH: statePath,
+      }),
+      now: () => '2026-04-10T10:03:00Z',
+      printJson: () => {},
+      printLine: () => {
+        throw new Error('claim-provisional-agent should not print help lines');
+      },
+    });
+
+    assert.equal(signInExitCode, 0);
+    assert.equal(claimExitCode, 0);
+    assert.deepEqual(createClientContexts, [
+      { tenantId: undefined, agentId: undefined, principalId: undefined, companyId: undefined, registrationId: undefined, sessionId: undefined, adminSessionId: undefined },
+      { tenantId: 'tenant-sign-in', agentId: undefined, principalId: 'principal-sign-in', companyId: undefined, registrationId: undefined, sessionId: 'session-sign-in' },
+    ]);
+    assert.deepEqual(claimCalls, [{
+      provisionalAgentRef: 'prov-agent-claim-from-local-session',
+      claimToken: 'claim-token-claim-from-local-session',
+      now: '2026-04-10T10:03:00Z',
+    }]);
+  } finally {
+    restoreStatePath();
+  }
+});
+
 test('runCli returns structured transport failures and does not write local onboarding state when claim-provisional-agent fails', async () => {
   const tempDirectory = mkdtempSync(path.join(tmpdir(), 'bidvia-cli-onboarding-actions-failure-'));
   const statePath = path.join(tempDirectory, 'onboarding-state.json');
@@ -847,6 +1209,8 @@ test('runCli returns structured transport failures and does not write local onbo
 
 test('runCli prints missing effective context with missing source attribution on a fresh machine', async () => {
   const printed: unknown[] = [];
+  const identitySessionPlane = buildIdentitySessionPlaneView();
+  const taskPlane = buildTaskPlaneView();
 
   const exitCode = await runCli(['context', 'show'], {
     createClient: () => {
@@ -866,6 +1230,15 @@ test('runCli prints missing effective context with missing source attribution on
   assert.deepEqual(printed, [{
     command: 'context show',
     scope: 'local-only',
+    identitySessionPlane: {
+      adoptionStatus: identitySessionPlane.adoptionStatus,
+      sessionTruth: identitySessionPlane.sessionTruth,
+    },
+    taskPlane: {
+      adoptionStatus: taskPlane.adoptionStatus,
+      localShellBoundary: taskPlane.localShellBoundary,
+      timeoutTruth: taskPlane.timeoutTruth,
+    },
     journeyBoundary: {
       publicProvisional: {
         label: 'Public Provisional',
@@ -879,14 +1252,18 @@ test('runCli prints missing effective context with missing source attribution on
         status: 'not-ready',
       },
     },
-    context: {
-      tenantId: {
-        value: null,
-        source: 'missing',
-      },
-      principalId: {
-        value: null,
-        source: 'missing',
+      context: {
+        tenantId: {
+          value: null,
+          source: 'missing',
+        },
+        agentId: {
+          value: null,
+          source: 'missing',
+        },
+        principalId: {
+          value: null,
+          source: 'missing',
       },
       companyId: {
         value: null,
@@ -914,6 +1291,8 @@ test('runCli prints missing effective context with missing source attribution on
 
 test('runCli prints effective context with env precedence and local onboarding state fallback while keeping sessions secret-safe', async () => {
   const printed: unknown[] = [];
+  const identitySessionPlane = buildIdentitySessionPlaneView();
+  const taskPlane = buildTaskPlaneView();
   const tempDirectory = mkdtempSync(path.join(tmpdir(), 'bidvia-cli-context-show-'));
   const statePath = path.join(tempDirectory, 'onboarding-state.json');
   const restoreStatePath = setEnvVar('BIDVIA_STATE_PATH', statePath);
@@ -929,7 +1308,7 @@ test('runCli prints effective context with env precedence and local onboarding s
       '--claim-token',
       'claim-token-context-show',
     ], {
-      createClient: () => ({
+      createClient: () => withRuntimeResultCommit({
         claimProvisionalAgent: async () => ({
           registrationId: 'areg-local',
           principalId: 'principal-local',
@@ -970,6 +1349,15 @@ test('runCli prints effective context with env precedence and local onboarding s
     assert.deepEqual(printed, [{
       command: 'context show',
       scope: 'local-only',
+      identitySessionPlane: {
+        adoptionStatus: identitySessionPlane.adoptionStatus,
+        sessionTruth: identitySessionPlane.sessionTruth,
+      },
+      taskPlane: {
+        adoptionStatus: taskPlane.adoptionStatus,
+        localShellBoundary: taskPlane.localShellBoundary,
+        timeoutTruth: taskPlane.timeoutTruth,
+      },
       journeyBoundary: {
         publicProvisional: {
           label: 'Public Provisional',
@@ -987,6 +1375,10 @@ test('runCli prints effective context with env precedence and local onboarding s
         tenantId: {
           value: 'tenant-env',
           source: 'env',
+        },
+        agentId: {
+          value: null,
+          source: 'missing',
         },
         principalId: {
           value: 'principal-env',
@@ -1024,6 +1416,8 @@ test('runCli prints effective context with env precedence and local onboarding s
 
 test('runCli prints a local-only whoami summary with env precedence, local-state fallback, and explicit non-authoritative login guidance', async () => {
   const printed: unknown[] = [];
+  const identitySessionPlane = buildIdentitySessionPlaneView();
+  const taskPlane = buildTaskPlaneView();
   const tempDirectory = mkdtempSync(path.join(tmpdir(), 'bidvia-cli-whoami-'));
   const statePath = path.join(tempDirectory, 'onboarding-state.json');
   const restoreStatePath = setEnvVar('BIDVIA_STATE_PATH', statePath);
@@ -1036,7 +1430,7 @@ test('runCli prints a local-only whoami summary with env precedence, local-state
       '--claim-token',
       'claim-token-whoami',
     ], {
-      createClient: () => ({
+      createClient: () => withRuntimeResultCommit({
         claimProvisionalAgent: async () => ({
           registrationId: 'areg-local',
           principalId: 'principal-local',
@@ -1085,6 +1479,15 @@ test('runCli prints a local-only whoami summary with env precedence, local-state
       identityKind: 'effective-local-context',
       authoritativeRemoteLoginState: false,
       guidance: 'Reports effective local identity/context from env and local onboarding state only. This is not proof of platform login and does not replace /account/me.',
+      identitySessionPlane: {
+        adoptionStatus: identitySessionPlane.adoptionStatus,
+        sessionTruth: identitySessionPlane.sessionTruth,
+      },
+      taskPlane: {
+        adoptionStatus: taskPlane.adoptionStatus,
+        localShellBoundary: taskPlane.localShellBoundary,
+        timeoutTruth: taskPlane.timeoutTruth,
+      },
       journeyBoundary: {
         publicProvisional: {
           label: 'Public Provisional',
@@ -1102,6 +1505,10 @@ test('runCli prints a local-only whoami summary with env precedence, local-state
         tenantId: {
           value: 'tenant-env',
           source: 'env',
+        },
+        agentId: {
+          value: null,
+          source: 'missing',
         },
         principalId: {
           value: 'principal-env',
@@ -1141,6 +1548,8 @@ test('runCli prints a local-only whoami summary with env precedence, local-state
 
 test('runCli prints a missing local-only whoami summary when no env or onboarding context is available', async () => {
   const printed: unknown[] = [];
+  const identitySessionPlane = buildIdentitySessionPlaneView();
+  const taskPlane = buildTaskPlaneView();
 
   const exitCode = await runCli(['whoami'], {
     createClient: () => {
@@ -1163,6 +1572,15 @@ test('runCli prints a missing local-only whoami summary when no env or onboardin
     identityKind: 'effective-local-context',
     authoritativeRemoteLoginState: false,
     guidance: 'Reports effective local identity/context from env and local onboarding state only. This is not proof of platform login and does not replace /account/me.',
+    identitySessionPlane: {
+      adoptionStatus: identitySessionPlane.adoptionStatus,
+      sessionTruth: identitySessionPlane.sessionTruth,
+    },
+    taskPlane: {
+      adoptionStatus: taskPlane.adoptionStatus,
+      localShellBoundary: taskPlane.localShellBoundary,
+      timeoutTruth: taskPlane.timeoutTruth,
+    },
     journeyBoundary: {
       publicProvisional: {
         label: 'Public Provisional',
@@ -1178,6 +1596,10 @@ test('runCli prints a missing local-only whoami summary when no env or onboardin
     },
     identity: {
       tenantId: {
+        value: null,
+        source: 'missing',
+      },
+      agentId: {
         value: null,
         source: 'missing',
       },

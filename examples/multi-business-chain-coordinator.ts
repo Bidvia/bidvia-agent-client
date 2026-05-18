@@ -53,10 +53,10 @@ const coordinatorPlan = buildMultiBusinessChainCoordinatorPlan({
       sourceMatchId: 'match-1',
       requesterActorId: 'actor-1',
       requesterCompanyId: 'company-1',
-      riskTier: 'medium',
+      riskTier: 'HIGH',
       policyVersion: 'policy-v1',
       approvalMatrixVersion: 'matrix-v1',
-      actionType: 'buyer_contact_request',
+      actionType: 'CONTACT_SHARE',
       now: '2026-03-27T10:03:00Z',
     },
     approveConnectionRequest: {

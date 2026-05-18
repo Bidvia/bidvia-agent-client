@@ -10,6 +10,7 @@ const expectedMcpServerToolNames = [
   'industry-universe-plan-preview',
   'industry-universe-review-packet-preview',
   'industry-universe-review-packet-export',
+  'industry-universe-execution',
   'connection-approval-plan-preview',
   'connection-approval-review-packet-preview',
   'connection-approval-review-packet-export',
@@ -37,8 +38,28 @@ const expectedMcpServerToolNames = [
   'sync-upload-execution',
   'evidence-execution',
   'proposal-execution',
+  'public-integration-apps-read',
+  'account-integration-apps-read',
+  'account-integration-installations-read',
+  'account-integration-capabilities-read',
+  'account-agent-integration-eligibility-read',
   'query-provisional-agent-read',
+  'account-agent-closure-status-read',
+  'account-agent-execution-status-read',
+  'account-agent-execution-listing-status-read',
+  'account-agent-execution-opportunity-status-read',
+  'account-agent-execution-opportunity-end-state-read',
+  'account-agent-execution-materialization-status-read',
   'agent-readiness-read',
+  'claimant-precondition-inspect-read',
+  'claimant-readiness-inspect-read',
+  'operator-handoff-consume-read',
+  'operator-closure-inspect-read',
+  'platform-managed-entry-inspect-read',
+  'platform-managed-readiness-inspect-read',
+  'claimant-handoff-inspect-read',
+  'claimant-handoff-opportunity-status-read',
+  'claimant-handoff-opportunity-end-state-read',
   'agent-summary-read',
   'agent-registrations-read',
   'agent-registration-read',
@@ -51,8 +72,36 @@ const expectedMcpServerToolNames = [
   'participation-state-read',
   'task-dispatches-read',
   'task-dispatch-read',
+  'notification-read',
+  'governed-work-closure-read',
+  'acknowledge-notification-execution',
   'create-provisional-agent-execution',
   'claim-provisional-agent-execution',
+  'create-account-integration-app-execution',
+  'create-account-integration-installation-execution',
+  'connect-account-integration-installation-execution',
+  'account-agent-execution-presence-execution',
+  'account-agent-execution-sync-upload-execution',
+  'account-agent-execution-sync-download-execution',
+  'account-agent-execution-evidence-execution',
+  'account-agent-execution-proposal-execution',
+  'account-agent-execution-listing-create-execution',
+  'account-agent-execution-listing-activate-execution',
+  'create-task-dispatch-outcome-execution',
+  'create-task-dispatch-evidence-bundle-execution',
+  'create-task-dispatch-confirmation-cycle-execution',
+  'claimant-precondition-establish-canonical-company-public-execution',
+  'claimant-readiness-repair-execution',
+  'operator-progression-match-execution',
+  'operator-progression-connect-execution',
+  'operator-progression-approve-execution',
+  'operator-progression-package-export-execution',
+  'operator-closure-commercial-action-run-execution',
+  'platform-managed-progression-run-execution',
+  'claimant-task-entry-run-execution',
+  'account-agent-authorization-refresh-execution',
+  'account-agent-external-binding-execution',
+  'operator-dispatch-authority-decision-execution',
   'download-sync-execution',
   'create-participation-state-execution',
   'create-lease-execution',
@@ -68,9 +117,6 @@ const expectedMcpServerToolNames = [
   'agent-authority-profile-write-execution',
   'agent-authority-ladder-write-execution',
   'agent-capability-profile-write-execution',
-  'create-commercial-action-execution',
-  'request-commercial-action-approval-execution',
-  'execute-commercial-action-execution',
 ] as const;
 
 const runLocalMcpServerWithDependencies = runLocalMcpServer as unknown as (
@@ -182,11 +228,33 @@ test('local MCP stdio server exposes bounded tool metadata and handles review-sa
 
   runLocalMcpServerWithDependencies(input, output, {
     createExecutionClient: () => ({
+      options: {
+        context: {
+          tenantId: 'tenant-a',
+          principalId: 'principal-a',
+          companyId: 'company-a',
+          registrationId: 'areg-a',
+        },
+      },
       async postHeartbeat(receivedInput: { expiresAt: string }) {
         return {
           ok: true,
           route: 'heartbeat',
           expiresAt: receivedInput.expiresAt,
+        };
+      },
+      async createListing() {
+        return { ok: true, route: 'createListing' };
+      },
+      async activateListing() {
+        return { ok: true, route: 'activateListing' };
+      },
+      async generateMatchCandidates() {
+        return { ok: true, route: 'generateMatchCandidates' };
+      },
+      async commitRuntimeResult() {
+        return {
+          outcomeRef: 'outcome://test/runtime-commit',
         };
       },
     }) as never,
@@ -245,6 +313,8 @@ test('local MCP stdio server exposes bounded tool metadata and handles review-sa
           localCapabilityRiskTier: string;
           accessContextFamily: string;
           requiredContext: string[];
+          runnable: boolean;
+          blockedBy: string | null;
         }>;
       };
     };
@@ -281,6 +351,8 @@ test('local MCP stdio server exposes bounded tool metadata and handles review-sa
         localCapabilityRiskTier: 'runtime-execution',
         accessContextFamily: 'registration',
         requiredContext: ['tenantId', 'registrationId', 'principalId'],
+        runnable: true,
+        blockedBy: null,
       },
     );
 
@@ -320,6 +392,21 @@ test('local MCP stdio server exposes bounded tool metadata and handles review-sa
       route: 'heartbeat',
       expiresAt: '2026-03-29T10:05:00Z',
     });
+
+    input.write(encodeFrame({
+      jsonrpc: '2.0',
+      id: 41,
+      method: 'tools/call',
+      params: {
+        name: 'industry-universe-execution',
+        arguments: createIndustryUniverseArguments(),
+      },
+    }));
+    const scenarioExecutionResponse = await readFrame(output) as { result: { content: Array<{ text: string }> } };
+    const scenarioExecutionPayload = JSON.parse(scenarioExecutionResponse.result.content[0]!.text);
+    assert.equal(scenarioExecutionPayload.toolName, 'industry-universe-execution');
+    assert.equal(scenarioExecutionPayload.outputMode, 'execution-result');
+    assert.equal(scenarioExecutionPayload.result.executionResult.executionResult.status, 'succeeded');
 
     input.write(encodeFrame({
       jsonrpc: '2.0',
@@ -796,6 +883,11 @@ test('local MCP stdio server dispatches widened Task 2 execution helpers and ret
           displayName: receivedInput.displayName,
         };
       },
+      async commitRuntimeResult() {
+        return {
+          outcomeRef: 'outcome://test/runtime-commit',
+        };
+      },
     }) as never,
   });
 
@@ -838,7 +930,7 @@ test('local MCP stdio server dispatches widened Task 2 execution helpers and ret
       id: 502,
       error: {
         code: -32000,
-        message: 'MCP tool create-commercial-action-execution is missing required local execution context: principalId, companyId. Use bidvia route-context-matrix to confirm the next Bidvia context family, then set BIDVIA_PRINCIPAL_ID and BIDVIA_COMPANY_ID before retrying this local stdio MCP tool.',
+        message: 'unknown MCP tool: create-commercial-action-execution',
       },
     });
   } finally {

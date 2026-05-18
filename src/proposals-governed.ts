@@ -1,4 +1,5 @@
 import type {
+  BidviaEnterpriseIntegrationPlaneHelperGroup,
   BidviaGovernedAuthorizedUseReceipt,
   BidviaGovernedParticipationAuthority,
   BidviaGovernedProposalRecommendation,
@@ -15,6 +16,7 @@ import {
   buildScenarioEnvelope,
   buildScenarioRouteStep,
 } from './scenarios.js';
+import { getEnterpriseIntegrationPlaneHelperGroup } from './enterprise-integration-plane.js';
 import { buildCompletedScenarioReviewResult } from './verification.js';
 
 export {
@@ -122,4 +124,8 @@ export function buildGovernedProposalReviewUseResult(
     verificationBundle,
     reviewPacket,
   };
+}
+
+export function buildGovernedProposalEnterpriseBoundary(): BidviaEnterpriseIntegrationPlaneHelperGroup {
+  return getEnterpriseIntegrationPlaneHelperGroup('governed-proposals');
 }

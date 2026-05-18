@@ -1,0 +1,119 @@
+import type { BidviaPublicRuntimeInterpretationReport } from './contracts.js';
+
+export interface BidviaPublicRuntimeInterpretationProbeInput {
+  baseUrl: string;
+}
+
+export interface BidviaPublicRuntimeInterpretationProbeDependencies {
+  fetchImpl?: typeof fetch;
+  now?: () => string;
+}
+
+function resolveFetchImplementation(fetchImpl?: typeof fetch): typeof fetch {
+  if (fetchImpl) {
+    return fetchImpl;
+  }
+
+  if (typeof globalThis.fetch !== 'function') {
+    throw new Error('public-runtime-interpretation-probe requires a fetch implementation.');
+  }
+
+  return globalThis.fetch;
+}
+
+function buildProbeUrl(baseUrl: string, pathname: '/healthz' | '/readyz'): string {
+  return new URL(pathname, baseUrl).toString();
+}
+
+function buildFailedReport(
+  baseUrl: string,
+  generatedAt: string,
+  message: string,
+): BidviaPublicRuntimeInterpretationReport {
+  return {
+    command: 'public-runtime-interpretation-probe',
+    scope: 'local-only',
+    generatedAt,
+    baseUrl,
+    family: 'public-runtime-interpretation',
+    proofClass: 'baseline-interpretation',
+    status: 'failed',
+    summary: {
+      healthzStatus: null,
+      readyzStatus: null,
+      releaseClosureState: null,
+      terminalReleaseConvergenceState: null,
+    },
+    readbacks: {
+      healthz: {},
+      readyz: {},
+    },
+    failure: {
+      code: 'runtime_probe_failed',
+      message,
+    },
+  };
+}
+
+async function readJson(
+  fetchImpl: typeof fetch,
+  url: string,
+): Promise<Record<string, unknown>> {
+  const response = await fetchImpl(url);
+
+  if (!response.ok) {
+    throw new Error(`public-runtime-interpretation-probe failed for ${url} with status ${response.status}.`);
+  }
+
+  const payload = await response.json() as unknown;
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+    throw new Error(`public-runtime-interpretation-probe expected a JSON object from ${url}.`);
+  }
+
+  return payload as Record<string, unknown>;
+}
+
+function readStringField(payload: Record<string, unknown>, key: string): string | null {
+  const value = payload[key];
+  return typeof value === 'string' ? value : null;
+}
+
+export async function buildPublicRuntimeInterpretationReport(
+  input: BidviaPublicRuntimeInterpretationProbeInput,
+  dependencies: BidviaPublicRuntimeInterpretationProbeDependencies = {},
+): Promise<BidviaPublicRuntimeInterpretationReport> {
+  const fetchImpl = resolveFetchImplementation(dependencies.fetchImpl);
+  const generatedAt = dependencies.now?.() ?? new Date().toISOString();
+
+  try {
+    const healthz = await readJson(fetchImpl, buildProbeUrl(input.baseUrl, '/healthz'));
+    const readyz = await readJson(fetchImpl, buildProbeUrl(input.baseUrl, '/readyz'));
+
+    return {
+      command: 'public-runtime-interpretation-probe',
+      scope: 'local-only',
+      generatedAt,
+      baseUrl: input.baseUrl,
+      family: 'public-runtime-interpretation',
+      proofClass: 'baseline-interpretation',
+      status: 'passed',
+      summary: {
+        healthzStatus: readStringField(healthz, 'status'),
+        readyzStatus: readStringField(readyz, 'status'),
+        releaseClosureState: readStringField(healthz, 'release_closure_state'),
+        terminalReleaseConvergenceState: readStringField(healthz, 'terminal_release_convergence_state'),
+      },
+      readbacks: {
+        healthz: {
+          ...healthz,
+        },
+        readyz: {
+          ...readyz,
+        },
+      },
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'public-runtime-interpretation-probe failed unexpectedly.';
+    return buildFailedReport(input.baseUrl, generatedAt, message);
+  }
+}

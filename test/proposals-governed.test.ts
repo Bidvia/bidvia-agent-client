@@ -15,6 +15,7 @@ import type {
 import {
   bidviaGovernedParticipationAuthorities,
   bidviaGovernedProposalSurfaceKinds,
+  buildGovernedProposalEnterpriseBoundary,
   buildGovernedProposalReviewUsePlan,
   buildGovernedProposalReviewUseResult,
 } from '../src/proposals-governed.ts';
@@ -176,6 +177,20 @@ test('buildGovernedProposalReviewUsePlan rejects local publish or adopt authorit
     }),
     /local authority must stay bounded to recommendation, assessment, or authorized-use only/,
   );
+});
+
+test('governed proposal helpers expose a bounded enterprise integration boundary', () => {
+  const boundary = buildGovernedProposalEnterpriseBoundary();
+
+  assert.equal(boundary.groupKey, 'governed-proposals');
+  assert.deepEqual(boundary.helperKeys, [
+    'buildGovernedProposalReviewUsePlan',
+    'buildGovernedProposalReviewUseResult',
+  ]);
+  assert.equal(boundary.broaderEnterpriseAuthorityClaimed, false);
+  assert.equal(boundary.broaderSystemAuthorityClaimed, false);
+  assert.equal(boundary.payloadPacketStatus, 'blocked-pending-packet');
+  assert.equal(boundary.blockedBy, 'core-plane-payload-packet-not-yet-frozen');
 });
 
 test('buildGovernedProposalReviewUseResult returns review-safe recommendation assessment and authorized-use outputs', () => {

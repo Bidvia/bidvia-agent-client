@@ -1,3 +1,9 @@
+import {
+  buildIdentitySessionPlaneView,
+  listIdentitySessionPlaneCommandHints,
+} from './identity-session-plane.js';
+import { getWorkflowStageLocalSemantics } from './workflow-stage-plane.js';
+
 export type BidviaOnboardingJourneyKey =
   | 'public-first-onboarding'
   | 'governed-run';
@@ -6,9 +12,7 @@ export type BidviaOnboardingJourneyHelperKey =
   | 'createProvisionalAgent'
   | 'queryProvisionalAgent'
   | 'claimProvisionalAgent'
-  | 'getAgentReadiness'
-  | 'postHeartbeat'
-  | 'createCommercialAction';
+  | 'getAgentReadiness';
 
 export type BidviaOnboardingJourneyRelevance =
   | 'public-first-common'
@@ -27,6 +31,7 @@ export interface BidviaOnboardingJourneyDefinition {
   helperSteps: ReadonlyArray<{
     helperKey: BidviaOnboardingJourneyHelperKey;
     journeyStage: BidviaOnboardingJourneyStage;
+    journeyStageSemantics: 'local-only';
   }>;
   relevance: BidviaOnboardingJourneyRelevance;
   presentationTier: BidviaOnboardingJourneyPresentationTier;
@@ -34,6 +39,7 @@ export interface BidviaOnboardingJourneyDefinition {
     command: string;
     rationale: string;
     journeyStage: BidviaOnboardingJourneyStage;
+    journeyStageSemantics: 'local-only';
   };
 }
 
@@ -43,58 +49,51 @@ export interface BidviaOnboardingJourneyCommandHint {
   rationale: string;
 }
 
+const identitySessionPlane = buildIdentitySessionPlaneView();
+const identitySessionPlaneCommandHints = listIdentitySessionPlaneCommandHints();
+
 const onboardingJourneyCommandHints: Record<BidviaOnboardingJourneyHelperKey, BidviaOnboardingJourneyCommandHint | null> = {
-  createProvisionalAgent: {
-    helperKey: 'createProvisionalAgent',
-    command: 'bidvia create-provisional-agent --provisional-agent-ref ...',
-    rationale: 'Start the public provisional flow once tenant context is available locally for deterministic CLI execution.',
-  },
-  queryProvisionalAgent: {
-    helperKey: 'queryProvisionalAgent',
-    command: 'bidvia query-provisional-agent --provisional-agent-ref ...',
-    rationale: 'Check public provisional status before you attempt the session-bound claim step.',
-  },
-  claimProvisionalAgent: {
-    helperKey: 'claimProvisionalAgent',
-    command: 'bidvia claim-provisional-agent --provisional-agent-ref ... --claim-token ...',
-    rationale: 'Complete the session-bound provisional-to-registration handoff when claim material is available.',
-  },
+  createProvisionalAgent: identitySessionPlaneCommandHints[0]!,
+  queryProvisionalAgent: identitySessionPlaneCommandHints[1]!,
+  claimProvisionalAgent: identitySessionPlaneCommandHints[2]!,
   getAgentReadiness: null,
-  postHeartbeat: null,
-  createCommercialAction: null,
 };
 
 const onboardingJourneyDefinitions: readonly BidviaOnboardingJourneyDefinition[] = [
   {
-    journeyKey: 'public-first-onboarding',
-    label: 'Public provisional onboarding',
-    helperSteps: [
-      { helperKey: 'createProvisionalAgent', journeyStage: 'public-provisional' },
-      { helperKey: 'queryProvisionalAgent', journeyStage: 'public-provisional' },
-      { helperKey: 'claimProvisionalAgent', journeyStage: 'public-provisional' },
-    ],
+    journeyKey: identitySessionPlane.canonicalOnboarding.journeyKey,
+    label: identitySessionPlane.canonicalOnboarding.label,
+    helperSteps: identitySessionPlane.canonicalOnboarding.helperSteps.map((step) => ({
+      helperKey: step.helperKey,
+      journeyStage: step.journeyStage,
+      journeyStageSemantics: getWorkflowStageLocalSemantics(step.journeyStage),
+    })),
     relevance: 'public-first-common',
     presentationTier: 'primary',
     firstSuccessNextStep: {
-      command: 'registration-lifecycle-plan',
-      rationale: 'Use the lifecycle plan next so the first successful onboarding path stays aligned with the shipped provisional-to-registration chain.',
-      journeyStage: 'governed-run-execution',
+      ...identitySessionPlane.canonicalOnboarding.firstSuccessNextStep,
+      journeyStageSemantics: getWorkflowStageLocalSemantics(
+        identitySessionPlane.canonicalOnboarding.firstSuccessNextStep.journeyStage,
+      ),
     },
   },
   {
     journeyKey: 'governed-run',
     label: 'Governed Run',
     helperSteps: [
-      { helperKey: 'getAgentReadiness', journeyStage: 'governed-run-support' },
-      { helperKey: 'postHeartbeat', journeyStage: 'governed-run-execution' },
-      { helperKey: 'createCommercialAction', journeyStage: 'governed-run-execution' },
+      {
+        helperKey: 'getAgentReadiness',
+        journeyStage: 'governed-run-support',
+        journeyStageSemantics: getWorkflowStageLocalSemantics('governed-run-support'),
+      },
     ],
     relevance: 'governed-run-secondary',
     presentationTier: 'secondary',
     firstSuccessNextStep: {
-      command: 'registered-agent-operations-plan',
-      rationale: 'Use the post-onboarding operations plan after Governed Run has the required registration context.',
-      journeyStage: 'governed-run-execution',
+      command: 'account-agent --agent-id ...',
+      rationale: 'Use the canonical account-plane claimed-agent detail readback first so post-claim continuation starts from the current account-owned surface instead of older registration-bound operational packaging.',
+      journeyStage: 'governed-run-support',
+      journeyStageSemantics: 'local-only',
     },
   },
 ] as const;

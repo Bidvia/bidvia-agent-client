@@ -4,11 +4,13 @@ import type {
   BidviaCommercialActionScenarioPlan,
   BidviaMultiBusinessChainCoordinatorPlan,
   BidviaMultiBusinessChainCoordinatorPlanInput,
+  BidviaScenarioExecutionResult,
   BidviaScenarioVerificationBundle,
 } from './contracts.js';
 import type { BidviaCommercialActionScenarioResult } from './commercial-action.js';
 import {
   buildCommercialActionScenarioPlan,
+  executeCommercialActionScenario,
   runCommercialActionScenario,
 } from './commercial-action.js';
 import {
@@ -17,12 +19,15 @@ import {
 } from './connection.js';
 import {
   buildOpportunityPackageHandoffPlan,
+  executeOpportunityPackageHandoff,
   runOpportunityPackageHandoff,
 } from './handoffs.js';
 import {
   buildIndustryUniverseScenarioPlan,
+  executeIndustryUniverseScenario,
   runIndustryUniverseScenario,
 } from './universe.js';
+import { buildScenarioExecutionResult } from './verification.js';
 
 export interface BidviaMultiBusinessChainCoordinatorPreHandoffResult {
   industryUniverse: BidviaScenarioVerificationBundle;
@@ -41,6 +46,10 @@ export interface BidviaMultiBusinessChainCoordinatorResult {
   postHandoff: BidviaMultiBusinessChainCoordinatorPostHandoffResult;
 }
 
+export interface BidviaMultiBusinessChainCoordinatorExecutionResult extends BidviaMultiBusinessChainCoordinatorResult {
+  executionResult: BidviaScenarioExecutionResult;
+}
+
 function buildApprovalOpportunityExternalHandoffBoundary(
   approvalRequestId: string,
   opportunityId: string,
@@ -53,6 +62,9 @@ function buildApprovalOpportunityExternalHandoffBoundary(
     suppliedKnownIds: {
       opportunityId,
     },
+    handoffStepName: 'operator-confirm-opportunity-handoff',
+    handoffOwnerRole: 'operator',
+    checkpointGuidance: 'verify the approvalRequestId and caller-supplied opportunityId before exporting the review-safe package',
   };
 }
 
@@ -63,6 +75,16 @@ function requireNonEmptyBoundaryId(value: string | undefined, fieldName: string)
   }
 
   return normalizedValue;
+}
+
+function requireFirstRecordId(
+  bundle: BidviaScenarioVerificationBundle,
+  recordGroup: keyof BidviaScenarioVerificationBundle['recordIds'],
+  fieldName: string,
+): string {
+  const recordIds = bundle.recordIds[recordGroup];
+  const firstRecordId = Array.isArray(recordIds) ? recordIds[0] : undefined;
+  return requireNonEmptyBoundaryId(firstRecordId, fieldName);
 }
 
 function requireMatchingExplicitApprovalOpportunityBoundary(
@@ -148,11 +170,19 @@ export async function runMultiBusinessChainCoordinatorPreHandoff(
 ): Promise<BidviaMultiBusinessChainCoordinatorPreHandoffResult> {
   const industryUniverse = await runIndustryUniverseScenario(client as BidviaClient, plan.industryUniverse);
   const connectionApproval = await runConnectionApprovalScenario(client as BidviaClient, plan.connectionApproval);
+  const approvalRequestId = requireFirstRecordId(
+    connectionApproval,
+    'approvals',
+    'approvalRequestId',
+  );
 
   return {
     industryUniverse,
     connectionApproval,
-    externalHandoffBoundary: plan.externalHandoffBoundary,
+    externalHandoffBoundary: {
+      ...plan.externalHandoffBoundary,
+      approvalRequestId,
+    },
   };
 }
 
@@ -200,11 +230,55 @@ export async function runMultiBusinessChainCoordinatorWithExplicitHandoff(
   const postHandoff = await runMultiBusinessChainCoordinatorPostHandoff(
     client,
     plan,
-    validatedExternalHandoffBoundary,
+    {
+      ...validatedExternalHandoffBoundary,
+      approvalRequestId: preHandoff.externalHandoffBoundary.approvalRequestId,
+    },
   );
 
   return {
     preHandoff,
     postHandoff,
+  };
+}
+
+export async function executeMultiBusinessChainCoordinatorWithExplicitHandoff(
+  client: BidviaFullCoordinatorClient,
+  plan: BidviaMultiBusinessChainCoordinatorPlan,
+  externalHandoffBoundary: BidviaApprovalOpportunityExternalHandoffBoundary,
+): Promise<BidviaMultiBusinessChainCoordinatorExecutionResult> {
+  const result = await runMultiBusinessChainCoordinatorWithExplicitHandoff(
+    client,
+    plan,
+    externalHandoffBoundary,
+  );
+
+  return {
+    ...result,
+    executionResult: buildScenarioExecutionResult({
+      scenarioId: plan.coordinatorId,
+      scenarioFamily: 'multi-business-chain',
+      verificationMode: 'review-safe',
+      status: 'succeeded',
+      closureStage: 'business-closure-deferred',
+      ownership: 'core-runtime',
+      resumable: true,
+      evidence: {
+        helperKey: 'runMultiBusinessChainCoordinatorWithExplicitHandoff',
+        routePathTemplate: 'coordinator://industry-to-package-with-commercial-action',
+        actorRole: 'operator',
+        contextSummary: {
+          tenantIdPresent: true,
+          principalIdPresent: true,
+          companyIdPresent: true,
+        },
+        requestSummary: {
+          method: 'SCENARIO',
+        },
+        responseSummary: {
+          status: 200,
+        },
+      },
+    }),
   };
 }

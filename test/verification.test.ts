@@ -14,11 +14,17 @@ import {
 import type {
   BidviaReviewPacket,
   BidviaReviewPacketSection,
+  BidviaScenarioExecutionResult,
 } from '../src/contracts.ts';
 import {
+  bidviaExecutionBlockerClasses,
+  bidviaExecutionClosureStages,
+  bidviaExecutionOwnerships,
+  bidviaExecutionResultStatuses,
   bidviaReviewPacketSectionKeys,
   bidviaReviewPacketStatuses,
 } from '../src/contracts.ts';
+import { buildEnterpriseIntegrationPlaneView } from '../src/index.ts';
 
 test('review packet contracts represent reviewer-ready summary and bounded status', () => {
   assert.deepEqual(bidviaReviewPacketStatuses, ['complete', 'partial', 'pending-review']);
@@ -51,14 +57,22 @@ test('review packet contracts represent reviewer-ready summary and bounded statu
         adjudicationOutcomeIncluded: false,
       },
       verification: {
-        expectedRouteKeys: ['createListing', 'activateListing', 'generateMatchCandidates'],
-        completedRouteKeys: ['createListing'],
-        pendingRouteKeys: ['activateListing', 'generateMatchCandidates'],
-        totalRecordCount: 1,
-        localDerivedExplanation: [
-          'review-packet-status',
-          'next-pending-route',
-          'route-coverage-note',
+      expectedRouteKeys: ['createListing', 'activateListing', 'generateMatchCandidates'],
+      completedRouteKeys: ['createListing'],
+      pendingRouteKeys: ['activateListing', 'generateMatchCandidates'],
+      totalRecordCount: 1,
+      minimumEvidenceFields: [
+        'helperKey',
+        'routePathTemplate',
+        'actorRole',
+        'contextSummary',
+        'requestSummary',
+        'responseSummary',
+      ],
+      localDerivedExplanation: [
+        'review-packet-status',
+        'next-pending-route',
+        'route-coverage-note',
         ],
         serverOwnedFacts: [
           'scenario-source-refs',
@@ -71,11 +85,22 @@ test('review packet contracts represent reviewer-ready summary and bounded statu
           'adjudication-outcome-included:false',
           'core-truth-closure:deferred',
         ],
+        roleSplit: {
+          user: [
+            'user-create-listing',
+            'user-activate-listing',
+            'user-generate-match-candidates',
+          ],
+          operator: [],
+          admin: [],
+        },
       },
       routeDetails: [
         {
           sequence: 1,
           routeKey: 'createListing',
+          stepName: 'user-create-listing',
+          actorRole: 'user',
           requiredContext: ['tenantId', 'principalId', 'companyId'],
           completed: true,
         },
@@ -108,9 +133,9 @@ test('review packet contracts represent reviewer-ready summary and bounded statu
         sectionKey: 'routes',
         title: 'Route coverage',
         entries: [
-          'completed:1/3:createListing:requires=tenantId|principalId|companyId',
-          'pending-review:2/3:activateListing:requires=tenantId|principalId|companyId',
-          'pending-review:3/3:generateMatchCandidates:requires=tenantId|principalId|companyId',
+          'completed:1/3:createListing:user-create-listing:actor=user:requires=tenantId|principalId|companyId',
+          'pending-review:2/3:activateListing:user-activate-listing:actor=user:requires=tenantId|principalId|companyId',
+          'pending-review:3/3:generateMatchCandidates:user-generate-match-candidates:actor=user:requires=tenantId|principalId|companyId',
         ],
       },
       {
@@ -170,6 +195,15 @@ test('review packet contracts represent reviewer-ready summary and bounded statu
     'adjudication-outcome-included:false',
     'core-truth-closure:deferred',
   ]);
+  assert.deepEqual(packet.details.verification.roleSplit, {
+    user: [
+      'user-create-listing',
+      'user-activate-listing',
+      'user-generate-match-candidates',
+    ],
+    operator: [],
+    admin: [],
+  });
   assert.deepEqual(packet.details.verification.pendingRouteKeys, ['activateListing', 'generateMatchCandidates']);
 });
 
@@ -212,6 +246,109 @@ test('review packet section contract supports additive reviewer-facing sections'
     title: 'Recorded ids',
     entries: ['listings:listing-1'],
   });
+});
+
+test('shared execution-state contract exposes bounded statuses, blocker classes, ownership, and closure stages', () => {
+  assert.deepEqual(bidviaExecutionResultStatuses, ['succeeded', 'blocked', 'failed']);
+  assert.deepEqual(bidviaExecutionOwnerships, ['claimant', 'operator-admin', 'core-runtime']);
+  assert.deepEqual(bidviaExecutionClosureStages, [
+    'account-plane-continuation',
+    'dispatch-authority-requested',
+    'operator-review-pending',
+    'post-review-claimant-progress',
+    'bounded-task-closure',
+    'business-closure-deferred',
+  ]);
+  assert.deepEqual(bidviaExecutionBlockerClasses, [
+    'missing-local-context',
+    'claimant-action-required',
+    'operator-action-required',
+    'compatibility-seam-encountered',
+    'core-unresolved-projection',
+    'blocked-pending-packet',
+    'transport-or-server-error',
+  ]);
+});
+
+test('shared scenario execution result export is frozen and keeps evidence plus next-step detail without claiming platform closure', async () => {
+  const exports = await import('../src/index.ts');
+
+  assert.equal(typeof exports.buildScenarioExecutionResult, 'function');
+  assert.equal(typeof exports.exportScenarioExecutionResult, 'function');
+
+  const result = (exports.buildScenarioExecutionResult as (input: BidviaScenarioExecutionResult) => BidviaScenarioExecutionResult)({
+    scenarioId: 'scenario-industry-universe-1',
+    scenarioFamily: 'industry-universe',
+    verificationMode: 'review-safe',
+    status: 'blocked',
+    blockerClass: 'core-unresolved-projection',
+    closureStage: 'post-review-claimant-progress',
+    ownership: 'core-runtime',
+    resumable: false,
+    nextStep: {
+      recommendedNextStep: 'refresh_authorization_context',
+      nextStepKind: 'org_context_authorization_refresh',
+      requiredActor: 'enterprise_admin',
+      canSelfResolve: false,
+    },
+    evidence: {
+      helperKey: 'getAgentReadiness',
+      routePathTemplate: '/runtime/agents/:agent_registration_id/readiness',
+      actorRole: 'user',
+      contextSummary: {
+        tenantIdPresent: true,
+        principalIdPresent: true,
+        registrationIdPresent: true,
+      },
+      requestSummary: {
+        method: 'GET',
+      },
+      responseSummary: {
+        status: 403,
+        errorCode: 'active_role_binding_required',
+      },
+    },
+  });
+
+  assert.deepEqual(result, {
+    scenarioId: 'scenario-industry-universe-1',
+    scenarioFamily: 'industry-universe',
+    verificationMode: 'review-safe',
+    status: 'blocked',
+    blockerClass: 'core-unresolved-projection',
+    closureStage: 'post-review-claimant-progress',
+    ownership: 'core-runtime',
+    resumable: false,
+    nextStep: {
+      recommendedNextStep: 'refresh_authorization_context',
+      nextStepKind: 'org_context_authorization_refresh',
+      requiredActor: 'enterprise_admin',
+      canSelfResolve: false,
+    },
+    evidence: {
+      helperKey: 'getAgentReadiness',
+      routePathTemplate: '/runtime/agents/:agent_registration_id/readiness',
+      actorRole: 'user',
+      contextSummary: {
+        tenantIdPresent: true,
+        principalIdPresent: true,
+        registrationIdPresent: true,
+      },
+      requestSummary: {
+        method: 'GET',
+      },
+      responseSummary: {
+        status: 403,
+        errorCode: 'active_role_binding_required',
+      },
+    },
+  });
+
+  const exported = (exports.exportScenarioExecutionResult as (input: BidviaScenarioExecutionResult) => BidviaScenarioExecutionResult)(result);
+  assert.deepEqual(exported, result);
+  assert.throws(() => {
+    exported.evidence.responseSummary.status = 500;
+  }, /object is not extensible|read only|readonly/i);
 });
 
 test('scenario verification bundle carries expected and completed route chains', () => {
@@ -263,8 +400,32 @@ test('scenario verification bundle carries expected and completed route chains',
   assert.equal(bundle.scenarioFamily, 'industry-universe');
   assert.equal(bundle.verificationMode, 'review-safe');
   assert.deepEqual(
-    bundle.expectedRouteChain.map((step) => step.routeKey),
-    ['createListing', 'activateListing', 'generateMatchCandidates'],
+    bundle.expectedRouteChain.map((step) => ({
+      routeKey: step.routeKey,
+      stepName: step.stepName,
+      actorRole: step.actorRole,
+      verifyRecordGroups: step.progressionCheckpoint?.verifyRecordGroups ?? null,
+    })),
+    [
+      {
+        routeKey: 'createListing',
+        stepName: 'user-create-listing',
+        actorRole: 'user',
+        verifyRecordGroups: null,
+      },
+      {
+        routeKey: 'activateListing',
+        stepName: 'user-activate-listing',
+        actorRole: 'user',
+        verifyRecordGroups: ['listings'],
+      },
+      {
+        routeKey: 'generateMatchCandidates',
+        stepName: 'user-generate-match-candidates',
+        actorRole: 'user',
+        verifyRecordGroups: ['matches'],
+      },
+    ],
   );
   assert.deepEqual(
     bundle.completedRouteChain.map((step) => step.routeKey),
@@ -552,6 +713,14 @@ test('buildReviewPacket derives reviewer-ready sections and complete status from
       completedRouteKeys: ['createListing', 'activateListing', 'generateMatchCandidates'],
       pendingRouteKeys: [],
       totalRecordCount: 2,
+      minimumEvidenceFields: [
+        'helperKey',
+        'routePathTemplate',
+        'actorRole',
+        'contextSummary',
+        'requestSummary',
+        'responseSummary',
+      ],
       localDerivedExplanation: [
         'review-packet-status',
         'next-pending-route',
@@ -568,25 +737,50 @@ test('buildReviewPacket derives reviewer-ready sections and complete status from
         'adjudication-outcome-included:false',
         'core-truth-closure:deferred',
       ],
+      roleSplit: {
+        user: [
+          'user-create-listing',
+          'user-activate-listing',
+          'user-generate-match-candidates',
+        ],
+        operator: [],
+        admin: [],
+      },
     },
     routeDetails: [
       {
         sequence: 1,
         routeKey: 'createListing',
+        stepName: 'user-create-listing',
+        actorRole: 'user',
         requiredContext: ['tenantId', 'principalId', 'companyId'],
         completed: true,
       },
       {
         sequence: 2,
         routeKey: 'activateListing',
+        stepName: 'user-activate-listing',
+        actorRole: 'user',
         requiredContext: ['tenantId', 'principalId', 'companyId'],
         completed: true,
+        progressionCheckpoint: {
+          checkpointName: 'verify-activation-before-match-generation',
+          verifyRecordGroups: ['listings'],
+          guidance: 'confirm the activated listing id remains the record carried into match generation on the runtime-generated lane',
+        },
       },
       {
         sequence: 3,
         routeKey: 'generateMatchCandidates',
+        stepName: 'user-generate-match-candidates',
+        actorRole: 'user',
         requiredContext: ['tenantId', 'principalId', 'companyId'],
         completed: true,
+        progressionCheckpoint: {
+          checkpointName: 'verify-match-id-before-connection-approval',
+          verifyRecordGroups: ['matches'],
+          guidance: 'capture the returned match id before continuing into downstream connection approval on the runtime-generated lane',
+        },
       },
     ],
     recordDetails: [
@@ -618,15 +812,15 @@ test('buildReviewPacket derives reviewer-ready sections and complete status from
       title: 'Traceability refs',
       entries: ['trace-1', 'wf-1'],
     },
-    {
-      sectionKey: 'routes',
-      title: 'Route coverage',
-      entries: [
-        'completed:1/3:createListing:requires=tenantId|principalId|companyId',
-        'completed:2/3:activateListing:requires=tenantId|principalId|companyId',
-        'completed:3/3:generateMatchCandidates:requires=tenantId|principalId|companyId',
-      ],
-    },
+      {
+        sectionKey: 'routes',
+        title: 'Route coverage',
+        entries: [
+          'completed:1/3:createListing:user-create-listing:actor=user:requires=tenantId|principalId|companyId',
+          'completed:2/3:activateListing:user-activate-listing:actor=user:requires=tenantId|principalId|companyId',
+          'completed:3/3:generateMatchCandidates:user-generate-match-candidates:actor=user:requires=tenantId|principalId|companyId',
+        ],
+      },
     {
       sectionKey: 'verification',
       title: 'Verification facts',
@@ -644,6 +838,7 @@ test('buildReviewPacket derives reviewer-ready sections and complete status from
         'server-owned-facts:scenario-evidence-refs:1',
         'server-owned-facts:traceability-refs:2',
         'server-owned-facts:recorded-ids:2',
+        'minimum-evidence-fields:helperKey|routePathTemplate|actorRole|contextSummary|requestSummary|responseSummary',
         'server-truth-claimed:false',
         'adjudication-outcome-included:false',
         'dependency-gated-seams:core-truth-closure:deferred',
@@ -660,6 +855,127 @@ test('buildReviewPacket derives reviewer-ready sections and complete status from
       ],
     },
   ]);
+});
+
+test('buildReviewPacket rejects expected route metadata drift between scenario and verification bundle', () => {
+  const plan = buildIndustryUniverseScenarioPlan({
+    scenarioId: 'scenario-industry-universe-1',
+    scenarioLabel: 'industry-universe-soda-ash-light',
+    sourceRefs: ['source://market/soda-ash-light'],
+    evidenceRefs: ['evidence://supply/soda-ash-light'],
+    traceIds: ['trace-1'],
+    workflowIds: ['wf-1'],
+    createListing: {
+      listingId: 'listing-1',
+      listingType: 'supply',
+      category: 'basic inorganic industrial chemical',
+      sku: 'sodium-carbonate-soda-ash-light',
+      quantityValue: '15',
+      quantityUnit: 'tons',
+      regionSummary: 'China -> Vietnam',
+      verificationStatus: 'verified',
+      freshnessTs: '2026-03-25T20:20:00Z',
+      traceId: 'trace-1',
+      idempotencyKey: 'listing-1',
+      now: '2026-03-25T20:20:00Z',
+    },
+    activateListing: {
+      now: '2026-03-25T20:21:00Z',
+    },
+    generateMatchCandidates: {
+      upstreamDecision: 'READY_FOR_ROUTING',
+      requiredEvidenceLevel: 1,
+      detectedEvidenceLevel: 1,
+      workflowRunId: 'wf-1',
+      triggerEventId: 'evt-1',
+      topN: 10,
+      now: '2026-03-25T20:22:00Z',
+    },
+  });
+
+  const bundle = buildScenarioVerificationBundle({
+    scenario: plan.envelope,
+    verificationMode: 'review-safe',
+  });
+  const driftedBundle = {
+    ...bundle,
+    expectedRouteChain: bundle.expectedRouteChain.map((step, index) => index === 1
+      ? {
+        ...step,
+        stepName: 'drifted-step-name',
+      }
+      : step),
+  };
+
+  assert.throws(
+    () => buildReviewPacket({
+      scenario: plan.envelope,
+      bundle: driftedBundle,
+    }),
+    /scenario and verification bundle facts must match/,
+  );
+});
+
+test('buildReviewPacket rejects checkpoint metadata drift between scenario and verification bundle', () => {
+  const plan = buildIndustryUniverseScenarioPlan({
+    scenarioId: 'scenario-industry-universe-1',
+    scenarioLabel: 'industry-universe-soda-ash-light',
+    sourceRefs: ['source://market/soda-ash-light'],
+    evidenceRefs: ['evidence://supply/soda-ash-light'],
+    traceIds: ['trace-1'],
+    workflowIds: ['wf-1'],
+    createListing: {
+      listingId: 'listing-1',
+      listingType: 'supply',
+      category: 'basic inorganic industrial chemical',
+      sku: 'sodium-carbonate-soda-ash-light',
+      quantityValue: '15',
+      quantityUnit: 'tons',
+      regionSummary: 'China -> Vietnam',
+      verificationStatus: 'verified',
+      freshnessTs: '2026-03-25T20:20:00Z',
+      traceId: 'trace-1',
+      idempotencyKey: 'listing-1',
+      now: '2026-03-25T20:20:00Z',
+    },
+    activateListing: {
+      now: '2026-03-25T20:21:00Z',
+    },
+    generateMatchCandidates: {
+      upstreamDecision: 'READY_FOR_ROUTING',
+      requiredEvidenceLevel: 1,
+      detectedEvidenceLevel: 1,
+      workflowRunId: 'wf-1',
+      triggerEventId: 'evt-1',
+      topN: 10,
+      now: '2026-03-25T20:22:00Z',
+    },
+  });
+
+  const bundle = buildScenarioVerificationBundle({
+    scenario: plan.envelope,
+    verificationMode: 'review-safe',
+  });
+  const driftedBundle = {
+    ...bundle,
+    expectedRouteChain: bundle.expectedRouteChain.map((step, index) => index === 2
+      ? {
+        ...step,
+        progressionCheckpoint: {
+          ...step.progressionCheckpoint!,
+          verifyRecordGroups: ['listings'] as Array<'listings'>,
+        },
+      }
+      : step),
+  };
+
+  assert.throws(
+    () => buildReviewPacket({
+      scenario: plan.envelope,
+      bundle: driftedBundle,
+    }),
+    /scenario and verification bundle facts must match/,
+  );
 });
 
 test('buildReviewPacket derives partial and pending-review only from completed route counts', () => {
@@ -783,9 +1099,9 @@ test('buildReviewPacket exposes richer route-chain and record-group readback fro
   const recordsSection = packet.sections.find((section) => section.sectionKey === 'records');
 
   assert.deepEqual(routesSection?.entries, [
-    'completed:1/3:createListing:requires=tenantId|principalId|companyId',
-    'pending-review:2/3:activateListing:requires=tenantId|principalId|companyId',
-    'pending-review:3/3:generateMatchCandidates:requires=tenantId|principalId|companyId',
+    'completed:1/3:createListing:user-create-listing:actor=user:requires=tenantId|principalId|companyId',
+    'pending-review:2/3:activateListing:user-activate-listing:actor=user:requires=tenantId|principalId|companyId',
+    'pending-review:3/3:generateMatchCandidates:user-generate-match-candidates:actor=user:requires=tenantId|principalId|companyId',
   ]);
   assert.deepEqual(verificationSection?.entries, [
     'verification-mode:review-safe',
@@ -801,6 +1117,7 @@ test('buildReviewPacket exposes richer route-chain and record-group readback fro
     'server-owned-facts:scenario-evidence-refs:1',
     'server-owned-facts:traceability-refs:2',
     'server-owned-facts:recorded-ids:3',
+    'minimum-evidence-fields:helperKey|routePathTemplate|actorRole|contextSummary|requestSummary|responseSummary',
     'server-truth-claimed:false',
     'adjudication-outcome-included:false',
     'dependency-gated-seams:core-truth-closure:deferred',
@@ -812,6 +1129,92 @@ test('buildReviewPacket exposes richer route-chain and record-group readback fro
     'matches:match-1',
     'matches:match-2',
   ]);
+});
+
+test('buildReviewPacket freezes minimum evidence fields in reviewer-facing verification facts', async () => {
+  const exports = await import('../src/index.ts');
+  const buildScenarioExecutionResult = exports.buildScenarioExecutionResult as (input: BidviaScenarioExecutionResult) => BidviaScenarioExecutionResult;
+  const plan = buildIndustryUniverseScenarioPlan({
+    scenarioId: 'scenario-industry-universe-1',
+    scenarioLabel: 'industry-universe-soda-ash-light',
+    sourceRefs: ['source://market/soda-ash-light'],
+    evidenceRefs: ['evidence://supply/soda-ash-light'],
+    traceIds: ['trace-1'],
+    workflowIds: ['wf-1'],
+    createListing: {
+      listingId: 'listing-1',
+      listingType: 'supply',
+      category: 'basic inorganic industrial chemical',
+      sku: 'sodium-carbonate-soda-ash-light',
+      quantityValue: '15',
+      quantityUnit: 'tons',
+      regionSummary: 'China -> Vietnam',
+      verificationStatus: 'verified',
+      freshnessTs: '2026-03-25T20:20:00Z',
+      traceId: 'trace-1',
+      idempotencyKey: 'listing-1',
+      now: '2026-03-25T20:20:00Z',
+    },
+    activateListing: {
+      now: '2026-03-25T20:21:00Z',
+    },
+    generateMatchCandidates: {
+      upstreamDecision: 'READY_FOR_ROUTING',
+      requiredEvidenceLevel: 1,
+      detectedEvidenceLevel: 1,
+      workflowRunId: 'wf-1',
+      triggerEventId: 'evt-1',
+      topN: 10,
+      now: '2026-03-25T20:22:00Z',
+    },
+  });
+
+  const executionResult = buildScenarioExecutionResult({
+    scenarioId: plan.envelope.scenarioId,
+    scenarioFamily: plan.envelope.scenarioFamily,
+    verificationMode: 'review-safe',
+    status: 'blocked',
+    blockerClass: 'core-unresolved-projection',
+    closureStage: 'post-review-claimant-progress',
+    ownership: 'core-runtime',
+    resumable: false,
+    evidence: {
+      helperKey: 'getAgentReadiness',
+      routePathTemplate: '/runtime/agents/:agent_registration_id/readiness',
+      actorRole: 'user',
+      contextSummary: {
+        tenantIdPresent: true,
+        principalIdPresent: true,
+        registrationIdPresent: true,
+      },
+      requestSummary: {
+        method: 'GET',
+      },
+      responseSummary: {
+        status: 403,
+        errorCode: 'active_role_binding_required',
+      },
+    },
+  });
+
+  const packet = buildReviewPacket({
+    scenario: plan.envelope,
+    bundle: buildScenarioVerificationBundle({
+      scenario: plan.envelope,
+      verificationMode: 'review-safe',
+    }),
+    executionResult,
+  } as Parameters<typeof buildReviewPacket>[0]);
+
+  assert.deepEqual(packet.details.verification.minimumEvidenceFields, [
+    'helperKey',
+    'routePathTemplate',
+    'actorRole',
+    'contextSummary',
+    'requestSummary',
+    'responseSummary',
+  ]);
+  assert.equal(packet.sections[4]?.entries.includes('minimum-evidence-fields:helperKey|routePathTemplate|actorRole|contextSummary|requestSummary|responseSummary'), true);
 });
 
 test('buildReviewPacket stays explicitly local and derived without server-owned outcomes', () => {
@@ -870,6 +1273,131 @@ test('buildReviewPacket stays explicitly local and derived without server-owned 
   assert.equal(packet.sections[4]?.entries.includes('adjudication-outcome-included:false'), true);
   assert.equal(packet.sections[4]?.entries.includes('local-derived-explanation:route-coverage-note:completed-prefix-only'), true);
   assert.equal(packet.sections[4]?.entries.includes('dependency-gated-seams:core-truth-closure:deferred'), true);
+});
+
+test('buildReviewPacket exposes richer blocker and closure details without claiming server-owned outcomes', async () => {
+  const exports = await import('../src/index.ts');
+  const buildScenarioExecutionResult = exports.buildScenarioExecutionResult as (input: BidviaScenarioExecutionResult) => BidviaScenarioExecutionResult;
+  const plan = buildIndustryUniverseScenarioPlan({
+    scenarioId: 'scenario-industry-universe-1',
+    scenarioLabel: 'industry-universe-soda-ash-light',
+    sourceRefs: ['source://market/soda-ash-light'],
+    evidenceRefs: ['evidence://supply/soda-ash-light'],
+    traceIds: ['trace-1'],
+    workflowIds: ['wf-1'],
+    createListing: {
+      listingId: 'listing-1',
+      listingType: 'supply',
+      category: 'basic inorganic industrial chemical',
+      sku: 'sodium-carbonate-soda-ash-light',
+      quantityValue: '15',
+      quantityUnit: 'tons',
+      regionSummary: 'China -> Vietnam',
+      verificationStatus: 'verified',
+      freshnessTs: '2026-03-25T20:20:00Z',
+      traceId: 'trace-1',
+      idempotencyKey: 'listing-1',
+      now: '2026-03-25T20:20:00Z',
+    },
+    activateListing: {
+      now: '2026-03-25T20:21:00Z',
+    },
+    generateMatchCandidates: {
+      upstreamDecision: 'READY_FOR_ROUTING',
+      requiredEvidenceLevel: 1,
+      detectedEvidenceLevel: 1,
+      workflowRunId: 'wf-1',
+      triggerEventId: 'evt-1',
+      topN: 10,
+      now: '2026-03-25T20:22:00Z',
+    },
+  });
+
+  const executionResult = buildScenarioExecutionResult({
+    scenarioId: plan.envelope.scenarioId,
+    scenarioFamily: plan.envelope.scenarioFamily,
+    verificationMode: 'review-safe',
+    status: 'blocked',
+    blockerClass: 'core-unresolved-projection',
+    closureStage: 'post-review-claimant-progress',
+    ownership: 'core-runtime',
+    resumable: false,
+    nextStep: {
+      recommendedNextStep: 'refresh_authorization_context',
+      nextStepKind: 'org_context_authorization_refresh',
+      requiredActor: 'enterprise_admin',
+      canSelfResolve: false,
+    },
+    evidence: {
+      helperKey: 'getAgentReadiness',
+      routePathTemplate: '/runtime/agents/:agent_registration_id/readiness',
+      actorRole: 'user',
+      contextSummary: {
+        tenantIdPresent: true,
+        principalIdPresent: true,
+        registrationIdPresent: true,
+      },
+      requestSummary: {
+        method: 'GET',
+      },
+      responseSummary: {
+        status: 403,
+        errorCode: 'active_role_binding_required',
+      },
+    },
+  });
+
+  const packet = buildReviewPacket({
+    scenario: plan.envelope,
+    bundle: buildScenarioVerificationBundle({
+      scenario: plan.envelope,
+      verificationMode: 'review-safe',
+    }),
+    executionResult,
+  } as Parameters<typeof buildReviewPacket>[0]);
+
+  assert.equal(packet.details.boundary.serverTruthClaimed, false);
+  assert.equal(packet.details.verification.blockerClass, 'core-unresolved-projection');
+  assert.equal(packet.details.verification.closureStage, 'post-review-claimant-progress');
+  assert.equal(packet.details.verification.ownership, 'core-runtime');
+  assert.equal(packet.details.verification.resumable, false);
+  assert.deepEqual(packet.details.verification.nextStep, {
+    recommendedNextStep: 'refresh_authorization_context',
+    nextStepKind: 'org_context_authorization_refresh',
+    requiredActor: 'enterprise_admin',
+    canSelfResolve: false,
+  });
+  assert.equal(packet.sections[4]?.entries.includes('execution-blocker-class:core-unresolved-projection'), true);
+  assert.equal(packet.sections[4]?.entries.includes('execution-closure-stage:post-review-claimant-progress'), true);
+  assert.equal(packet.sections[4]?.entries.includes('execution-ownership:core-runtime'), true);
+  assert.equal(packet.sections[4]?.entries.includes('execution-resumable:false'), true);
+});
+
+test('enterprise integration plane keeps review-safe and discovery visibility bounded to the shipped commercial-universe surface', () => {
+  const plane = buildEnterpriseIntegrationPlaneView();
+
+  assert.equal(plane.visibilityBoundary.boundedCommercialUniverseOnly, true);
+  assert.equal(plane.visibilityBoundary.broaderEnterpriseAuthorityClaimed, false);
+  assert.equal(plane.visibilityBoundary.broaderSystemAuthorityClaimed, false);
+  assert.deepEqual(plane.packetTruthBoundary.packetCompleteFieldFamilies, [
+    'identity-mapping-fields',
+    'account-integration-capability-read-models',
+    'account-agent-invocation-eligibility-read-models',
+    'attachment-document-media-evidence-visibility',
+  ]);
+  assert.equal(plane.packetTruthBoundary.inventedPacketFieldsBlocked, true);
+  assert.deepEqual(plane.helperGroups.find((group) => group.groupKey === 'evidence-submission')?.cliCommands, [
+    'evidence',
+  ]);
+  assert.deepEqual(plane.helperGroups.find((group) => group.groupKey === 'commercial-action')?.discoveryHelperKeys, [
+    'createCommercialAction',
+    'getCommercialActionStatus',
+    'policyCheckCommercialAction',
+    'requestCommercialActionApproval',
+    'executeCommercialAction',
+    'getCommercialActionReceipt',
+    'getCommercialActionAudit',
+  ]);
 });
 
 test('exportReviewPacket returns a stable cloned packet export', () => {

@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
+import { BidviaClient } from '../src/client.ts';
 import { runCli } from '../src/cli.ts';
 
 function setEnvVar(name: string, value: string | undefined) {
@@ -38,36 +39,104 @@ test('runCli help lists truth-fetch read-only commands under the advanced govern
     'bidvia',
     'OpenClaw primary path: export stdio MCP config first, then add the companion bundle when you want bundle/bootstrap packaging.',
     'OpenClaw scope for this version: local-first, Core-truth-consuming, stdio MCP primary.',
-    'Getting Started (Learn):',
+    'Stage 1 client runtime is complete locally: CLI and MCP execution share one runtime core and local accumulation layer.',
+    'Getting Started (Agent-first Learn):',
     '  onboard',
-    '  context show',
     '  whoami',
+    '  context show',
     '  doctor',
     '  onboarding-readiness',
-    '  route-context-matrix',
+    'Prerequisite Account / Session Support:',
+    '  sign-in --input ...',
+    '  sign-up-personal --input ...',
+      '  sign-up-enterprise --input ...',
+      '  account-me',
+      '  select-org --input ...',
+      '  create-account-integration-app --input ...',
+      '  create-account-integration-installation --input ...',
+      '  connect-account-integration-installation --integration-installation-id ... --input ...',
+      '  agent-self-service --agent-id ... --input ...',
+      '  account-agent-dispatch-authority-request --agent-id ...',
+    '  session-refresh',
+    '  session-revoke',
+    'Advanced Integration (OpenClaw / Companion Bundle):',
     '  openclaw-mcp-config',
     '  openclaw-bundle-export --output ...',
     'Agent Onboarding (Public Provisional -> Claim):',
     '  create-provisional-agent --provisional-agent-ref ...',
     '  query-provisional-agent --provisional-agent-ref ...',
     '  claim-provisional-agent --provisional-agent-ref ... --claim-token ...',
+    'Claimant Product Entry:',
+    '  claimant-precondition-inspect',
+    '  claimant-precondition-establish-canonical-company-public --input ...',
+    '  claimant-readiness-inspect --agent-id ...',
+    '  claimant-readiness-repair --agent-id ... --input ...',
+      '  claimant-task-entry-inspect --agent-id ...',
+      '  claimant-task-entry-run --agent-id ... --input ...',
+      '  claimant-handoff-inspect --agent-id ... --listing-id ...',
+      '  claimant-handoff-opportunity-status --agent-id ... --target-ref ...',
+      '  claimant-handoff-opportunity-end-state --agent-id ... --target-ref ...',
+    'Operator Product Entry:',
+    '  operator-handoff-consume --listing-id ...',
+    '  operator-progression-match --input ...',
+    '  operator-progression-connect --input ...',
+    '  operator-progression-approve --input ...',
+    '  operator-progression-package-export --input ...',
+    '  operator-closure-commercial-action-run --input ...',
+    '  operator-closure-inspect --input ...',
+    'Universe Orchestrator:',
+    '  universe inspect --input ...',
+    '  universe run --input ...',
+    '  universe explain --input ...',
+    'Platform-Managed Product Entry:',
+    '  platform-managed entry inspect',
+    '  platform-managed readiness inspect',
+    '  platform-managed progression run',
     'Agent Runtime (Run):',
+    '  route-context-matrix',
     '  registration-lifecycle-plan',
     '  registered-agent-operations-plan',
-    '  mcp-server',
+      '  mcp-server',
+      '  industry-universe-execution --input ...',
+      '  create-lease --agent-id ... --input ...',
+      '  create-task-dispatch --agent-id ... --input ...',
+      '  assign-task-dispatch --agent-id ... --task-dispatch-id ... --input ...',
+      '  suspend-task-dispatch --agent-id ... --task-dispatch-id ... --input ...',
+      '  resume-task-dispatch --agent-id ... --task-dispatch-id ... --input ...',
+      '  complete-task-dispatch --agent-id ... --task-dispatch-id ... --input ...',
+      '  fail-task-dispatch --agent-id ... --task-dispatch-id ... --input ...',
+      '  create-task-dispatch-outcome --agent-id ... --task-dispatch-id ... --input ...',
+      '  create-task-dispatch-evidence-bundle --agent-id ... --task-dispatch-id ... --input ...',
+      '  create-task-dispatch-confirmation-cycle --agent-id ... --task-dispatch-id ... --input ...',
+    '  create-claim --agent-id ... --input ...',
+    '  accept-claim --agent-id ... --claim-id ... --input ...',
+    '  reject-claim --agent-id ... --claim-id ... --input ...',
     '  heartbeat [--dry-run]',
     '  sync-upload [--dry-run]',
     '  evidence [--dry-run]',
     '  proposal [--dry-run]',
     'Diagnostics:',
     '  environment-mode',
+    '  install-integrity',
+    '  validation-smoke',
+    '  diagnostic-bundle-export --output ...',
+    '  public-runtime-interpretation-probe',
     '  runtime-capabilities',
     '  launch-topology-smoke',
     '  server-capabilities',
     '  operator-discovery',
     'Advanced Governance / Internal Review:',
     '  account-agents',
-    '  account-agent --registration-id ...',
+    '  account-agent --agent-id ...',
+    '  account-agent-dispatch-authority --agent-id ...',
+    '  account-agent-closure-status --agent-id ...',
+    '  account-agent-execution-status --agent-id ...',
+    '  account-agent-execution-listing-status --agent-id ... --listing-id ...',
+    '  account-agent-execution-opportunity-status --agent-id ... --target-ref ...',
+    '  account-agent-execution-opportunity-end-state --agent-id ... --target-ref ...',
+    '  account-agent-execution-materialization-status --agent-id ... --listing-id ...',
+    '  account-integration-capabilities',
+    '  account-agent-integration-eligibility --agent-id ... --integration-code ...',
     '  account-agent-bindings',
     '  account-records',
     '  agent-presence --registration-id ...',
@@ -83,8 +152,9 @@ test('runCli help lists truth-fetch read-only commands under the advanced govern
       '  agent-capability-profile --registration-id ...',
       '  participation-states --registration-id ...',
       '  participation-state --registration-id ... --participation-state-id ...',
-      '  task-dispatches --registration-id ...',
-      '  task-dispatch --registration-id ... --task-dispatch-id ...',
+      '  task-dispatches --agent-id ... [--registration-id compatibility-only]',
+      '  task-dispatch --agent-id ... --task-dispatch-id ... [--registration-id compatibility-only]',
+      '  governed-work-closure --agent-id ... --task-dispatch-id ... [--registration-id compatibility-only]',
       '  canonical-semantic-concepts',
       '  canonical-semantic-concept --concept-id ...',
       '  canonical-semantic-labels',
@@ -104,16 +174,13 @@ test('runCli help lists truth-fetch read-only commands under the advanced govern
     '  pricing-explanations',
     '  pricing-explanation --pricing-explanation-id ...',
     '  document-artifacts',
-    '  document-artifact --document-artifact-id ...',
-    '  media-assets',
-    '  media-asset --media-asset-id ...',
-    '  evidence-assets',
-    '  evidence-asset --evidence-asset-id ...',
-    '  attachment-bindings',
-    '  attachment-binding --attachment-binding-id ...',
-    '  file-resources',
-    '  file-resource --file-resource-id ...',
-    '  target-attachment-bindings --target-ref ...',
+      '  document-artifact --document-artifact-id ...',
+      '  media-assets',
+      '  media-asset --media-asset-id ...',
+      '  evidence-assets',
+      '  evidence-asset --evidence-asset-id ...',
+      '  attachment-bindings',
+      '  attachment-binding --attachment-binding-id ...',
   ];
   assert.deepEqual(lines.slice(0, expectedVisibilityLines.length), expectedVisibilityLines);
   assert.equal(lines[expectedVisibilityLines.length], '  industry-universe-plan');
@@ -124,7 +191,7 @@ test('runCli help lists truth-fetch read-only commands under the advanced govern
 
 test('runCli returns structured missing required-id failures for truth-fetch detail commands', async () => {
   const cases = [
-    ['account-agent', '--registration-id'],
+    ['account-agent', '--agent-id'],
     ['agent-presence', '--registration-id'],
     ['agent-authority', '--registration-id'],
     ['canonical-semantic-concept', '--concept-id'],
@@ -162,7 +229,7 @@ test('runCli returns structured missing required-id failures for truth-fetch det
 test('runCli returns a structured missing value failure when a required truth-fetch id flag has no value', async () => {
   const printed: unknown[] = [];
 
-  const exitCode = await runCli(['account-agent', '--registration-id'], {
+  const exitCode = await runCli(['account-agent', '--agent-id'], {
     printJson: (value) => {
       printed.push(value);
     },
@@ -176,8 +243,8 @@ test('runCli returns a structured missing value failure when a required truth-fe
     error: {
       code: 'invalid-input',
       command: 'account-agent',
-      message: 'Missing value for --registration-id on account-agent.',
-      details: ['--registration-id'],
+        message: 'Missing value for --agent-id on account-agent.',
+        details: ['--agent-id'],
     },
   }]);
 });
@@ -211,8 +278,11 @@ test('runCli routes truth-fetch commands through the matching SDK method and pri
     async listAccountAgents() {
       return { method: 'listAccountAgents' };
     },
-    async getAccountAgent(registrationId: string) {
-      return { method: 'getAccountAgent', registrationId };
+    async getAccountAgent(agentId: string) {
+      return { method: 'getAccountAgent', agentId };
+    },
+    async getAccountAgentDispatchAuthority(agentId: string) {
+      return { method: 'getAccountAgentDispatchAuthority', agentId };
     },
     async listAccountAgentBindings() {
       return { method: 'listAccountAgentBindings' };
@@ -270,8 +340,12 @@ test('runCli routes truth-fetch commands through the matching SDK method and pri
       expected: { method: 'listAccountAgents' },
     },
     {
-      argv: ['account-agent', '--registration-id', 'areg-1'],
-      expected: { method: 'getAccountAgent', registrationId: 'areg-1' },
+      argv: ['account-agent', '--agent-id', 'agent-1'],
+      expected: { method: 'getAccountAgent', agentId: 'agent-1' },
+    },
+    {
+      argv: ['account-agent-dispatch-authority', '--agent-id', 'agent-1'],
+      expected: { method: 'getAccountAgentDispatchAuthority', agentId: 'agent-1' },
     },
     {
       argv: ['account-agent-bindings'],
@@ -428,6 +502,60 @@ test('runCli default client uses session and principal-governed env context for 
   ]);
 });
 
+test('runCli truth-fetch reads fall back to local onboarding state for effective session context', async () => {
+  const printed: unknown[] = [];
+  const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
+  const restoreEnv = [
+    setEnvVar('BIDVIA_BASE_URL', 'http://127.0.0.1:8787'),
+    setEnvVar('BIDVIA_SESSION_ID', undefined),
+    setEnvVar('BIDVIA_TENANT_ID', undefined),
+    setEnvVar('BIDVIA_PRINCIPAL_ID', undefined),
+  ];
+  const previousFetch = globalThis.fetch;
+
+  globalThis.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
+    calls.push({ input, init });
+
+    return new Response(JSON.stringify({ ok: true, path: String(input) }), {
+      status: 200,
+      headers: { 'content-type': 'application/json' },
+    });
+  };
+
+  try {
+    const exitCode = await runCli(['account-agent-bindings'], {
+      readLocalOnboardingState: async () => ({
+        tenantId: 'tenant-local',
+        principalId: 'principal-local',
+        sessionId: 'sess-local',
+        registrationId: 'areg-local',
+        createdAt: '2026-04-01T12:00:00.000Z',
+        updatedAt: '2026-04-01T12:00:00.000Z',
+      }),
+      printJson: (value) => {
+        printed.push(value);
+      },
+      printLine: () => {
+        throw new Error('truth-fetch reads should not print help');
+      },
+    });
+
+    assert.equal(exitCode, 0);
+  } finally {
+    globalThis.fetch = previousFetch;
+    for (const restore of restoreEnv.reverse()) {
+      restore();
+    }
+  }
+
+  assert.equal(calls.length, 1);
+  assert.equal(String(calls[0]?.input), 'http://127.0.0.1:8787/runtime/account/agent-bindings');
+  assert.equal((calls[0]?.init?.headers as Record<string, string>)['x-bidvia-session-id'], 'sess-local');
+  assert.deepEqual(printed, [
+    { ok: true, path: 'http://127.0.0.1:8787/runtime/account/agent-bindings' },
+  ]);
+});
+
 test('runCli execution commands pass company, principal-type, and authorized-role env values into BidviaClient', async () => {
   const printed: unknown[] = [];
   const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
@@ -453,6 +581,24 @@ test('runCli execution commands pass company, principal-type, and authorized-rol
 
   try {
     const exitCode = await runCli(['heartbeat'], {
+      createClient: () => Object.assign(new BidviaClient({
+        baseUrl: 'http://127.0.0.1:8787',
+        context: {
+          tenantId: 'tenant-a',
+          principalId: 'principal-1',
+          principalType: 'operator',
+          authorizedRole: 'admin',
+          companyId: 'company-a',
+          registrationId: 'areg-1',
+        },
+        fetchImpl: globalThis.fetch,
+      }), {
+        async commitRuntimeResult() {
+          return {
+            outcomeRef: 'outcome://test/runtime-commit',
+          };
+        },
+      }) as never,
       printJson: (value) => {
         printed.push(value);
       },

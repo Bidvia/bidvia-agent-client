@@ -35,7 +35,7 @@ function buildCodexPluginFile(): string {
   return JSON.stringify({
     schemaVersion: '1.0',
     name: 'bidvia-openclaw-companion',
-    description: 'Local-first Codex companion bundle for Bidvia OpenClaw MCP handoff.',
+    description: 'Local-first Codex companion bundle for Bidvia OpenClaw packaging around the shared stdio MCP path.',
     mcpConfigPath: '.mcp.json',
     docs: [
       'docs/bidvia-openclaw-local-operator.md',
@@ -48,6 +48,7 @@ function buildBootstrapContent(): string {
     '# Bidvia OpenClaw companion bootstrap',
     '',
     '- Use `bidvia mcp-server` as the installed local stdio MCP command.',
+    '- OpenClaw stays packaging/config around that same local runtime path, not a separate Bidvia runtime surface.',
     '- This companion stays local-only and does not provide managed runtime or remote transport alternatives.',
     '- Bidvia tool tiers include review-safe reads and runtime-execution tools.',
     '- If required Bidvia context is missing, start with `route-context-matrix` to find the next context family.',

@@ -1,81 +1,34 @@
-import {
-  bidviaMcpServerSupportedMethods,
-} from './contracts.js';
 import type { BidviaLocalRuntimeCapabilitySnapshot } from './contracts.js';
-import {
-  resolveBidviaBaseUrl,
-  resolveBidviaEnvironmentMode,
-} from './config.js';
 import type { ResolveBidviaBaseUrlOptions } from './config.js';
+import { buildCapabilityPlaneLocalRuntimeSnapshot } from './capability-plane.js';
 import {
+  buildStage3ReleaseGate,
+  listCorePlaneAdoptionStatuses,
+} from './core-plane-adoption.js';
+import {
+  buildLocalDiagnosticCommandCatalog,
   buildLocalMcpToolCatalog,
   buildLocalRouteCapabilityCatalog,
 } from './discovery-catalog.js';
-
-const runtimeCapabilitySnapshotSchemaVersion = '2026-03-27';
-const localRuntimeCapabilitySnapshotVersion = 'local-runtime-capability-snapshot';
-const localStaticFallbackPolicy = 'prefer-local-static-until-server-negotiation';
-const deferredNegotiationFallbackPolicy = 'await-explicit-server-negotiation';
-
-function cloneLocalRouteCapabilities(): BidviaLocalRuntimeCapabilitySnapshot['routeCapabilities']['items'] {
-  return buildLocalRouteCapabilityCatalog();
-}
-
-function cloneLocalMcpTools(): BidviaLocalRuntimeCapabilitySnapshot['mcpTools']['items'] {
-  return buildLocalMcpToolCatalog();
-}
-
-function buildLocalStaticMetadata(revision: string, lastUpdatedAt: string) {
-  return {
-    schemaVersion: runtimeCapabilitySnapshotSchemaVersion,
-    version: localRuntimeCapabilitySnapshotVersion,
-    revision,
-    lastUpdatedAt,
-    ttl: null,
-    expiresAt: null,
-    stale: false,
-    fallbackPolicy: localStaticFallbackPolicy,
-  };
-}
+import { buildExecutionGuidanceEntries } from './execution-guidance.js';
+import { buildAgentLifecycleGuidance } from './task-plane.js';
 
 export function buildLocalRuntimeCapabilitySnapshot(
   options: ResolveBidviaBaseUrlOptions = {},
 ): BidviaLocalRuntimeCapabilitySnapshot {
-  const lastUpdatedAt = new Date().toISOString();
+  const snapshot = buildCapabilityPlaneLocalRuntimeSnapshot(options, {
+    buildRouteCapabilityCatalog: buildLocalRouteCapabilityCatalog,
+    buildMcpToolCatalog: buildLocalMcpToolCatalog,
+  });
+  const planeAdoption = listCorePlaneAdoptionStatuses();
+  const stage3ReleaseGate = buildStage3ReleaseGate();
 
   return {
-    baseUrl: resolveBidviaBaseUrl(options),
-    environmentMode: resolveBidviaEnvironmentMode(options),
-    routeCapabilities: {
-      source: 'local-static',
-      ...buildLocalStaticMetadata('repo-route-capabilities', lastUpdatedAt),
-      items: cloneLocalRouteCapabilities(),
-    } as BidviaLocalRuntimeCapabilitySnapshot['routeCapabilities'],
-    mcpTools: {
-      source: 'local-static',
-      ...buildLocalStaticMetadata('repo-mcp-tools', lastUpdatedAt),
-      items: cloneLocalMcpTools(),
-    } as BidviaLocalRuntimeCapabilitySnapshot['mcpTools'],
-    localMcpServer: {
-      source: 'local-static',
-      ...buildLocalStaticMetadata('repo-local-mcp-server', lastUpdatedAt),
-      available: true,
-      transport: 'stdio',
-      entrypoint: 'src/mcp-server.ts',
-      supportedMethods: [...bidviaMcpServerSupportedMethods],
-    } as BidviaLocalRuntimeCapabilitySnapshot['localMcpServer'],
-    deferredServerNegotiation: {
-      source: 'deferred-server-negotiation',
-      schemaVersion: runtimeCapabilitySnapshotSchemaVersion,
-      version: localRuntimeCapabilitySnapshotVersion,
-      revision: 'deferred-server-negotiation',
-      lastUpdatedAt,
-      ttl: null,
-      expiresAt: null,
-      stale: false,
-      fallbackPolicy: deferredNegotiationFallbackPolicy,
-      status: 'deferred',
-      serverProvidedCapabilitiesKnown: false,
-    } as BidviaLocalRuntimeCapabilitySnapshot['deferredServerNegotiation'],
+    ...snapshot,
+    localDiagnostics: buildLocalDiagnosticCommandCatalog(),
+    planeAdoption,
+    stage3ReleaseGate,
+    executionGuidance: buildExecutionGuidanceEntries(),
+    agentLifecycleGuidance: buildAgentLifecycleGuidance(),
   };
 }

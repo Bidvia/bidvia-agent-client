@@ -26,6 +26,16 @@ test('industry-universe-review-packet-preview prints review packet json', () => 
   assert.equal(output.scenarioFamily, 'industry-universe');
   assert.equal(output.verificationMode, 'review-safe');
   assert.equal(output.status, 'pending-review');
+  assert.deepEqual(output.closureGuidance, {
+    lane: 'runtime-generated',
+    fixedFixtureAssumptions: false,
+    prerequisites: [
+      'create supply and demand listings first',
+      'activate both listings',
+      'use the returned activation event id to generate a real persisted match',
+      'continue downstream with the returned match and approval ids',
+    ],
+  });
   assert.equal(output.details.boundary.serverTruthClaimed, false);
   assert.equal(output.details.boundary.adjudicationOutcomeIncluded, false);
   assert.equal(output.details.boundary.localDerivedExplanationIncluded, true);
@@ -47,15 +57,59 @@ test('industry-universe-review-packet-preview prints review packet json', () => 
     'adjudication-outcome-included:false',
     'core-truth-closure:deferred',
   ]);
+  assert.deepEqual(output.details.verification.roleSplit, {
+    user: [
+      'user-create-listing',
+      'user-activate-listing',
+      'user-generate-match-candidates',
+    ],
+    operator: [],
+    admin: [],
+  });
+  assert.deepEqual(output.details.routeDetails[1], {
+    sequence: 2,
+    routeKey: 'activateListing',
+    stepName: 'user-activate-listing',
+    actorRole: 'user',
+    requiredContext: ['tenantId', 'principalId', 'companyId'],
+    completed: false,
+    progressionCheckpoint: {
+      checkpointName: 'verify-activation-before-match-generation',
+      verifyRecordGroups: ['listings'],
+      guidance: 'confirm the activated listing id remains the record carried into match generation on the runtime-generated lane',
+    },
+  });
+  assert.deepEqual(output.details.routeDetails[2], {
+    sequence: 3,
+    routeKey: 'generateMatchCandidates',
+    stepName: 'user-generate-match-candidates',
+    actorRole: 'user',
+    requiredContext: ['tenantId', 'principalId', 'companyId'],
+    completed: false,
+    progressionCheckpoint: {
+      checkpointName: 'verify-match-id-before-connection-approval',
+      verifyRecordGroups: ['matches'],
+      guidance: 'capture the returned match id before continuing into downstream connection approval on the runtime-generated lane',
+    },
+  });
   assert.equal(output.summary.pendingRouteCount, 3);
   assert.equal(
     output.sections[3]?.entries[0],
-    'pending-review:1/3:createListing:requires=tenantId|principalId|companyId',
+    'pending-review:1/3:createListing:user-create-listing:actor=user:requires=tenantId|principalId|companyId',
   );
   assert.equal(output.sections[4]?.entries.includes('next-pending-route:createListing'), true);
   assert.equal(output.sections[4]?.entries.includes('local-derived-explanation:review-packet-status:pending-review'), true);
   assert.equal(output.sections[4]?.entries.includes('server-owned-facts:scenario-source-refs:1'), true);
   assert.equal(output.sections[4]?.entries.includes('dependency-gated-seams:core-truth-closure:deferred'), true);
+  assert.deepEqual(output.details.verification.minimumEvidenceFields, [
+    'helperKey',
+    'routePathTemplate',
+    'actorRole',
+    'contextSummary',
+    'requestSummary',
+    'responseSummary',
+  ]);
+  assert.equal(output.sections[4]?.entries.includes('minimum-evidence-fields:helperKey|routePathTemplate|actorRole|contextSummary|requestSummary|responseSummary'), true);
   assert.deepEqual(
     output.sections.map((section: { sectionKey: string }) => section.sectionKey),
     ['scenario', 'evidence', 'traceability', 'routes', 'verification', 'records'],
@@ -89,6 +143,16 @@ test('industry-universe-review-packet-export prints exported review packet json'
   assert.equal(output.scenarioFamily, 'industry-universe');
   assert.equal(output.verificationMode, 'review-safe');
   assert.equal(output.status, 'pending-review');
+  assert.deepEqual(output.closureGuidance, {
+    lane: 'runtime-generated',
+    fixedFixtureAssumptions: false,
+    prerequisites: [
+      'create supply and demand listings first',
+      'activate both listings',
+      'use the returned activation event id to generate a real persisted match',
+      'continue downstream with the returned match and approval ids',
+    ],
+  });
   assert.equal(output.details.boundary.serverTruthClaimed, false);
   assert.equal(output.details.boundary.adjudicationOutcomeIncluded, false);
   assert.equal(output.details.boundary.localDerivedExplanationIncluded, true);
@@ -110,17 +174,85 @@ test('industry-universe-review-packet-export prints exported review packet json'
     'adjudication-outcome-included:false',
     'core-truth-closure:deferred',
   ]);
+  assert.deepEqual(output.details.verification.roleSplit, {
+    user: [
+      'user-create-listing',
+      'user-activate-listing',
+      'user-generate-match-candidates',
+    ],
+    operator: [],
+    admin: [],
+  });
+  assert.deepEqual(output.details.routeDetails[1], {
+    sequence: 2,
+    routeKey: 'activateListing',
+    stepName: 'user-activate-listing',
+    actorRole: 'user',
+    requiredContext: ['tenantId', 'principalId', 'companyId'],
+    completed: false,
+    progressionCheckpoint: {
+      checkpointName: 'verify-activation-before-match-generation',
+      verifyRecordGroups: ['listings'],
+      guidance: 'confirm the activated listing id remains the record carried into match generation on the runtime-generated lane',
+    },
+  });
+  assert.deepEqual(output.details.routeDetails[2], {
+    sequence: 3,
+    routeKey: 'generateMatchCandidates',
+    stepName: 'user-generate-match-candidates',
+    actorRole: 'user',
+    requiredContext: ['tenantId', 'principalId', 'companyId'],
+    completed: false,
+    progressionCheckpoint: {
+      checkpointName: 'verify-match-id-before-connection-approval',
+      verifyRecordGroups: ['matches'],
+      guidance: 'capture the returned match id before continuing into downstream connection approval on the runtime-generated lane',
+    },
+  });
   assert.equal(output.summary.pendingRouteCount, 3);
   assert.equal(
     output.sections[3]?.entries[0],
-    'pending-review:1/3:createListing:requires=tenantId|principalId|companyId',
+    'pending-review:1/3:createListing:user-create-listing:actor=user:requires=tenantId|principalId|companyId',
   );
   assert.equal(output.sections[4]?.entries.includes('next-pending-route:createListing'), true);
   assert.equal(output.sections[4]?.entries.includes('local-derived-explanation:review-packet-status:pending-review'), true);
   assert.equal(output.sections[4]?.entries.includes('server-owned-facts:scenario-source-refs:1'), true);
   assert.equal(output.sections[4]?.entries.includes('dependency-gated-seams:core-truth-closure:deferred'), true);
+  assert.deepEqual(output.details.verification.minimumEvidenceFields, [
+    'helperKey',
+    'routePathTemplate',
+    'actorRole',
+    'contextSummary',
+    'requestSummary',
+    'responseSummary',
+  ]);
+  assert.equal(output.sections[4]?.entries.includes('minimum-evidence-fields:helperKey|routePathTemplate|actorRole|contextSummary|requestSummary|responseSummary'), true);
   assert.deepEqual(
     output.sections.map((section: { sectionKey: string }) => section.sectionKey),
     ['scenario', 'evidence', 'traceability', 'routes', 'verification', 'records'],
   );
+});
+
+test('industry-universe review packet preview and export keep operator-facing diagnostics consistent', () => {
+  const tsxCliPath = path.join(process.cwd(), 'node_modules', 'tsx', 'dist', 'cli.mjs');
+  const previewResult = spawnSync(process.execPath, [tsxCliPath, 'src/cli.ts', 'industry-universe-review-packet-preview'], {
+    cwd: process.cwd(),
+    env: process.env,
+    encoding: 'utf8',
+  });
+  const exportResult = spawnSync(process.execPath, [tsxCliPath, 'src/cli.ts', 'industry-universe-review-packet-export'], {
+    cwd: process.cwd(),
+    env: process.env,
+    encoding: 'utf8',
+  });
+
+  assert.equal(previewResult.status, 0, previewResult.stderr || previewResult.stdout);
+  assert.equal(exportResult.status, 0, exportResult.stderr || exportResult.stdout);
+
+  const previewOutput = JSON.parse(previewResult.stdout);
+  const exportedOutput = JSON.parse(exportResult.stdout);
+
+  assert.deepEqual(previewOutput.details.boundary, exportedOutput.details.boundary);
+  assert.deepEqual(previewOutput.details.verification.minimumEvidenceFields, exportedOutput.details.verification.minimumEvidenceFields);
+  assert.deepEqual(previewOutput.details.verification.dependencyGatedSeams, exportedOutput.details.verification.dependencyGatedSeams);
 });

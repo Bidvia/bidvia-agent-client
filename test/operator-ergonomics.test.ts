@@ -5,7 +5,25 @@ import { BidviaClient } from '../src/client.ts';
 import type { BidviaClientContext, BidviaMcpToolCallResponse } from '../src/contracts.ts';
 import { runCli } from '../src/cli.ts';
 import { dispatchMcpToolCall } from '../src/mcp.ts';
-import { buildMcpMissingContextMessage } from '../src/operator-ergonomics.ts';
+import {
+  buildExecutionGuidanceEntries,
+  buildMcpMissingContextMessage,
+} from '../src/operator-ergonomics.ts';
+
+function withRuntimeResultCommit<T>(client: T): T & {
+  commitRuntimeResult: () => Promise<{ outcomeRef: string }>;
+} {
+  return {
+    ...(client as object),
+    async commitRuntimeResult() {
+      return {
+        outcomeRef: 'outcome://test/runtime-commit',
+      };
+    },
+  } as T & {
+    commitRuntimeResult: () => Promise<{ outcomeRef: string }>;
+  };
+}
 
 const dispatchMcpToolCallWithExecution = dispatchMcpToolCall as unknown as (
   request: {
@@ -28,6 +46,10 @@ type ExecutionPreflight = {
   localCapabilityRiskTier: string;
   requiredContext: string[];
   missingContext: string[];
+  runnable: boolean;
+  blockedBy: string | null;
+  blockerClass: string | null;
+  ownership: string;
   hints: string[];
 };
 
@@ -38,25 +60,47 @@ function createExecutionContext(overrides: Partial<BidviaClientContext> = {}): B
   };
 }
 
+function setEnvVar(name: string, value: string | undefined) {
+  const previousValue = process.env[name];
+  if (value === undefined) {
+    delete process.env[name];
+  } else {
+    process.env[name] = value;
+  }
+
+  return () => {
+    if (previousValue === undefined) {
+      delete process.env[name];
+    } else {
+      process.env[name] = previousValue;
+    }
+  };
+}
+
 test('runCli heartbeat dry-run emits structured preflight context and risk hints', async () => {
   const printed: unknown[] = [];
 
-  const exitCode = await runCli(['heartbeat', '--dry-run'], {
-    now: () => '2026-03-30T10:00:00Z',
-    printJson: (value: unknown) => {
-      printed.push(value);
-    },
-    printLine: () => {
-      throw new Error('help output should not be used for heartbeat dry-run');
-    },
-    createClient: () => {
-      throw new Error('dry-run should not create a client');
-    },
-    resolveExecutionContext: () => createExecutionContext(),
-  } as never);
+  const restoreRegistrationId = setEnvVar('BIDVIA_REGISTRATION_ID', undefined);
+  const restorePrincipalId = setEnvVar('BIDVIA_PRINCIPAL_ID', undefined);
 
-  assert.equal(exitCode, 0);
-  assert.deepEqual(printed, [{
+  try {
+    const exitCode = await runCli(['heartbeat', '--dry-run'], {
+      now: () => '2026-03-30T10:00:00Z',
+      printJson: (value: unknown) => {
+        printed.push(value);
+      },
+      printLine: () => {
+        throw new Error('help output should not be used for heartbeat dry-run');
+      },
+      createClient: () => {
+        throw new Error('dry-run should not create a client');
+      },
+      readLocalOnboardingState: async () => null,
+      resolveExecutionContext: () => createExecutionContext(),
+    } as never);
+
+    assert.equal(exitCode, 0);
+    assert.deepEqual(printed, [{
     command: 'heartbeat',
     mode: 'dry-run',
     scope: 'local-only',
@@ -71,9 +115,14 @@ test('runCli heartbeat dry-run emits structured preflight context and risk hints
       localCapabilityRiskTier: 'runtime-execution',
       requiredContext: ['tenantId', 'registrationId', 'principalId'],
       missingContext: ['registrationId', 'principalId'],
+      runnable: true,
+      blockedBy: null,
+      blockerClass: 'missing-local-context',
+      ownership: 'claimant',
       hints: [
         'Dry-run stays local and does not execute the remote registration-bound route.',
         'Set BIDVIA_REGISTRATION_ID and BIDVIA_PRINCIPAL_ID before running the real execution command.',
+        'Blocker class missing-local-context keeps this command fail-closed until the required execution context is present.',
         'Risk tier runtime-execution means the non-dry-run command writes to the remote runtime route.',
       ],
     },
@@ -81,29 +130,38 @@ test('runCli heartbeat dry-run emits structured preflight context and risk hints
       now: '2026-03-30T10:00:00Z',
       expiresAt: '2026-03-30T10:05:00.000Z',
     },
-  }]);
+    }]);
+  } finally {
+    restoreRegistrationId();
+    restorePrincipalId();
+  }
 });
 
 test('runCli heartbeat fails fast with structured missing-context guidance before real execution', async () => {
   const printed: unknown[] = [];
 
-  const exitCode = await runCli(['heartbeat'], {
-    now: () => '2026-03-30T10:00:00Z',
-    printJson: (value: unknown) => {
-      printed.push(value);
-    },
-    printLine: () => {
-      throw new Error('help output should not be used for heartbeat execution');
-    },
-    createClient: () => new BidviaClient({
-      baseUrl: 'http://127.0.0.1:8787',
-      context: createExecutionContext(),
-    }),
-    resolveExecutionContext: () => createExecutionContext(),
-  } as never);
+  const restoreRegistrationId = setEnvVar('BIDVIA_REGISTRATION_ID', undefined);
+  const restorePrincipalId = setEnvVar('BIDVIA_PRINCIPAL_ID', undefined);
 
-  assert.equal(exitCode, 1);
-  assert.deepEqual(printed, [{
+  try {
+    const exitCode = await runCli(['heartbeat'], {
+      now: () => '2026-03-30T10:00:00Z',
+      printJson: (value: unknown) => {
+        printed.push(value);
+      },
+      printLine: () => {
+        throw new Error('help output should not be used for heartbeat execution');
+      },
+      createClient: () => new BidviaClient({
+        baseUrl: 'http://127.0.0.1:8787',
+        context: createExecutionContext(),
+      }),
+      readLocalOnboardingState: async () => null,
+      resolveExecutionContext: () => createExecutionContext(),
+    } as never);
+
+    assert.equal(exitCode, 1);
+    assert.deepEqual(printed, [{
     error: {
       code: 'missing-context',
       command: 'heartbeat',
@@ -120,14 +178,23 @@ test('runCli heartbeat fails fast with structured missing-context guidance befor
         localCapabilityRiskTier: 'runtime-execution',
         requiredContext: ['tenantId', 'registrationId', 'principalId'],
         missingContext: ['registrationId', 'principalId'],
+        runnable: true,
+        blockedBy: null,
+        blockerClass: 'missing-local-context',
+        ownership: 'claimant',
         hints: [
           'Set BIDVIA_REGISTRATION_ID and BIDVIA_PRINCIPAL_ID before running the real execution command.',
+          'Blocker class missing-local-context keeps this command fail-closed until the required execution context is present.',
           'Use --dry-run to inspect the local-only payload preview without remote execution.',
           'Risk tier runtime-execution means the non-dry-run command writes to the remote runtime route.',
         ],
       },
     },
-  }]);
+    }]);
+  } finally {
+    restoreRegistrationId();
+    restorePrincipalId();
+  }
 });
 
 test('dispatchMcpToolCall adds execution preflight metadata and rejects missing local context clearly', async () => {
@@ -140,15 +207,15 @@ test('dispatchMcpToolCall adds execution preflight metadata and rejects missing 
       },
     },
     {
-      createExecutionClient: () => ({
-        async postHeartbeat(input: { expiresAt: string }) {
-          return {
-            ok: true,
+        createExecutionClient: () => withRuntimeResultCommit({
+          async postHeartbeat(input: { expiresAt: string }) {
+            return {
+              ok: true,
             route: 'heartbeat',
             expiresAt: input.expiresAt,
           };
-        },
-      }),
+          },
+        }),
     },
   ) as BidviaMcpToolCallResponse & { preflight: ExecutionPreflight };
 
@@ -163,6 +230,10 @@ test('dispatchMcpToolCall adds execution preflight metadata and rejects missing 
     localCapabilityRiskTier: 'runtime-execution',
     requiredContext: ['tenantId', 'registrationId', 'principalId'],
     missingContext: [],
+    runnable: true,
+    blockedBy: null,
+    blockerClass: null,
+    ownership: 'claimant',
     hints: [
       'This MCP execution tool uses the existing local execution client seam.',
       'Risk tier runtime-execution means the tool writes to the remote runtime route when context is present.',
@@ -194,4 +265,168 @@ test('buildMcpMissingContextMessage gives OpenClaw agents the next local remedia
     buildMcpMissingContextMessage('create-commercial-action-execution', ['companyId', 'principalId']),
     'MCP tool create-commercial-action-execution is missing required local execution context: companyId, principalId. Use bidvia route-context-matrix to confirm the next Bidvia context family, then set BIDVIA_COMPANY_ID and BIDVIA_PRINCIPAL_ID before retrying this local stdio MCP tool.',
   );
+});
+
+test('CLI and MCP execution diagnostics keep blocker wording and ownership consistent', async () => {
+  const printed: unknown[] = [];
+
+  const restoreRegistrationId = setEnvVar('BIDVIA_REGISTRATION_ID', undefined);
+  const restorePrincipalId = setEnvVar('BIDVIA_PRINCIPAL_ID', undefined);
+
+  try {
+    const exitCode = await runCli(['heartbeat'], {
+      now: () => '2026-03-30T10:00:00Z',
+      printJson: (value: unknown) => {
+        printed.push(value);
+      },
+      printLine: () => {
+        throw new Error('help output should not be used for heartbeat execution');
+      },
+      createClient: () => new BidviaClient({
+        baseUrl: 'http://127.0.0.1:8787',
+        context: createExecutionContext(),
+      }),
+      readLocalOnboardingState: async () => null,
+      resolveExecutionContext: () => createExecutionContext(),
+    } as never);
+
+    assert.equal(exitCode, 1);
+    const cliFailure = printed[0] as { error: { preflight: ExecutionPreflight } };
+
+    let mcpFailure: Error | undefined;
+    try {
+      await dispatchMcpToolCallWithExecution(
+        {
+          toolName: 'heartbeat-execution',
+          arguments: {
+            now: '2026-03-30T10:00:00Z',
+            expiresAt: '2026-03-30T10:05:00Z',
+          },
+        },
+        {
+          createExecutionClient: () => new BidviaClient({
+            baseUrl: 'http://127.0.0.1:8787',
+            context: createExecutionContext(),
+          }),
+        },
+      );
+    } catch (error) {
+      mcpFailure = error as Error;
+    }
+
+    assert.equal(cliFailure.error.preflight.blockerClass, 'missing-local-context');
+    assert.equal(cliFailure.error.preflight.ownership, 'claimant');
+    assert.equal(
+      cliFailure.error.preflight.hints.includes('Blocker class missing-local-context keeps this command fail-closed until the required execution context is present.'),
+      true,
+    );
+    assert.ok(mcpFailure);
+    assert.equal(mcpFailure.message.includes('missing required local execution context: registrationId, principalId'), true);
+  } finally {
+    restoreRegistrationId();
+    restorePrincipalId();
+  }
+});
+
+test('buildExecutionGuidanceEntries surfaces task-write-ready and proof-lane next-step guidance without faking Core truth', () => {
+  assert.deepEqual(buildExecutionGuidanceEntries(), [
+    {
+      guidanceKey: 'task-write-ready',
+      lane: 'default-local-docker',
+      appliesWhen: 'route-exists-but-subject-not-runnable',
+      signal: 'authority_class_not_dispatchable',
+      errorCategory: 'expected-bounded-behavior',
+      nextStepOwner: 'operator-or-admin',
+      nextStepAction: 'Follow the surfaced task-write-ready progression and keep unresolved Core-owned progression visible instead of assuming claim is sufficient.',
+      checkpoints: [
+        {
+          stepKey: 'self-service-patch',
+          actor: 'external-claimed-agent',
+          lane: 'default-local-docker',
+          surfacedAction: 'Patch claimed-agent self-service state first so task-dispatch acceptance and related readiness inputs are explicit before requesting operator intervention.',
+          verificationCheckpoint: {
+            helperKeys: ['getAgentReadiness'],
+            truthFields: ['taskWriteReady', 'dispatchEligibility'],
+            guidance: 'Re-read readiness after the self-service patch and stay blocked if Core truth still does not show task-write-ready or dispatch-eligible state.',
+          },
+          failClosedState: 'A successful self-service patch does not itself make the claimed agent task-write-ready or dispatch-eligible.',
+        },
+        {
+          stepKey: 'dispatch-authority-request',
+          actor: 'external-claimed-agent',
+          lane: 'default-local-docker',
+          surfacedAction: 'If readiness is still blocked, submit the bounded dispatch-authority request rather than assuming claim already granted runnable authority.',
+          verificationCheckpoint: {
+            helperKeys: ['getAccountAgentDispatchAuthority', 'getAgentReadiness'],
+            truthFields: ['taskWriteReady', 'dispatchEligibility'],
+            guidance: 'Re-read dispatch-authority and readiness after the request; treat the request as pending until Core-owned truth changes.',
+          },
+          failClosedState: 'Submitting the request alone does not make the subject dispatchable and does not close operator/admin review.',
+        },
+        {
+          stepKey: 'operator-review-closure',
+          actor: 'operator-or-admin',
+          lane: 'default-local-docker',
+          surfacedAction: 'Wait for the real operator/admin review closure on the requested authority path instead of inventing a client-side approval outcome.',
+          verificationCheckpoint: {
+            helperKeys: ['getAccountAgentDispatchAuthority', 'getAgentReadiness'],
+            truthFields: ['taskWriteReady', 'dispatchEligibility'],
+            guidance: 'After review closes, re-read the surfaced truth helpers to confirm whether Core now reports runnable authority.',
+          },
+          failClosedState: 'If operator/admin closure is absent or unresolved, keep the subject non-dispatchable.',
+        },
+        {
+          stepKey: 'external-binding-completion',
+          actor: 'operator-or-admin',
+          lane: 'default-local-docker',
+          surfacedAction: 'Use the shipped first-class account-plane external binding write helper together with the account-agent binding read surface when the current Core-owned route/body contract for that lane is explicit, then verify returned task-write-ready and dispatch-eligibility truth before treating the subject as runnable.',
+          verificationCheckpoint: {
+            helperKeys: ['createAccountAgentExternalBinding', 'listAccountAgentBindings'],
+            truthFields: [],
+            guidance: 'Use the shipped external binding write helper plus the account-agent binding read surface for visibility, and verify returned task-write-ready or dispatch-eligibility truth after any binding write. Claimant and operator routes still use different body contracts, so remain fail-closed when the current lane lacks an explicit Core-owned route/body contract.',
+          },
+          failClosedState: 'Until the current lane has an explicit Core-owned binding route/body contract and the returned reads confirm runnable truth, keep the subject non-dispatchable.',
+        },
+        {
+          stepKey: 'post-step-truth-check',
+          actor: 'external-claimed-agent',
+          lane: 'default-local-docker',
+          surfacedAction: 'Use the shipped read helpers to verify the final task-write-ready and dispatch-eligibility truth before attempting task execution.',
+          verificationCheckpoint: {
+            helperKeys: ['getAgentReadiness', 'getAccountAgentDispatchAuthority'],
+            truthFields: ['taskWriteReady', 'dispatchEligibility'],
+            guidance: 'Only treat the progression as complete when the returned truth confirms task-write-ready and dispatch-eligibility state.',
+          },
+          failClosedState: 'If the post-step reads do not confirm both truth fields, remain fail-closed and do not treat the subject as runnable.',
+        },
+      ],
+    },
+    {
+      guidanceKey: 'authorization-projection',
+      lane: 'default-local-docker',
+      appliesWhen: 'account-plane-succeeds-but-governed-runtime-still-denied',
+      signal: 'active_role_binding_required',
+      errorCategory: 'probable-core-contradiction',
+      nextStepOwner: 'enterprise-admin',
+      nextStepAction: 'Keep claimant continuation on the account-owned plane, use only the allowed account/session/org repair actions surfaced by Core, and if the gate still remains after those repairs, treat it as an unresolved Core-owned authorization projection issue rather than inventing a new claimant or operator workflow.',
+    },
+    {
+      guidanceKey: 'proof-lane',
+      lane: 'proof-lane-admin-session',
+      appliesWhen: 'deterministic-proof-validation',
+      signal: 'admin-session-required',
+      errorCategory: 'client-misuse',
+      nextStepOwner: 'admin',
+      nextStepAction: 'Use a real admin session for proof-lane walkthroughs rather than assuming fixed proof ids are runnable on default local docker.',
+    },
+    {
+      guidanceKey: 'runtime-generated-closure',
+      lane: 'runtime-generated',
+      appliesWhen: 'business-universe-closure',
+      signal: 'fixed-fixture-not-required',
+      errorCategory: 'client-misuse',
+      nextStepOwner: 'agent',
+      nextStepAction: 'Create the required runtime objects yourself and continue with the returned ids instead of depending on fixed fixture identifiers.',
+    },
+  ]);
 });

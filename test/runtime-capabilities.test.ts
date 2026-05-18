@@ -4,6 +4,15 @@ import assert from 'node:assert/strict';
 import {
   buildLocalRuntimeCapabilitySnapshot,
 } from '../src/runtime-capabilities.ts';
+import {
+  buildCapabilityPlaneLocalRuntimeSnapshot,
+  buildCapabilityPlaneView,
+} from '../src/capability-plane.ts';
+import {
+  buildLocalDiagnosticCommandCatalog,
+  buildLocalMcpToolCatalog,
+  buildLocalRouteCapabilityCatalog,
+} from '../src/discovery-catalog.ts';
 import type {
   BidviaLocalRuntimeCapabilitySnapshot,
 } from '../src/contracts.ts';
@@ -15,11 +24,12 @@ function withDefaultContextSemantic<T extends { accessContextFamily: string }>(v
   };
 }
 
-test('buildLocalRuntimeCapabilitySnapshot defaults to the public global API while keeping its capability view derived from shipped facts only', () => {
+test('buildLocalRuntimeCapabilitySnapshot defaults to the public china API while keeping its capability view derived from shipped facts only', () => {
   const snapshot = buildLocalRuntimeCapabilitySnapshot();
 
-  assert.equal(snapshot.baseUrl, 'https://api.bidvia.ai');
+  assert.equal(snapshot.baseUrl, 'https://api.bidvia.cn');
   assert.equal(snapshot.environmentMode, 'production');
+  assert.deepEqual(snapshot.localDiagnostics, buildLocalDiagnosticCommandCatalog());
   assert.equal(snapshot.routeCapabilities.source, 'local-static');
   assert.equal(snapshot.routeCapabilities.items.length > 0, true);
   assert.equal(snapshot.routeCapabilities.schemaVersion, '2026-03-27');
@@ -36,7 +46,7 @@ test('buildLocalRuntimeCapabilitySnapshot defaults to the public global API whil
     true,
   );
   assert.equal(snapshot.mcpTools.source, 'local-static');
-  assert.equal(snapshot.mcpTools.items.length, 64);
+  assert.equal(snapshot.mcpTools.items.length, 110);
   assert.equal(snapshot.mcpTools.schemaVersion, '2026-03-27');
   assert.equal(snapshot.mcpTools.version, 'local-runtime-capability-snapshot');
   assert.equal(snapshot.mcpTools.revision, 'repo-mcp-tools');
@@ -81,6 +91,34 @@ test('buildLocalRuntimeCapabilitySnapshot keeps explicit local and sim base URLs
   assert.notEqual(simSnapshot.environmentMode, 'local');
 });
 
+test('buildLocalRuntimeCapabilitySnapshot flows through the explicit capability-plane adapter and keeps local snapshots descriptive-only', () => {
+  const options = {
+    explicitBaseUrl: 'https://staging.bidvia.internal',
+  };
+  const capabilityPlane = buildCapabilityPlaneView();
+
+  const runtimeSnapshot = buildLocalRuntimeCapabilitySnapshot(options);
+  const capabilityPlaneSnapshot = buildCapabilityPlaneLocalRuntimeSnapshot(options, {
+    buildRouteCapabilityCatalog: buildLocalRouteCapabilityCatalog,
+    buildMcpToolCatalog: buildLocalMcpToolCatalog,
+  });
+
+  capabilityPlaneSnapshot.routeCapabilities.lastUpdatedAt = runtimeSnapshot.routeCapabilities.lastUpdatedAt;
+  capabilityPlaneSnapshot.mcpTools.lastUpdatedAt = runtimeSnapshot.mcpTools.lastUpdatedAt;
+  capabilityPlaneSnapshot.localMcpServer.lastUpdatedAt = runtimeSnapshot.localMcpServer.lastUpdatedAt;
+  capabilityPlaneSnapshot.deferredServerNegotiation.lastUpdatedAt = runtimeSnapshot.deferredServerNegotiation.lastUpdatedAt;
+  capabilityPlaneSnapshot.executionGuidance = runtimeSnapshot.executionGuidance;
+  const expectedRuntimeSnapshot = {
+    ...capabilityPlaneSnapshot,
+    localDiagnostics: buildLocalDiagnosticCommandCatalog(),
+  };
+
+  assert.deepEqual(runtimeSnapshot, expectedRuntimeSnapshot);
+  assert.equal(capabilityPlane.localSnapshots.descriptiveOnly, true);
+  assert.equal(capabilityPlane.localSnapshots.liveServerNegotiationClaimed, false);
+  assert.equal(capabilityPlane.localSnapshots.remoteRegistryBehaviorClaimed, false);
+});
+
 test('buildLocalRuntimeCapabilitySnapshot keeps deferred server negotiation explicit and separate from local facts', () => {
   const snapshot: BidviaLocalRuntimeCapabilitySnapshot = buildLocalRuntimeCapabilitySnapshot({
     explicitBaseUrl: 'https://staging.bidvia.internal',
@@ -119,6 +157,7 @@ test('buildLocalRuntimeCapabilitySnapshot keeps deferred server negotiation expl
       level: 'atomic-route',
       localCapabilityTier: 'L2-registration-runtime',
       localCapabilityRiskTier: 'runtime-execution',
+      taskPlaneCapabilityMode: 'packet-grounded-execution',
     }),
   );
   assert.deepEqual(
@@ -171,6 +210,43 @@ test('buildLocalRuntimeCapabilitySnapshot includes shipped widened read helpers 
       level: 'atomic-route',
       localCapabilityTier: 'L0-observe-only',
       localCapabilityRiskTier: 'observe-only',
+      capabilityPlaneCapabilityMode: 'packet-grounded-read',
+      dispatchEligibilityDerivedFromCapabilityReadTruth: false,
+      governedRunAuthorizationDerivedFromCapabilityReadTruth: false,
+    }),
+  );
+  assert.deepEqual(
+    snapshot.routeCapabilities.items.find((capability) => capability.helperKey === 'getAgentSummary'),
+    withDefaultContextSemantic({
+      helperKey: 'getAgentSummary',
+      routePathTemplate: '/runtime/agents/:agent_registration_id/summary',
+      httpMethod: 'GET',
+      accessContextFamily: 'principal-governed-read',
+      requiredContext: ['tenantId', 'principalId'],
+      scope: 'read',
+      level: 'atomic-route',
+      localCapabilityTier: 'L0-observe-only',
+      localCapabilityRiskTier: 'observe-only',
+      capabilityPlaneCapabilityMode: 'packet-grounded-read',
+      dispatchEligibilityDerivedFromCapabilityReadTruth: false,
+      governedRunAuthorizationDerivedFromCapabilityReadTruth: false,
+    }),
+  );
+  assert.deepEqual(
+    snapshot.routeCapabilities.items.find((capability) => capability.helperKey === 'getAgentCapabilityProfile'),
+    withDefaultContextSemantic({
+      helperKey: 'getAgentCapabilityProfile',
+      routePathTemplate: '/runtime/agents/:agent_registration_id/capability-profile',
+      httpMethod: 'GET',
+      accessContextFamily: 'principal-governed-read',
+      requiredContext: ['tenantId', 'principalId'],
+      scope: 'read',
+      level: 'atomic-route',
+      localCapabilityTier: 'L0-observe-only',
+      localCapabilityRiskTier: 'observe-only',
+      capabilityPlaneCapabilityMode: 'packet-grounded-read',
+      dispatchEligibilityDerivedFromCapabilityReadTruth: false,
+      governedRunAuthorizationDerivedFromCapabilityReadTruth: false,
     }),
   );
   assert.deepEqual(
@@ -201,18 +277,195 @@ test('buildLocalRuntimeCapabilitySnapshot includes shipped widened read helpers 
       localCapabilityRiskTier: 'observe-only',
     }),
   );
-  assert.deepEqual(
+  assert.equal(
     snapshot.routeCapabilities.items.find((capability) => capability.helperKey === 'listTargetAttachmentBindings'),
-    withDefaultContextSemantic({
-      helperKey: 'listTargetAttachmentBindings',
-      routePathTemplate: '/runtime/targets/:target_ref/attachment-bindings',
-      httpMethod: 'GET',
-      accessContextFamily: 'tenant',
-      requiredContext: ['tenantId'],
-      scope: 'read',
-      level: 'atomic-route',
-      localCapabilityTier: 'L0-observe-only',
-      localCapabilityRiskTier: 'observe-only',
-    }),
+    undefined,
   );
+});
+
+test('buildLocalRuntimeCapabilitySnapshot surfaces canonical agentId route templates for account-scoped task and notification helpers', () => {
+  const snapshot = buildLocalRuntimeCapabilitySnapshot();
+
+  assert.equal(
+    snapshot.routeCapabilities.items.find((capability) => capability.helperKey === 'createLease')?.routePathTemplate,
+    '/runtime/account/agents/:agentId/leases',
+  );
+  assert.equal(
+    snapshot.routeCapabilities.items.find((capability) => capability.helperKey === 'listTaskDispatches')?.routePathTemplate,
+    '/runtime/account/agents/:agentId/task-dispatches',
+  );
+  assert.equal(
+    snapshot.routeCapabilities.items.find((capability) => capability.helperKey === 'getTaskDispatch')?.routePathTemplate,
+    '/runtime/account/agents/:agentId/task-dispatches/:task_dispatch_id',
+  );
+  assert.equal(
+    snapshot.routeCapabilities.items.find((capability) => capability.helperKey === 'getNotification')?.routePathTemplate,
+    '/runtime/account/agents/:agentId/notifications/:notification_id',
+  );
+  assert.equal(
+    snapshot.routeCapabilities.items.find((capability) => capability.helperKey === 'acknowledgeNotification')?.routePathTemplate,
+    '/runtime/account/agents/:agentId/notifications/:notification_id/acknowledgements',
+  );
+});
+
+test('buildLocalRuntimeCapabilitySnapshot keeps execution listing status capability metadata unique', () => {
+  const snapshot = buildLocalRuntimeCapabilitySnapshot();
+
+  const listingStatusCapabilities = snapshot.routeCapabilities.items.filter(
+    (capability) => capability.helperKey === 'getAccountAgentExecutionListingStatus',
+  );
+
+  assert.equal(listingStatusCapabilities.length, 1);
+  assert.equal(
+    listingStatusCapabilities[0]?.routePathTemplate,
+    '/runtime/account/agents/:agentId/execution/listings/:listing_id/status',
+  );
+});
+
+test('buildLocalRuntimeCapabilitySnapshot carries shared execution truth without widening release blockers', () => {
+  const snapshot = buildLocalRuntimeCapabilitySnapshot();
+
+  assert.deepEqual(snapshot.localDiagnostics, buildLocalDiagnosticCommandCatalog());
+
+  assert.deepEqual(
+    snapshot.planeAdoption.map((status) => ({
+      plane: status.plane,
+      descriptiveVisibility: status.descriptiveVisibility,
+      executableHelperEligibility: status.executableHelperEligibility,
+    })),
+    [
+      {
+        plane: 'identity-session',
+        descriptiveVisibility: 'descriptive-plane-visible',
+        executableHelperEligibility: 'packet-grounded-execution',
+      },
+      {
+        plane: 'task',
+        descriptiveVisibility: 'descriptive-plane-visible',
+        executableHelperEligibility: 'packet-grounded-execution',
+      },
+      {
+        plane: 'capability',
+        descriptiveVisibility: 'descriptive-plane-visible',
+        executableHelperEligibility: 'packet-grounded-read',
+      },
+      {
+        plane: 'workflow-stage',
+        descriptiveVisibility: 'descriptive-plane-visible',
+        executableHelperEligibility: 'blocked-pending-packet',
+      },
+      {
+        plane: 'event-notification',
+        descriptiveVisibility: 'descriptive-plane-visible',
+        executableHelperEligibility: 'packet-grounded-execution',
+      },
+      {
+        plane: 'enterprise-integration',
+        descriptiveVisibility: 'descriptive-plane-visible',
+        executableHelperEligibility: 'packet-grounded-execution',
+      },
+    ],
+  );
+  assert.equal(snapshot.stage3ReleaseGate.status, 'blocked');
+  assert.deepEqual(snapshot.stage3ReleaseGate.blockedBy, ['plane-adoption-incomplete']);
+  assert.deepEqual(snapshot.executionGuidance, [
+    {
+      guidanceKey: 'task-write-ready',
+      lane: 'default-local-docker',
+      appliesWhen: 'route-exists-but-subject-not-runnable',
+      signal: 'authority_class_not_dispatchable',
+      errorCategory: 'expected-bounded-behavior',
+      nextStepOwner: 'operator-or-admin',
+      nextStepAction: 'Follow the surfaced task-write-ready progression and keep unresolved Core-owned progression visible instead of assuming claim is sufficient.',
+      checkpoints: [
+        {
+          stepKey: 'self-service-patch',
+          actor: 'external-claimed-agent',
+          lane: 'default-local-docker',
+          surfacedAction: 'Patch claimed-agent self-service state first so task-dispatch acceptance and related readiness inputs are explicit before requesting operator intervention.',
+          verificationCheckpoint: {
+            helperKeys: ['getAgentReadiness'],
+            truthFields: ['taskWriteReady', 'dispatchEligibility'],
+            guidance: 'Re-read readiness after the self-service patch and stay blocked if Core truth still does not show task-write-ready or dispatch-eligible state.',
+          },
+          failClosedState: 'A successful self-service patch does not itself make the claimed agent task-write-ready or dispatch-eligible.',
+        },
+        {
+          stepKey: 'dispatch-authority-request',
+          actor: 'external-claimed-agent',
+          lane: 'default-local-docker',
+          surfacedAction: 'If readiness is still blocked, submit the bounded dispatch-authority request rather than assuming claim already granted runnable authority.',
+          verificationCheckpoint: {
+            helperKeys: ['getAccountAgentDispatchAuthority', 'getAgentReadiness'],
+            truthFields: ['taskWriteReady', 'dispatchEligibility'],
+            guidance: 'Re-read dispatch-authority and readiness after the request; treat the request as pending until Core-owned truth changes.',
+          },
+          failClosedState: 'Submitting the request alone does not make the subject dispatchable and does not close operator/admin review.',
+        },
+        {
+          stepKey: 'operator-review-closure',
+          actor: 'operator-or-admin',
+          lane: 'default-local-docker',
+          surfacedAction: 'Wait for the real operator/admin review closure on the requested authority path instead of inventing a client-side approval outcome.',
+          verificationCheckpoint: {
+            helperKeys: ['getAccountAgentDispatchAuthority', 'getAgentReadiness'],
+            truthFields: ['taskWriteReady', 'dispatchEligibility'],
+            guidance: 'After review closes, re-read the surfaced truth helpers to confirm whether Core now reports runnable authority.',
+          },
+          failClosedState: 'If operator/admin closure is absent or unresolved, keep the subject non-dispatchable.',
+        },
+        {
+          stepKey: 'external-binding-completion',
+          actor: 'operator-or-admin',
+          lane: 'default-local-docker',
+          surfacedAction: 'Use the shipped first-class account-plane external binding write helper together with the account-agent binding read surface when the current Core-owned route/body contract for that lane is explicit, then verify returned task-write-ready and dispatch-eligibility truth before treating the subject as runnable.',
+          verificationCheckpoint: {
+            helperKeys: ['createAccountAgentExternalBinding', 'listAccountAgentBindings'],
+            truthFields: [],
+            guidance: 'Use the shipped external binding write helper plus the account-agent binding read surface for visibility, and verify returned task-write-ready or dispatch-eligibility truth after any binding write. Claimant and operator routes still use different body contracts, so remain fail-closed when the current lane lacks an explicit Core-owned route/body contract.',
+          },
+          failClosedState: 'Until the current lane has an explicit Core-owned binding route/body contract and the returned reads confirm runnable truth, keep the subject non-dispatchable.',
+        },
+        {
+          stepKey: 'post-step-truth-check',
+          actor: 'external-claimed-agent',
+          lane: 'default-local-docker',
+          surfacedAction: 'Use the shipped read helpers to verify the final task-write-ready and dispatch-eligibility truth before attempting task execution.',
+          verificationCheckpoint: {
+            helperKeys: ['getAgentReadiness', 'getAccountAgentDispatchAuthority'],
+            truthFields: ['taskWriteReady', 'dispatchEligibility'],
+            guidance: 'Only treat the progression as complete when the returned truth confirms task-write-ready and dispatch-eligibility state.',
+          },
+          failClosedState: 'If the post-step reads do not confirm both truth fields, remain fail-closed and do not treat the subject as runnable.',
+        },
+      ],
+    },
+    {
+      guidanceKey: 'authorization-projection',
+      lane: 'default-local-docker',
+      appliesWhen: 'account-plane-succeeds-but-governed-runtime-still-denied',
+      signal: 'active_role_binding_required',
+      errorCategory: 'probable-core-contradiction',
+      nextStepOwner: 'enterprise-admin',
+      nextStepAction: 'Keep claimant continuation on the account-owned plane, use only the allowed account/session/org repair actions surfaced by Core, and if the gate still remains after those repairs, treat it as an unresolved Core-owned authorization projection issue rather than inventing a new claimant or operator workflow.',
+    },
+    {
+      guidanceKey: 'proof-lane',
+      lane: 'proof-lane-admin-session',
+      appliesWhen: 'deterministic-proof-validation',
+      signal: 'admin-session-required',
+      errorCategory: 'client-misuse',
+      nextStepOwner: 'admin',
+      nextStepAction: 'Use a real admin session for proof-lane walkthroughs rather than assuming fixed proof ids are runnable on default local docker.',
+    },
+    {
+      guidanceKey: 'runtime-generated-closure',
+      lane: 'runtime-generated',
+      appliesWhen: 'business-universe-closure',
+      signal: 'fixed-fixture-not-required',
+      errorCategory: 'client-misuse',
+      nextStepOwner: 'agent',
+      nextStepAction: 'Create the required runtime objects yourself and continue with the returned ids instead of depending on fixed fixture identifiers.',
+    },
+  ]);
 });

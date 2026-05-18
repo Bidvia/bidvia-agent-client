@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
@@ -53,7 +53,7 @@ test('resolveLocalOnboardingStatePath defaults to ~/.bidvia/onboarding-state.jso
   );
 });
 
-test('writeLocalOnboardingState persists only non-secret onboarding fields and readLocalOnboardingState reloads them from the BIDVIA_STATE_PATH override', async () => {
+test('writeLocalOnboardingState persists minimal continuation fields while still excluding token material', async () => {
   const exports = publicSurface as Record<string, unknown>;
   const tempDirectory = mkdtempSync(path.join(tmpdir(), 'bidvia-local-onboarding-state-'));
   const statePath = path.join(tempDirectory, 'onboarding-state.json');
@@ -77,6 +77,7 @@ test('writeLocalOnboardingState persists only non-secret onboarding fields and r
   try {
     const result = await writeLocalOnboardingState({
       tenantId: 'tenant-a',
+      agentId: 'agent-a',
       principalId: 'principal-a',
       companyId: 'company-a',
       registrationId: 'areg-1',
@@ -92,9 +93,11 @@ test('writeLocalOnboardingState persists only non-secret onboarding fields and r
     assert.equal(result.path, statePath);
     assert.deepEqual(result.state, {
       tenantId: 'tenant-a',
+      agentId: 'agent-a',
       principalId: 'principal-a',
       companyId: 'company-a',
       registrationId: 'areg-1',
+      sessionId: 'session-secret',
       lastCompletedStep: 'claim-provisional-agent',
       createdAt: '2026-04-02T10:00:00.000Z',
       updatedAt: '2026-04-02T10:05:00.000Z',
@@ -102,21 +105,27 @@ test('writeLocalOnboardingState persists only non-secret onboarding fields and r
 
     assert.deepEqual(JSON.parse(readFileSync(statePath, 'utf8')), {
       tenantId: 'tenant-a',
+      agentId: 'agent-a',
       principalId: 'principal-a',
       companyId: 'company-a',
       registrationId: 'areg-1',
+      sessionId: 'session-secret',
       lastCompletedStep: 'claim-provisional-agent',
       createdAt: '2026-04-02T10:00:00.000Z',
       updatedAt: '2026-04-02T10:05:00.000Z',
     });
 
+    assert.equal(statSync(statePath).mode & 0o777, 0o600);
+
     const reloaded = await readLocalOnboardingState();
 
     assert.deepEqual(reloaded, {
       tenantId: 'tenant-a',
+      agentId: 'agent-a',
       principalId: 'principal-a',
       companyId: 'company-a',
       registrationId: 'areg-1',
+      sessionId: 'session-secret',
       lastCompletedStep: 'claim-provisional-agent',
       createdAt: '2026-04-02T10:00:00.000Z',
       updatedAt: '2026-04-02T10:05:00.000Z',
@@ -124,6 +133,61 @@ test('writeLocalOnboardingState persists only non-secret onboarding fields and r
   } finally {
     restoreStatePath();
   }
+});
+
+test('writeLocalOnboardingState persists explicit companyId only and never invents it from tenantId', async () => {
+  const exports = publicSurface as Record<string, unknown>;
+  const tempDirectory = mkdtempSync(path.join(tmpdir(), 'bidvia-local-onboarding-state-company-'));
+  const statePath = path.join(tempDirectory, 'onboarding-state.json');
+
+  const writeLocalOnboardingState = exports.writeLocalOnboardingState as (
+    state: Record<string, unknown>,
+    options?: { env?: NodeJS.ProcessEnv; homeDirectory?: string },
+  ) => Promise<{ path: string; state: Record<string, unknown> }>;
+
+  const result = await writeLocalOnboardingState({
+    tenantId: 'tenant-public',
+    principalId: 'principal-1',
+    registrationId: 'areg-1',
+    lastCompletedStep: 'claim-provisional-agent',
+    createdAt: '2026-04-02T10:00:00.000Z',
+    updatedAt: '2026-04-02T10:05:00.000Z',
+  }, {
+    env: { BIDVIA_STATE_PATH: statePath },
+  });
+
+  assert.equal('companyId' in result.state, false);
+  assert.equal('companyId' in JSON.parse(readFileSync(statePath, 'utf8')), false);
+});
+
+test('writeLocalOnboardingState tightens an existing onboarding-state file to owner-only permissions', async () => {
+  const exports = publicSurface as Record<string, unknown>;
+  const tempDirectory = mkdtempSync(path.join(tmpdir(), 'bidvia-local-onboarding-state-perms-'));
+  const statePath = path.join(tempDirectory, 'onboarding-state.json');
+
+  const writeLocalOnboardingState = exports.writeLocalOnboardingState as (
+    state: Record<string, unknown>,
+    options?: { env?: NodeJS.ProcessEnv; homeDirectory?: string },
+  ) => Promise<{ path: string; state: Record<string, unknown> }>;
+
+  writeFileSync(statePath, JSON.stringify({ stale: true }), { encoding: 'utf8', mode: 0o644 });
+  assert.equal(statSync(statePath).mode & 0o777, 0o644);
+
+  await writeLocalOnboardingState({
+    tenantId: 'tenant-a',
+    agentId: 'agent-a',
+    principalId: 'principal-a',
+    companyId: 'company-a',
+    registrationId: 'areg-1',
+    lastCompletedStep: 'claim-provisional-agent',
+    createdAt: '2026-04-02T10:00:00.000Z',
+    updatedAt: '2026-04-02T10:05:00.000Z',
+    sessionId: 'session-secret',
+  }, {
+    env: { BIDVIA_STATE_PATH: statePath },
+  });
+
+  assert.equal(statSync(statePath).mode & 0o777, 0o600);
 });
 
 test('readLocalOnboardingState returns null when no local onboarding state file exists at the resolved path', async () => {

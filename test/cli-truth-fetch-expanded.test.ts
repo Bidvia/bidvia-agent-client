@@ -41,8 +41,9 @@ test('runCli help lists the expanded truth-fetch family commands under the visib
   assert(lines.includes('  agent-capability-profile --registration-id ...'));
   assert(lines.includes('  participation-states --registration-id ...'));
   assert(lines.includes('  participation-state --registration-id ... --participation-state-id ...'));
-  assert(lines.includes('  task-dispatches --registration-id ...'));
-  assert(lines.includes('  task-dispatch --registration-id ... --task-dispatch-id ...'));
+  assert(lines.includes('  task-dispatches --agent-id ... [--registration-id compatibility-only]'));
+  assert(lines.includes('  task-dispatch --agent-id ... --task-dispatch-id ... [--registration-id compatibility-only]'));
+  assert(lines.includes('  governed-work-closure --agent-id ... --task-dispatch-id ... [--registration-id compatibility-only]'));
   assert(lines.includes('  canonical-semantic-labels'));
   assert(lines.includes('  canonical-semantic-label --label-id ...'));
   assert(lines.includes('  canonical-semantic-mappings'));
@@ -62,9 +63,9 @@ test('runCli help lists the expanded truth-fetch family commands under the visib
   assert(lines.includes('  pricing-quotation --pricing-quotation-id ...'));
   assert(lines.includes('  pricing-explanations'));
   assert(lines.includes('  pricing-explanation --pricing-explanation-id ...'));
-  assert(lines.includes('  file-resources'));
-  assert(lines.includes('  file-resource --file-resource-id ...'));
-  assert(lines.includes('  target-attachment-bindings --target-ref ...'));
+  assert(!lines.includes('  file-resources'));
+  assert(!lines.includes('  file-resource --file-resource-id ...'));
+  assert(!lines.includes('  target-attachment-bindings --target-ref ...'));
 });
 
 test('runCli returns structured missing required-id failures for expanded truth-fetch detail and target-bound commands', async () => {
@@ -78,9 +79,7 @@ test('runCli returns structured missing required-id failures for expanded truth-
     ['pricing-quote-template', '--pricing-quote-template-id'],
     ['pricing-quotation', '--pricing-quotation-id'],
     ['pricing-explanation', '--pricing-explanation-id'],
-    ['file-resource', '--file-resource-id'],
-    ['target-attachment-bindings', '--target-ref'],
-  ] as const;
+    ] as const;
 
   for (const [command, flag] of cases) {
     const printed: unknown[] = [];
@@ -250,18 +249,6 @@ test('runCli routes expanded truth-fetch commands through the matching SDK metho
       argv: ['pricing-explanation', '--pricing-explanation-id', 'explanation-1'],
       expected: { method: 'getPricingExplanation', pricingExplanationId: 'explanation-1' },
     },
-    {
-      argv: ['file-resources'],
-      expected: { method: 'listFileResources' },
-    },
-    {
-      argv: ['file-resource', '--file-resource-id', 'file-1'],
-      expected: { method: 'getFileResource', fileResourceId: 'file-1' },
-    },
-    {
-      argv: ['target-attachment-bindings', '--target-ref', 'target://listing/1'],
-      expected: { method: 'listTargetAttachmentBindings', targetRef: 'target://listing/1' },
-    },
   ] as const;
 
   for (const { argv, expected } of cases) {
@@ -287,7 +274,7 @@ test('runCli routes expanded truth-fetch commands through the matching SDK metho
   assert.equal(clientCreateCalls.length, cases.length);
 });
 
-test('runCli default client uses tenant env context for expanded truth-fetch reads', async () => {
+test('runCli default client requires governed principal context for current supported expanded truth-fetch reads', async () => {
   const printed: unknown[] = [];
   const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
   const restoreEnv = [
@@ -306,19 +293,20 @@ test('runCli default client uses tenant env context for expanded truth-fetch rea
   };
 
   try {
-    const fileResourceExitCode = await runCli(['file-resource', '--file-resource-id', 'file-1'], {
+    const fileResourceExitCode = await runCli(['attachment-binding', '--attachment-binding-id', 'ab-1'], {
       printJson: (value) => {
         printed.push(value);
       },
       printLine: () => {
         throw new Error('truth-fetch reads should not print help');
       },
+      readLocalOnboardingState: async () => null,
     });
 
     const targetBindingsExitCode = await runCli([
-      'target-attachment-bindings',
-      '--target-ref',
-      'target://listing/1',
+      'document-artifact',
+      '--document-artifact-id',
+      'da-1',
     ], {
       printJson: (value) => {
         printed.push(value);
@@ -326,10 +314,11 @@ test('runCli default client uses tenant env context for expanded truth-fetch rea
       printLine: () => {
         throw new Error('truth-fetch reads should not print help');
       },
+      readLocalOnboardingState: async () => null,
     });
 
-    assert.equal(fileResourceExitCode, 0);
-    assert.equal(targetBindingsExitCode, 0);
+    assert.equal(fileResourceExitCode, 1);
+    assert.equal(targetBindingsExitCode, 1);
   } finally {
     globalThis.fetch = previousFetch;
     for (const restore of restoreEnv.reverse()) {
@@ -337,22 +326,26 @@ test('runCli default client uses tenant env context for expanded truth-fetch rea
     }
   }
 
-  assert.equal(calls.length, 2);
-  assert.equal(String(calls[0]?.input), 'http://127.0.0.1:8787/runtime/file-resources/file-1');
-  assert.equal(
-    String(calls[1]?.input),
-    'http://127.0.0.1:8787/runtime/targets/target%3A%2F%2Flisting%2F1/attachment-bindings',
-  );
+  assert.equal(calls.length, 0);
   assert.deepEqual(printed, [
-    { ok: true, path: 'http://127.0.0.1:8787/runtime/file-resources/file-1' },
     {
-      ok: true,
-      path: 'http://127.0.0.1:8787/runtime/targets/target%3A%2F%2Flisting%2F1/attachment-bindings',
+      error: {
+        code: 'missing-context',
+        command: 'attachment-binding',
+        message: 'principalId is required for governed read routes',
+      },
+    },
+    {
+      error: {
+        code: 'missing-context',
+        command: 'document-artifact',
+        message: 'principalId is required for governed read routes',
+      },
     },
   ]);
 });
 
-test('runCli default client honors injected resolveProcessEnv values instead of ambient process env', async () => {
+test('runCli default client honors injected resolveProcessEnv values instead of ambient process env for governed reads', async () => {
   const printed: unknown[] = [];
   const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
   const restoreEnv = [
@@ -371,10 +364,11 @@ test('runCli default client honors injected resolveProcessEnv values instead of 
   };
 
   try {
-    const exitCode = await runCli(['file-resource', '--file-resource-id', 'file-injected-env'], {
+    const exitCode = await runCli(['attachment-binding', '--attachment-binding-id', 'ab-injected-env'], {
       resolveProcessEnv: () => ({
         BIDVIA_BASE_URL: 'http://127.0.0.1:8787',
         BIDVIA_TENANT_ID: 'tenant-injected-env',
+        BIDVIA_PRINCIPAL_ID: 'principal-injected-env',
       }),
       printJson: (value) => {
         printed.push(value);
@@ -393,9 +387,9 @@ test('runCli default client honors injected resolveProcessEnv values instead of 
   }
 
   assert.equal(calls.length, 1);
-  assert.equal(String(calls[0]?.input), 'http://127.0.0.1:8787/runtime/file-resources/file-injected-env');
+  assert.equal(String(calls[0]?.input), 'http://127.0.0.1:8787/runtime/attachment-bindings/ab-injected-env?tenant_id=tenant-injected-env');
   assert.deepEqual(printed, [{
     ok: true,
-    path: 'http://127.0.0.1:8787/runtime/file-resources/file-injected-env',
+    path: 'http://127.0.0.1:8787/runtime/attachment-bindings/ab-injected-env?tenant_id=tenant-injected-env',
   }]);
 });

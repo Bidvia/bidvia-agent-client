@@ -2,10 +2,10 @@
 
 > Status: reference-only support material
 >
-> The active execution plan for the current wave is `.sisyphus/plans/agent-client-core-vnext-alignment-and-joint-debug.md`.
-> Read this file as long-horizon sequencing support only. Current execution stays grounded in Track 1 client-owned productization, while broader Core truth closure remains deferred to later work.
+> This file remains the single roadmap for `bidvia-agent-client`.
+> Individual `.sisyphus/plans/*.md` files are execution slices; they must not replace the long-horizon architecture direction captured here.
 >
-> The next-version OpenClaw-focused design and implementation planning follow-up lives in `docs/superpowers/specs/2026-04-01-openclaw-official-integration-design.md` and `docs/superpowers/plans/2026-04-01-openclaw-next-version-integration.md`.
+> The current architectural follow-up builds on the completed OpenClaw-compatible local stdio MCP path, the first-access CLI work, and the public-provisional clarification work. Future execution should stay grounded in this roadmap rather than creating a parallel roadmap document.
 
 ## Product direction
 
@@ -22,12 +22,66 @@ That current slice is centered on the execution layer, with adjacent scenario, v
 Today the mainline already includes:
 
 - shipped local helpers for onboarding, claim, heartbeat, sync, evidence, proposal, and related governed execution flows
+- shipped bounded identity/session prerequisite helpers for membership lifecycle and account-agent dispatch-authority support without widening into a general account-admin shell
 - shipped local helper coverage for pricing, media, evidence, document, attachment, proposal, review, and authorized-use explanation surfaces
 - shipped SDK/CLI visibility for the frozen registration, authority-profile, capability-profile, singular agent-capability-profile, participation-state, and task-dispatch route families now adopted downstream
+- shipped account-scoped task-dispatch and notification helper families where the downstream packets are already frozen and adopted here
 - shipped local scenario-envelope builders plus bounded scenario families for registration lifecycle, registered-agent operations, industry-universe, connection approval, commercial-action continuation, and one honest cross-chain coordinator path across shipped slices
 - shipped local review-packet, verification-bundle, CLI preview/export, static capability metadata, local runtime snapshot, server-capability normalization, static MCP catalog, bounded local stdio MCP server, and environment-mode visibility surfaces
+- shipped local install-integrity, validation-smoke, diagnostic-bundle-export, and public-runtime-interpretation-probe tooling for external-user-facing bounded diagnostics, runtime-baseline interpretation, and escalation packaging
 
-This is meaningful progress, but it is still not the full operating-kit destination. The repo remains bounded by frozen Core contracts and must not claim platform authority, hosted runtime behavior, integrated Core truth, or a general workflow engine.
+This is meaningful progress, but it is still not the full operating-kit destination. The repo remains bounded by frozen Core contracts and must not claim platform authority, hosted runtime behavior, integrated Core truth, platform-auth ownership, or a general workflow engine.
+
+The current V1 framing is agent-first with bounded login/session prerequisite support. External users may need account/session establishment before they can continue, but the package promise stays centered on the governed agent path rather than on a general account product shell.
+
+## Validation lanes and closure guidance
+
+Client-facing validation should now be explained through explicit lanes rather than a single generic local-dev story:
+
+- **default local docker** validates real surfaced runtime behavior
+- **proof-lane / admin-session** validates deterministic admin-scoped walkthroughs
+- **seeded / runtime-generated object validation** covers closures where agents must create or obtain real runtime objects instead of assuming fixed proof ids
+
+The roadmap should keep three operational rules clear:
+
+1. fixed proof ids are not assumed in default local docker
+2. self-generated runtime data is the preferred path for business-universe closure on the ordinary surfaced lane
+3. task-write-ready progression is a distinct surfaced path, not an implied side effect of claim
+
+That task-write-ready path should stay concrete: self-service patch -> dispatch-authority request -> operator/admin review closure -> external binding check -> post-step verification of task-write-ready and dispatch-eligibility truth. It is bounded task closure, not full business closure. The external claimed agent owns the self-service patch and bounded dispatch-authority request, operator/admin owns review closure, and the latest surfaced runtime now proves that claimant/account-scoped and operator/admin binding writes use different body contracts. The current repo now ships a first-class account-plane external binding write helper together with account-agent binding visibility reads, but the external binding step must stay fail-closed until the current lane has an explicit Core-owned route/body contract and the returned reads confirm runnable truth.
+
+This means the client’s long-horizon value is not only helper coverage, but also accurate lane selection, truthful gate explanation, and efficient next-step guidance for agents that should not need Core-source archaeology.
+
+That outward diagnostic story should now stay explicit in roadmap language too:
+
+- `install-integrity` is the local install-path self-check
+- `validation-smoke` is the bounded external-user validation lane
+- `diagnostic-bundle-export` packages bounded smoke evidence into shareable artifacts
+- `public-runtime-interpretation-probe` stays bounded to live runtime-baseline interpretation over `/healthz` and `/readyz`
+- bounded task-plane CLI parity commands such as `create-task-dispatch`, `assign-task-dispatch`, `complete-task-dispatch`, `create-claim`, `accept-claim`, and `reject-claim` stay limited to already-shipped helper semantics only
+- all of those surfaces remain fail-closed and do not turn the client into a Core-owned certification flow
+
+## Payload-grounded V1 truth model
+
+The current mainline should now be described through the helper-level payload matrix rather than through blanket plane-wide blockage language.
+
+The canonical summary is:
+
+- `identity-session | packet-grounded-execution`
+- `task | packet-grounded-execution`
+- `capability | packet-grounded-read`
+- `workflow-stage | blocked-pending-packet`
+- `event-notification | packet-grounded-execution`
+- `enterprise-integration | packet-grounded-read`
+
+That helper-level payload matrix is grounded in the downstream contract center and keeps four distinct helper states visible in repo language:
+
+- `packet-grounded-execution`
+- `packet-grounded-read`
+- `blocked-pending-packet`
+- `compatibility-only`
+
+Docs should therefore stop implying that all six Core-facing planes are broadly blocked. Only the workflow-stage plane remains broadly blocked at the current plane-summary level; the others already contain payload-grounded helpers and must be described accordingly.
 
 ## Release-language split for the current mainline
 
@@ -50,7 +104,7 @@ For the next OpenClaw-compatible version, the roadmap language should stay speci
 
 These are implemented seams that must stay fail-closed until Bidvia Core provides frozen truth:
 
-- `refreshRemoteCapabilityTruth(...)` is implemented as a readiness-only consumption seam, but it is blocked until frozen Core capability truth and freshness semantics exist
+- `refreshRemoteCapabilityTruth(...)` is implemented as a readiness-only consumption seam, but it remains `compatibility-only` until frozen Core capability truth and freshness semantics exist
 - the seam can accept a future server-derived capability payload shape without rewriting the client boundary, but it must not be described as integrated Core truth, truth closure, live negotiation, remote discovery, hosted MCP/runtime behavior, or remote registry behavior
 
 ### Deferred Core, runtime, and control-plane areas
@@ -64,67 +118,102 @@ These remain outside the shipped mainline boundary:
 
 The current wave also keeps six speculative mechanisms explicitly deferred: transport profiles, workspace grants, confirmation gates, durable session stores, context compression, and memory blocks. Treat them as out of scope for current-wave implementation until a future plan provides separate evidence for promotion. See `.sisyphus/internal/AGENT_CLIENT_DEFERRED_MECHANISMS_EVIDENCE.md`.
 
-## Long-horizon blueprint
+## Plane model for the long-term architecture
 
-The approved order is Track 1 first, then Track 2, with explicit L1, L2, and L3 levels across that evolution.
+The repo now needs to be read through two groups of planes rather than through a flat feature list.
 
-### L1. Integration productization completion
+### Core-facing platform planes
 
-L1 completes Track 1. The goal is for this repo to become the most reliable Bidvia integration product and independent platform access layer for external users, operators, and OpenClaw Gateway paths while staying inside the frozen current-mainline authority boundary.
+These are the planes where Bidvia Core now freezes stable downstream truth and where the client must stop inferring semantics from individual routes and local metadata:
 
-#### Track 1. Integration productization for external users, operators, and OpenClaw Gateway paths
+1. identity / session plane
+2. task plane
+3. capability plane
+4. workflow / stage plane
+5. event / notification plane
+6. enterprise integration plane
 
-Track 1 focuses on turning the current shipped slice into a clear, dependable integration product without changing the repo into OpenClaw core, a hosted control plane, or a client-owned authority layer.
+Core now freezes these six planes through the downstream contract center, but client adoption still proceeds in waves because packet-complete payload truth is not yet equally complete across every plane.
 
-Primary outcomes:
+### Agent-client local planes
 
-- make the shipped local surfaces easier for external integrators and operators to understand, adopt, and verify
-- keep the OpenClaw Gateway path visible as a local operator path, not as a hosted control-plane claim
-- make the first OpenClaw-ready execution step a safe non-daemon real remote execution surface, per call and access-layer scoped, before any daemonized bridge, sidecar requirement, hosted runtime, or hosted control-plane idea is considered
-- introduce clear tool-tiering and risk-tiering language for future gating, with explicit low-risk to high-risk layers such as L0, L1, L2, and L3 tool classes, while keeping today's shipped MCP-facing surface honest about its bounded local scope
-- harden the access layer with timeout and abort controls, error normalization, a request-policy or middleware seam, and clearer operator and integrator ergonomics around the surfaces that are already real
-- improve packaging, docs, bounded CLI/operator flows, and bounded scenario ergonomics around the surfaces that are already real
-- widen coverage across bounded business-chain and review-safe operational slices only when those slices remain honest about current authority boundaries
+These are the planes the client must own locally, regardless of whether Core has already promoted the corresponding platform truth into an explicit contract:
 
-Track 1 is complete when the repo presents a stable integration product around its shipped local surfaces, with clear operator guidance, bounded orchestration support, safe non-daemon real remote execution surfaces, access-layer hardening, and no confusion between local tooling ergonomics and platform truth ownership.
+7. local runtime / execution session plane
+8. local accumulation / memory plane
 
-### L2. Core truth consumption closure
+The local planes must stay local-first and must not turn this repo into a hosted runtime, control plane, or model-provider owner.
 
-L2 begins Track 2. The goal is to close the gap between local descriptive surfaces and frozen Core truth consumption, without shifting authority ownership away from Core.
+## V1.0-oriented architecture path
 
-#### Track 2. Core collaboration closure for capability truth refresh, notification semantics, and broader multi-agent coordination
+The current roadmap should now be read as a three-stage path toward an eventual public `1.0.0` release.
 
-Track 2 focuses on the seams that cannot become fully real until Bidvia Core exposes frozen truth. Core truth refresh, notification semantics, and broader multi-agent coordination remain downstream of L1 and remain Core-dependent, even though the current SDK and CLI already expose the frozen registration/profile and participation/task route families confirmed for this repo.
+### Stage 1. Agent-client runtime architecture upgrade
 
-Primary outcomes:
+Stage 1 is intentionally client-first and should proceed even when Core has not yet promoted every missing plane into an explicit contract.
 
-- consume frozen Core capability truth so local capability views no longer stop at descriptive local knowledge
-- move capability refresh from an implemented but blocked seam toward a real Core-truth consumption path, while preserving fail-closed behavior until truth is available
-- close remaining semantics around notifications and broader coordination surfaces only where Core-owned truth makes those semantics trustworthy beyond the shipped frozen wrappers
-- strengthen multi-agent coordination only where Core semantics are frozen and where the client still remains an integration product, not an authority owner
-
-L2 is complete when the client can consume frozen Core truth for the collaboration semantics it already describes, especially capability truth refresh and broader coordination semantics beyond the shipped frozen wrappers, without overstating client ownership.
-
-### L3. Runtime, adapter, and multi-agent collaboration expansion
-
-L3 is the final long-horizon level. It expands only after L1 productization and L2 Core-truth consumption closure are in place.
+The goal is to complete the client's own architecture so it is no longer just a helper/CLI/MCP access layer, but a stable local runtime for agents operating on Bidvia.
 
 Primary outcomes:
 
-- broaden runtime and adapter surfaces beyond the current bounded local adapter seam, only where the Core boundary is already stable
-- consider richer adapter, runtime-bridge, or broader execution-surface expansion only after the non-daemon access-layer path and Core-truth collaboration path are already in place
-- extend multi-agent collaboration patterns beyond the current bounded orchestration slices, without turning the repo into an unfounded workflow-engine claim
-- grow richer operator and integration surfaces across runtime-aware and collaboration-aware paths while keeping the release-language split explicit
+- introduce a first-class execution-session/runtime model over the existing SDK, CLI, and MCP surfaces
+- add a task runtime layer over the already-shipped claim / lease / dispatch / completion primitives
+- add local checkpoint, result-journal, and resumability mechanisms that remain explicitly local and fail-closed
+- add a local accumulation layer for onboarding memory, task execution memory, capability usage memory, and result memory
+- introduce lifecycle hook seams so agent runtimes such as OpenClaw can integrate without making this repo the model-provider owner
+- refactor CLI/MCP/operator surfaces so they consume the runtime/session layer instead of each command rebuilding its own local state machine
 
-L3 is where future runtime and adapter expansion can happen, but it must stay downstream of the earlier levels and must remain honest about what is local, what is dependency-gated, and what is still deferred.
+This stage must not claim Core truth ownership. It should focus on local runtime quality, reliability, and maintainability.
 
-## Strategic reading rule
+### Stage 2. Core contract consumption and seam hardening
 
-Read this roadmap top-down:
+Stage 2 is not a passive waiting period. The client should continue evolving by hardening the seams that consume the frozen six-plane Core truth, while keeping any still-incomplete payload packets fail-closed.
 
-1. current mainline, partial slice at the frozen Commercial Universe V1 / Core V12 handoff boundary
-2. Track 1 first, productize the integration surface for external users, operators, and OpenClaw Gateway paths
-3. Track 2 second, close Core collaboration seams once frozen truth exists
-4. L3 only after L1 and L2, for broader runtime, adapter, and multi-agent expansion
+Primary outcomes:
 
-That ordering keeps the roadmap honest. It protects the repo from claiming hosted runtime ownership, remote registry behavior, integrated Core truth, or client-owned authority before those boundaries are actually real.
+- keep identity/session, task, capability, workflow, event, and enterprise integration dependencies aligned to the helper-level payload matrix instead of collapsing them into coarser plane defaults
+- consume Core capability truth only through stable plane-level payloads, not through scattered route heuristics or helper-local metadata
+- replace client-side semantic inference with Core-provided workflow/stage and task-truth consumption wherever those contracts are frozen
+- keep all still-packet-incomplete Core plane payloads fail-closed and clearly documented, rather than emulating them locally
+- maintain local runtime evolution while preventing drift between local ergonomics and Core-owned truth
+
+Stage 2 now executes in three waves:
+
+- P0: identity/session, task, and event/notification
+- P1: capability and workflow/stage
+- P2: enterprise integration plus the Stage 3 release gate handoff
+
+This stage is where the repo should converge on a model in which capability growth in Core does not force a version-scale client rewrite, provided the plane contracts remain stable.
+
+### Stage 3. V1.0 release closure
+
+The public `1.0.0` release should happen only when both the client runtime upgrade and the critical Core contract support are present, and when the repo can prove that blocked payload work remains blocked rather than guessed locally.
+
+Stage 3 is now an explicit release gate, not narrative-only wording. Its default repo-state posture must stay blocked until P0, P1, and P2 adoption are packet-grounded. The release validator suite remains a separate closure requirement rather than a hardcoded runtime-snapshot blocker.
+
+For `1.0.0`, the client must be able to support all of the following through the public product path:
+
+- complete agent onboarding and claim
+- complete task receive / claim / lease / execute / complete-or-fail flow
+- complete platform capability consumption across the frozen execution and governance surfaces required for real work
+- complete result submission and operator-visible diagnostics
+- complete OpenClaw/local-agent operator path and website/docs handoff consistency
+
+Core does not need a full architectural rewrite before this release, but it does need to keep exposing the minimum stable contract surface required for:
+
+- claim -> governed-run closure
+- explicit task runtime semantics
+- explicit capability manifest truth
+- explicit workflow / stage truth
+- the subset of enterprise integration truth required by the initial commercial-universe operating-system release
+
+## Roadmap reading rule
+
+Read this roadmap in order:
+
+1. respect the current shipped boundary and release-language split
+2. complete Stage 1 as a client-owned runtime architecture upgrade
+3. use Stage 2 to harden plane-consumption seams and align on the frozen Core contracts as they are adopted
+4. use Stage 3 as an executable `1.0.0` closure gate only when both the client runtime and the necessary Core contracts are ready
+
+This ordering keeps the roadmap honest. It allows substantial client-side architecture evolution now, without pretending the client owns Core truth, hosted runtime behavior, remote registry behavior, or model-provider execution.

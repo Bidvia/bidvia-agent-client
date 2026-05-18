@@ -1,6 +1,6 @@
 # Onboarding Guide
 
-This guide supports the current local-first package surface. For current execution sequencing and scope, use `.sisyphus/plans/agent-client-core-vnext-alignment-and-joint-debug.md` as the active plan. That current wave stays inside grounded Track 1 client-owned productization and does not reopen Core truth closure.
+This guide supports the current local-first package surface. For the current truth-alignment execution wave, use `docs/superpowers/plans/2026-04-30-client-truth-alignment-v3-implementation.md` as the active implementation plan. That current wave keeps the repo aligned to the latest fresh local-docker evidence and the agent-first-but-login-capable V1 release boundary.
 
 ## Goal
 
@@ -9,7 +9,27 @@ This guide shows one primary public journey and one secondary Governed Run journ
 1. the primary public CLI-first journey organized as Learn, then Public Provisional create -> query -> claim, then Governed Run
 2. the secondary Governed Run journey, where local stdio MCP handoff is one packaging/integration path after the public defaults are understood
 
-This guide is intentionally more than an API quickstart. It explains how an agent should approach the shipped package surface in the order that matches the current repo boundary.
+The V1 boundary is agent-first but login-capable. The visible journey still stays Learn -> Public Provisional create -> query -> claim -> Governed Run, while bounded account/session prerequisite support exists when an external user still needs context establishment before that agent-first path can succeed.
+
+This guide is intentionally more than an API quickstart. It explains how an agent should approach the shipped package surface in the order that matches the current repo boundary. The outward story is now explicitly **role-stage** oriented: claimant, operator, platform-managed, and universe orchestration all describe one agent-first operating entry.
+
+Before you begin runtime validation, choose the correct lane and do not mix them implicitly:
+
+- **default local docker** validates real surfaced runtime behavior
+- **proof-lane / admin-session** validates deterministic admin-scoped walkthroughs
+- **seeded / runtime-generated object validation** covers flows where you must create your own business objects rather than assuming fixed proof ids
+
+Fixed proof ids are not assumed in default local docker, self-generated runtime data is the preferred path for business-universe closure, and task-write-ready progression is a distinct surfaced path, not an implied side effect of claim. That surfaced path is bounded task closure, not full business closure. Use `docs/VALIDATION_LANES.md` when deciding which lane to use next.
+
+When a claimed external agent is still not runnable, keep the ordinary surfaced chain explicit: self-service patch -> dispatch-authority request -> operator/admin review closure -> external binding check -> post-step verification of task-write-ready and dispatch-eligibility truth. The external claimed agent owns the self-service patch and bounded dispatch-authority request, operator/admin owns review closure, and the latest surfaced runtime now proves that claimant/account-scoped and operator/admin binding writes use different body contracts. This repo now ships a first-class account-plane external binding write helper together with the `account-agent-bindings` read surface for external binding visibility, but that external binding step must still stay fail-closed whenever runnable truth depends on a missing or unclear Core-owned route/body contract or the returned reads do not yet confirm runnable truth.
+
+Separately, if account-plane continuation succeeds but governed reads or governed runtime still return `active_role_binding_required`, treat that as a distinct authorization-projection gate. Stay on the account-owned continuation plane, prefer Core-provided `recommended_next_step` / `next_step_kind`, and do not reinterpret that response as operator review or a hidden claimant-facing activation workflow.
+
+This onboarding layer must also explain where admin/operator context is required, so agents do not misread proof-lane or operator-assisted steps as if they were ordinary external-user flows.
+
+Stage 1 of the client-side runtime architecture upgrade is now complete in this repo. That means the CLI and local stdio MCP surfaces share one local runtime core and write local accumulation records for onboarding memory, task execution memory, capability usage memory, and result memory. It does not mean Stage 2 Core plane contracts are complete, and it does not change the rule that Core still owns platform truth. For next-version architecture language, keep one explicit three-layer client architecture in mind: atomic helpers, executable scenario runners, and productized CLI/MCP surfaces over those bounded layers.
+
+For current downstream contract truth, use the Bidvia Core downstream contract center (`docs/downstream-contract-center/**` in the main Bidvia repo) as the routine implementation source, then apply this repo's fail-closed adoption rules where packet-complete payload truth is still pending.
 
 If your dominant path is a local OpenClaw Gateway / node-host install, use the dedicated package docs instead of reconstructing that flow from this file:
 
@@ -40,32 +60,38 @@ npm test
 npm run validate
 npm run typecheck
 npm run build
+npm run validate:release-readiness
+npm run validate:release-gate
 npm run example
 ```
 
 ## Primary public CLI-first journey
 
-For the normal public package path, start with the package defaults. The CLI and SDK resolve against `https://api.bidvia.ai`, so public onboarding should not begin with `BIDVIA_BASE_URL` or with manual environment switching.
+For the normal public package path, start with the package defaults. The CLI and SDK resolve against `https://api.bidvia.cn`, so public onboarding should not begin with `BIDVIA_BASE_URL` or with manual environment switching.
 
 Use this order:
 
 1. read the contract boundary and this onboarding guide
 2. run `bidvia onboard`
 3. run `bidvia context show` or `bidvia whoami` when you need local-first visibility around the same journey
-4. run the explicit public provisional commands, `create-provisional-agent`, `query-provisional-agent`, then `claim-provisional-agent`, when onboarding material is available
-5. once claim has established session-bound identity and local context is ready, run `bidvia doctor` or `bidvia route-context-matrix`
-6. stay on the Governed Run side with `bidvia registration-lifecycle-plan`
-7. when onboarding is already complete, stay on the Governed Run side with `bidvia registered-agent-operations-plan`
+4. if prerequisite account/session context is still missing, use the bounded account/session prerequisite support: `bidvia sign-in`, `bidvia sign-up-personal`, `bidvia sign-up-enterprise`, `bidvia account-me`, `bidvia select-org`, `bidvia session-refresh`, and `bidvia session-revoke`; once a session exists, the same bounded surface may also expose membership lifecycle and dispatch-authority helpers without turning the package into a general account-admin shell
+5. run the explicit public provisional commands, `create-provisional-agent`, `query-provisional-agent`, then `claim-provisional-agent`, when onboarding material is available
+6. once claim has established session-bound identity and local context is ready, run `bidvia doctor` or `bidvia route-context-matrix`
+7. stay on the Governed Run side with `bidvia registration-lifecycle-plan`
+8. when onboarding is already complete, stay on the Governed Run side with `bidvia registered-agent-operations-plan`
 
-Those commands answer different questions across the Learn → Public Provisional create -> query -> claim → Governed Run flow:
+Those commands answer different questions across the Learn → Public Provisional create -> query -> claim → Governed Run flow. Once the guided path is established, the product-facing role-stage layer mirrors the same progression through claimant, operator, platform-managed, and universe surfaces instead of making an agent memorize low-level route topology.
 
 - `onboard` is the visible first-run entry point and rerunnable local guide for the whole public path
 - `context show` shows effective local context plus source attribution
 - `whoami` summarizes local identity without claiming platform login
 - `doctor` shows local diagnostics and, when possible, an optional readiness live check on the Governed Run side after claim
+- bounded account/session prerequisite support stays available through `bidvia sign-in`, `bidvia sign-up-personal`, `bidvia sign-up-enterprise`, `bidvia account-me`, `bidvia select-org`, `bidvia session-refresh`, and `bidvia session-revoke`
+- bounded session-scoped membership lifecycle helpers and bounded dispatch-authority read/request helpers stay in the same prerequisite surface when Core requires them
 - `create-provisional-agent`, `query-provisional-agent`, and `claim-provisional-agent` keep the public provisional create -> query -> claim chain explicit
 - `claim-provisional-agent` is the session-bound transition point, not a generic tenant-scoped shortcut
 - `route-context-matrix` shows which context family each guided route needs before you move from Public Provisional into Governed Run
+- claimant/account-plane continuation uses `agentId` as the canonical identifier; `registrationId` on that plane is compatibility-only and should not be treated as the primary continuation key
 - `registration-lifecycle-plan` keeps the first success path on the shipped create provisional -> query provisional -> claim -> registration chain
 - `registered-agent-operations-plan` is the visible next public path once you already have registration context
 
@@ -76,6 +102,13 @@ bidvia onboard
 bidvia context show
 bidvia whoami
 bidvia doctor
+bidvia sign-in --input ...
+bidvia sign-up-personal --input ...
+bidvia sign-up-enterprise --input ...
+bidvia account-me
+bidvia select-org --input ...
+bidvia session-refresh
+bidvia session-revoke
 bidvia create-provisional-agent --provisional-agent-ref ...
 bidvia query-provisional-agent --provisional-agent-ref ...
 bidvia claim-provisional-agent --provisional-agent-ref ... --claim-token ...
@@ -91,6 +124,13 @@ node dist/cli.js onboard
 node dist/cli.js context show
 node dist/cli.js whoami
 node dist/cli.js doctor
+node dist/cli.js sign-in --input ...
+node dist/cli.js sign-up-personal --input ...
+node dist/cli.js sign-up-enterprise --input ...
+node dist/cli.js account-me
+node dist/cli.js select-org --input ...
+node dist/cli.js session-refresh
+node dist/cli.js session-revoke
 node dist/cli.js create-provisional-agent --provisional-agent-ref ...
 node dist/cli.js query-provisional-agent --provisional-agent-ref ...
 node dist/cli.js claim-provisional-agent --provisional-agent-ref ... --claim-token ...
@@ -102,20 +142,45 @@ node dist/cli.js registered-agent-operations-plan
 After that guided path is clear, use the supporting diagnostics and review-safe commands when you need more visibility around the same journey:
 
 1. `environment-mode` when you need read-only confirmation of the current base URL classification
-2. `runtime-capabilities` when you need one local JSON view of repo-known runtime-facing facts
-3. truth-fetch CLI or SDK reads when you need approved frozen Core reads for account, richer governance deep-read, semantic, pricing, or asset facts
-4. `verification-bundle-preview` or `verification-bundle-export` when the bounded run should be reviewable later
-5. explicit local execution commands when you need payload preview for `heartbeat`, `sync-upload`, `evidence`, or `proposal`
+2. `install-integrity` when you need a local install-path self-check before assuming the wrong `bidvia` binary is active
+3. `validation-smoke` when you need one external-user-facing bounded smoke pass over install, environment, runtime capability, server-capability normalization, and local context diagnostics
+4. `public-runtime-interpretation-probe` when you need a live `/healthz` and `/readyz` runtime-baseline interpretation readback without jumping to the full bounded-matrix regression lane
+5. `runtime-capabilities` when you need one local JSON view of repo-known runtime-facing facts, including the blocked-or-complete Stage 3 release gate
+6. `diagnostic-bundle-export --output ...` when the bounded smoke result should be packaged for support/Core escalation
+7. truth-fetch CLI or SDK reads when you need approved frozen Core reads for account, richer governance deep-read, semantic, pricing, or asset facts
+8. `verification-bundle-preview` or `verification-bundle-export` when the bounded run should be reviewable later
+9. explicit local execution commands when you need payload preview for `heartbeat`, `sync-upload`, `evidence`, or `proposal`
+
+Keep the unchanged fail-closed boundary lines explicit while you use those tools:
+
+- `install-integrity` is local and observational only
+- `validation-smoke` is a bounded external-user lane, not a Core-owned certification flow
+- `public-runtime-interpretation-probe` stays bounded to runtime-baseline interpretation only
+- `diagnostic-bundle-export` packages bounded user-facing evidence only
+- all four remain fail-closed and do not turn local checks into full business closure claims
+
+When the current lane needs shipped bounded task-plane writes from CLI, use the canonical account-plane command family on `--agent-id`: `create-lease`, `create-task-dispatch`, `assign-task-dispatch`, `suspend-task-dispatch`, `resume-task-dispatch`, `complete-task-dispatch`, `fail-task-dispatch`, `create-claim`, `accept-claim`, and `reject-claim`. Those commands only expose already-shipped helpers and do not widen deeper operator-owned continuation seams.
 
 `onboarding-readiness` still exists as a supporting read-only explainer. It is no longer the primary public first-run entry point.
 
-In this phase, truth-fetch ships through the SDK and CLI as the widened frozen downstream read surface, with a bounded local stdio MCP seam exposing the currently approved read-only subset. That MCP rollout is phased on purpose: governance-first truth-fetch tools ship first, then business-truth collection and detail tools ship second. In both phases, MCP stays read-only, local stdio only, and a thin wrapper over the shipped SDK helpers.
+Stage 3 release gate remains blocked in the current repo state for the shipped V1 helper set. Use `route-context-matrix` and `runtime-capabilities` to inspect the blocked gate posture, and keep the remaining distinction clear: the package documents a formal `1.0.0` release boundary, but workflow-stage truth and the remaining route-model adoption seams still keep Stage 3 closure blocked until Core freezes the missing truth. The validator suite remains required before any human release packet can describe closure.
+
+The helper-level payload matrix is the truth model for that boundary. In current repo language:
+
+- `packet-grounded-execution` covers identity/session, task, and event-notification helpers where canonical payload truth now exists
+- `packet-grounded-read` covers capability and enterprise-integration helpers where canonical read payload truth now exists
+- `blocked-pending-packet` still applies where workflow-stage or scenario-wrapper payload truth is not yet frozen
+- `compatibility-only` still applies to bounded wrappers that should not be mistaken for the canonical payload-grounded path
+
+In this phase, truth-fetch ships through the SDK and CLI as the widened frozen downstream read surface, with a bounded local stdio MCP seam exposing the currently approved read-only subset. That MCP rollout is phased on purpose: governance-first truth-fetch tools ship first, then business-truth collection and detail tools ship second. The same bounded local stdio MCP seam now includes review-safe and explicit execution tooling, but it remains local stdio only and a thin wrapper over the shipped SDK helpers. Across this guide, keep the surface taxonomy explicit: executable, review-safe, and compatibility-only. Executable surfaces do bounded remote work, review-safe surfaces package or diagnose bounded flows without claiming server closure, and compatibility-only surfaces stay limited to tolerated transition seams.
 
 The honest phase split is:
 
 - the SDK and CLI expose the widened governance deep-read family and the broader business truth-fetch families listed below
 - the canonical frozen governance reads now visible in SDK and CLI include `GET /runtime/agents/registrations`, `GET /runtime/agents/:registrationId`, `GET /runtime/authority-profiles`, `GET /runtime/capability-profiles`, and `GET /runtime/agents/:registrationId/capability-profile`
+- bounded identity/session prerequisite support also includes the shipped membership lifecycle and dispatch-authority helper families when session-bound account context is required before or around governed run
 - the same public surface also includes the shipped participation-state and task-dispatch wrappers, while keeping local helper aliases clearly local
+- the same public surface also includes the adopted account-scoped task-dispatch and notification helper families where downstream packets are already frozen
 - the MCP seam keeps the currently approved governance-first tools for `account-*`, `agent-presence`, and `agent-authority`
 - the MCP seam also exposes the shipped business-truth collection and detail tools for canonical semantics, pricing, document, media, evidence, and attachment reads
 - the SDK and CLI stay the source of truth, and MCP only forwards to those already-shipped helpers
@@ -126,7 +191,7 @@ Safe order for truth-fetch work:
 
 1. resolve the right `baseUrl` and `tenantId`
 2. start with read-only CLI visibility commands or the matching SDK read helper
-3. use explicit identifier flags for detail reads such as `--registration-id`, `--concept-id`, or `--media-asset-id`
+3. use explicit identifier flags for detail reads such as canonical `--agent-id` on account-plane continuation commands, or `--registration-id`, `--concept-id`, and `--media-asset-id` on registration-bound deep reads and other detail routes
 4. keep execution commands separate from truth-fetch reads
 5. treat returned payloads as frozen-route readbacks, not as new client-owned authority
 
@@ -146,7 +211,7 @@ After that handoff, continue in the dedicated docs:
 - `docs/OPENCLAW_GATEWAY_ONBOARDING.md`
 - `docs/OPENCLAW_GATEWAY_SMOKE.md`
 
-Keep the packaging boundary explicit: local stdio MCP on your side, remote HTTPS Bidvia API on the other side. Explicit endpoint override stays secondary and operator-only.
+Keep the packaging boundary explicit: local stdio MCP on your side, remote HTTPS Bidvia API on the other side. MCP execution now routes through the same local runtime core and writes the same local accumulation layers the CLI uses, but that remains local-only runtime behavior. Explicit endpoint override stays secondary and operator-only.
 
 Website work for this same first-access journey stays spec-only in `docs/WEBSITE_FIRST_ACCESS_HANDOFF.md`. It does not change the shipped OpenClaw runtime order in this repo.
 
@@ -168,7 +233,7 @@ node dist/cli.js environment-mode
 
 This layer does not change request payloads, enforce execution policy, or add environment-specific runtime controls. It only surfaces classification from the current base URL/profile inputs.
 
-For the normal public package path, start with the package defaults. The SDK and CLI resolve against the canonical public API at `https://api.bidvia.ai`, so public onboarding should not begin with a manual `BIDVIA_BASE_URL` export.
+For the normal public package path, start with the package defaults. The SDK and CLI resolve against the canonical public API at `https://api.bidvia.cn`, so public onboarding should not begin with a manual `BIDVIA_BASE_URL` export.
 
 When you need an explicit operator-selected endpoint instead, use the canonical API domains below:
 
@@ -187,7 +252,8 @@ That command prints local JSON only: resolved `baseUrl`, resolved `environmentMo
 
 The active profile/default resolution behavior is now:
 
-- default or `global` profile -> `https://api.bidvia.ai`
+- default profile -> `https://api.bidvia.cn`
+- `global` profile -> `https://api.bidvia.ai`
 - `china` profile -> `https://api.bidvia.cn`
 
 During the compatibility window, `launch-topology-smoke` may still show the older root domains as informational compatibility mappings:
@@ -228,7 +294,7 @@ The same approved reads now also have a phased MCP surface on the local stdio se
 - the SDK and CLI expose the widened governance deep-read family plus the broader business truth-fetch families listed above
 - the MCP seam keeps the currently approved governance-first tools for `account-*`, `agent-presence`, and `agent-authority`
 - the MCP seam also exposes the shipped business-truth collection and detail tools for canonical semantics, pricing, document, media, evidence, and attachment reads
-- the MCP layer stays read-only and forwards to the SDK helpers already shipped in this repo
+- the truth-fetch MCP layer stays read-only, while the broader bounded local stdio MCP seam also exposes review-safe and explicit execution tooling over the same shipped SDK and runner surfaces
 
 Runnable repo-local example:
 
@@ -251,13 +317,13 @@ node dist/cli.js pricing-bases
 node dist/cli.js media-asset --media-asset-id media-1
 ```
 
-This truth-fetch layer stays read-only. The MCP portion stays local stdio only and does not add hosted runtime behavior, hosted MCP, remote registry or remote discovery, login, OAuth, auth implementation, integrated Core capability-truth refresh, full governed notification semantics, broader multi-agent coordination authority, or live negotiation.
+This truth-fetch layer stays read-only. The broader bounded local stdio MCP seam may also expose review-safe and explicit execution tooling, but it still does not add hosted runtime behavior, hosted MCP, remote registry or remote discovery, platform-auth ownership, login beyond bounded prerequisite support, OAuth, auth implementation, integrated Core capability-truth refresh, full governed notification semantics, broader multi-agent coordination authority, or live negotiation.
 
 Keep the deferred boundary explicit when you explain this surface to operators or SDK users:
 
 - hosted runtime and hosted MCP stay deferred
 - remote registry and remote discovery stay deferred
-- login, OAuth, and auth implementation stay deferred
+- OAuth and broader auth/platform-auth implementation stay deferred beyond the bounded shipped login/session prerequisite path
 - integrated Core capability-truth refresh and live negotiation stay deferred
 - notification truth and broader multi-agent coordination truth beyond the shipped frozen participation/task wrappers stay deferred
 - approval -> opportunity closure stays deferred beyond the explicit current handoff seam
@@ -339,7 +405,7 @@ It is intentionally limited to the local request loop for:
 
 That local server uses the shipped tool catalog from `src/mcp.ts` and dispatches only the current bounded MCP-facing tools. It is useful when you want a repo-local MCP server surface for the shipped read-only truth-fetch tools, the already-shipped review-safe plan and packet tools, and the explicit local execution tools.
 
-This server remains deliberately narrow. It does not add hosted runtime behavior, hosted MCP service, remote registry features, broader protocol/runtime complexity, or any MCP authority beyond the shipped local tool loop.
+This server remains deliberately narrow. Its execution tools now run through the shared Stage 1 local runtime core and local accumulation store, but it still does not add hosted runtime behavior, hosted MCP service, remote registry features, broader protocol/runtime complexity, or any MCP authority beyond the shipped local tool loop.
 
 ## Scenario planning and bounded orchestration preview
 
@@ -499,7 +565,8 @@ Recommended domain profile defaults for current rollout:
 
 Active profile resolution:
 
-- default or `global` profile -> `https://api.bidvia.ai`
+- default profile -> `https://api.bidvia.cn`
+- `global` profile -> `https://api.bidvia.ai`
 - `china` profile -> `https://api.bidvia.cn`
 
 Compatibility mapping still shown as informational launch-window context:
@@ -520,3 +587,9 @@ Compatibility mapping still shown as informational launch-window context:
 - `docs/CONTRACT_BOUNDARY.md`
 - `docs/ROADMAP.md`
 - `docs/OPTIMIZATION_BACKLOG.md`
+
+## Role-stage product entry
+
+The outward product layer is organized as claimant, operator, platform-managed, and universe roles. In SDK terms this means `client.claimant.*`, `client.operator.*`, `client.platformManaged.*`, and `client.universe.*`. In CLI terms the same role-stage entry appears through commands such as claimant readiness/handoff, operator progression/closure, `platform-managed entry inspect`, and `universe inspect`.
+
+When you need machine-consumable diagnostics instead of the default business result, use the role-stage evidence output mode where it is exposed, for example `--output evidence`. For the migration path from helper-first usage to role-stage product entry, use `docs/AGENT_FIRST_MIGRATION.md`.

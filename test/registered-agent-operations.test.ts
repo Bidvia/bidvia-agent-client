@@ -9,6 +9,7 @@ import type { BidviaClient } from '../src/client.ts';
 import type {
   BidviaRegisteredAgentOperationsScenarioPlan,
 } from '../src/contracts.ts';
+import { runCli } from '../src/cli.ts';
 
 type RegisteredAgentOperationsRunnerClient = Pick<BidviaClient,
   'postHeartbeat'
@@ -62,6 +63,15 @@ test('buildRegisteredAgentOperationsScenarioPlan builds the exact post-onboardin
   );
   assert.deepEqual(plan.envelope.recordIds, {
     registrations: ['areg-registered-1'],
+  });
+  assert.deepEqual(plan.envelope.workflowStage, {
+    workflowIds: ['wf-registered-agent-1'],
+    localStageLabel: 'governed-run-execution',
+    localStageSemantics: 'local-only',
+    coreStageIdentifier: null,
+    coreStageSemantics: 'blocked-pending-packet',
+    blockedBy: 'core-write-semantics-not-frozen',
+    transitionRule: null,
   });
 });
 
@@ -208,6 +218,35 @@ test('runRegisteredAgentOperationsScenario executes the exact post-onboarding he
   assert.equal(result.verificationBundle.verificationMode, 'review-safe');
   assert.equal(result.verificationBundle.completedRouteChain.length, 5);
   assert.equal(result.reviewPacket.status, 'complete');
+});
+
+test('runCli runtime execution commands consume claimed local onboarding state automatically', async () => {
+  const printed: unknown[] = [];
+
+  const exitCode = await runCli(['heartbeat'], {
+    resolveProcessEnv: () => ({
+      BIDVIA_BASE_URL: 'http://127.0.0.1:8787',
+    }),
+    readLocalOnboardingState: async () => ({
+      tenantId: 'tenant-public',
+      principalId: 'claimed:prov-agent-1',
+      registrationId: 'areg-1',
+      sessionId: 'sess-1',
+      lastCompletedStep: 'claim-provisional-agent',
+      createdAt: '2026-04-10T10:00:00Z',
+      updatedAt: '2026-04-10T10:05:00Z',
+    }),
+    printJson: (value) => {
+      printed.push(value);
+    },
+    printLine: () => {},
+    createClient: () => ({
+      postHeartbeat: async () => ({ ok: true }),
+    }) as never,
+  });
+
+  assert.equal(exitCode, 0);
+  assert.deepEqual(printed, [{ ok: true }]);
 });
 
 test('runRegisteredAgentOperationsScenario surfaces helper failures directly', async () => {

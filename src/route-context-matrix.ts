@@ -10,14 +10,27 @@ import {
   type BidviaOnboardingJourneyStage,
 } from './onboarding-journey.js';
 import type {
+  BidviaAgentLifecycleGuidance,
+  BidviaExecutionGuidanceEntry,
+  BidviaEventNotificationPlaneView,
+  BidviaIdentitySessionPlaneView,
   BidviaMcpToolOutputMode,
+  BidviaPlaneExecutionTruth,
   BidviaRouteCapability,
   BidviaScenarioContextKey,
+  BidviaTaskPlaneView,
+  BidviaWorkflowStagePlaneView,
 } from './contracts.js';
 import { getRouteCapability } from './capabilities.js';
+import { buildStage3ReleaseGate } from './core-plane-adoption.js';
 import { buildLocalDiscoveryCatalog } from './discovery-catalog.js';
-import { buildGovernedReadPosture } from './governed-read-posture.js';
+import { buildEventNotificationPlaneView } from './event-notification-plane.js';
+import { buildExecutionGuidanceEntries } from './execution-guidance.js';
+import { buildIdentitySessionPlaneView } from './identity-session-plane.js';
+import { requirePlaneExecutionGate } from './plane-execution-gate.js';
 import { buildLocalRuntimeCapabilitySnapshot } from './runtime-capabilities.js';
+import { buildAgentLifecycleGuidance, buildTaskPlaneView } from './task-plane.js';
+import { buildWorkflowStagePlaneView } from './workflow-stage-plane.js';
 
 type BidviaRouteContextJourneyKey = BidviaOnboardingJourneyKey;
 
@@ -44,13 +57,35 @@ export interface BidviaRouteContextMatrixRow {
   routePathTemplate: string;
   routeFamily: BidviaRouteContextFamily;
   journeyStage: BidviaRouteContextJourneyStage;
+  journeyStageSemantics: 'local-only';
   accessContextFamily: BidviaRouteCapability['accessContextFamily'];
   contextSemantic: BidviaRouteCapability['contextSemantic'];
   requiredContext: BidviaScenarioContextKey[];
   operationKind: BidviaRouteContextOperationKind;
+  executionTruth: BidviaPlaneExecutionTruth;
+  executionBlockedBy: string | null;
   localCapabilityRiskTier: BidviaRouteCapability['localCapabilityRiskTier'];
   relevance: BidviaRouteContextRelevance;
   presentationTier: BidviaRouteContextPresentationTier;
+  recommendedOutputMode: BidviaMcpToolOutputMode;
+}
+
+export interface BidviaRoleStageGuidanceEntry {
+  helperKey: string;
+  role: string;
+  stage: string;
+  executability: string;
+  ownershipClass: string;
+  handoffClass: string;
+  canonicality: string;
+  mayContinueHere: boolean;
+  mayReadHere: boolean;
+  mayNotDecideHere: boolean;
+  cliCommands: string[];
+  mcpTools: Array<{
+    toolName: string;
+    outputMode: BidviaMcpToolOutputMode;
+  }>;
   recommendedOutputMode: BidviaMcpToolOutputMode;
 }
 
@@ -60,12 +95,20 @@ export interface BidviaRouteContextMatrix {
     environmentMode: string;
     environmentSelectionRequired: false;
   };
+  identitySessionPlane: BidviaIdentitySessionPlaneView;
+  taskPlane: BidviaTaskPlaneView;
+  workflowStagePlane: BidviaWorkflowStagePlaneView;
+  eventNotificationPlane: BidviaEventNotificationPlaneView;
   governedReadPosture: {
     accessContextFamily: 'principal-governed-read';
     requiredContext: ['tenantId', 'principalId'];
     adminSessionOptional: true;
     operatorGuidance: string;
   };
+  stage3ReleaseGate: import('./contracts.js').BidviaStage3ReleaseGate;
+  executionGuidance: BidviaExecutionGuidanceEntry[];
+  roleStageGuidance: BidviaRoleStageGuidanceEntry[];
+  agentLifecycleGuidance: BidviaAgentLifecycleGuidance;
   rows: BidviaRouteContextMatrixRow[];
   firstSuccessNextSteps: Record<
     BidviaRouteContextJourneyKey,
@@ -76,6 +119,7 @@ export interface BidviaRouteContextMatrix {
 export interface BidviaRouteContextNextStepHint {
   journeyKey: BidviaRouteContextJourneyKey;
   journeyStage: BidviaRouteContextJourneyStage;
+  journeyStageSemantics: 'local-only';
   relevance: BidviaRouteContextRelevance;
   command: string;
   rationale: string;
@@ -104,6 +148,47 @@ function requireRouteCapability(helperKey: string): BidviaRouteCapability {
 
 function buildDiscoveryCatalogMap(): Map<string, BidviaLocalDiscoveryCatalogEntry> {
   return new Map(buildLocalDiscoveryCatalog().map((entry) => [entry.helperKey, entry]));
+}
+
+
+function buildRoleStageGuidance(
+  discoveryCatalogMap: Map<string, BidviaLocalDiscoveryCatalogEntry>,
+): BidviaRoleStageGuidanceEntry[] {
+  return [...discoveryCatalogMap.values()]
+    .filter((entry): entry is BidviaLocalDiscoveryCatalogEntry & {
+      role: string;
+      stage: string;
+      executability: string;
+      ownershipClass: string;
+      handoffClass: string;
+      canonicality: string;
+      mayContinueHere: boolean;
+      mayReadHere: boolean;
+      mayNotDecideHere: boolean;
+    } => entry.role !== undefined
+      && entry.stage !== undefined
+      && entry.executability !== undefined
+      && entry.ownershipClass !== undefined
+      && entry.handoffClass !== undefined
+      && entry.canonicality !== undefined
+      && entry.mayContinueHere !== undefined
+      && entry.mayReadHere !== undefined
+      && entry.mayNotDecideHere !== undefined)
+    .map((entry) => ({
+      helperKey: entry.helperKey,
+      role: entry.role,
+      stage: entry.stage,
+      executability: entry.executability,
+      ownershipClass: entry.ownershipClass,
+      handoffClass: entry.handoffClass,
+      canonicality: entry.canonicality,
+      mayContinueHere: entry.mayContinueHere,
+      mayReadHere: entry.mayReadHere,
+      mayNotDecideHere: entry.mayNotDecideHere,
+      cliCommands: [...entry.cliCommands],
+      mcpTools: entry.mcpTools.map((tool) => ({ ...tool })),
+      recommendedOutputMode: entry.recommendedOutputMode,
+    }));
 }
 
 function buildPublicDefaults(): BidviaRouteContextMatrix['defaults'] {
@@ -162,6 +247,7 @@ function buildMatrixRow(
 ): BidviaRouteContextMatrixRow {
   const capability = requireRouteCapability(helperKey);
   const discoveryEntry = discoveryCatalogMap.get(helperKey);
+  const executionGate = requirePlaneExecutionGate(helperKey);
 
   return {
     journeyKey: journey.journeyKey,
@@ -169,10 +255,13 @@ function buildMatrixRow(
     routePathTemplate: capability.routePathTemplate,
     routeFamily: inferRouteFamily(capability.routePathTemplate),
     journeyStage: requireJourneyHelperStage(journey, capability.helperKey),
+    journeyStageSemantics: 'local-only',
     accessContextFamily: capability.accessContextFamily,
     contextSemantic: capability.contextSemantic,
     requiredContext: [...capability.requiredContext],
     operationKind: buildOperationKind(capability),
+    executionTruth: executionGate.executionTruth,
+    executionBlockedBy: executionGate.blockedBy,
     localCapabilityRiskTier: capability.localCapabilityRiskTier,
     relevance: journey.relevance,
     presentationTier: journey.presentationTier,
@@ -184,10 +273,22 @@ function buildMatrixRow(
 export function buildRouteContextMatrix(): BidviaRouteContextMatrix {
   const discoveryCatalogMap = buildDiscoveryCatalogMap();
   const journeys = listOnboardingJourneyDefinitions();
+  const identitySessionPlane = buildIdentitySessionPlaneView();
+  const taskPlane = buildTaskPlaneView();
+  const workflowStagePlane = buildWorkflowStagePlaneView();
+  const eventNotificationPlane = buildEventNotificationPlaneView();
 
   return {
     defaults: buildPublicDefaults(),
-    governedReadPosture: buildGovernedReadPosture(),
+    identitySessionPlane,
+    taskPlane,
+    workflowStagePlane,
+    eventNotificationPlane,
+    governedReadPosture: identitySessionPlane.governedReadPosture,
+    stage3ReleaseGate: buildStage3ReleaseGate(),
+    executionGuidance: buildExecutionGuidanceEntries(),
+    roleStageGuidance: buildRoleStageGuidance(discoveryCatalogMap),
+    agentLifecycleGuidance: buildAgentLifecycleGuidance(),
     rows: journeys.flatMap((journey) => (
       journey.helperSteps.map(({ helperKey }) => buildMatrixRow(journey, helperKey, discoveryCatalogMap))
     )),
@@ -201,6 +302,7 @@ export function buildRouteContextMatrixNextStepHints(): BidviaRouteContextNextSt
   return listOnboardingJourneyDefinitions().map((journey) => ({
     journeyKey: journey.journeyKey,
     journeyStage: journey.firstSuccessNextStep.journeyStage,
+    journeyStageSemantics: journey.firstSuccessNextStep.journeyStageSemantics,
     relevance: journey.relevance,
     command: journey.firstSuccessNextStep.command,
     rationale: journey.firstSuccessNextStep.rationale,

@@ -18,12 +18,22 @@ test('public release docs no longer depend on transitional publication wording i
   const onboardingGuide = readText('docs/ONBOARDING.md');
   const contractBoundary = readText('docs/CONTRACT_BOUNDARY.md');
   const roadmap = readText('docs/ROADMAP.md');
+  const corePlaneGaps = readText('docs/CORE_AGENT_CLIENT_PLANE_CONTRACT_GAPS.md');
   const onboardingDoc = readText('docs/OPENCLAW_GATEWAY_ONBOARDING.md');
   const smokeDoc = readText('docs/OPENCLAW_GATEWAY_SMOKE.md');
   const websiteHandoff = readText('docs/WEBSITE_FIRST_ACCESS_HANDOFF.md');
   const releaseChecklist = readText('docs/INTERNAL_RELEASE_CHECKLIST.md');
   const releaseNotes = readText('docs/RELEASE_NOTES_LOCAL_ONLY_NEXT_VERSION.md');
   const openClawExample = readText('examples/openclaw-gateway-bidvia-setup.md');
+  const integrationCapabilityDiscoveryContract = readText(
+    '.sisyphus/evidence/contract-snapshots/2026-05-01/agent-client/integration-capability-discovery-contract.md',
+  );
+  const enterpriseIntegrationPlaneContract = readText(
+    '.sisyphus/evidence/contract-snapshots/2026-05-01/agent-client/enterprise-integration-plane-contract.md',
+  );
+  const canonicalRouteAndStatusContract = readText(
+    '.sisyphus/evidence/contract-snapshots/2026-05-01/shared/canonical-route-and-status-contract.md',
+  );
 
   for (const document of [readme, onboardingDoc, smokeDoc]) {
     assert.doesNotMatch(document, /once the final (public )?publish gate is open/i);
@@ -54,10 +64,123 @@ test('public release docs no longer depend on transitional publication wording i
   assert.doesNotMatch(readme, /bidvia-agent-client openclaw-mcp-config/);
   assert.doesNotMatch(smokeDoc, /bidvia-agent-client openclaw-mcp-config/);
 
-  for (const document of [readme, onboardingGuide, contractBoundary, roadmap]) {
-    assert.match(document, /\.sisyphus\/plans\/agent-client-core-vnext-alignment-and-joint-debug\.md/);
+  assert.match(corePlaneGaps, /Stage 1 is complete on the client side/i);
+  assert.match(corePlaneGaps, /Identity \/ session plane \| packet-grounded-execution/i);
+  assert.match(corePlaneGaps, /Task plane \| packet-grounded-execution/i);
+  assert.match(corePlaneGaps, /Capability plane \| packet-grounded-read/i);
+  assert.match(corePlaneGaps, /Workflow \/ stage plane \| blocked-pending-packet/i);
+  assert.match(corePlaneGaps, /Event \/ notification plane \| packet-grounded-execution/i);
+  assert.match(corePlaneGaps, /Event \/ notification plane \| packet-grounded-execution \| Notification detail reads are payload-grounded and acknowledgement is the only packet-grounded execution helper in this wave\./i);
+  assert.match(corePlaneGaps, /Enterprise integration plane \| packet-grounded-read/i);
+  assert.match(corePlaneGaps, /helper-level payload matrix/i);
+  assert.match(corePlaneGaps, /three-layer client architecture/i);
+  assert.match(corePlaneGaps, /atomic helpers, executable scenario runners, and productized CLI\/MCP surfaces/i);
+  assert.match(corePlaneGaps, /packet-grounded-execution/i);
+  assert.match(corePlaneGaps, /packet-grounded-read/i);
+  assert.match(corePlaneGaps, /blocked-pending-packet/i);
+  assert.match(corePlaneGaps, /compatibility-only/i);
+  assert.match(corePlaneGaps, /CLI and MCP execution now write local accumulation through the runtime core/i);
+  assert.match(corePlaneGaps, /sign-up, sign-in, select-org, and session hygiene/i);
+  assert.match(corePlaneGaps, /notification detail visibility is packet-grounded-read and acknowledgement is the only packet-grounded-execution helper in this wave/i);
+  assert.match(corePlaneGaps, /notification delivery, retry, and expiry remain compatibility-only/i);
+  assert.match(corePlaneGaps, /integration and commercial read helpers are packet-grounded/i);
+  assert.match(corePlaneGaps, /workflow-stage remains the only broadly blocked Core-facing plane/i);
+  assert.doesNotMatch(corePlaneGaps, /hosted runtime behavior is shipped/i);
+
+  for (const document of [onboardingGuide, contractBoundary]) {
+    assert.match(document, /docs\/superpowers\/plans\/2026-04-30-client-truth-alignment-v3-implementation\.md/);
+    assert.doesNotMatch(document, /agent-client-v1-payload-contract-release/);
     assert.doesNotMatch(document, /agent-client-next-version-productization/);
   }
+
+  assert.doesNotMatch(readme, /\.sisyphus\/plans\//);
+
+  for (const document of [readme, onboardingGuide, releaseChecklist, releaseNotes]) {
+    assert.match(document, /downstream-contract-center/i);
+  }
+
+  for (const document of [readme, roadmap, onboardingGuide, releaseChecklist, releaseNotes]) {
+    assert.match(document, /Stage 3 (release )?(closure|gate)/i);
+  }
+
+  for (const document of [readme, onboardingGuide, releaseChecklist, releaseNotes]) {
+    assert.match(document, /npm test/);
+    assert.match(document, /npm run typecheck/);
+    assert.match(document, /npm run build/);
+    assert.match(document, /npm run validate/);
+    assert.match(document, /npm run validate:release-readiness/);
+    assert.match(document, /npm run validate:release-gate/);
+  }
+
+  assert.match(readme, /validator commands to stay green together/i);
+  assert.doesNotMatch(readme, /validator evidence is present/i);
+  assert.match(roadmap, /agent-first with bounded login\/session prerequisite support/i);
+  assert.match(roadmap, /helper-level payload matrix/i);
+  assert.match(roadmap, /identity-session \| packet-grounded-execution/i);
+  assert.match(roadmap, /task \| packet-grounded-execution/i);
+  assert.match(roadmap, /capability \| packet-grounded-read/i);
+  assert.match(roadmap, /workflow-stage \| blocked-pending-packet/i);
+  assert.match(roadmap, /event-notification \| packet-grounded-execution/i);
+  assert.match(roadmap, /enterprise-integration \| packet-grounded-read/i);
+  assert.match(contractBoundary, /sign-up-personal/i);
+  assert.match(contractBoundary, /sign-up-enterprise/i);
+  assert.match(contractBoundary, /sign-in/i);
+  assert.match(contractBoundary, /select-org/i);
+  assert.match(contractBoundary, /account-me/i);
+  assert.match(contractBoundary, /session-refresh/i);
+  assert.match(contractBoundary, /session-revoke/i);
+  assert.match(contractBoundary, /`GET \/runtime\/account\/agents\/:agentId\/notifications\/:notification_id`/i);
+  assert.match(contractBoundary, /`POST \/runtime\/account\/agents\/:agentId\/notifications\/:notification_id\/acknowledgements`/i);
+  assert.match(contractBoundary, /`GET \/runtime\/account\/integration-capabilities`/i);
+  assert.match(contractBoundary, /`GET \/runtime\/account\/agents\/:agentId\/integrations\/:integrationCode\/eligibility`/i);
+  assert.doesNotMatch(contractBoundary, /`POST \/runtime\/account\/agents\/:agentId\/integrations\/:integrationCode\/inbound`/i);
+  assert.match(contractBoundary, /compatibility-only support seams/i);
+  assert.doesNotMatch(contractBoundary, /`GET \/runtime\/account\/agents\/:registration_id\/notifications`/i);
+  assert.doesNotMatch(contractBoundary, /`GET \/runtime\/notifications\/:notification_id`/i);
+  assert.doesNotMatch(contractBoundary, /`POST \/runtime\/notifications\/:notification_id\/acknowledge`/i);
+  assert.match(contractBoundary, /agent-first but login-capable/i);
+  assert.match(contractBoundary, /executable, review-safe, and compatibility-only/i);
+  assert.match(integrationCapabilityDiscoveryContract, /`GET \/runtime\/account\/integration-capabilities`/i);
+  assert.match(integrationCapabilityDiscoveryContract, /`GET \/runtime\/account\/agents\/:agentId\/integrations\/:integrationCode\/eligibility`/i);
+  assert.doesNotMatch(integrationCapabilityDiscoveryContract, /`POST \/runtime\/account\/agents\/:agentId\/integrations\/:integrationCode\/inbound`/i);
+  assert.match(enterpriseIntegrationPlaneContract, /`GET \/runtime\/account\/integration-capabilities`/i);
+  assert.match(enterpriseIntegrationPlaneContract, /`GET \/runtime\/account\/agents\/:agentId\/integrations\/:integrationCode\/eligibility`/i);
+  assert.doesNotMatch(enterpriseIntegrationPlaneContract, /`POST \/runtime\/account\/agents\/:agentId\/integrations\/:integrationCode\/inbound`/i);
+  assert.match(canonicalRouteAndStatusContract, /`GET \/runtime\/account\/integration-capabilities`/i);
+  assert.match(canonicalRouteAndStatusContract, /`GET \/runtime\/account\/agents\/:agentId\/integrations\/:integrationCode\/eligibility`/i);
+  assert.doesNotMatch(canonicalRouteAndStatusContract, /`POST \/runtime\/account\/agents\/:agentId\/integrations\/:integrationCode\/inbound`/i);
+  assert.match(onboardingGuide, /agent-first but login-capable/i);
+  assert.match(onboardingGuide, /bounded account\/session prerequisite support/i);
+  assert.match(onboardingGuide, /bounded task closure, not full business closure/i);
+  assert.match(onboardingGuide, /bounded local stdio MCP seam now includes review-safe and explicit execution tooling/i);
+  assert.doesNotMatch(onboardingGuide, /MCP stays read-only/i);
+  assert.match(onboardingGuide, /bidvia sign-in/);
+  assert.match(onboardingGuide, /bidvia sign-up-personal/);
+  assert.match(onboardingGuide, /bidvia sign-up-enterprise/);
+  assert.match(onboardingGuide, /bidvia select-org/);
+  assert.match(releaseNotes, /agent-first but login-capable/i);
+  assert.match(releaseNotes, /helper-level payload matrix/i);
+  assert.match(releaseNotes, /platform-auth/i);
+  assert.match(websiteHandoff, /agent-first but login-capable/i);
+  assert.match(websiteHandoff, /sign-up-personal/i);
+  assert.match(websiteHandoff, /sign-in/i);
+  assert.match(websiteHandoff, /select-org/i);
+  assert.match(roadmap, /P0, P1, and P2 adoption/i);
+  assert.match(onboardingGuide, /route-context-matrix/i);
+  assert.match(onboardingGuide, /runtime-capabilities/i);
+  assert.match(readme, /formal `1\.0\.0` release/i);
+  assert.match(releaseNotes, /formal release packet/i);
+  assert.match(readme, /Stage 3 release gate remains blocked/i);
+  assert.match(releaseNotes, /Stage 3 release gate remains blocked/i);
+  assert.match(releaseChecklist, /do not describe `1\.0\.0` closure as complete/i);
+  assert.match(releaseNotes, /downstream contract center/i);
+  assert.doesNotMatch(releaseNotes, /Stage 3 release gate is now ready/i);
+  assert.doesNotMatch(readme, /release-ready public surface/i);
+
+  assert.match(roadmap, /This file remains the single roadmap for `bidvia-agent-client`\./);
+  assert.match(roadmap, /Individual `\.sisyphus\/plans\/\*\.md` files are execution slices/);
+  assert.doesNotMatch(roadmap, /agent-client-core-vnext-alignment-and-joint-debug/);
+  assert.doesNotMatch(roadmap, /agent-client-next-version-productization/);
 
   for (const document of [readme, onboardingGuide, contractBoundary, releaseChecklist, releaseNotes]) {
     assert.match(document, /tenantId/);
@@ -82,4 +205,36 @@ test('public release surface exports the OpenClaw config and companion bundle he
   assert.equal(typeof exports.exportOpenClawConfig, 'function');
   assert.equal(typeof exports.buildOpenClawCompanionBundle, 'function');
   assert.equal(typeof exports.exportOpenClawCompanionBundle, 'function');
+  assert.equal(typeof exports.buildEventNotificationPlaneView, 'function');
+  assert.equal(typeof exports.buildStage3ReleaseGate, 'function');
+});
+
+test('public docs explain bounded validation tooling and new bounded task-plane CLI coverage without framing it as internal certification', () => {
+  const readme = readText('README.md');
+  const onboardingGuide = readText('docs/ONBOARDING.md');
+  const openClawOnboarding = readText('docs/OPENCLAW_GATEWAY_ONBOARDING.md');
+  const openClawSmoke = readText('docs/OPENCLAW_GATEWAY_SMOKE.md');
+  const releaseChecklist = readText('docs/INTERNAL_RELEASE_CHECKLIST.md');
+  const roadmap = readText('docs/ROADMAP.md');
+
+  for (const document of [readme, onboardingGuide, openClawOnboarding, openClawSmoke]) {
+    assert.match(document, /install-integrity/i);
+    assert.match(document, /validation-smoke/i);
+    assert.match(document, /diagnostic-bundle-export/i);
+    assert.match(document, /public-runtime-interpretation-probe/i);
+  }
+
+  for (const document of [readme, onboardingGuide, roadmap]) {
+    assert.match(document, /create-task-dispatch/i);
+    assert.match(document, /create-claim/i);
+    assert.match(document, /bounded/i);
+    assert.match(document, /fail-closed/i);
+  }
+
+  assert.match(releaseChecklist, /validation-smoke/i);
+  assert.match(releaseChecklist, /diagnostic-bundle-export/i);
+  assert.match(releaseChecklist, /public-runtime-interpretation-probe/i);
+  assert.doesNotMatch(readme, /internal Core acceptance harness/i);
+  assert.doesNotMatch(onboardingGuide, /internal Core acceptance harness/i);
+  assert.doesNotMatch(roadmap, /internal Core acceptance harness/i);
 });

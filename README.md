@@ -1,48 +1,47 @@
 # Bidvia Agent Client
 
-`@bidvia/client` is the open-source SDK and CLI for connecting governed agents to the Bidvia platform.
+This README is the customer-facing V1 entrypoint for the current `1.0.0` package state.
 
-The active execution plan for the current documentation and productization wave is `.sisyphus/plans/agent-client-core-vnext-alignment-and-joint-debug.md`. This README stays focused on the shipped local-first package surface and should be read alongside that plan, not as a competing roadmap.
+## What is Bidvia?
 
-Today, this package ships a usable current mainline client surface for the frozen Bidvia Commercial Universe V1 / Core V12 handoff boundary. It includes typed SDK helpers, a widened read-only truth-fetch layer, stronger local operator discovery surfaces, richer review-safe readback, bounded scenario and verification helpers, local CLI commands, and a local stdio MCP seam. Recent transport and auth-provider hardening support that local-only foundation, but they do not mean login is shipped. It does not claim hosted runtime behavior, remote registry behavior, integrated Core truth beyond frozen inputs, or client-owned authority.
+Bidvia is the governed platform for onboarding, running, and integrating agents. It provides the downstream contract truth, onboarding semantics, governed runtime routes, and enterprise-facing integration surfaces that this package consumes.
 
-## What ships today
+## What is `@bidvia/client`?
 
-This package currently gives external users two guided journeys:
+`@bidvia/client` is the open-source Bidvia client project. It gives external users a typed SDK, the `bidvia` CLI, and a local `bidvia mcp-server` entrypoint for governed agent onboarding and operations.
 
-- one primary public CLI-first journey organized as Learn, then Public Provisional create -> query -> claim, then Governed Run
-- one secondary Governed Run journey where local stdio MCP remains a packaging/integration path, not a separate onboarding semantics layer
+The package is agent-first but login-capable: external users may need bounded account/session setup before they continue, but the product promise stays centered on the governed agent path rather than on a general account-admin or platform-auth shell.
 
-The same package also ships an SDK for Bidvia agent access routes, onboarding flows, registration-bound operations, the frozen downstream truth-fetch reads now adopted in the client surface, bounded scenario planning, and verification-safe exports.
+This repo now presents itself as an **agent-first operating entry** organized around a **role-stage** model rather than a helper bundle. The product-facing surfaces are `client.claimant.*`, `client.operator.*`, `client.platformManaged.*`, and `client.universe.*`, and the CLI/MCP surfaces mirror the same role-stage operating entry.
 
-The widened frozen read surface now visible in the SDK and CLI includes the canonical families behind `GET /runtime/agents/registrations`, `GET /runtime/agents/:registrationId`, `GET /runtime/authority-profiles`, `GET /runtime/capability-profiles`, `GET /runtime/agents/:registrationId/capability-profile`, plus the shipped participation-state and task-dispatch read/write wrappers where the client already exposes them. The local stdio MCP surface is now wider too, covering the approved OpenClaw-facing read, review-safe, and explicit execution families that already ship in this repo. It still stays local-first and bounded to the approved stdio runtime.
+For the next-version role of this repo, use one explicit three-layer client architecture: atomic helpers, executable scenario runners, and productized CLI/MCP surfaces.
 
-The current mainline remains explicitly bounded to the frozen Bidvia Commercial Universe V1 / Core V12 framing. This repo can improve client ergonomics, but it must not invent platform truth or widen governance authority on its own.
+## Current version and release maturity
+
+The current package version is `1.0.0`.
+
+This is the customer-facing `1.0.0` package state for the current local client surface. The shipped SDK, CLI, MCP handoff, account/session prerequisite support, governed onboarding path, and frozen downstream read visibility are documented here, but the Stage 3 release gate remains blocked while workflow-stage truth and the remaining route-model adoption seams still require Core-frozen payload truth. npm publication is still a separate final human step.
 
 ## Installation
 
-### Current public install path
+Requirements:
+
+- Node.js `>=20`
+
+Install path when using the published package:
 
 ```bash
 npm install @bidvia/client
 ```
 
-The installed package exposes:
+That installs the `bidvia` CLI and the local `bidvia mcp-server` entrypoint.
 
-- `bidvia` for CLI commands
-- `bidvia mcp-server` for the local stdio MCP server
-
-### Developer fallback: repo-local development/build path
+Repo-local development fallback:
 
 ```bash
 npm install
 npm run build
 ```
-
-This gives you:
-
-- the local CLI at `node dist/cli.js`
-- the local MCP fallback at `node dist/mcp-server.js`
 
 Useful local verification commands:
 
@@ -51,40 +50,96 @@ npm test
 npm run typecheck
 npm run build
 npm run validate
+npm run validate:release-readiness
+npm run validate:release-gate
 ```
 
-## Start here
+Those validator commands must stay green together before any human release packet can describe public closure. This README treats validator commands to stay green together as a formal `1.0.0` release requirement, not as optional evidence. For product-wave regression, also run `npx tsx scripts/validate-agent-first-business-universe.ts` so the role-stage status artifacts stay machine-checkable.
 
-### Primary public CLI-first journey
+For bounded external-user validation, start with these local-first commands before assuming the problem is deeper than the current machine or shell state:
 
-For the normal public package path, start with the package defaults. The CLI resolves against `https://api.bidvia.ai`, so the baseline public journey does not start with `BIDVIA_BASE_URL`.
+```bash
+bidvia install-integrity
+bidvia validation-smoke
+bidvia diagnostic-bundle-export --output ./bidvia-diagnostic-bundle
+bidvia public-runtime-interpretation-probe
+```
 
-Current installed path:
+- `install-integrity` is the local install-path self-check
+- `validation-smoke` is the bounded external-user smoke lane
+- `diagnostic-bundle-export` packages that smoke report into machine-readable JSON plus a shareable markdown summary
+- `public-runtime-interpretation-probe` reads live `/healthz` and `/readyz` and exports bounded runtime-baseline interpretation evidence without overclaiming release truth
+
+These commands stay fail-closed. They do not become a Core-owned certification flow, do not claim hosted runtime truth, and do not turn bounded local diagnostics into full business closure claims. `public-runtime-interpretation-probe` stays narrower than the bounded matrix: it proves only the surfaced runtime baseline and does not claim business closure.
+
+When you need a probe-backed local-docker regression artifact instead of the lighter smoke lane, run:
+
+```bash
+npx tsx scripts/verify-client-bounded-matrix.ts --base-url http://127.0.0.1:8787 --output ./bidvia-bounded-matrix.json
+```
+
+That bounded matrix stays local-first and review-safe. It can execute the checked-in proven slices when fresh artifact paths are available, and it reports a bounded mix of `pass`, `bounded-stop`, `contradiction`, and `blocked` results instead of pretending the entire business chain is either fully open or fully closed.
+
+## Quick start
+
+If you are evaluating the package as an external user, use the default public API path first. The CLI and SDK resolve against `https://api.bidvia.cn` unless you intentionally choose a different deployment entrypoint. Then follow the CLI onboarding path below in order: start with Learn, use bounded account/session prerequisite support when needed, complete public provisional create -> query -> claim, and only then move into governed run.
+
+Before validating runtime behavior, choose the right lane:
+
+- **default local docker** for real surfaced runtime behavior
+- **proof-lane / admin-session** for deterministic admin-scoped walkthroughs
+- **seeded / runtime-generated object validation** when you need to create your own business objects rather than relying on fixed proof ids
+
+See `docs/VALIDATION_LANES.md` for the full lane guide. Fixed proof ids are not assumed in default local docker, self-generated runtime data is the preferred path for business-universe closure, and task-write-ready progression is a distinct surfaced path rather than an implied side effect of claim. When you need machine-consumable diagnostics instead of the default business result, the role-stage product commands may emit evidence output with `--output evidence`.
+
+That surfaced progression is bounded task closure, not full business closure.
+
+For task-write-ready progression, keep the chain explicit on the ordinary surfaced lane: self-service patch -> dispatch-authority request -> operator/admin review closure -> external binding check -> post-step verification of task-write-ready and dispatch-eligibility truth. The external claimed agent owns the self-service patch and bounded dispatch-authority request, operator/admin owns review closure, and the latest surfaced runtime now proves that claimant/account-scoped and operator/admin binding writes use different body contracts. This repo now ships a first-class account-plane external binding write helper together with the `account-agent-bindings` read helper, but the step still stays fail-closed unless the current lane has an explicit Core-owned route/body contract and the returned reads confirm runnable truth. If a governed read still returns `active_role_binding_required` after account-plane continuation succeeds, treat that as a separate authorization-projection gate rather than as dispatch-authority review or a hidden claimant-side activation workflow.
+
+## CLI onboarding path
+
+The CLI onboarding path is customer-facing, but it stays honest about prerequisites.
+
+### 1. Start with the visible Learn stage
 
 ```bash
 bidvia onboard
-bidvia context show
 bidvia whoami
+bidvia context show
 bidvia doctor
 ```
 
-Developer fallback path:
+- `onboard` is the visible first-run command
+- `whoami` summarizes local identity without claiming platform login
+- `context show` explains which local context fields are present
+- `doctor` is a governed-run diagnostic once enough context exists
+
+### 2. Use bounded account/session prerequisite support when needed
+
+When account or session context is still missing, start with the bounded prerequisite support:
 
 ```bash
-node dist/cli.js onboard
-node dist/cli.js context show
-node dist/cli.js whoami
-node dist/cli.js doctor
+bidvia sign-up-personal --input ...
+bidvia sign-up-enterprise --input ...
+bidvia sign-in --input ...
+bidvia select-org --input ...
+bidvia account-me
 ```
 
-Use the first three commands for the Learn stage, and keep `doctor` as a supporting governed-run diagnostic once context starts to exist:
+Session support is available when needed:
 
-- `onboard` is the primary first-run entry point and rerunnable local guide
-- `context show` shows effective local context and where each field came from
-- `whoami` summarizes local identity without implying platform login
-- `doctor` shows local diagnostics and, when enough context exists, the optional readiness live check on the governed side of the journey
+```bash
+bidvia session-refresh
+bidvia session-revoke
+```
 
-When you need the explicit public provisional chain, keep create -> query -> claim visible instead of hiding query behind a browser flow or shorthand:
+### 3. Run the public provisional onboarding chain
+
+Keep the official public chain explicit:
+
+- use `bidvia create-provisional-agent` to start the provisional record
+- use `bidvia query-provisional-agent` to check the provisional state
+- use `bidvia claim-provisional-agent` to complete the session-bound handoff
 
 ```bash
 bidvia create-provisional-agent --provisional-agent-ref ...
@@ -92,7 +147,9 @@ bidvia query-provisional-agent --provisional-agent-ref ...
 bidvia claim-provisional-agent --provisional-agent-ref ... --claim-token ...
 ```
 
-When local context is ready and you are crossing into Run, use the bounded runtime path:
+`claim-provisional-agent` is session-bound. It is the bridge from public provisional onboarding into governed runtime work.
+
+### 4. Move into governed run
 
 ```bash
 bidvia route-context-matrix
@@ -100,46 +157,29 @@ bidvia registration-lifecycle-plan
 bidvia registered-agent-operations-plan
 ```
 
-`docs/ONBOARDING.md` expands this Learn → Public Provisional create -> query -> claim → Governed Run path and shows where the supporting diagnostics fit around it.
+Use the route matrix to confirm which context family is required before you execute the next governed step. For claimant/account-plane continuation, treat `agentId` as the canonical account-plane identifier; any continued use of `registrationId` on that plane is compatibility-only.
 
-In that split, `claim-provisional-agent` is session-bound, and `doctor`, `route-context-matrix`, and the plan commands belong to Governed Run rather than to the official public provisional chain.
+### 5. Run bounded validation and diagnostic export when you need user-facing proof
 
-### Secondary Governed Run journey
-
-If your path includes a local OpenClaw Gateway or node-host install, treat that as one way to enter the same Governed Run surface rather than as a separate onboarding journey:
-
-Current installed path:
+After the onboarding path is clear, use the bounded local-first validation flow:
 
 ```bash
-bidvia openclaw-mcp-config
-bidvia openclaw-bundle-export --output ./bidvia-openclaw-bundle
-bidvia route-context-matrix
+bidvia install-integrity
+bidvia validation-smoke
+bidvia diagnostic-bundle-export --output ./bidvia-diagnostic-bundle
 ```
 
-Developer fallback path:
+When the current lane genuinely needs shipped bounded task-plane writes from CLI, the current surface now also includes `create-lease`, `create-task-dispatch`, `assign-task-dispatch`, `suspend-task-dispatch`, `resume-task-dispatch`, `complete-task-dispatch`, `fail-task-dispatch`, `create-claim`, `accept-claim`, and `reject-claim`. Those commands stay bounded to already-shipped helper semantics only, remain fail-closed, and do not imply deeper operator-owned continuation or full business closure.
 
-```bash
-node dist/cli.js openclaw-mcp-config
-node dist/cli.js openclaw-bundle-export --output ./bidvia-openclaw-bundle
-node dist/cli.js route-context-matrix
-```
+## SDK quick start
 
-Use `openclaw-mcp-config` first to export the OpenClaw-compatible `command` / `args` / `env` fragment for the primary stdio MCP path. Use `openclaw-bundle-export --output ./bidvia-openclaw-bundle` when you want companion bundle/bootstrap packaging around that same local server written to disk. The installed execution story is still `bidvia mcp-server`, and the repo-local development fallback remains `node dist/mcp-server.js`. Then use `route-context-matrix` to confirm which context family the guided Governed Run route needs before enabling execution.
-
-Continue with:
-
-- `docs/OPENCLAW_GATEWAY_ONBOARDING.md` for the install and handoff order
-- `docs/OPENCLAW_GATEWAY_SMOKE.md` for the smoke sequence
-
-## Quick SDK use
-
-For the normal public package path, the guided public journey stays CLI-first. If you need the direct SDK equivalent, point it at the canonical public API at `https://api.bidvia.ai`.
+Use the SDK when you want the same governed client surface in code.
 
 ```ts
 import { BidviaClient, buildHeartbeatInput } from '@bidvia/client';
 
 const client = new BidviaClient({
-  baseUrl: 'https://api.bidvia.ai',
+  baseUrl: 'https://api.bidvia.cn',
   context: {
     tenantId: 'tenant-a',
     principalId: 'agent-1',
@@ -159,265 +199,65 @@ const heartbeat = await client.postHeartbeat(
 console.log(heartbeat);
 ```
 
-In practice, the SDK currently covers:
+The shipped SDK includes:
 
-- official onboarding and claim flows
-- registration-bound heartbeat, sync, evidence, and proposal operations
-- agent-state and task-participation helpers
-- truth-fetch reads for account agents, account agent bindings, and account records; richer governance deep reads for agent registrations, per-registration detail, agent presence, authority, readiness, summaries, authority profiles, capability profiles, and the singular per-registration capability profile; shipped participation-state and task-dispatch visibility plus task action wrappers; broader business truth-fetch families for canonical semantics, pricing, and document, media, evidence, attachment, and file-resource assets
-- pricing, assets, connection, commercial-action, and related route helpers already present in code
-- bounded scenario planning and verification bundle support
-- richer review-safe readback for already-shipped bounded orchestration slices
-- local capability and server-payload normalization helpers
+- product-facing role-stage facades such as `client.claimant.precondition.inspect(...)`, `client.operator.handoff.consume(...)`, `client.platformManaged.entry.inspect(...)`, and `client.universe.inspect(...)`
 
-The truth-fetch expansion now ships across the SDK and CLI, with the local stdio MCP layer exposing the approved OpenClaw-facing subset as a thin wrapper over shipped SDK helpers. The rollout is phased on purpose: the SDK and CLI now cover the widened frozen downstream read surface, while MCP exposes the currently approved governance, business-truth, review-safe, and explicit execution slices on the same local seam. That MCP layer stays local stdio only in every phase, and it stays Core-truth-consuming rather than truth-owning.
+- bounded account/session prerequisite support
+- bounded membership lifecycle support for invitation create/accept, admin transfer, and removal
+- bounded account-agent dispatch-authority read/request support on the canonical `/runtime/account/agents/:agentId/...` continuation family
+- account-scoped task-dispatch and notification canonical families where the current downstream packets are already adopted
+- provisional create -> query -> claim helpers
+- registration-bound heartbeat, sync, evidence, and proposal helpers
+- governed reads such as `authority-profiles`, `capability-profile`, agent registration visibility, participation-state visibility, and task-dispatch visibility
+- bounded scenario, review-safe, and verification export helpers
 
-For the principal-governed read family, the honest default is `tenantId` plus `principalId`, with `adminSessionId` only as an optional companion on some routes. Local and sim probes without real governed credentials can prove route wiring, transport behavior, reachability, or auth-guard posture only. They do not prove full governed semantics.
+For governed reads, the honest default is `tenantId` plus `principalId`, with `adminSessionId` only as an optional companion on some routes.
 
-### Advanced endpoint override
+## OpenClaw and advanced integration
 
-Use an explicit production `baseUrl` only when you know you need a non-default deployment entrypoint. The canonical production API domains are:
-
-- `https://api.bidvia.ai`
-- `https://api.bidvia.cn`
-
-```ts
-const client = new BidviaClient({
-  baseUrl: 'https://api.bidvia.cn',
-  context: {
-    tenantId: 'tenant-a',
-    principalId: 'agent-1',
-    registrationId: 'registration-1',
-  },
-});
-```
-
-## CLI quick start
-
-Current installed path:
-
-```bash
-bidvia --help
-```
-
-Developer fallback path:
-
-```bash
-node dist/cli.js --help
-```
-
-For the normal public package path, CLI commands resolve against `https://api.bidvia.ai`. Start with `bidvia onboard` before you reach for explicit overrides.
-
-Guided public journey, current installed path:
-
-```bash
-bidvia onboard
-bidvia context show
-bidvia whoami
-bidvia doctor
-bidvia create-provisional-agent --provisional-agent-ref ...
-bidvia query-provisional-agent --provisional-agent-ref ...
-bidvia claim-provisional-agent --provisional-agent-ref ... --claim-token ...
-bidvia route-context-matrix
-bidvia registration-lifecycle-plan
-bidvia registered-agent-operations-plan
-```
-
-Developer fallback path:
-
-```bash
-node dist/cli.js onboard
-node dist/cli.js context show
-node dist/cli.js whoami
-node dist/cli.js doctor
-node dist/cli.js create-provisional-agent --provisional-agent-ref ...
-node dist/cli.js query-provisional-agent --provisional-agent-ref ...
-node dist/cli.js claim-provisional-agent --provisional-agent-ref ... --claim-token ...
-node dist/cli.js route-context-matrix
-node dist/cli.js registration-lifecycle-plan
-node dist/cli.js registered-agent-operations-plan
-```
-
-Governed Run packaging/integration handoff, developer fallback path:
-
-```bash
-node dist/cli.js openclaw-mcp-config
-node dist/cli.js openclaw-bundle-export
-node dist/cli.js route-context-matrix
-```
-
-`openclaw-mcp-config` is the primary OpenClaw handoff because it points directly at `bidvia mcp-server`. `openclaw-bundle-export` is additive packaging for operators and agents that want bundle/bootstrap guidance around that same local runtime. `node dist/mcp-server.js` remains the repo-local fallback. Those steps support the same Governed Run journey rather than defining a separate OpenClaw-owned onboarding path.
-
-Start with grouped help when you want the current local-only command surface:
-
-```bash
-node dist/cli.js --help
-```
-
-Supporting diagnostics and visibility commands:
-
-```bash
-node dist/cli.js environment-mode
-node dist/cli.js launch-topology-smoke
-node dist/cli.js runtime-capabilities
-node dist/cli.js server-capabilities
-node dist/cli.js account-agents
-node dist/cli.js agent-presence --registration-id areg-1
-node dist/cli.js pricing-bases
-node dist/cli.js media-asset --media-asset-id media-1
-```
-
-The full truth-fetch command group also includes detail and collection reads for account records, account agent bindings, richer governance deep reads such as `agent-registrations`, `agent-registration`, `authority-profiles`, `capability-profiles`, and `agent-capability-profile`, plus `participation-states`, `participation-state`, `task-dispatches`, and `task-dispatch` around the frozen participation/task family. These commands stay operator-facing, and the governed read routes still require real principal context when you want more than local auth-posture proof.
-
-`onboarding-readiness` remains available as a supporting read-only explainer, but `onboard` is now the visible public first-run entry point.
-
-Bounded preview and export commands:
-
-```bash
-node dist/cli.js industry-universe-plan
-node dist/cli.js industry-universe-review-packet-preview
-node dist/cli.js industry-universe-review-packet-export
-node dist/cli.js connection-approval-plan
-node dist/cli.js connection-approval-review-packet-preview
-node dist/cli.js connection-approval-review-packet-export
-node dist/cli.js opportunity-package-handoff-plan
-node dist/cli.js opportunity-package-handoff-review-packet-preview
-node dist/cli.js opportunity-package-handoff-review-packet-export
-node dist/cli.js registration-lifecycle-plan
-node dist/cli.js registered-agent-operations-plan
-node dist/cli.js multi-business-chain-verification-wave-preview
-node dist/cli.js commercial-action-verification-wave-preview
-node dist/cli.js verification-bundle-preview --input registration-lifecycle
-node dist/cli.js verification-bundle-export --input registered-agent-operations
-```
-
-Local execution commands are explicit and support payload preview through `--dry-run`:
-
-```bash
-node dist/cli.js heartbeat --dry-run
-node dist/cli.js sync-upload --dry-run
-node dist/cli.js evidence --dry-run
-node dist/cli.js proposal --dry-run
-```
-
-The CLI is intentionally local and operator-facing. It helps you inspect environment resolution, local capability views, dry-run payloads, and bounded reviewable flows. It does not turn this package into a hosted runtime, and it does not mean user login is already part of the executable package surface.
-
-### Advanced CLI endpoint override
-
-When you need an explicit operator-selected endpoint, set `BIDVIA_BASE_URL` before running commands. The public defaults stay package-first, but explicit override remains available for operator-managed environments.
-
-```bash
-export BIDVIA_BASE_URL="https://api.bidvia.cn"
-node dist/cli.js environment-mode
-```
-
-If you want a minimal repo-local truth-fetch example without live credentials, run:
-
-```bash
-npx tsx examples/truth-fetch.ts
-```
-
-If you want a minimal repo-local MCP truth-fetch example without live credentials, run:
-
-```bash
-npx tsx examples/mcp-truth-fetch.ts
-```
-
-## OpenClaw Gateway and local node-host path
-
-This repository already supports a local OpenClaw Gateway and node-host integration path. The default public path still stays intentionally narrow:
-
-- local operator workflow
-- local stdio MCP server
-- remote HTTPS Bidvia API
-
-The shipped local MCP seam exposes widened truth-fetch tools, review-safe tooling, and explicit execution tooling, but only through a local stdio server. The truth-fetch rollout is phased: governance-first MCP reads ship first, business-truth reads ship second, and both stay thin wrappers over the shipped SDK helpers. The next OpenClaw-compatible release keeps stdio MCP first, companion bundle export second, and leaves HTTP MCP, hosted runtime behavior, remote registry participation, native-plugin-first runtime, login, OAuth, auth implementation, integrated Core capability truth refresh, full governed notification semantics, broader multi-agent coordination authority, and live negotiation out of scope.
-
-Start here if that is your path:
+OpenClaw and node-host integration stay local-first. The standard handoff is:
 
 ```bash
 bidvia openclaw-mcp-config
-bidvia openclaw-bundle-export
+bidvia openclaw-bundle-export --output ./bidvia-openclaw-bundle
 bidvia route-context-matrix
 ```
 
-Developer fallback path:
+- `bidvia openclaw-mcp-config` exports the primary OpenClaw stdio configuration
+- `openclaw-bundle-export` is additive packaging around that same local server
+- `bidvia mcp-server` remains the installed runtime command
 
-```bash
-node dist/cli.js openclaw-mcp-config
-node dist/cli.js openclaw-bundle-export
-node dist/cli.js route-context-matrix
-```
+If you need explicit endpoint control, set `BIDVIA_BASE_URL` yourself and keep the boundary the same: local stdio MCP on your side, remote HTTPS Bidvia API on the other side.
 
-Then continue with:
+## Boundaries, contract truth, and compatibility-only surfaces
 
-- `docs/OPENCLAW_GATEWAY_ONBOARDING.md` for install and configuration order
-- `docs/OPENCLAW_GATEWAY_SMOKE.md` for the detailed smoke sequence
+Use the Bidvia Core downstream contract center (`docs/downstream-contract-center/**` in the main Bidvia repo) as the canonical contract truth source.
 
-For Gateway users on the public path, the safest order is still: install locally, export the operator config from `openclaw-mcp-config`, optionally export the companion bundle from `openclaw-bundle-export`, confirm route context with `route-context-matrix`, run the smoke commands against the default public API, then wire the local stdio MCP server only if the Gateway side is ready. The website handoff stays spec-only in `docs/WEBSITE_FIRST_ACCESS_HANDOFF.md` and does not change this OpenClaw runtime order.
+This package ships local value, but it does not become:
 
-If your Gateway deployment needs an operator-selected endpoint instead, set `BIDVIA_BASE_URL` explicitly before the smoke flow. Keep the boundary the same: local stdio MCP on your side, remote HTTPS Bidvia API on the other side.
+- a hosted runtime
+- an HTTP MCP product
+- a platform-auth product
+- a remote registry participant
+- a source of Core-owned truth
 
-## Release boundary, kept honest
+The current helper-level payload model matters:
 
-The current mainline uses three release categories, and they should stay separate.
+- packet-grounded execution helpers already ship in the identity/session, task, and event-notification surfaces
+- packet-grounded read helpers already ship in the capability and enterprise surfaces
+- identity/session prerequisite support remains bounded even when it now includes membership lifecycle and dispatch-authority helpers
+- claimant/account-plane continuation is canonical on `agentId`, while `registrationId` remains legitimate on registration-bound deep-read and operator/control-plane families only
+- account-scoped task-dispatch and notification helpers only claim the currently adopted downstream route families; they do not imply a general account-admin shell
+- use one surface taxonomy here: executable, review-safe, and compatibility-only
+- next-version surface language stays explicit: executable surfaces perform bounded remote work, review-safe surfaces package or diagnose bounded flows without claiming server closure, and compatibility-only surfaces stay available only for tolerated transition seams
+- some wrappers remain `compatibility-only`
+- workflow-stage and remaining route-model adoption seams stay blocked until Core freezes the missing payloads
 
-### 1. Shipped local surfaces
+Examples of shipped governed read surfaces include `authority-profiles`, the singular per-registration `capability-profile`, and the participation/task family around `task-dispatch` visibility.
 
-These are implemented in code today and available to users now. They include:
-
-- the typed SDK client and helper builders
-- the typed SDK truth-fetch read wrappers for the approved account, richer governance deep-read, semantic, pricing, and asset groups, including agent registrations, authority profiles, capability profiles, the singular per-registration capability profile, and the shipped participation/task visibility family
-- the local stdio MCP tool surface for the approved governance, business-truth, review-safe, and explicit execution families, shipped in phases on the same local server
-- bounded scenario planning and verification bundle support
-- review-packet preview and export helpers, now with richer review-safe readback around the already-shipped bounded slices
-- explicit local execution commands with `--dry-run`
-- explicit CLI truth-fetch commands for the same approved read groups, centered on `agent-registrations`, `agent-registration`, `authority-profiles`, `capability-profiles`, `agent-capability-profile`, `participation-states`, `participation-state`, `task-dispatches`, and `task-dispatch`
-- static capability metadata, operator discovery snapshots, and local runtime-capability snapshots
-- server-capability payload normalization
-- environment-mode visibility
-- the local CLI command surface
-- the local stdio MCP descriptor and server seam, including review-safe and explicit execution tools plus the companion OpenClaw bundle export
-- OpenClaw Gateway operator documentation for the local path
-- transport/auth-provider hardening for local execution paths
-
-The shipped MCP slice stays local stdio only and sourced from the SDK helpers already in this repo. It is not a hosted runtime, not HTTP MCP, not a native-plugin-first package, not a new auth layer, and not a new source of platform truth.
-
-In plain terms, phase order matters here. The widened governance deep-read family ships through the SDK and CLI, while MCP now covers the approved governance, business-truth, review-safe, and explicit execution families that already ship in this repo. If canonical-semantic taxonomy or lineage aliases are mentioned at all, treat them as transitional or non-final only. None of that widens the MCP layer beyond a local stdio wrapper over already-shipped SDK helpers, and none of it turns the client into a hosted or control-plane-owning product.
-
-### 2. Implemented but dependency-gated seams
-
-These seams exist in code as readiness-only consumption points, but they remain blocked until Bidvia Core provides frozen truth.
-
-`refreshRemoteCapabilityTruth(...)` belongs here. The seam is ready to consume a future frozen Core capability-truth payload, but this repo does not have that truth today. Until frozen Core-owned capability truth exists, every blocked refresh stays fail-closed and must not be read as truth closure.
-
-### 3. Deferred areas
-
-These areas are outside the current shipped boundary:
-
-- hosted MCP and hosted runtime behavior
-- remote registry behavior and remote discovery
-- live remote negotiation
-- approval-to-opportunity creation or discovery beyond the explicit current handoff seam
-- integrated Core-owned notification truth, full governed task outcome semantics beyond the shipped wrappers, and broader multi-agent coordination truth
-- login, OAuth, or any auth implementation beyond local transport/auth-provider seams
-- capability truth integration beyond local descriptive surfaces
-- broader orchestration beyond the shipped bounded slices
-- any client-owned authority or server-truth claims beyond the frozen boundary
-
-## Current scope, in plain language
-
-This package is not yet the full Bidvia agent operating kit vision. The shipped slice is centered on the execution layer, with bounded scenario, verification, and local adapter support around it.
-
-That means you can use it today for governed agent access, bounded reviewable flows, and local operator tooling. You should not read it as a complete runtime platform, a source of Core authority, or a promise of remote negotiation behavior that does not exist yet.
-
-## Recommended docs next
-
-- `docs/ONBOARDING.md` for the primary public CLI-first Learn → Public Provisional create -> query -> claim → Governed Run path
-- `docs/OPENCLAW_GATEWAY_ONBOARDING.md` for Gateway and node-host installation
-- `docs/OPENCLAW_GATEWAY_SMOKE.md` for Gateway smoke verification
-- `docs/WEBSITE_FIRST_ACCESS_HANDOFF.md` for the website-team handoff contract
-- `docs/CONTRACT_BOUNDARY.md` for contract and authority boundaries
+For the plane-by-plane adoption view, use `docs/CORE_AGENT_CLIENT_PLANE_CONTRACT_GAPS.md`. For the full guided onboarding flow, use `docs/ONBOARDING.md`.
+For the lane-by-lane validation guide, use `docs/VALIDATION_LANES.md`. For migration from helper-first usage into the role-stage product entry, use `docs/AGENT_FIRST_MIGRATION.md`.
 
 ## License
 

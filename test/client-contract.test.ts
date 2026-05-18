@@ -2,6 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import { BidviaClient, exportVerificationBundle } from '../src/client.ts';
+import { buildIdentitySessionPlaneView } from '../src/index.ts';
+import * as publicSurface from '../src/index.ts';
 
 function createFetchStub() {
   const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
@@ -18,6 +20,7 @@ function createFetchStub() {
 
 test('BidviaClient uses the frozen provisional->query->claim onboarding contract', async () => {
   const { calls, fetchStub } = createFetchStub();
+  const identitySessionPlane = buildIdentitySessionPlaneView();
   const client = new BidviaClient({
     baseUrl: 'http://127.0.0.1:8787',
     context: {
@@ -42,10 +45,136 @@ test('BidviaClient uses the frozen provisional->query->claim onboarding contract
   });
 
   assert.equal(calls.length, 3);
+  assert.deepEqual(
+    identitySessionPlane.canonicalOnboarding.helperSteps.map((step) => step.helperKey),
+    ['createProvisionalAgent', 'queryProvisionalAgent', 'claimProvisionalAgent'],
+  );
+  assert.equal(identitySessionPlane.canonicalOnboarding.primaryForAgentOnboarding, true);
+  assert.deepEqual(identitySessionPlane.canonicalOnboarding.claim.requiredContext, ['tenantId', 'sessionId']);
+  assert.equal(identitySessionPlane.onboardingSupport.label, 'Bounded V1 account/session prerequisite support');
+  assert.equal(identitySessionPlane.onboardingSupport.fullAccountProductClaim, false);
+  assert.equal(identitySessionPlane.onboardingSupport.prerequisiteSupportOnly, true);
+  assert.deepEqual(
+    identitySessionPlane.onboardingSupport.helperSteps.map((step) => step.helperKey),
+    [
+      'signUpPersonalAccount',
+      'signUpEnterpriseAccount',
+      'signIn',
+      'refreshSession',
+      'revokeSession',
+      'getAccountMe',
+      'selectOrg',
+      'createAccountMembershipInvitation',
+      'acceptAccountMembershipInvitation',
+      'transferAccountMembershipAdmin',
+      'removeAccountMembership',
+      'patchAgentSelfService',
+      'getAccountAgentDispatchAuthority',
+      'createAccountAgentDispatchAuthorityRequest',
+    ],
+  );
+  const supportStepsByHelperKey = new Map(
+    identitySessionPlane.onboardingSupport.helperSteps.map((step) => [step.helperKey, step]),
+  );
+  assert.deepEqual(supportStepsByHelperKey.get('refreshSession')?.requiredContext, ['tenantId', 'sessionId']);
+  assert.deepEqual(supportStepsByHelperKey.get('revokeSession')?.requiredContext, ['tenantId', 'sessionId']);
+  assert.deepEqual(supportStepsByHelperKey.get('getAccountMe')?.requiredContext, ['tenantId', 'sessionId']);
+  assert.deepEqual(supportStepsByHelperKey.get('selectOrg')?.requiredContext, ['tenantId', 'sessionId']);
+  assert.deepEqual(supportStepsByHelperKey.get('createAccountMembershipInvitation')?.requiredContext, ['tenantId', 'sessionId']);
+  assert.deepEqual(supportStepsByHelperKey.get('acceptAccountMembershipInvitation')?.requiredContext, ['tenantId', 'sessionId']);
+  assert.deepEqual(supportStepsByHelperKey.get('transferAccountMembershipAdmin')?.requiredContext, ['tenantId', 'sessionId']);
+  assert.deepEqual(supportStepsByHelperKey.get('removeAccountMembership')?.requiredContext, ['tenantId', 'sessionId']);
+  assert.deepEqual(supportStepsByHelperKey.get('getAccountAgentDispatchAuthority')?.requiredContext, ['tenantId', 'sessionId']);
+  assert.deepEqual(supportStepsByHelperKey.get('createAccountAgentDispatchAuthorityRequest')?.requiredContext, ['tenantId', 'sessionId']);
+  const exports = publicSurface as Record<string, unknown>;
+  const sharedIdentitySessionStatus = (exports.listCorePlaneAdoptionStatuses as () => Array<{
+    plane: string;
+    frozenInCore: boolean;
+    payloadPacketStatus: string;
+    descriptiveVisibility: string;
+    executableHelperEligibility: string;
+    blockedBy: string | null;
+    notes: string[];
+  }>)().find((status) => status.plane === 'identity-session');
+
+  assert.deepEqual(identitySessionPlane.adoptionStatus, sharedIdentitySessionStatus);
+  assert.equal(identitySessionPlane.sessionTruth.payloadPacketStatus, sharedIdentitySessionStatus?.payloadPacketStatus);
+  assert.equal(identitySessionPlane.sessionTruth.blockedBy, sharedIdentitySessionStatus?.blockedBy ?? null);
   assert.equal(String(calls[0]?.input), 'http://127.0.0.1:8787/runtime/agents/provisional');
   assert.equal(String(calls[1]?.input), 'http://127.0.0.1:8787/runtime/agents/provisional?provisional_agent_ref=prov-agent-1');
   assert.equal(String(calls[2]?.input), 'http://127.0.0.1:8787/runtime/agents/provisional/claim');
   assert.equal((calls[2]?.init?.headers as Record<string, string>)['x-bidvia-session-id'], 'sess-1');
+});
+
+test('BidviaClient includes the bounded V1 account and session prerequisite helper surface in the client contract', async () => {
+  const { calls, fetchStub } = createFetchStub();
+  const client = new BidviaClient({
+    baseUrl: 'http://127.0.0.1:8787',
+    context: {
+      tenantId: 'tenant-a',
+      sessionId: 'sess-1',
+    },
+    fetchImpl: fetchStub,
+  });
+
+  await client.signUpPersonalAccount({
+    email: 'person@example.com',
+    password: 'secret-1',
+    invitationToken: 'invite-token-123',
+    displayName: 'Ada Lovelace',
+    now: '2026-04-10T10:00:00Z',
+  });
+  await client.signUpEnterpriseAccount({
+    email: 'ops@example.com',
+    password: 'secret-2',
+    invitationToken: 'invite-token-456',
+    companyName: 'Bidvia Labs',
+    now: '2026-04-10T10:01:00Z',
+  });
+  await client.signIn({
+    email: 'person@example.com',
+    password: 'secret-1',
+    now: '2026-04-10T10:02:00Z',
+  });
+  await client.refreshSession();
+  await client.revokeSession();
+  await client.getAccountMe();
+  await client.selectOrg({ orgId: 'org-2' });
+
+  assert.equal(calls.length, 7);
+  assert.equal(String(calls[0]?.input), 'http://127.0.0.1:8787/runtime/accounts/personal/sign-up');
+  assert.equal(String(calls[1]?.input), 'http://127.0.0.1:8787/runtime/accounts/enterprise/sign-up');
+  assert.equal(String(calls[2]?.input), 'http://127.0.0.1:8787/runtime/sessions/sign-in');
+  assert.equal(String(calls[3]?.input), 'http://127.0.0.1:8787/runtime/sessions/refresh');
+  assert.equal(String(calls[4]?.input), 'http://127.0.0.1:8787/runtime/sessions/revoke');
+  assert.equal(String(calls[5]?.input), 'http://127.0.0.1:8787/runtime/account/me');
+  assert.equal(String(calls[6]?.input), 'http://127.0.0.1:8787/runtime/account/select-org');
+  assert.deepEqual(JSON.parse(String(calls[0]?.init?.body)), {
+    email: 'person@example.com',
+    password: 'secret-1',
+    invitation_token: 'invite-token-123',
+    display_name: 'Ada Lovelace',
+    now: '2026-04-10T10:00:00Z',
+  });
+  assert.deepEqual(JSON.parse(String(calls[1]?.init?.body)), {
+    email: 'ops@example.com',
+    password: 'secret-2',
+    invitation_token: 'invite-token-456',
+    company_name: 'Bidvia Labs',
+    now: '2026-04-10T10:01:00Z',
+  });
+  assert.deepEqual(JSON.parse(String(calls[2]?.init?.body)), {
+    email: 'person@example.com',
+    password: 'secret-1',
+    now: '2026-04-10T10:02:00Z',
+  });
+  assert.equal((calls[3]?.init?.headers as Record<string, string>)['x-bidvia-session-id'], 'sess-1');
+  assert.equal((calls[4]?.init?.headers as Record<string, string>)['x-bidvia-session-id'], 'sess-1');
+  assert.equal((calls[5]?.init?.headers as Record<string, string>)['x-bidvia-session-id'], 'sess-1');
+  assert.equal((calls[6]?.init?.headers as Record<string, string>)['x-bidvia-session-id'], 'sess-1');
+  assert.deepEqual(JSON.parse(String(calls[6]?.init?.body)), {
+    org_id: 'org-2',
+  });
 });
 
 test('BidviaClient accepts object-shaped provisional query input for onboarding symmetry', async () => {
@@ -68,6 +197,124 @@ test('BidviaClient accepts object-shaped provisional query input for onboarding 
 
   assert.equal(calls.length, 1);
   assert.equal(String(calls[0]?.input), 'http://127.0.0.1:8787/runtime/agents/provisional?provisional_agent_ref=prov-agent-2');
+});
+
+test('BidviaClient uses the canonical account integration capability discovery and eligibility routes', async () => {
+  const { calls, fetchStub } = createFetchStub();
+  const client = new BidviaClient({
+    baseUrl: 'http://127.0.0.1:8787',
+    context: {
+      tenantId: 'tenant-a',
+      sessionId: 'sess-1',
+    },
+    fetchImpl: fetchStub,
+  });
+
+  await client.listAccountIntegrationCapabilities();
+  await client.getAccountAgentIntegrationEligibility('agent-7', 'haisi-wms');
+
+  assert.equal(calls.length, 2);
+  assert.equal(String(calls[0]?.input), 'http://127.0.0.1:8787/runtime/account/integration-capabilities');
+  assert.equal(
+    String(calls[1]?.input),
+    'http://127.0.0.1:8787/runtime/account/agents/agent-7/integrations/haisi-wms/eligibility',
+  );
+  assert.equal((calls[0]?.init?.headers as Record<string, string>)['x-bidvia-session-id'], 'sess-1');
+  assert.equal((calls[1]?.init?.headers as Record<string, string>)['x-bidvia-session-id'], 'sess-1');
+});
+
+test('BidviaClient exposes the canonical integration-app lifecycle subset through dedicated account and public helpers', async () => {
+  const { calls, fetchStub } = createFetchStub();
+  const client = new BidviaClient({
+    baseUrl: 'http://127.0.0.1:8787',
+    context: {
+      tenantId: 'tenant-a',
+      sessionId: 'sess-1',
+    },
+    fetchImpl: fetchStub,
+  });
+
+  const listPublicIntegrationApps = Reflect.get(client, 'listPublicIntegrationApps');
+  const createAccountIntegrationApp = Reflect.get(client, 'createAccountIntegrationApp');
+  const listAccountIntegrationApps = Reflect.get(client, 'listAccountIntegrationApps');
+  const createAccountIntegrationInstallation = Reflect.get(client, 'createAccountIntegrationInstallation');
+  const listAccountIntegrationInstallations = Reflect.get(client, 'listAccountIntegrationInstallations');
+  const connectAccountIntegrationInstallation = Reflect.get(client, 'connectAccountIntegrationInstallation');
+
+  assert.equal(typeof listPublicIntegrationApps, 'function');
+  assert.equal(typeof createAccountIntegrationApp, 'function');
+  assert.equal(typeof listAccountIntegrationApps, 'function');
+  assert.equal(typeof createAccountIntegrationInstallation, 'function');
+  assert.equal(typeof listAccountIntegrationInstallations, 'function');
+  assert.equal(typeof connectAccountIntegrationInstallation, 'function');
+
+  assert.equal(calls.length, 0);
+});
+
+test('BidviaClient exposes bounded task progression outcome, evidence-bundle, and confirmation-cycle writes as account-plane helpers', async () => {
+  const { calls, fetchStub } = createFetchStub();
+  const client = new BidviaClient({
+    baseUrl: 'http://127.0.0.1:8787',
+    context: {
+      tenantId: 'tenant-a',
+      sessionId: 'sess-1',
+      principalId: 'actor-1',
+      companyId: 'company-a',
+    },
+    fetchImpl: fetchStub,
+  });
+
+  const createTaskDispatchOutcome = Reflect.get(client, 'createTaskDispatchOutcome');
+  const createTaskDispatchEvidenceBundle = Reflect.get(client, 'createTaskDispatchEvidenceBundle');
+  const createTaskDispatchConfirmationCycle = Reflect.get(client, 'createTaskDispatchConfirmationCycle');
+
+  assert.equal(typeof createTaskDispatchOutcome, 'function');
+  assert.equal(typeof createTaskDispatchEvidenceBundle, 'function');
+  assert.equal(typeof createTaskDispatchConfirmationCycle, 'function');
+
+  await Reflect.apply(createTaskDispatchOutcome, client, ['agent-1', 'dispatch-1', {
+    outcomeRef: 'outcome://dispatch/1',
+    reason: 'bounded completion evidence recorded',
+    now: '2026-05-14T12:00:00Z',
+  }]);
+  await Reflect.apply(createTaskDispatchEvidenceBundle, client, ['agent-1', 'dispatch-1', {
+    now: '2026-05-14T12:01:00Z',
+    evidenceRefs: ['evidence://dispatch/1/receipt'],
+    rationaleSummary: 'provider receipt attached',
+    confidence: 'high',
+  }]);
+  await Reflect.apply(createTaskDispatchConfirmationCycle, client, ['agent-1', 'dispatch-1', {
+    requiredEvidenceProfile: 'hybrid-machine-plus-human',
+    startedAt: '2026-05-14T12:02:00Z',
+    slaWindowRef: 'sla://dispatch/1',
+  }]);
+
+  assert.equal(calls.length, 3);
+  assert.equal(String(calls[0]?.input), 'http://127.0.0.1:8787/runtime/account/agents/agent-1/task-dispatches/dispatch-1/outcomes?tenant_id=tenant-a');
+  assert.equal(String(calls[1]?.input), 'http://127.0.0.1:8787/runtime/account/agents/agent-1/task-dispatches/dispatch-1/evidence-bundles?tenant_id=tenant-a');
+  assert.equal(String(calls[2]?.input), 'http://127.0.0.1:8787/runtime/account/agents/agent-1/task-dispatches/dispatch-1/confirmation-cycles?tenant_id=tenant-a');
+  assert.equal(calls[0]?.init?.method, 'POST');
+  assert.equal(calls[1]?.init?.method, 'POST');
+  assert.equal(calls[2]?.init?.method, 'POST');
+  assert.equal((calls[0]?.init?.headers as Record<string, string>)['x-bidvia-session-id'], 'sess-1');
+  assert.equal((calls[1]?.init?.headers as Record<string, string>)['x-bidvia-session-id'], 'sess-1');
+  assert.equal((calls[2]?.init?.headers as Record<string, string>)['x-bidvia-session-id'], 'sess-1');
+  assert.deepEqual(JSON.parse(String(calls[0]?.init?.body)), {
+    outcome_ref: 'outcome://dispatch/1',
+    reason: 'bounded completion evidence recorded',
+    now: '2026-05-14T12:00:00Z',
+  });
+  assert.deepEqual(JSON.parse(String(calls[1]?.init?.body)), {
+    now: '2026-05-14T12:01:00Z',
+    evidence_refs: ['evidence://dispatch/1/receipt'],
+    rationale_summary: 'provider receipt attached',
+    confidence: 'high',
+  });
+  assert.deepEqual(JSON.parse(String(calls[2]?.init?.body)), {
+    required_evidence_profile: 'hybrid-machine-plus-human',
+    started_at: '2026-05-14T12:02:00Z',
+    sla_window_ref: 'sla://dispatch/1',
+  });
 });
 
 test('BidviaClient uses the frozen registration-bound heartbeat/sync/evidence/proposal contract', async () => {
@@ -98,13 +345,13 @@ test('BidviaClient uses the frozen registration-bound heartbeat/sync/evidence/pr
   assert.equal((calls[0]?.init?.headers as Record<string, string>)['x-bidvia-principal-id'], 'actor-1');
 });
 
-test('BidviaClient makes admin-session commercial action reads explicit', async () => {
+test('BidviaClient makes commercial action reads explicit under principal-governed headers', async () => {
   const { calls, fetchStub } = createFetchStub();
   const client = new BidviaClient({
     baseUrl: 'http://127.0.0.1:8787',
     context: {
       tenantId: 'tenant-a',
-      adminSessionId: 'admin-sess-1',
+      principalId: 'actor-1',
     },
     fetchImpl: fetchStub,
   });
@@ -112,10 +359,20 @@ test('BidviaClient makes admin-session commercial action reads explicit', async 
   await client.getCommercialActionStatus({
     commercialActionRequestId: 'commercial-action-1',
   });
+  await client.getCommercialActionReceipt({
+    commercialActionRequestId: 'commercial-action-1',
+  });
+  await client.getCommercialActionAudit({
+    commercialActionRequestId: 'commercial-action-1',
+  });
 
-  assert.equal(calls.length, 1);
+  assert.equal(calls.length, 3);
   assert.equal(String(calls[0]?.input), 'http://127.0.0.1:8787/runtime/commercial-actions/commercial-action-1/status?tenant_id=tenant-a');
-  assert.equal((calls[0]?.init?.headers as Record<string, string>)['x-bidvia-admin-session-id'], 'admin-sess-1');
+  assert.equal(String(calls[1]?.input), 'http://127.0.0.1:8787/runtime/commercial-actions/commercial-action-1/receipt?tenant_id=tenant-a');
+  assert.equal(String(calls[2]?.input), 'http://127.0.0.1:8787/runtime/commercial-actions/commercial-action-1/audit?tenant_id=tenant-a');
+  assert.equal((calls[0]?.init?.headers as Record<string, string>)['x-authorized-tenant-id'], 'tenant-a');
+  assert.equal((calls[0]?.init?.headers as Record<string, string>)['x-bidvia-principal-id'], 'actor-1');
+  assert.equal((calls[0]?.init?.headers as Record<string, string>)['x-bidvia-admin-session-id'], undefined);
 });
 
 test('BidviaClient makes commercial action writes explicit under operator principal context', async () => {
@@ -156,6 +413,7 @@ test('BidviaClient supports frozen governance write wrappers under principal-gov
       principalType: 'operator',
       authorizedRole: 'admin',
       companyId: 'company-a',
+      adminSessionId: 'admin-sess-1',
     },
     fetchImpl: fetchStub,
   });
@@ -197,8 +455,11 @@ test('BidviaClient supports frozen governance write wrappers under principal-gov
   assert.equal((calls[0]?.init?.headers as Record<string, string>)['x-authorized-tenant-id'], 'tenant-a');
   assert.equal((calls[0]?.init?.headers as Record<string, string>)['x-bidvia-principal-id'], 'actor-1');
   assert.equal((calls[0]?.init?.headers as Record<string, string>)['x-authorized-company-id'], 'company-a');
+  assert.equal((calls[0]?.init?.headers as Record<string, string>)['x-bidvia-admin-session-id'], 'admin-sess-1');
   assert.equal((calls[0]?.init?.headers as Record<string, string>)['x-bidvia-principal-type'], 'operator');
   assert.equal((calls[0]?.init?.headers as Record<string, string>)['x-authorized-role'], 'admin');
+  assert.equal((calls[1]?.init?.headers as Record<string, string>)['x-bidvia-admin-session-id'], 'admin-sess-1');
+  assert.equal((calls[2]?.init?.headers as Record<string, string>)['x-bidvia-admin-session-id'], 'admin-sess-1');
   assert.equal((calls[1]?.init?.headers as Record<string, string>)['x-bidvia-principal-type'], 'operator');
   assert.equal((calls[1]?.init?.headers as Record<string, string>)['x-authorized-role'], 'admin');
   assert.equal((calls[2]?.init?.headers as Record<string, string>)['x-bidvia-principal-type'], 'operator');
@@ -359,6 +620,77 @@ test('BidviaClient supports the first business-chain helper slice for listing ac
   assert.equal(String(calls[1]?.input), 'http://127.0.0.1:8787/runtime/listings/listing-1/activate?tenant_id=tenant-a');
   assert.equal(String(calls[2]?.input), 'http://127.0.0.1:8787/runtime/listings/listing-1/match-candidates?tenant_id=tenant-a');
   assert.equal((calls[2]?.init?.headers as Record<string, string>)['x-authorized-company-id'], 'company-a');
+});
+
+test('BidviaClient supports the claimant account-owned execution and first business-entry helper slice', async () => {
+  const { calls, fetchStub } = createFetchStub();
+  const client = new BidviaClient({
+    baseUrl: 'http://127.0.0.1:8787',
+    context: {
+      tenantId: 'tenant-a',
+      sessionId: 'sess-1',
+    },
+    fetchImpl: fetchStub,
+  });
+
+  await client.postAccountAgentExecutionPresence('agent-1', {
+    now: '2026-05-01T12:10:00Z',
+    expiresAt: '2026-05-01T12:15:00Z',
+  });
+  await client.getAccountAgentExecutionStatus('agent-1');
+  await client.uploadAccountAgentExecutionSync('agent-1', {
+    cursorRef: 'cursor-1',
+    objectCount: 3,
+    now: '2026-05-01T12:11:00Z',
+  });
+  await client.downloadAccountAgentExecutionSync('agent-1');
+  await client.submitAccountAgentExecutionEvidence('agent-1', {
+    evidenceRef: 'evidence://1',
+    evidenceKind: 'provider_receipt',
+    summary: 'receipt evidence',
+    now: '2026-05-01T12:12:00Z',
+  });
+  await client.submitAccountAgentExecutionProposal('agent-1', {
+    proposalType: 'template_change',
+    proposalRef: 'proposal://1',
+    summary: 'template change',
+    now: '2026-05-01T12:13:00Z',
+  });
+  await client.createAccountAgentExecutionListing('agent-1', {
+    listingId: 'listing-1',
+    listingType: 'supply',
+    category: 'basic inorganic industrial chemical',
+    sku: 'sodium-carbonate-soda-ash-light',
+    quantityValue: '15',
+    quantityUnit: 'tons',
+    regionSummary: 'China -> Vietnam',
+    verificationStatus: 'verified',
+    freshnessTs: '2026-05-01T12:20:00Z',
+    traceId: 'trace-1',
+    idempotencyKey: 'listing-1',
+    now: '2026-05-01T12:20:00Z',
+  });
+  await client.activateAccountAgentExecutionListing('agent-1', 'listing-1', {
+    verificationStatus: 'verified',
+    now: '2026-05-01T12:21:00Z',
+  });
+  await client.getAccountAgentExecutionListingStatus('agent-1', 'listing-1');
+  await client.getAccountAgentExecutionListingMaterializationStatus('agent-1', 'listing-1');
+
+  assert.equal(calls.length, 10);
+  assert.equal(String(calls[0]?.input), 'http://127.0.0.1:8787/runtime/account/agents/agent-1/execution/presence?tenant_id=tenant-a');
+  assert.equal(String(calls[1]?.input), 'http://127.0.0.1:8787/runtime/account/agents/agent-1/execution/status?tenant_id=tenant-a');
+  assert.equal(String(calls[2]?.input), 'http://127.0.0.1:8787/runtime/account/agents/agent-1/execution/sync/upload?tenant_id=tenant-a');
+  assert.equal(String(calls[3]?.input), 'http://127.0.0.1:8787/runtime/account/agents/agent-1/execution/sync/download?tenant_id=tenant-a');
+  assert.equal(String(calls[4]?.input), 'http://127.0.0.1:8787/runtime/account/agents/agent-1/execution/evidence-submissions?tenant_id=tenant-a');
+  assert.equal(String(calls[5]?.input), 'http://127.0.0.1:8787/runtime/account/agents/agent-1/execution/proposals?tenant_id=tenant-a');
+  assert.equal(String(calls[6]?.input), 'http://127.0.0.1:8787/runtime/account/agents/agent-1/execution/listings?tenant_id=tenant-a');
+  assert.equal(String(calls[7]?.input), 'http://127.0.0.1:8787/runtime/account/agents/agent-1/execution/listings/listing-1/activate?tenant_id=tenant-a');
+  assert.equal(String(calls[8]?.input), 'http://127.0.0.1:8787/runtime/account/agents/agent-1/execution/listings/listing-1/status?tenant_id=tenant-a');
+  assert.equal(String(calls[9]?.input), 'http://127.0.0.1:8787/runtime/account/agents/agent-1/execution/listings/listing-1/materialization-status?tenant_id=tenant-a');
+  for (const call of calls) {
+    assert.equal((call.init?.headers as Record<string, string>)['x-bidvia-session-id'], 'sess-1');
+  }
 });
 
 test('BidviaClient supports the connection, approval, and opportunity helper slice proven in production wave-2', async () => {

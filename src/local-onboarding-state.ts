@@ -1,12 +1,14 @@
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { chmod, mkdir, readFile, writeFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import path from 'node:path';
 
 export interface BidviaLocalOnboardingState {
   tenantId?: string;
+  agentId?: string;
   principalId?: string;
   companyId?: string;
   registrationId?: string;
+  sessionId?: string;
   lastCompletedStep?: string;
   createdAt?: string;
   updatedAt?: string;
@@ -64,9 +66,11 @@ function isBidviaLocalOnboardingState(value: unknown): value is BidviaLocalOnboa
   const candidate = value as Record<string, unknown>;
 
   return isOptionalString(candidate.tenantId)
+    && isOptionalString(candidate.agentId)
     && isOptionalString(candidate.principalId)
     && isOptionalString(candidate.companyId)
     && isOptionalString(candidate.registrationId)
+    && isOptionalString(candidate.sessionId)
     && isOptionalString(candidate.lastCompletedStep)
     && isOptionalString(candidate.createdAt)
     && isOptionalString(candidate.updatedAt);
@@ -77,9 +81,11 @@ function buildPersistedLocalOnboardingState(
 ): BidviaLocalOnboardingState {
   return {
     ...(state.tenantId === undefined ? {} : { tenantId: state.tenantId }),
+    ...(state.agentId === undefined ? {} : { agentId: state.agentId }),
     ...(state.principalId === undefined ? {} : { principalId: state.principalId }),
     ...(state.companyId === undefined ? {} : { companyId: state.companyId }),
     ...(state.registrationId === undefined ? {} : { registrationId: state.registrationId }),
+    ...(state.sessionId === undefined ? {} : { sessionId: state.sessionId }),
     ...(state.lastCompletedStep === undefined ? {} : { lastCompletedStep: state.lastCompletedStep }),
     ...(state.createdAt === undefined ? {} : { createdAt: state.createdAt }),
     ...(state.updatedAt === undefined ? {} : { updatedAt: state.updatedAt }),
@@ -156,7 +162,11 @@ export async function writeLocalOnboardingState(
   const persistedState = buildPersistedLocalOnboardingState(state);
 
   await mkdir(path.dirname(filePath), { recursive: true });
-  await writeFile(filePath, JSON.stringify(persistedState, null, 2), 'utf8');
+  await writeFile(filePath, JSON.stringify(persistedState, null, 2), {
+    encoding: 'utf8',
+    mode: 0o600,
+  });
+  await chmod(filePath, 0o600);
 
   return {
     path: filePath,

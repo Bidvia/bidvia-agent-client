@@ -4,6 +4,11 @@ import assert from 'node:assert/strict';
 import {
   normalizeServerCapabilityPayload,
 } from '../src/server-capabilities.ts';
+import { buildCapabilityPlaneServerSnapshot } from '../src/capability-plane.ts';
+import {
+  getLocalMcpToolDescriptor,
+  getRouteCapabilityFromLocalCatalog,
+} from '../src/discovery-catalog.ts';
 import type {
   BidviaNormalizedServerCapabilitySnapshot,
 } from '../src/contracts.ts';
@@ -62,6 +67,7 @@ test('normalizeServerCapabilityPayload maps server-provided capability payloads 
   assert.equal(snapshot.mcpTools.source, 'server-derived');
   assert.equal(snapshot.mcpTools.items[0]?.toolName, 'industry-universe-plan-preview');
   assert.equal(snapshot.mcpTools.items[0]?.contextSemantic, 'scenario');
+  assert.equal(snapshot.mcpTools.items[0]?.capabilityPlaneCapabilityMode, undefined);
   assert.equal(snapshot.mcpTools.schemaVersion, '2026-03-27');
   assert.equal(snapshot.mcpTools.version, 'server-capability-payload');
   assert.equal(snapshot.mcpTools.etag, null);
@@ -134,9 +140,60 @@ test('normalizeServerCapabilityPayload keeps local and deferred server knowledge
   assert.equal(snapshot.localMcpServer.available, false);
 });
 
+test('normalizeServerCapabilityPayload flows through the explicit capability-plane adapter without claiming live negotiation', () => {
+  const payload = {
+    route_capabilities: [],
+    mcp_tools: [],
+    mcp_server: {
+      available: false,
+      transport: 'stdio',
+      supported_methods: ['initialize', 'tools/list', 'tools/call'],
+    },
+  } satisfies Parameters<typeof normalizeServerCapabilityPayload>[0];
+
+  const normalized = normalizeServerCapabilityPayload(payload);
+  const expected = buildCapabilityPlaneServerSnapshot(payload, {
+    getRouteCapabilityFromLocalCatalog,
+    getLocalMcpToolDescriptor,
+  });
+  expected.routeCapabilities.lastUpdatedAt = normalized.routeCapabilities.lastUpdatedAt;
+  expected.mcpTools.lastUpdatedAt = normalized.mcpTools.lastUpdatedAt;
+  expected.localMcpServer.lastUpdatedAt = normalized.localMcpServer.lastUpdatedAt;
+  expected.serverNegotiation.lastUpdatedAt = normalized.serverNegotiation.lastUpdatedAt;
+
+  assert.deepEqual(normalized, expected);
+});
+
 test('normalizeServerCapabilityPayload classifies widened truth-fetch reads from payload data without synthesizing extra support', () => {
   const snapshot = normalizeServerCapabilityPayload({
     route_capabilities: [
+      {
+        helper_key: 'getAgentReadiness',
+        route_path_template: '/runtime/agents/:agent_registration_id/readiness',
+        http_method: 'GET',
+        access_context_family: 'principal-governed-read',
+        required_context: ['tenantId', 'principalId'],
+        scope: 'read',
+        level: 'atomic-route',
+      },
+      {
+        helper_key: 'getAgentSummary',
+        route_path_template: '/runtime/agents/:agent_registration_id/summary',
+        http_method: 'GET',
+        access_context_family: 'principal-governed-read',
+        required_context: ['tenantId', 'principalId'],
+        scope: 'read',
+        level: 'atomic-route',
+      },
+      {
+        helper_key: 'getAgentCapabilityProfile',
+        route_path_template: '/runtime/agents/:agent_registration_id/capability-profile',
+        http_method: 'GET',
+        access_context_family: 'principal-governed-read',
+        required_context: ['tenantId', 'principalId'],
+        scope: 'read',
+        level: 'atomic-route',
+      },
       {
         helper_key: 'listCanonicalSemanticConcepts',
         route_path_template: '/runtime/canonical-semantic-concepts',
@@ -166,6 +223,51 @@ test('normalizeServerCapabilityPayload classifies widened truth-fetch reads from
 
   assert.deepEqual(snapshot.routeCapabilities.items, [
     {
+      helperKey: 'getAgentReadiness',
+      routePathTemplate: '/runtime/agents/:agent_registration_id/readiness',
+      httpMethod: 'GET',
+      accessContextFamily: 'principal-governed-read',
+      contextSemantic: 'principal-governed-read',
+      requiredContext: ['tenantId', 'principalId'],
+      scope: 'read',
+      level: 'atomic-route',
+      localCapabilityTier: 'L0-observe-only',
+      localCapabilityRiskTier: 'observe-only',
+      capabilityPlaneCapabilityMode: 'packet-grounded-read',
+      dispatchEligibilityDerivedFromCapabilityReadTruth: false,
+      governedRunAuthorizationDerivedFromCapabilityReadTruth: false,
+    },
+    {
+      helperKey: 'getAgentSummary',
+      routePathTemplate: '/runtime/agents/:agent_registration_id/summary',
+      httpMethod: 'GET',
+      accessContextFamily: 'principal-governed-read',
+      contextSemantic: 'principal-governed-read',
+      requiredContext: ['tenantId', 'principalId'],
+      scope: 'read',
+      level: 'atomic-route',
+      localCapabilityTier: 'L0-observe-only',
+      localCapabilityRiskTier: 'observe-only',
+      capabilityPlaneCapabilityMode: 'packet-grounded-read',
+      dispatchEligibilityDerivedFromCapabilityReadTruth: false,
+      governedRunAuthorizationDerivedFromCapabilityReadTruth: false,
+    },
+    {
+      helperKey: 'getAgentCapabilityProfile',
+      routePathTemplate: '/runtime/agents/:agent_registration_id/capability-profile',
+      httpMethod: 'GET',
+      accessContextFamily: 'principal-governed-read',
+      contextSemantic: 'principal-governed-read',
+      requiredContext: ['tenantId', 'principalId'],
+      scope: 'read',
+      level: 'atomic-route',
+      localCapabilityTier: 'L0-observe-only',
+      localCapabilityRiskTier: 'observe-only',
+      capabilityPlaneCapabilityMode: 'packet-grounded-read',
+      dispatchEligibilityDerivedFromCapabilityReadTruth: false,
+      governedRunAuthorizationDerivedFromCapabilityReadTruth: false,
+    },
+    {
       helperKey: 'listCanonicalSemanticConcepts',
       routePathTemplate: '/runtime/canonical-semantic-concepts',
       httpMethod: 'GET',
@@ -190,4 +292,37 @@ test('normalizeServerCapabilityPayload classifies widened truth-fetch reads from
       localCapabilityRiskTier: 'observe-only',
     },
   ]);
+});
+
+test('normalizeServerCapabilityPayload propagates capability-plane helper mode to server-derived MCP descriptors when available', () => {
+  const snapshot = normalizeServerCapabilityPayload({
+    route_capabilities: [],
+    mcp_tools: [
+      {
+        tool_name: 'agent-readiness-read',
+        description: 'Reads the current governed agent readiness through the shipped SDK helper.',
+        input_schema_ref: {
+          schema_key: 'BidviaAgentRegistrationIdentifierInput',
+        },
+        output_mode: 'truth-fetch-result',
+        helper_ref: {
+          helper_key: 'getAgentReadiness',
+          capability_key: 'getAgentReadiness',
+        },
+        context_semantic: 'principal-governed-read',
+      },
+    ],
+    mcp_server: {
+      available: true,
+      transport: 'stdio',
+      supported_methods: ['initialize', 'tools/list', 'tools/call'],
+    },
+  } as Parameters<typeof normalizeServerCapabilityPayload>[0] & {
+    mcp_tools: Array<Parameters<typeof normalizeServerCapabilityPayload>[0]['mcp_tools'][number] & {
+      context_semantic: 'principal-governed-read';
+    }>;
+  });
+
+  assert.equal(snapshot.mcpTools.items[0]?.toolName, 'agent-readiness-read');
+  assert.equal(snapshot.mcpTools.items[0]?.capabilityPlaneCapabilityMode, 'packet-grounded-read');
 });

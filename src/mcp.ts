@@ -25,10 +25,95 @@ import {
 import {
   buildMcpExecutionPreflight,
   buildMcpMissingContextMessage,
+  buildMcpPlaneBlockedMessage,
 } from './operator-ergonomics.js';
 import type { BidviaLocalMcpProductizationSnapshot } from './discovery-catalog.js';
 import type { BidviaOpportunityPackageHandoffPlanInput } from './handoffs.js';
+import {
+  buildIndustryUniverseScenarioPlan,
+  executeIndustryUniverseScenario,
+} from './universe.js';
 import type { BidviaIndustryUniverseScenarioPlanInput } from './universe.js';
+import type { BidviaClientContext } from './contracts.js';
+import {
+  buildBidviaSurfaceRuntimeIdentityContext,
+  runBidviaSurfaceCapability,
+} from './runtime/surface-runtime.js';
+import { isBlockedCapabilityExecutionError } from './runtime/capability-orchestration.js';
+import {
+  establishClaimantCanonicalCompanyPublicPrecondition,
+  inspectClaimantHandoff,
+  inspectClaimantOpportunityEndState,
+  inspectClaimantOpportunityStatus,
+  inspectClaimantPrecondition,
+  inspectClaimantReadiness,
+  repairClaimantReadiness,
+  runClaimantTaskEntry,
+} from './business-universe/claimant.js';
+import {
+  consumeOperatorHandoff,
+  inspectOperatorCommercialAction,
+  runOperatorApprovalContinuation,
+  runOperatorCommercialAction,
+  runOperatorConnectionContinuation,
+  runOperatorMatching,
+  runOperatorPackageExport,
+} from './business-universe/operator.js';
+import {
+  inspectPlatformManagedEntry,
+  inspectPlatformManagedReadiness,
+  runPlatformManagedProgression,
+} from './business-universe/platform-managed.js';
+import { buildProductEvidenceEnvelope } from './business-universe/evidence.js';
+
+
+function buildFallbackStageSnapshotFromDescriptor(descriptor: BidviaMcpToolDescriptor): import('./business-universe/contracts.js').BidviaStageSnapshot | undefined {
+  if (!descriptor.role || !descriptor.stage || !descriptor.executability || !descriptor.canonicality) {
+    return undefined;
+  }
+
+  return {
+    roleWorkspace: {
+      role: descriptor.role,
+      sessionPresent: false,
+      adminSessionPresent: false,
+      canonicality: descriptor.canonicality,
+    },
+    stage: descriptor.stage,
+    state: descriptor.executability === 'later-wave-stop' ? 'later-wave-stop' : 'completed',
+    executability: descriptor.executability,
+    action: {
+      kind: descriptor.mayReadHere ? 'read' : 'continue',
+      owner: descriptor.role,
+      executability: descriptor.executability,
+    },
+    ...(descriptor.executability === 'later-wave-stop'
+      ? {
+          boundary: {
+            boundaryClass: 'later-wave-stop',
+            reasonCodes: ['product-evidence-fallback'],
+          },
+        }
+      : {}),
+  };
+}
+
+function buildMcpProductEvidence(
+  descriptor: BidviaMcpToolDescriptor,
+  input: unknown,
+  result: unknown,
+): Pick<BidviaMcpDispatchResult, 'evidencePacket' | 'resultTaxonomy'> {
+  const envelope = buildProductEvidenceEnvelope({
+    command: descriptor.toolName,
+    input,
+    result,
+    fallbackStageSnapshot: buildFallbackStageSnapshotFromDescriptor(descriptor),
+  });
+  return {
+    evidencePacket: envelope.evidencePacket,
+    resultTaxonomy: envelope.resultTaxonomy,
+  };
+}
 
 function cloneMcpToolCatalog(catalog: ReadonlyArray<BidviaMcpToolDescriptor>): BidviaMcpToolDescriptor[] {
   return structuredClone([...catalog]);
@@ -54,11 +139,54 @@ type BidviaMcpDispatchResult = {
   exportedReviewPacket?: unknown;
   truthFetchResult?: unknown;
   executionResult?: unknown;
+  evidencePacket?: unknown;
+  resultTaxonomy?: unknown;
 };
 
 type BidviaMcpDispatchDependencies = {
   createExecutionClient?: () => BidviaClient;
+  localAccumulationPath?: string;
+  now?: () => string;
 };
+
+function extractExecutionClientContext(client: unknown): Partial<BidviaClientContext> | undefined {
+  return typeof client === 'object'
+    && client !== null
+    && 'options' in client
+    && typeof client.options === 'object'
+    && client.options !== null
+    && 'context' in client.options
+    && typeof client.options.context === 'object'
+    && client.options.context !== null
+    ? client.options.context as Partial<BidviaClientContext>
+    : undefined;
+}
+
+function buildRuntimeExecutionIdentity(
+  descriptor: BidviaMcpToolDescriptor,
+  preflight: ReturnType<typeof buildMcpExecutionPreflight>,
+  client: unknown,
+): Partial<BidviaClientContext> {
+  const clientContext = extractExecutionClientContext(client);
+
+  if (clientContext) {
+    if (descriptor.contextSemantic === 'public-provisional') {
+      return {
+        tenantId: clientContext.tenantId,
+      };
+    }
+
+    return clientContext;
+  }
+
+  const fallbackIdentity: Partial<BidviaClientContext> = {};
+
+  for (const contextKey of preflight?.requiredContext ?? []) {
+    fallbackIdentity[contextKey] = 'available-via-local-client-seam';
+  }
+
+  return fallbackIdentity;
+}
 
 type BidviaGenericExecutionDispatch = (client: BidviaClient, input: unknown) => Promise<unknown>;
 
@@ -106,14 +234,302 @@ function requireExecutionStringInput(
 }
 
 const widenedExecutionDispatchersByCapabilityKey: Record<string, BidviaGenericExecutionDispatch> = {
+  establishClaimantCanonicalCompanyPublicPrecondition(client, input) {
+    const objectInput = requireObjectInput(input, 'claimant canonical precondition input is required for MCP execution');
+    return establishClaimantCanonicalCompanyPublicPrecondition(client, {
+      invitationToken: typeof objectInput.invitationToken === 'string' ? objectInput.invitationToken : undefined,
+      canonicalOrgId: typeof objectInput.canonicalOrgId === 'string' ? objectInput.canonicalOrgId : undefined,
+      now: requireExecutionStringInput(objectInput, ['now'], 'now is required for claimant canonical precondition execution'),
+    });
+  },
+  repairClaimantReadiness(client, input) {
+    const objectInput = requireObjectInput(input, 'claimant readiness repair input is required for MCP execution');
+    return repairClaimantReadiness(client, {
+      agentId: requireAccountAgentId(objectInput),
+      now: requireExecutionStringInput(objectInput, ['now'], 'now is required for claimant readiness repair execution'),
+      ...(objectInput.capabilityProfile === undefined ? {} : { capabilityProfile: objectInput.capabilityProfile as any }),
+      ...(objectInput.taskDispatchAcceptance === undefined ? {} : { taskDispatchAcceptance: objectInput.taskDispatchAcceptance as any }),
+      ...(objectInput.participationState === undefined ? {} : { participationState: objectInput.participationState as any }),
+      ...(objectInput.externalBinding === undefined ? {} : { externalBinding: objectInput.externalBinding as any }),
+    });
+  },
+  runClaimantTaskEntry(client, input) {
+    const objectInput = requireObjectInput(input, 'claimant task entry input is required for MCP execution');
+    return runClaimantTaskEntry(client, requireAccountAgentId(objectInput), {
+      taskKind: requireExecutionStringInput(objectInput, ['taskKind'], 'taskKind is required for claimant task entry execution'),
+      taskRef: requireExecutionStringInput(objectInput, ['taskRef'], 'taskRef is required for claimant task entry execution'),
+      reason: requireExecutionStringInput(objectInput, ['reason'], 'reason is required for claimant task entry execution'),
+      now: requireExecutionStringInput(objectInput, ['now'], 'now is required for claimant task entry execution'),
+    });
+  },
+  runOperatorMatching(client, input) {
+    const objectInput = requireObjectInput(input, 'operator matching input is required for MCP execution');
+    return runOperatorMatching(client, {
+      sourceListingId: requireExecutionStringInput(objectInput, ['sourceListingId'], 'sourceListingId is required for operator progression match'),
+      candidateListing: requireObjectInput(objectInput.candidateListing, 'candidateListing is required for operator progression match') as never,
+      candidateActivation: requireObjectInput(objectInput.candidateActivation, 'candidateActivation is required for operator progression match') as never,
+      matchCandidates: requireObjectInput(objectInput.matchCandidates, 'matchCandidates is required for operator progression match') as never,
+    });
+  },
+  runOperatorConnectionContinuation(client, input) {
+    const objectInput = requireObjectInput(input, 'operator connection continuation input is required for MCP execution');
+    const connection = {
+      companyId: requireExecutionStringInput(objectInput, ['companyId'], 'companyId is required for operator progression connect'),
+      sourceMatchId: requireExecutionStringInput(objectInput, ['sourceMatchId'], 'sourceMatchId is required for operator progression connect'),
+      requesterActorId: requireExecutionStringInput(objectInput, ['requesterActorId'], 'requesterActorId is required for operator progression connect'),
+      requesterCompanyId: requireExecutionStringInput(objectInput, ['requesterCompanyId'], 'requesterCompanyId is required for operator progression connect'),
+      riskTier: requireExecutionStringInput(objectInput, ['riskTier'], 'riskTier is required for operator progression connect') as 'HIGH' | 'CRITICAL',
+      policyVersion: requireExecutionStringInput(objectInput, ['policyVersion'], 'policyVersion is required for operator progression connect'),
+      approvalMatrixVersion: requireExecutionStringInput(objectInput, ['approvalMatrixVersion'], 'approvalMatrixVersion is required for operator progression connect'),
+      actionType: requireExecutionStringInput(objectInput, ['actionType'], 'actionType is required for operator progression connect') as 'CONTACT_SHARE',
+      now: requireExecutionStringInput(objectInput, ['now'], 'now is required for operator progression connect'),
+    };
+    if (objectInput.approval === undefined) {
+      return client.createOperatorConnection(connection);
+    }
+    const approvalInput = requireObjectInput(objectInput.approval, 'approval is required for operator progression connect continuation');
+    return runOperatorConnectionContinuation(client, {
+      connection,
+      approval: {
+        approvalRequestId: requireExecutionStringInput(approvalInput, ['approvalRequestId'], 'approvalRequestId is required for operator progression connect continuation'),
+        actorId: requireExecutionStringInput(approvalInput, ['actorId'], 'actorId is required for operator progression connect continuation'),
+        decision: requireExecutionStringInput(approvalInput, ['decision'], 'decision is required for operator progression connect continuation'),
+        now: requireExecutionStringInput(approvalInput, ['now'], 'now is required for operator progression connect continuation'),
+      },
+    });
+  },
+  runOperatorApprovalContinuation(client, input) {
+    const objectInput = requireObjectInput(input, 'operator approval continuation input is required for MCP execution');
+    return runOperatorApprovalContinuation(client, {
+      approvalRequestId: requireExecutionStringInput(objectInput, ['approvalRequestId'], 'approvalRequestId is required for operator progression approve'),
+      actorId: requireExecutionStringInput(objectInput, ['actorId'], 'actorId is required for operator progression approve'),
+      decision: requireExecutionStringInput(objectInput, ['decision'], 'decision is required for operator progression approve'),
+      now: requireExecutionStringInput(objectInput, ['now'], 'now is required for operator progression approve'),
+    });
+  },
+  runOperatorPackageExport(client, input) {
+    const objectInput = requireObjectInput(input, 'operator package export input is required for MCP execution');
+    return runOperatorPackageExport(client, {
+      opportunityId: requireExecutionStringInput(objectInput, ['opportunityId'], 'opportunityId is required for operator package export'),
+      renderTemplateId: requireExecutionStringInput(objectInput, ['renderTemplateId'], 'renderTemplateId is required for operator package export'),
+      contentRef: requireExecutionStringInput(objectInput, ['contentRef'], 'contentRef is required for operator package export'),
+      redactionProfile: requireExecutionStringInput(objectInput, ['redactionProfile'], 'redactionProfile is required for operator package export'),
+      targetSystem: requireExecutionStringInput(objectInput, ['targetSystem'], 'targetSystem is required for operator package export'),
+      operationType: requireExecutionStringInput(objectInput, ['operationType'], 'operationType is required for operator package export'),
+      nodeId: requireExecutionStringInput(objectInput, ['nodeId'], 'nodeId is required for operator package export'),
+      runtimeId: requireExecutionStringInput(objectInput, ['runtimeId'], 'runtimeId is required for operator package export'),
+      agentId: requireExecutionStringInput(objectInput, ['agentId'], 'agentId is required for operator package export'),
+      boundAccountId: requireExecutionStringInput(objectInput, ['boundAccountId'], 'boundAccountId is required for operator package export'),
+      now: requireExecutionStringInput(objectInput, ['now'], 'now is required for operator package export'),
+    });
+  },
+  runOperatorCommercialAction(client, input) {
+    const objectInput = requireObjectInput(input, 'operator commercial action input is required for MCP execution');
+    return runOperatorCommercialAction(client, {
+      create: requireObjectInput(objectInput.create, 'create is required for operator commercial action') as never,
+      policyCheck: requireObjectInput(objectInput.policyCheck, 'policyCheck is required for operator commercial action') as never,
+      requestApproval: requireObjectInput(objectInput.requestApproval, 'requestApproval is required for operator commercial action') as never,
+      execute: requireObjectInput(objectInput.execute, 'execute is required for operator commercial action') as never,
+    });
+  },
+  runPlatformManagedProgression() {
+    return runPlatformManagedProgression();
+  },
   createProvisionalAgent(client, input) {
     return client.createProvisionalAgent(
       requireObjectInput(input, 'createProvisionalAgent input is required for MCP execution') as never,
     );
   },
+  async executeIndustryUniverseScenario(client, input) {
+    const scenarioInput: unknown = requireObjectInput(
+      input,
+      'industry universe scenario input is required for MCP execution',
+    );
+    return executeIndustryUniverseScenario(
+      client,
+      buildIndustryUniverseScenarioPlan(
+        scenarioInput as BidviaIndustryUniverseScenarioPlanInput,
+      ),
+    );
+  },
+  createNotificationDelivery(client, input) {
+    return client.createNotificationDelivery(
+      requireObjectInput(input, 'createNotificationDelivery input is required for notification delivery execution') as never,
+    );
+  },
+  acknowledgeNotification(client, input) {
+    const agentId = requireAccountAgentId(input);
+    return client.acknowledgeNotification(
+      agentId,
+      requireExecutionStringInput(
+        input,
+        ['notificationId'],
+        'notificationId is required for governed notification acknowledgement execution',
+      ),
+      buildExecutionPayload(
+        input,
+        ['agentId', 'agentRegistrationId', 'notificationId'],
+        'agentId is required for governed notification acknowledgement execution',
+      ) as never,
+    );
+  },
+  retryNotification(client, input) {
+    return client.retryNotification(
+      requireExecutionStringInput(
+        input,
+        ['notificationId'],
+        'notificationId is required for governed notification retry execution',
+      ),
+      buildExecutionPayload(
+        input,
+        ['notificationId'],
+        'notificationId is required for governed notification retry execution',
+      ) as never,
+    );
+  },
+  expireNotification(client, input) {
+    return client.expireNotification(
+      requireExecutionStringInput(
+        input,
+        ['notificationId'],
+        'notificationId is required for governed notification expiration execution',
+      ),
+      buildExecutionPayload(
+        input,
+        ['notificationId'],
+        'notificationId is required for governed notification expiration execution',
+      ) as never,
+    );
+  },
   claimProvisionalAgent(client, input) {
     return client.claimProvisionalAgent(
       requireObjectInput(input, 'claimProvisionalAgent input is required for MCP execution') as never,
+    );
+  },
+  postAccountAgentExecutionPresence(client, input) {
+    return client.postAccountAgentExecutionPresence(
+      requireAccountAgentId(input),
+      buildExecutionPayload(
+        input,
+        ['agentId', 'agentRegistrationId', 'registrationId'],
+        'agentId is required for claimant execution presence',
+      ) as never,
+    );
+  },
+  uploadAccountAgentExecutionSync(client, input) {
+    return client.uploadAccountAgentExecutionSync(
+      requireAccountAgentId(input),
+      buildExecutionPayload(
+        input,
+        ['agentId', 'agentRegistrationId', 'registrationId'],
+        'agentId is required for claimant execution sync upload',
+      ) as never,
+    );
+  },
+  downloadAccountAgentExecutionSync(client, input) {
+    return client.downloadAccountAgentExecutionSync(requireAccountAgentId(input));
+  },
+  submitAccountAgentExecutionEvidence(client, input) {
+    return client.submitAccountAgentExecutionEvidence(
+      requireAccountAgentId(input),
+      buildExecutionPayload(
+        input,
+        ['agentId', 'agentRegistrationId', 'registrationId'],
+        'agentId is required for claimant execution evidence submission',
+      ) as never,
+    );
+  },
+  submitAccountAgentExecutionProposal(client, input) {
+    return client.submitAccountAgentExecutionProposal(
+      requireAccountAgentId(input),
+      buildExecutionPayload(
+        input,
+        ['agentId', 'agentRegistrationId', 'registrationId'],
+        'agentId is required for claimant execution proposal submission',
+      ) as never,
+    );
+  },
+  createAccountAgentExecutionListing(client, input) {
+    return client.createAccountAgentExecutionListing(
+      requireAccountAgentId(input),
+      buildExecutionPayload(
+        input,
+        ['agentId', 'agentRegistrationId', 'registrationId'],
+        'agentId is required for claimant execution listing creation',
+      ) as never,
+    );
+  },
+  activateAccountAgentExecutionListing(client, input) {
+    return client.activateAccountAgentExecutionListing(
+      requireAccountAgentId(input),
+      requireExecutionStringInput(
+        input,
+        ['listingId'],
+        'listingId is required for claimant execution listing activation',
+      ),
+      buildExecutionPayload(
+        input,
+        ['agentId', 'agentRegistrationId', 'registrationId', 'listingId'],
+        'agentId and listingId are required for claimant execution listing activation',
+      ) as never,
+    );
+  },
+  refreshAccountAgentAuthorization(client, input) {
+    return client.refreshAccountAgentAuthorization(
+      requireAccountAgentId(input),
+      buildExecutionPayload(
+        input,
+        ['agentId', 'agentRegistrationId', 'registrationId'],
+        'agentId is required for canonical account-plane authorization refresh execution',
+      ) as never,
+    );
+  },
+  createAccountAgentExternalBinding(client, input) {
+    return client.createAccountAgentExternalBinding(
+      requireAccountAgentId(input),
+      buildExecutionPayload(
+        input,
+        ['agentId', 'agentRegistrationId', 'registrationId'],
+        'agentId is required for canonical account-plane external binding execution',
+      ) as never,
+    );
+  },
+  createAccountIntegrationApp(client, input) {
+    return client.createAccountIntegrationApp(
+      buildExecutionPayload(input, [], 'integration app creation input is required') as never,
+    );
+  },
+  createAccountIntegrationInstallation(client, input) {
+    return client.createAccountIntegrationInstallation(
+      buildExecutionPayload(input, [], 'integration installation creation input is required') as never,
+    );
+  },
+  connectAccountIntegrationInstallation(client, input) {
+    return client.connectAccountIntegrationInstallation(
+      requireExecutionStringInput(
+        input,
+        ['integrationInstallationId'],
+        'integrationInstallationId is required for integration installation connection execution',
+      ),
+      buildExecutionPayload(
+        input,
+        ['integrationInstallationId'],
+        'integrationInstallationId is required for integration installation connection execution',
+      ) as never,
+    );
+  },
+  decideDispatchAuthorityRequest(client, input) {
+    return client.decideDispatchAuthorityRequest(
+      requireExecutionStringInput(
+        input,
+        ['requestId'],
+        'requestId is required for operator dispatch-authority decision execution',
+      ),
+      buildExecutionPayload(
+        input,
+        ['requestId'],
+        'requestId is required for operator dispatch-authority decision execution',
+      ) as never,
     );
   },
   downloadSync(client) {
@@ -131,27 +547,72 @@ const widenedExecutionDispatchersByCapabilityKey: Record<string, BidviaGenericEx
   },
   createLease(client, input) {
     return client.createLease(
-      requireAgentRegistrationId(input),
+      requireAccountAgentId(input),
       buildExecutionPayload(
         input,
-        ['agentRegistrationId', 'registrationId'],
-        'agentRegistrationId is required for governed lease execution',
+        ['agentId', 'agentRegistrationId', 'registrationId'],
+        'agentId is required for canonical account-plane governed lease execution',
       ) as never,
     );
   },
   createTaskDispatch(client, input) {
     return client.createTaskDispatch(
-      requireAgentRegistrationId(input),
+      requireAccountAgentId(input),
       buildExecutionPayload(
         input,
-        ['agentRegistrationId', 'registrationId'],
-        'agentRegistrationId is required for governed task dispatch execution',
+        ['agentId', 'agentRegistrationId', 'registrationId'],
+        'agentId is required for canonical account-plane governed task dispatch execution',
+      ) as never,
+    );
+  },
+  createTaskDispatchOutcome(client, input) {
+    return client.createTaskDispatchOutcome(
+      requireAccountAgentId(input),
+      requireExecutionStringInput(
+        input,
+        ['taskDispatchId'],
+        'taskDispatchId is required for bounded task outcome execution',
+      ),
+      buildExecutionPayload(
+        input,
+        ['agentId', 'agentRegistrationId', 'registrationId', 'taskDispatchId'],
+        'agentId and taskDispatchId are required for canonical account-plane bounded task outcome execution',
+      ) as never,
+    );
+  },
+  createTaskDispatchEvidenceBundle(client, input) {
+    return client.createTaskDispatchEvidenceBundle(
+      requireAccountAgentId(input),
+      requireExecutionStringInput(
+        input,
+        ['taskDispatchId'],
+        'taskDispatchId is required for bounded task evidence-bundle execution',
+      ),
+      buildExecutionPayload(
+        input,
+        ['agentId', 'agentRegistrationId', 'registrationId', 'taskDispatchId'],
+        'agentId and taskDispatchId are required for canonical account-plane bounded task evidence-bundle execution',
+      ) as never,
+    );
+  },
+  createTaskDispatchConfirmationCycle(client, input) {
+    return client.createTaskDispatchConfirmationCycle(
+      requireAccountAgentId(input),
+      requireExecutionStringInput(
+        input,
+        ['taskDispatchId'],
+        'taskDispatchId is required for bounded task confirmation-cycle execution',
+      ),
+      buildExecutionPayload(
+        input,
+        ['agentId', 'agentRegistrationId', 'registrationId', 'taskDispatchId'],
+        'agentId and taskDispatchId are required for canonical account-plane bounded task confirmation-cycle execution',
       ) as never,
     );
   },
   assignTaskDispatch(client, input) {
     return client.assignTaskDispatch(
-      requireAgentRegistrationId(input),
+      requireAccountAgentId(input),
       requireExecutionStringInput(
         input,
         ['taskDispatchId'],
@@ -159,14 +620,14 @@ const widenedExecutionDispatchersByCapabilityKey: Record<string, BidviaGenericEx
       ),
       buildExecutionPayload(
         input,
-        ['agentRegistrationId', 'registrationId', 'taskDispatchId'],
-        'agentRegistrationId and taskDispatchId are required for governed task dispatch assignment execution',
+        ['agentId', 'agentRegistrationId', 'registrationId', 'taskDispatchId'],
+        'agentId and taskDispatchId are required for canonical account-plane governed task dispatch assignment execution',
       ) as never,
     );
   },
   suspendTaskDispatch(client, input) {
     return client.suspendTaskDispatch(
-      requireAgentRegistrationId(input),
+      requireAccountAgentId(input),
       requireExecutionStringInput(
         input,
         ['taskDispatchId'],
@@ -174,14 +635,14 @@ const widenedExecutionDispatchersByCapabilityKey: Record<string, BidviaGenericEx
       ),
       buildExecutionPayload(
         input,
-        ['agentRegistrationId', 'registrationId', 'taskDispatchId'],
-        'agentRegistrationId and taskDispatchId are required for governed task dispatch suspension execution',
+        ['agentId', 'agentRegistrationId', 'registrationId', 'taskDispatchId'],
+        'agentId and taskDispatchId are required for canonical account-plane governed task dispatch suspension execution',
       ) as never,
     );
   },
   resumeTaskDispatch(client, input) {
     return client.resumeTaskDispatch(
-      requireAgentRegistrationId(input),
+      requireAccountAgentId(input),
       requireExecutionStringInput(
         input,
         ['taskDispatchId'],
@@ -189,14 +650,14 @@ const widenedExecutionDispatchersByCapabilityKey: Record<string, BidviaGenericEx
       ),
       buildExecutionPayload(
         input,
-        ['agentRegistrationId', 'registrationId', 'taskDispatchId'],
-        'agentRegistrationId and taskDispatchId are required for governed task dispatch resume execution',
+        ['agentId', 'agentRegistrationId', 'registrationId', 'taskDispatchId'],
+        'agentId and taskDispatchId are required for canonical account-plane governed task dispatch resume execution',
       ) as never,
     );
   },
   completeTaskDispatch(client, input) {
     return client.completeTaskDispatch(
-      requireAgentRegistrationId(input),
+      requireAccountAgentId(input),
       requireExecutionStringInput(
         input,
         ['taskDispatchId'],
@@ -204,14 +665,14 @@ const widenedExecutionDispatchersByCapabilityKey: Record<string, BidviaGenericEx
       ),
       buildExecutionPayload(
         input,
-        ['agentRegistrationId', 'registrationId', 'taskDispatchId'],
-        'agentRegistrationId and taskDispatchId are required for governed task dispatch completion execution',
+        ['agentId', 'agentRegistrationId', 'registrationId', 'taskDispatchId'],
+        'agentId and taskDispatchId are required for canonical account-plane governed task dispatch completion execution',
       ) as never,
     );
   },
   failTaskDispatch(client, input) {
     return client.failTaskDispatch(
-      requireAgentRegistrationId(input),
+      requireAccountAgentId(input),
       requireExecutionStringInput(
         input,
         ['taskDispatchId'],
@@ -219,40 +680,40 @@ const widenedExecutionDispatchersByCapabilityKey: Record<string, BidviaGenericEx
       ),
       buildExecutionPayload(
         input,
-        ['agentRegistrationId', 'registrationId', 'taskDispatchId'],
-        'agentRegistrationId and taskDispatchId are required for governed task dispatch failure execution',
+        ['agentId', 'agentRegistrationId', 'registrationId', 'taskDispatchId'],
+        'agentId and taskDispatchId are required for canonical account-plane governed task dispatch failure execution',
       ) as never,
     );
   },
   createClaim(client, input) {
     return client.createClaim(
-      requireAgentRegistrationId(input),
+      requireAccountAgentId(input),
       buildExecutionPayload(
         input,
-        ['agentRegistrationId', 'registrationId'],
-        'agentRegistrationId is required for governed claim execution',
+        ['agentId', 'agentRegistrationId', 'registrationId'],
+        'agentId is required for canonical account-plane governed claim execution',
       ) as never,
     );
   },
   acceptClaim(client, input) {
     return client.acceptClaim(
-      requireAgentRegistrationId(input),
+      requireAccountAgentId(input),
       requireExecutionStringInput(input, ['claimId'], 'claimId is required for governed claim acceptance execution'),
       buildExecutionPayload(
         input,
-        ['agentRegistrationId', 'registrationId', 'claimId'],
-        'agentRegistrationId and claimId are required for governed claim acceptance execution',
+        ['agentId', 'agentRegistrationId', 'registrationId', 'claimId'],
+        'agentId and claimId are required for canonical account-plane governed claim acceptance execution',
       ) as never,
     );
   },
   rejectClaim(client, input) {
     return client.rejectClaim(
-      requireAgentRegistrationId(input),
+      requireAccountAgentId(input),
       requireExecutionStringInput(input, ['claimId'], 'claimId is required for governed claim rejection execution'),
       buildExecutionPayload(
         input,
-        ['agentRegistrationId', 'registrationId', 'claimId'],
-        'agentRegistrationId and claimId are required for governed claim rejection execution',
+        ['agentId', 'agentRegistrationId', 'registrationId', 'claimId'],
+        'agentId and claimId are required for canonical account-plane governed claim rejection execution',
       ) as never,
     );
   },
@@ -457,9 +918,33 @@ async function dispatchRegisteredAgentExecutionTool(
     throw new Error(`unsupported MCP helper dispatch: ${descriptor.helperRef.helperKey}`);
   }
 
-  const executionResult = adapter
-    ? await adapter.run(client, input)
-    : await directDispatcher!(client, input);
+  const helperKey = descriptor.helperRef.capabilityKey ?? descriptor.helperRef.helperKey;
+  const executionContext = buildRuntimeExecutionIdentity(descriptor, preflight, client);
+  let executionResult: unknown;
+
+  try {
+    executionResult = await runBidviaSurfaceCapability({
+      transport: 'mcp',
+      helperKey,
+      capabilityKey: helperKey,
+      identity: buildBidviaSurfaceRuntimeIdentityContext(executionContext),
+      input,
+      createClient: () => client,
+      execute: async (runtimeClient) => adapter
+        ? adapter.run(runtimeClient, input)
+        : directDispatcher!(runtimeClient, input),
+      now: dependencies.now ?? (() => new Date().toISOString()),
+      accumulation: dependencies.localAccumulationPath
+        ? { path: dependencies.localAccumulationPath }
+        : undefined,
+    });
+  } catch (error) {
+    if (isBlockedCapabilityExecutionError(error) && error.blockedByPlaneGate) {
+      throw new Error(buildMcpPlaneBlockedMessage(descriptor.toolName, error.blockedByPlaneGate));
+    }
+
+    throw error;
+  }
 
   return {
     toolName: descriptor.toolName,
@@ -467,6 +952,7 @@ async function dispatchRegisteredAgentExecutionTool(
     preflight,
     result: {
       executionResult,
+      ...((descriptor.role && descriptor.stage) ? buildMcpProductEvidence(descriptor, input, executionResult) : {}),
     },
   };
 }
@@ -480,6 +966,37 @@ function requireDispatchExecutionClient(
   }
 
   return dependencies.createExecutionClient();
+}
+
+async function dispatchIndustryUniverseScenarioExecutionTool(
+  descriptor: BidviaMcpToolDescriptor,
+  input: unknown,
+  dependencies: BidviaMcpDispatchDependencies,
+): Promise<BidviaMcpToolCallResponse<BidviaMcpDispatchResult>> {
+  const client = requireDispatchExecutionClient(descriptor, dependencies);
+  const preflight = buildMcpExecutionPreflight(descriptor, client);
+  if (preflight && preflight.missingContext.length > 0) {
+    throw new Error(buildMcpMissingContextMessage(descriptor.toolName, preflight.missingContext));
+  }
+
+  const scenarioInput: unknown = requireObjectInput(
+    input,
+    'industry universe scenario input is required for MCP execution',
+  );
+
+  return {
+    toolName: descriptor.toolName,
+    outputMode: descriptor.outputMode,
+    preflight,
+    result: {
+      executionResult: await executeIndustryUniverseScenario(
+        client,
+        buildIndustryUniverseScenarioPlan(
+          scenarioInput as BidviaIndustryUniverseScenarioPlanInput,
+        ),
+      ),
+    },
+  };
 }
 
 function requireAgentRegistrationId(input: unknown): string {
@@ -500,6 +1017,29 @@ function requireAgentRegistrationId(input: unknown): string {
   }
 
   return registrationId;
+}
+
+function requireAccountAgentId(input: unknown): string {
+  if (typeof input !== 'object' || input === null) {
+    throw new Error('agentId is required for canonical account-plane operations; agentRegistrationId remains compatibility-only');
+  }
+
+  const agentId =
+    ('agentId' in input && typeof input.agentId === 'string'
+      ? input.agentId
+      : undefined) ??
+    ('agentRegistrationId' in input && typeof input.agentRegistrationId === 'string'
+      ? input.agentRegistrationId
+      : undefined) ??
+    ('registrationId' in input && typeof input.registrationId === 'string'
+      ? input.registrationId
+      : undefined);
+
+  if (!agentId) {
+    throw new Error('agentId is required for canonical account-plane operations; agentRegistrationId remains compatibility-only');
+  }
+
+  return agentId;
 }
 
 function requireStringInput(input: unknown, fieldName: string, errorMessage: string): string {
@@ -531,6 +1071,140 @@ async function dispatchGovernanceTruthFetchTool(
       outputMode: descriptor.outputMode,
       result: {
         truthFetchResult: await client.listAccountAgents(),
+      },
+    };
+  }
+
+  if (descriptor.helperRef.helperKey === 'getAccountAgentClosureStatus') {
+    return {
+      toolName: descriptor.toolName,
+      outputMode: descriptor.outputMode,
+      result: {
+        truthFetchResult: await client.getAccountAgentClosureStatus(requireAccountAgentId(input)),
+      },
+    };
+  }
+
+  if (descriptor.helperRef.helperKey === 'getAccountAgentExecutionStatus') {
+    return {
+      toolName: descriptor.toolName,
+      outputMode: descriptor.outputMode,
+      result: {
+        truthFetchResult: await client.getAccountAgentExecutionStatus(requireAccountAgentId(input)),
+      },
+    };
+  }
+
+  if (descriptor.helperRef.helperKey === 'getAccountAgentExecutionListingStatus') {
+    const agentId = requireAccountAgentId(input);
+    return {
+      toolName: descriptor.toolName,
+      outputMode: descriptor.outputMode,
+      result: {
+        truthFetchResult: await client.getAccountAgentExecutionListingStatus(
+          agentId,
+          requireStringInput(input, 'listingId', 'listingId is required for claimant execution listing status reads'),
+        ),
+      },
+    };
+  }
+
+  if (descriptor.helperRef.helperKey === 'getAccountAgentExecutionListingMaterializationStatus') {
+    const agentId = requireAccountAgentId(input);
+    return {
+      toolName: descriptor.toolName,
+      outputMode: descriptor.outputMode,
+      result: {
+        truthFetchResult: await client.getAccountAgentExecutionListingMaterializationStatus(
+          agentId,
+          requireStringInput(input, 'listingId', 'listingId is required for claimant execution materialization-status reads'),
+        ),
+      },
+    };
+  }
+
+  if (descriptor.helperRef.helperKey === 'getAccountAgentExecutionOpportunityStatus') {
+    const agentId = requireAccountAgentId(input);
+    return {
+      toolName: descriptor.toolName,
+      outputMode: descriptor.outputMode,
+      result: {
+        truthFetchResult: await client.getAccountAgentExecutionOpportunityStatus(
+          agentId,
+          requireStringInput(input, 'targetRef', 'targetRef is required for claimant opportunity status reads'),
+        ),
+      },
+    };
+  }
+
+  if (descriptor.helperRef.helperKey === 'getAccountAgentExecutionOpportunityEndState') {
+    const agentId = requireAccountAgentId(input);
+    return {
+      toolName: descriptor.toolName,
+      outputMode: descriptor.outputMode,
+      result: {
+        truthFetchResult: await client.getAccountAgentExecutionOpportunityEndState(
+          agentId,
+          requireStringInput(input, 'targetRef', 'targetRef is required for claimant opportunity end-state reads'),
+        ),
+      },
+    };
+  }
+
+  if (descriptor.helperRef.helperKey === 'listPublicIntegrationApps') {
+    return {
+      toolName: descriptor.toolName,
+      outputMode: descriptor.outputMode,
+      result: {
+        truthFetchResult: await client.listPublicIntegrationApps(),
+      },
+    };
+  }
+
+  if (descriptor.helperRef.helperKey === 'listAccountIntegrationApps') {
+    return {
+      toolName: descriptor.toolName,
+      outputMode: descriptor.outputMode,
+      result: {
+        truthFetchResult: await client.listAccountIntegrationApps(),
+      },
+    };
+  }
+
+  if (descriptor.helperRef.helperKey === 'listAccountIntegrationInstallations') {
+    return {
+      toolName: descriptor.toolName,
+      outputMode: descriptor.outputMode,
+      result: {
+        truthFetchResult: await client.listAccountIntegrationInstallations(),
+      },
+    };
+  }
+
+  if (descriptor.helperRef.helperKey === 'listAccountIntegrationCapabilities') {
+    return {
+      toolName: descriptor.toolName,
+      outputMode: descriptor.outputMode,
+      result: {
+        truthFetchResult: await client.listAccountIntegrationCapabilities(),
+      },
+    };
+  }
+
+  if (descriptor.helperRef.helperKey === 'getAccountAgentIntegrationEligibility') {
+    const agentId = requireAccountAgentId(input);
+    return {
+      toolName: descriptor.toolName,
+      outputMode: descriptor.outputMode,
+      result: {
+        truthFetchResult: await client.getAccountAgentIntegrationEligibility(
+          agentId,
+          requireStringInput(
+            input,
+            'integrationCode',
+            'integrationCode is required for account-agent integration eligibility reads',
+          ),
+        ),
       },
     };
   }
@@ -746,12 +1420,41 @@ async function dispatchGovernanceTruthFetchTool(
           ),
         ),
       },
+      };
+  }
+
+  if (descriptor.helperRef.helperKey === 'getNotification') {
+    const inputObject = requireObjectInput(input, 'notification read input is required') as Record<string, unknown>;
+    const agentIdCandidate = inputObject.agentId;
+    const compatibilityRegistrationIdCandidate = inputObject.agentRegistrationId;
+    const agentId = typeof agentIdCandidate === 'string' && agentIdCandidate.length > 0
+      ? agentIdCandidate
+      : typeof compatibilityRegistrationIdCandidate === 'string' && compatibilityRegistrationIdCandidate.length > 0
+        ? compatibilityRegistrationIdCandidate
+        : (() => {
+            throw new Error('agentId is required for notification reads; agentRegistrationId remains compatibility-only');
+          })();
+
+    return {
+      toolName: descriptor.toolName,
+      outputMode: descriptor.outputMode,
+      result: {
+        truthFetchResult: await client.getNotification(
+          {
+            agentId,
+            notificationId: requireStringInput(
+              input,
+              'notificationId',
+              'notificationId is required for notification reads',
+            ),
+          },
+        ),
+      },
     };
   }
 
-  const registrationId = requireAgentRegistrationId(input);
-
   if (descriptor.helperRef.helperKey === 'getAgentReadiness') {
+    const registrationId = requireAgentRegistrationId(input);
     return {
       toolName: descriptor.toolName,
       outputMode: descriptor.outputMode,
@@ -762,6 +1465,7 @@ async function dispatchGovernanceTruthFetchTool(
   }
 
   if (descriptor.helperRef.helperKey === 'getAgentSummary') {
+    const registrationId = requireAgentRegistrationId(input);
     return {
       toolName: descriptor.toolName,
       outputMode: descriptor.outputMode,
@@ -772,6 +1476,7 @@ async function dispatchGovernanceTruthFetchTool(
   }
 
   if (descriptor.helperRef.helperKey === 'getAgentRegistration') {
+    const registrationId = requireAgentRegistrationId(input);
     return {
       toolName: descriptor.toolName,
       outputMode: descriptor.outputMode,
@@ -781,7 +1486,140 @@ async function dispatchGovernanceTruthFetchTool(
     };
   }
 
+  if (descriptor.helperRef.helperKey === 'consumeOperatorHandoff') {
+    return {
+      toolName: descriptor.toolName,
+      outputMode: descriptor.outputMode,
+      result: {
+        truthFetchResult: await consumeOperatorHandoff(client, {
+          sourceListingId: requireExecutionStringInput(
+            input,
+            ['sourceListingId'],
+            'sourceListingId is required for operator handoff consume',
+          ),
+        }),
+      },
+    };
+  }
+
+  if (descriptor.helperRef.helperKey === 'inspectOperatorCommercialAction') {
+    return {
+      toolName: descriptor.toolName,
+      outputMode: descriptor.outputMode,
+      result: {
+        truthFetchResult: await inspectOperatorCommercialAction(client, {
+          commercialActionRequestId: requireExecutionStringInput(
+            input,
+            ['commercialActionRequestId'],
+            'commercialActionRequestId is required for operator commercial action inspection',
+          ),
+        }),
+      },
+    };
+  }
+
+  if (descriptor.helperRef.helperKey === 'inspectPlatformManagedEntry') {
+    return {
+      toolName: descriptor.toolName,
+      outputMode: descriptor.outputMode,
+      result: {
+        truthFetchResult: await inspectPlatformManagedEntry(),
+        ...buildMcpProductEvidence(descriptor, input, await inspectPlatformManagedEntry()),
+      },
+    };
+  }
+
+  if (descriptor.helperRef.helperKey === 'inspectPlatformManagedReadiness') {
+    return {
+      toolName: descriptor.toolName,
+      outputMode: descriptor.outputMode,
+      result: {
+        truthFetchResult: await inspectPlatformManagedReadiness(),
+        ...buildMcpProductEvidence(descriptor, input, await inspectPlatformManagedReadiness()),
+      },
+    };
+  }
+
+  if (descriptor.helperRef.helperKey === 'inspectClaimantPrecondition') {
+    return {
+      toolName: descriptor.toolName,
+      outputMode: descriptor.outputMode,
+      result: {
+        truthFetchResult: await inspectClaimantPrecondition(client),
+      },
+    };
+  }
+
+  if (descriptor.helperRef.helperKey === 'inspectClaimantReadiness') {
+    const agentId = requireAccountAgentId(input);
+    return {
+      toolName: descriptor.toolName,
+      outputMode: descriptor.outputMode,
+      result: {
+        truthFetchResult: await inspectClaimantReadiness(client, agentId),
+      },
+    };
+  }
+
+  if (descriptor.helperRef.helperKey === 'inspectClaimantHandoff') {
+    const agentId = requireAccountAgentId(input);
+    return {
+      toolName: descriptor.toolName,
+      outputMode: descriptor.outputMode,
+      result: {
+        truthFetchResult: await inspectClaimantHandoff(
+          client,
+          agentId,
+          requireExecutionStringInput(
+            input,
+            ['listingId'],
+            'listingId is required for claimant handoff inspection',
+          ),
+        ),
+      },
+    };
+  }
+
+  if (descriptor.helperRef.helperKey === 'inspectClaimantOpportunityStatus') {
+    const agentId = requireAccountAgentId(input);
+    return {
+      toolName: descriptor.toolName,
+      outputMode: descriptor.outputMode,
+      result: {
+        truthFetchResult: await inspectClaimantOpportunityStatus(
+          client,
+          agentId,
+          requireExecutionStringInput(
+            input,
+            ['targetRef', 'opportunityId'],
+            'targetRef is required for claimant opportunity status inspection',
+          ),
+        ),
+      },
+    };
+  }
+
+  if (descriptor.helperRef.helperKey === 'inspectClaimantOpportunityEndState') {
+    const agentId = requireAccountAgentId(input);
+    return {
+      toolName: descriptor.toolName,
+      outputMode: descriptor.outputMode,
+      result: {
+        truthFetchResult: await inspectClaimantOpportunityEndState(
+          client,
+          agentId,
+          requireExecutionStringInput(
+            input,
+            ['targetRef', 'opportunityId'],
+            'targetRef is required for claimant opportunity end-state inspection',
+          ),
+        ),
+      },
+    };
+  }
+
   if (descriptor.helperRef.helperKey === 'getAgentAuthorityProfile') {
+    const registrationId = requireAgentRegistrationId(input);
     return {
       toolName: descriptor.toolName,
       outputMode: descriptor.outputMode,
@@ -792,6 +1630,7 @@ async function dispatchGovernanceTruthFetchTool(
   }
 
   if (descriptor.helperRef.helperKey === 'getAgentAuthorityLadder') {
+    const registrationId = requireAgentRegistrationId(input);
     return {
       toolName: descriptor.toolName,
       outputMode: descriptor.outputMode,
@@ -802,6 +1641,7 @@ async function dispatchGovernanceTruthFetchTool(
   }
 
   if (descriptor.helperRef.helperKey === 'getAgentCapabilityProfile') {
+    const registrationId = requireAgentRegistrationId(input);
     return {
       toolName: descriptor.toolName,
       outputMode: descriptor.outputMode,
@@ -812,6 +1652,7 @@ async function dispatchGovernanceTruthFetchTool(
   }
 
   if (descriptor.helperRef.helperKey === 'listParticipationStates') {
+    const registrationId = requireAgentRegistrationId(input);
     return {
       toolName: descriptor.toolName,
       outputMode: descriptor.outputMode,
@@ -822,6 +1663,7 @@ async function dispatchGovernanceTruthFetchTool(
   }
 
   if (descriptor.helperRef.helperKey === 'getParticipationState') {
+    const registrationId = requireAgentRegistrationId(input);
     return {
       toolName: descriptor.toolName,
       outputMode: descriptor.outputMode,
@@ -839,22 +1681,24 @@ async function dispatchGovernanceTruthFetchTool(
   }
 
   if (descriptor.helperRef.helperKey === 'listTaskDispatches') {
+    const agentId = requireAccountAgentId(input);
     return {
       toolName: descriptor.toolName,
       outputMode: descriptor.outputMode,
       result: {
-        truthFetchResult: await client.listTaskDispatches(registrationId),
+        truthFetchResult: await client.listTaskDispatches(agentId),
       },
     };
   }
 
   if (descriptor.helperRef.helperKey === 'getTaskDispatch') {
+    const agentId = requireAccountAgentId(input);
     return {
       toolName: descriptor.toolName,
       outputMode: descriptor.outputMode,
       result: {
         truthFetchResult: await client.getTaskDispatch(
-          registrationId,
+          agentId,
           requireStringInput(
             input,
             'taskDispatchId',
@@ -865,7 +1709,26 @@ async function dispatchGovernanceTruthFetchTool(
     };
   }
 
+  if (descriptor.helperRef.helperKey === 'getAccountAgentGovernedWorkClosure') {
+    const agentId = requireAccountAgentId(input);
+    return {
+      toolName: descriptor.toolName,
+      outputMode: descriptor.outputMode,
+      result: {
+        truthFetchResult: await client.getAccountAgentGovernedWorkClosure(
+          agentId,
+          requireStringInput(
+            input,
+            'taskDispatchId',
+            'taskDispatchId is required for governed-work-closure reads',
+          ),
+        ),
+      },
+    };
+  }
+
   if (descriptor.helperRef.helperKey === 'getAgentPresence') {
+    const registrationId = requireAgentRegistrationId(input);
     return {
       toolName: descriptor.toolName,
       outputMode: descriptor.outputMode,
@@ -876,6 +1739,7 @@ async function dispatchGovernanceTruthFetchTool(
   }
 
   if (descriptor.helperRef.helperKey === 'getAgentAuthority') {
+    const registrationId = requireAgentRegistrationId(input);
     return {
       toolName: descriptor.toolName,
       outputMode: descriptor.outputMode,
@@ -907,6 +1771,22 @@ export async function dispatchMcpToolCall(
 
   if (descriptor.helperRef.helperKey === 'buildOpportunityPackageHandoffPlan') {
     return dispatchOpportunityPackageHandoffTool(descriptor, request.arguments);
+  }
+
+  if (descriptor.helperRef.helperKey === 'establishClaimantCanonicalCompanyPublicPrecondition') {
+    return dispatchRegisteredAgentExecutionTool(descriptor, request.arguments, dependencies);
+  }
+
+  if (descriptor.helperRef.helperKey === 'repairClaimantReadiness') {
+    return dispatchRegisteredAgentExecutionTool(descriptor, request.arguments, dependencies);
+  }
+
+  if (descriptor.helperRef.helperKey === 'runClaimantTaskEntry') {
+    return dispatchRegisteredAgentExecutionTool(descriptor, request.arguments, dependencies);
+  }
+
+  if (descriptor.helperRef.helperKey === 'executeIndustryUniverseScenario') {
+    return dispatchRegisteredAgentExecutionTool(descriptor, request.arguments, dependencies);
   }
 
   if (descriptor.outputMode === 'truth-fetch-result') {

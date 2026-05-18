@@ -7,6 +7,21 @@ import path from 'node:path';
 import type { BidviaHeartbeatInput } from '../src/contracts.ts';
 import { runCli } from '../src/cli.ts';
 
+function withRuntimeResultCommit<T>(client: T): T & {
+  commitRuntimeResult: () => Promise<{ outcomeRef: string }>;
+} {
+  return {
+    ...(client as object),
+    async commitRuntimeResult() {
+      return {
+        outcomeRef: 'outcome://test/runtime-commit',
+      };
+    },
+  } as T & {
+    commitRuntimeResult: () => Promise<{ outcomeRef: string }>;
+  };
+}
+
 function setEnvVar(name: string, value: string | undefined) {
   const previousValue = process.env[name];
 
@@ -29,9 +44,9 @@ function setEnvVar(name: string, value: string | undefined) {
 test('runCli routes heartbeat through the explicit execution adapter and creates a client for that invocation', async () => {
   const printed: unknown[] = [];
   let clientCreateCount = 0;
-  const client = {
+  const client = withRuntimeResultCommit({
     marker: 'runtime-client',
-  };
+  });
 
   const exitCode = await runCli(['heartbeat'], {
     createClient: () => {
@@ -141,6 +156,7 @@ test('runCli default execution context does not silently inject tenant-a when he
       createClient: () => {
         throw new Error('heartbeat should fail preflight before creating a client');
       },
+      readLocalOnboardingState: async () => null,
       printJson: (value) => {
         printed.push(value);
       },
@@ -182,9 +198,9 @@ test('runCli default execution context does not silently inject tenant-a when he
 test('runCli execution preflight honors injected resolveProcessEnv without custom resolveExecutionContext', async () => {
   const printed: unknown[] = [];
   let clientCreateCount = 0;
-  const client = {
+  const client = withRuntimeResultCommit({
     marker: 'runtime-client-from-injected-env',
-  };
+  });
 
   const exitCode = await runCli(['heartbeat'], {
     createClient: () => {
@@ -287,7 +303,7 @@ test('runCli describes the companion bundle as additive packaging around the std
   assert.match(output.operatorNotes.developmentNote, /development-only/i);
   assert.equal(
     output.operatorNotes.primaryPath,
-    'Primary OpenClaw path: export stdio MCP config first, then add the companion bundle when you want bundle/bootstrap packaging around the same local server.',
+    'Primary OpenClaw path: export stdio MCP config first, then add the companion bundle when you want packaging around that same local stdio MCP runtime path.',
   );
   assert.equal(
     output.operatorNotes.deferredNativePlugin,

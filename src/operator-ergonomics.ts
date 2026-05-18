@@ -1,9 +1,14 @@
 import type {
   BidviaClientContext,
+  BidviaExecutionBlockerClass,
+  BidviaExecutionOwnership,
   BidviaMcpToolDescriptor,
+  BidviaPlaneExecutionGate,
   BidviaScenarioContextKey,
 } from './contracts.js';
 import { buildLocalDiscoveryCatalog, getLocalMcpToolDescriptor } from './discovery-catalog.js';
+export { buildExecutionGuidanceEntries } from './execution-guidance.js';
+import { getPlaneExecutionGate } from './plane-execution-gate.js';
 
 export interface BidviaExecutionOperatorPreflight {
   target: string;
@@ -16,31 +21,39 @@ export interface BidviaExecutionOperatorPreflight {
   localCapabilityRiskTier: string;
   requiredContext: BidviaScenarioContextKey[];
   missingContext: BidviaScenarioContextKey[];
+  runnable: boolean;
+  blockedBy: string | null;
+  blockerClass: BidviaExecutionBlockerClass | null;
+  ownership: BidviaExecutionOwnership;
   hints: string[];
 }
 
 interface BidviaExecutionCatalogEntry {
+  helperKey: string;
   routePathTemplate: string;
   httpMethod: string;
   accessContextFamily: string;
   localCapabilityTier: string;
   localCapabilityRiskTier: string;
   requiredContext: BidviaScenarioContextKey[];
+  executionGate: BidviaPlaneExecutionGate | undefined;
 }
 
 function buildCliExecutionCatalogEntry(command: string): BidviaExecutionCatalogEntry | undefined {
   const entry = buildLocalDiscoveryCatalog().find((candidate) => candidate.cliCommands.includes(command));
-  if (!entry || entry.discoveryKind !== 'execute') {
+  if (!entry || entry.recommendedOutputMode !== 'execution-result') {
     return undefined;
   }
 
   return {
+    helperKey: entry.helperKey,
     routePathTemplate: entry.routePathTemplate,
     httpMethod: entry.httpMethod,
     accessContextFamily: entry.accessContextFamily,
     localCapabilityTier: entry.localCapabilityTier,
     localCapabilityRiskTier: entry.localCapabilityRiskTier,
     requiredContext: [...entry.requiredContext],
+    executionGate: getPlaneExecutionGate(entry.helperKey),
   };
 }
 
@@ -58,12 +71,14 @@ function buildMcpExecutionCatalogEntry(toolName: string): BidviaExecutionCatalog
   }
 
   return {
+    helperKey: descriptor.helperRef.capabilityKey ?? descriptor.helperRef.helperKey,
     routePathTemplate: discoveryEntry.routePathTemplate,
     httpMethod: discoveryEntry.httpMethod,
     accessContextFamily: descriptor.accessContextFamily,
     localCapabilityTier: descriptor.localCapabilityTier,
     localCapabilityRiskTier: descriptor.localCapabilityRiskTier,
     requiredContext: [...descriptor.requiredContext],
+    executionGate: getPlaneExecutionGate(descriptor.helperRef.capabilityKey ?? descriptor.helperRef.helperKey),
   };
 }
 
@@ -76,6 +91,8 @@ function collectMissingContext(
 
 function toEnvKey(contextKey: BidviaScenarioContextKey): string {
   switch (contextKey) {
+    case 'agentId':
+      return 'BIDVIA_AGENT_ID';
     case 'registrationId':
       return 'BIDVIA_REGISTRATION_ID';
     case 'principalId':
@@ -93,12 +110,16 @@ function toEnvKey(contextKey: BidviaScenarioContextKey): string {
     case 'companyId':
       return 'BIDVIA_COMPANY_ID';
   }
+
+  return 'BIDVIA_UNKNOWN_CONTEXT';
 }
 
 function buildHints(params: {
   surface: 'cli' | 'mcp';
+  executionGate: BidviaPlaneExecutionGate | undefined;
   localCapabilityRiskTier: string;
   missingContext: BidviaScenarioContextKey[];
+  blockerClass: BidviaExecutionBlockerClass | null;
   dryRun: boolean;
 }): string[] {
   const hints: string[] = [];
@@ -111,9 +132,17 @@ function buildHints(params: {
     hints.push('This MCP execution tool uses the existing local execution client seam.');
   }
 
+  if (params.executionGate && params.executionGate.executionTruth !== 'packet-grounded-execution') {
+    hints.push('Execution is currently blocked by plane policy until Core freezes the packet-complete payload truth.');
+  }
+
   if (params.missingContext.length > 0) {
     const envKeys = params.missingContext.map(toEnvKey);
     hints.push(`Set ${envKeys.join(' and ')} before running the real execution command.`);
+  }
+
+  if (params.blockerClass) {
+    hints.push(`Blocker class ${params.blockerClass} keeps this command fail-closed until the required execution context is present.`);
   }
 
   if (params.surface === 'cli' && !params.dryRun) {
@@ -127,6 +156,33 @@ function buildHints(params: {
   return hints;
 }
 
+function deriveOwnership(catalogEntry: BidviaExecutionCatalogEntry): BidviaExecutionOwnership {
+  if (catalogEntry.accessContextFamily === 'operator-company') {
+    return 'operator-admin';
+  }
+
+  if (catalogEntry.executionGate && catalogEntry.executionGate.executionTruth !== 'packet-grounded-execution') {
+    return 'core-runtime';
+  }
+
+  return 'claimant';
+}
+
+function deriveBlockerClass(params: {
+  executionGate: BidviaPlaneExecutionGate | undefined;
+  missingContext: BidviaScenarioContextKey[];
+}): BidviaExecutionBlockerClass | null {
+  if (params.executionGate && params.executionGate.executionTruth !== 'packet-grounded-execution') {
+    return 'blocked-pending-packet';
+  }
+
+  if (params.missingContext.length > 0) {
+    return 'missing-local-context';
+  }
+
+  return null;
+}
+
 function buildPreflight(
   target: string,
   surface: 'cli' | 'mcp',
@@ -135,6 +191,10 @@ function buildPreflight(
   dryRun: boolean,
 ): BidviaExecutionOperatorPreflight {
   const missingContext = collectMissingContext(catalogEntry.requiredContext, context);
+  const blockerClass = deriveBlockerClass({
+    executionGate: catalogEntry.executionGate,
+    missingContext,
+  });
 
   return {
     target,
@@ -147,10 +207,16 @@ function buildPreflight(
     localCapabilityRiskTier: catalogEntry.localCapabilityRiskTier,
     requiredContext: [...catalogEntry.requiredContext],
     missingContext,
+    runnable: catalogEntry.executionGate?.executionTruth === 'packet-grounded-execution',
+    blockedBy: catalogEntry.executionGate?.blockedBy ?? null,
+    blockerClass,
+    ownership: deriveOwnership(catalogEntry),
     hints: buildHints({
       surface,
+      executionGate: catalogEntry.executionGate,
       localCapabilityRiskTier: catalogEntry.localCapabilityRiskTier,
       missingContext,
+      blockerClass,
       dryRun,
     }),
   };
@@ -230,4 +296,8 @@ export function buildMcpMissingContextMessage(
   }
 
   return `MCP tool ${toolName} is missing required local execution context: ${missingContext.join(', ')}. Use bidvia route-context-matrix to confirm the next Bidvia context family, then set ${envKeys.join(' and ')} before retrying this local stdio MCP tool.`;
+}
+
+export function buildMcpPlaneBlockedMessage(toolName: string, blockedBy: string): string {
+  return `MCP tool ${toolName} is blocked by the shared plane execution gate: ${blockedBy}. Use bidvia route-context-matrix to confirm the current plane adoption status before retrying this local stdio MCP tool.`;
 }

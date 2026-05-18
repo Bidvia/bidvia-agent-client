@@ -15,6 +15,8 @@ import {
   buildReviewPacket,
   buildScenarioVerificationBundle,
 } from './verification.js';
+import { listIdentitySessionPlaneCanonicalHelperKeys } from './identity-session-plane.js';
+import { buildWorkflowStageReference } from './workflow-stage-plane.js';
 
 export interface BidviaRegistrationLifecycleScenarioResult {
   verificationBundle: BidviaScenarioVerificationBundle;
@@ -70,6 +72,9 @@ export function buildRegistrationLifecycleScenarioPlan(
   );
   const registrationId = requireNonEmptyRegistrationId(input.registrationId);
 
+  const [createProvisionalAgentRouteKey, queryProvisionalAgentRouteKey, claimProvisionalAgentRouteKey] =
+    listIdentitySessionPlaneCanonicalHelperKeys();
+
   return {
     envelope: buildScenarioEnvelope({
       scenarioId: input.scenarioId,
@@ -79,10 +84,11 @@ export function buildRegistrationLifecycleScenarioPlan(
       evidenceRefs: input.evidenceRefs,
       traceIds: input.traceIds,
       workflowIds: input.workflowIds,
+      workflowStage: buildWorkflowStageReference(input.workflowIds, 'public-provisional'),
       expectedRouteChain: [
-        buildScenarioRouteStep('createProvisionalAgent', ['tenantId']),
-        buildScenarioRouteStep('queryProvisionalAgent', ['tenantId']),
-        buildScenarioRouteStep('claimProvisionalAgent', ['tenantId', 'sessionId']),
+        buildScenarioRouteStep(createProvisionalAgentRouteKey, ['tenantId']),
+        buildScenarioRouteStep(queryProvisionalAgentRouteKey, ['tenantId']),
+        buildScenarioRouteStep(claimProvisionalAgentRouteKey, ['tenantId', 'sessionId']),
         buildScenarioRouteStep('postHeartbeat', ['tenantId', 'principalId', 'registrationId']),
         buildScenarioRouteStep('uploadSync', ['tenantId', 'principalId', 'registrationId']),
         buildScenarioRouteStep('downloadSync', ['tenantId', 'principalId', 'registrationId']),

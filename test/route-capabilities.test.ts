@@ -23,6 +23,7 @@ import {
   getRouteCapability,
   getNextStageReadRouteDiscoveryGroup,
 } from '../src/capabilities.ts';
+import { buildCapabilityPlaneView } from '../src/capability-plane.ts';
 
 function withDefaultContextSemantic(capability: BidviaRouteCapability): BidviaRouteCapability {
   return {
@@ -44,7 +45,7 @@ test('capability contract exposes bounded descriptive metadata labels', () => {
     'runtime-execution',
     'governed-commercial',
   ]);
-  assert.deepEqual(bidviaRouteCapabilityHttpMethods, ['GET', 'POST']);
+  assert.deepEqual(bidviaRouteCapabilityHttpMethods, ['GET', 'POST', 'PATCH']);
   assert.deepEqual(bidviaRouteCapabilityAccessContextFamilies, [
     'tenant',
     'registration',
@@ -135,6 +136,42 @@ test('capability registry gives every shipped route complete local tier and risk
   );
 });
 
+test('route capabilities freeze the approved task-plane CLI parity helper set as already-shipped execution surfaces', () => {
+  for (const helperKey of [
+    'createLease',
+    'createTaskDispatch',
+    'assignTaskDispatch',
+    'suspendTaskDispatch',
+    'resumeTaskDispatch',
+    'completeTaskDispatch',
+    'failTaskDispatch',
+    'createClaim',
+    'acceptClaim',
+    'rejectClaim',
+  ] as const) {
+    const capability = getRouteCapability(helperKey);
+    assert.ok(capability, `expected route capability for ${helperKey}`);
+    assert.equal(capability?.scope, 'write');
+  }
+});
+
+test('capability plane view keeps capability discovery descriptive-only until packet-complete core truth exists', () => {
+  const capabilityPlane = buildCapabilityPlaneView();
+
+  assert.deepEqual(capabilityPlane.adoptionStatus, {
+    plane: 'capability',
+    frozenInCore: true,
+    payloadPacketStatus: 'packet-grounded',
+    descriptiveVisibility: 'descriptive-plane-visible',
+    executableHelperEligibility: 'packet-grounded-read',
+    blockedBy: null,
+    notes: ['Route remote capability refresh through one fail-closed capability-plane adapter.'],
+  });
+  assert.equal(capabilityPlane.localSnapshots.descriptiveOnly, true);
+  assert.equal(capabilityPlane.localSnapshots.liveServerNegotiationClaimed, false);
+  assert.equal(capabilityPlane.localSnapshots.remoteRegistryBehaviorClaimed, false);
+});
+
 test('capability registry covers representative shipped helpers and route families', () => {
   assert.ok(bidviaRouteCapabilities.length >= 10);
   assert.deepEqual(
@@ -217,9 +254,9 @@ test('capability registry lookup returns descriptive admin and operator route me
     helperKey: 'getCommercialActionStatus',
     routePathTemplate: '/runtime/commercial-actions/:commercialActionRequestId/status',
     httpMethod: 'GET',
-    accessContextFamily: 'admin-session',
-    contextSemantic: 'admin-session',
-    requiredContext: ['tenantId', 'adminSessionId'],
+    accessContextFamily: 'principal-governed-read',
+    contextSemantic: 'principal-governed-read',
+    requiredContext: ['tenantId', 'principalId'],
     scope: 'read',
     level: 'atomic-route',
     localCapabilityTier: 'L0-observe-only',
@@ -286,7 +323,18 @@ test('capability registry exposes approved truth-fetch helpers as local read-onl
     },
     {
       helperKey: 'getAccountAgent',
-      routePathTemplate: '/runtime/account/agents/:agent_registration_id',
+      routePathTemplate: '/runtime/account/agents/:agentId',
+      httpMethod: 'GET',
+      accessContextFamily: 'session',
+      requiredContext: ['tenantId', 'sessionId'],
+      scope: 'read',
+      level: 'atomic-route',
+      localCapabilityTier: 'L0-observe-only',
+      localCapabilityRiskTier: 'observe-only',
+    },
+    {
+      helperKey: 'getAccountAgentDispatchAuthority',
+      routePathTemplate: '/runtime/account/agents/:agentId/dispatch-authority',
       httpMethod: 'GET',
       accessContextFamily: 'session',
       requiredContext: ['tenantId', 'sessionId'],
@@ -479,6 +527,60 @@ test('capability registry exposes approved truth-fetch helpers as local read-onl
   );
 });
 
+test('capability registry marks dispatch-authority review as a session-bound account-agent request distinct from role-binding activation', () => {
+  assert.deepEqual(getRouteCapability('createAccountAgentDispatchAuthorityRequest'), {
+    helperKey: 'createAccountAgentDispatchAuthorityRequest',
+    routePathTemplate: '/runtime/account/agents/:agentId/dispatch-authority-requests',
+    httpMethod: 'POST',
+    accessContextFamily: 'session',
+    contextSemantic: 'session',
+    requiredContext: ['tenantId', 'sessionId'],
+    scope: 'write',
+    level: 'atomic-route',
+    localCapabilityTier: 'L1-review-safe',
+    localCapabilityRiskTier: 'review-safe',
+  });
+
+  const dispatchAuthorityReviewBoundary = {
+    code: 'authority_class_not_dispatchable',
+    permanentlyIneligible: false,
+    reviewFamily: 'dispatch-authority-review',
+  };
+  const activeRoleBindingBoundary = {
+    code: 'active_role_binding_required',
+    blockedOn: 'active-role-binding',
+  };
+
+  assert.equal(dispatchAuthorityReviewBoundary.code, 'authority_class_not_dispatchable');
+  assert.equal(dispatchAuthorityReviewBoundary.permanentlyIneligible, false);
+  assert.equal(dispatchAuthorityReviewBoundary.reviewFamily, 'dispatch-authority-review');
+  assert.equal(activeRoleBindingBoundary.code, 'active_role_binding_required');
+  assert.notEqual(dispatchAuthorityReviewBoundary.reviewFamily, activeRoleBindingBoundary.blockedOn);
+});
+
+test('capability registry uses canonical agentId path tokens for account-scoped task and notification families', () => {
+  assert.equal(
+    getRouteCapability('createLease')?.routePathTemplate,
+    '/runtime/account/agents/:agentId/leases',
+  );
+  assert.equal(
+    getRouteCapability('listTaskDispatches')?.routePathTemplate,
+    '/runtime/account/agents/:agentId/task-dispatches',
+  );
+  assert.equal(
+    getRouteCapability('getTaskDispatch')?.routePathTemplate,
+    '/runtime/account/agents/:agentId/task-dispatches/:task_dispatch_id',
+  );
+  assert.equal(
+    getRouteCapability('acknowledgeNotification')?.routePathTemplate,
+    '/runtime/account/agents/:agentId/notifications/:notification_id/acknowledgements',
+  );
+  assert.equal(
+    getRouteCapability('createClaim')?.routePathTemplate,
+    '/runtime/account/agents/:agentId/claims',
+  );
+});
+
 test('capability registry exposes shipped widened T2 and T3 truth-fetch helpers as real route capabilities', () => {
   const shippedExpandedHelperKeys = [
     'getAgentReadiness',
@@ -519,9 +621,6 @@ test('capability registry exposes shipped widened T2 and T3 truth-fetch helpers 
     'getPricingQuotation',
     'listPricingExplanations',
     'getPricingExplanation',
-    'listFileResources',
-    'getFileResource',
-    'listTargetAttachmentBindings',
   ] as const;
 
   assert.equal(
@@ -604,6 +703,9 @@ test('capability registry keeps singular capability-profile truth canonical and 
     level: 'atomic-route',
     localCapabilityTier: 'L0-observe-only',
     localCapabilityRiskTier: 'observe-only',
+    capabilityPlaneCapabilityMode: 'packet-grounded-read',
+    dispatchEligibilityDerivedFromCapabilityReadTruth: false,
+    governedRunAuthorizationDerivedFromCapabilityReadTruth: false,
   });
 
   assert.equal(getRouteCapability('listAgentCapabilityProfiles'), undefined);
@@ -613,7 +715,7 @@ test('capability registry keeps singular capability-profile truth canonical and 
   assert.equal(getRouteCapability('getCanonicalSemanticLineageLink'), undefined);
 });
 
-test('capability registry describes principal-governed reads and canonical participation or task families honestly', () => {
+test('capability registry describes principal-governed reads and canonical participation or account-scoped task families honestly', () => {
   assert.deepEqual(getRouteCapability('getAgentReadiness'), {
     helperKey: 'getAgentReadiness',
     routePathTemplate: '/runtime/agents/:agent_registration_id/readiness',
@@ -625,6 +727,25 @@ test('capability registry describes principal-governed reads and canonical parti
     level: 'atomic-route',
     localCapabilityTier: 'L0-observe-only',
     localCapabilityRiskTier: 'observe-only',
+    capabilityPlaneCapabilityMode: 'packet-grounded-read',
+    dispatchEligibilityDerivedFromCapabilityReadTruth: false,
+    governedRunAuthorizationDerivedFromCapabilityReadTruth: false,
+  });
+
+  assert.deepEqual(getRouteCapability('getAgentSummary'), {
+    helperKey: 'getAgentSummary',
+    routePathTemplate: '/runtime/agents/:agent_registration_id/summary',
+    httpMethod: 'GET',
+    accessContextFamily: 'principal-governed-read',
+    contextSemantic: 'principal-governed-read',
+    requiredContext: ['tenantId', 'principalId'],
+    scope: 'read',
+    level: 'atomic-route',
+    localCapabilityTier: 'L0-observe-only',
+    localCapabilityRiskTier: 'observe-only',
+    capabilityPlaneCapabilityMode: 'packet-grounded-read',
+    dispatchEligibilityDerivedFromCapabilityReadTruth: false,
+    governedRunAuthorizationDerivedFromCapabilityReadTruth: false,
   });
 
   assert.deepEqual(getRouteCapability('listParticipationStates'), {
@@ -638,33 +759,169 @@ test('capability registry describes principal-governed reads and canonical parti
     level: 'atomic-route',
     localCapabilityTier: 'L0-observe-only',
     localCapabilityRiskTier: 'observe-only',
+    taskPlaneCapabilityMode: 'visibility-only',
   });
 
-  assert.deepEqual(getRouteCapability('createTaskDispatch'), {
-    helperKey: 'createTaskDispatch',
-    routePathTemplate: '/runtime/agents/:agent_registration_id/task-dispatches',
-    httpMethod: 'POST',
-    accessContextFamily: 'operator-company',
-    contextSemantic: 'operator-company',
-    requiredContext: ['tenantId', 'principalId', 'companyId'],
-    scope: 'write',
+  assert.deepEqual(getRouteCapability('listTaskDispatches'), {
+    helperKey: 'listTaskDispatches',
+    routePathTemplate: '/runtime/account/agents/:agentId/task-dispatches',
+    httpMethod: 'GET',
+    accessContextFamily: 'principal-governed-read',
+    contextSemantic: 'principal-governed-read',
+    requiredContext: ['tenantId', 'principalId'],
+    scope: 'read',
     level: 'atomic-route',
-    localCapabilityTier: 'L3-governed-commercial',
-    localCapabilityRiskTier: 'governed-commercial',
+    localCapabilityTier: 'L0-observe-only',
+    localCapabilityRiskTier: 'observe-only',
+    taskPlaneCapabilityMode: 'visibility-only',
   });
 
-  assert.deepEqual(getRouteCapability('rejectClaim'), {
-    helperKey: 'rejectClaim',
-    routePathTemplate: '/runtime/agents/:agent_registration_id/claims/:claim_id/reject',
-    httpMethod: 'POST',
-    accessContextFamily: 'operator-company',
-    contextSemantic: 'operator-company',
-    requiredContext: ['tenantId', 'principalId', 'companyId'],
-    scope: 'write',
-    level: 'atomic-route',
-    localCapabilityTier: 'L3-governed-commercial',
-    localCapabilityRiskTier: 'governed-commercial',
-  });
+  assert.deepEqual(
+    [
+      'createLease',
+      'createTaskDispatch',
+      'assignTaskDispatch',
+      'suspendTaskDispatch',
+      'resumeTaskDispatch',
+      'completeTaskDispatch',
+      'failTaskDispatch',
+      'createClaim',
+      'acceptClaim',
+      'rejectClaim',
+    ].map((helperKey) => getRouteCapability(helperKey)),
+    [
+      {
+        helperKey: 'createLease',
+        routePathTemplate: '/runtime/account/agents/:agentId/leases',
+        httpMethod: 'POST',
+        accessContextFamily: 'operator-company',
+        contextSemantic: 'operator-company',
+        requiredContext: ['tenantId', 'principalId', 'companyId'],
+        scope: 'write',
+        level: 'atomic-route',
+        localCapabilityTier: 'L3-governed-commercial',
+        localCapabilityRiskTier: 'governed-commercial',
+        taskPlaneCapabilityMode: 'packet-grounded-execution',
+      },
+      {
+        helperKey: 'createTaskDispatch',
+        routePathTemplate: '/runtime/account/agents/:agentId/task-dispatches',
+        httpMethod: 'POST',
+        accessContextFamily: 'operator-company',
+        contextSemantic: 'operator-company',
+        requiredContext: ['tenantId', 'principalId', 'companyId'],
+        scope: 'write',
+        level: 'atomic-route',
+        localCapabilityTier: 'L3-governed-commercial',
+        localCapabilityRiskTier: 'governed-commercial',
+        taskPlaneCapabilityMode: 'packet-grounded-execution',
+      },
+      {
+        helperKey: 'assignTaskDispatch',
+        routePathTemplate: '/runtime/account/agents/:agentId/task-dispatches/:task_dispatch_id/assign',
+        httpMethod: 'POST',
+        accessContextFamily: 'operator-company',
+        contextSemantic: 'operator-company',
+        requiredContext: ['tenantId', 'principalId', 'companyId'],
+        scope: 'write',
+        level: 'atomic-route',
+        localCapabilityTier: 'L3-governed-commercial',
+        localCapabilityRiskTier: 'governed-commercial',
+        taskPlaneCapabilityMode: 'packet-grounded-execution',
+      },
+      {
+        helperKey: 'suspendTaskDispatch',
+        routePathTemplate: '/runtime/account/agents/:agentId/task-dispatches/:task_dispatch_id/suspend',
+        httpMethod: 'POST',
+        accessContextFamily: 'operator-company',
+        contextSemantic: 'operator-company',
+        requiredContext: ['tenantId', 'principalId', 'companyId'],
+        scope: 'write',
+        level: 'atomic-route',
+        localCapabilityTier: 'L3-governed-commercial',
+        localCapabilityRiskTier: 'governed-commercial',
+        taskPlaneCapabilityMode: 'packet-grounded-execution',
+      },
+      {
+        helperKey: 'resumeTaskDispatch',
+        routePathTemplate: '/runtime/account/agents/:agentId/task-dispatches/:task_dispatch_id/resume',
+        httpMethod: 'POST',
+        accessContextFamily: 'operator-company',
+        contextSemantic: 'operator-company',
+        requiredContext: ['tenantId', 'principalId', 'companyId'],
+        scope: 'write',
+        level: 'atomic-route',
+        localCapabilityTier: 'L3-governed-commercial',
+        localCapabilityRiskTier: 'governed-commercial',
+        taskPlaneCapabilityMode: 'packet-grounded-execution',
+      },
+      {
+        helperKey: 'completeTaskDispatch',
+        routePathTemplate: '/runtime/account/agents/:agentId/task-dispatches/:task_dispatch_id/complete',
+        httpMethod: 'POST',
+        accessContextFamily: 'operator-company',
+        contextSemantic: 'operator-company',
+        requiredContext: ['tenantId', 'principalId', 'companyId'],
+        scope: 'write',
+        level: 'atomic-route',
+        localCapabilityTier: 'L3-governed-commercial',
+        localCapabilityRiskTier: 'governed-commercial',
+        taskPlaneCapabilityMode: 'packet-grounded-execution',
+      },
+      {
+        helperKey: 'failTaskDispatch',
+        routePathTemplate: '/runtime/account/agents/:agentId/task-dispatches/:task_dispatch_id/fail',
+        httpMethod: 'POST',
+        accessContextFamily: 'operator-company',
+        contextSemantic: 'operator-company',
+        requiredContext: ['tenantId', 'principalId', 'companyId'],
+        scope: 'write',
+        level: 'atomic-route',
+        localCapabilityTier: 'L3-governed-commercial',
+        localCapabilityRiskTier: 'governed-commercial',
+        taskPlaneCapabilityMode: 'packet-grounded-execution',
+      },
+      {
+        helperKey: 'createClaim',
+        routePathTemplate: '/runtime/account/agents/:agentId/claims',
+        httpMethod: 'POST',
+        accessContextFamily: 'operator-company',
+        contextSemantic: 'operator-company',
+        requiredContext: ['tenantId', 'principalId', 'companyId'],
+        scope: 'write',
+        level: 'atomic-route',
+        localCapabilityTier: 'L3-governed-commercial',
+        localCapabilityRiskTier: 'governed-commercial',
+        taskPlaneCapabilityMode: 'packet-grounded-execution',
+      },
+      {
+        helperKey: 'acceptClaim',
+        routePathTemplate: '/runtime/account/agents/:agentId/claims/:claim_id/accept',
+        httpMethod: 'POST',
+        accessContextFamily: 'operator-company',
+        contextSemantic: 'operator-company',
+        requiredContext: ['tenantId', 'principalId', 'companyId'],
+        scope: 'write',
+        level: 'atomic-route',
+        localCapabilityTier: 'L3-governed-commercial',
+        localCapabilityRiskTier: 'governed-commercial',
+        taskPlaneCapabilityMode: 'packet-grounded-execution',
+      },
+      {
+        helperKey: 'rejectClaim',
+        routePathTemplate: '/runtime/account/agents/:agentId/claims/:claim_id/reject',
+        httpMethod: 'POST',
+        accessContextFamily: 'operator-company',
+        contextSemantic: 'operator-company',
+        requiredContext: ['tenantId', 'principalId', 'companyId'],
+        scope: 'write',
+        level: 'atomic-route',
+        localCapabilityTier: 'L3-governed-commercial',
+        localCapabilityRiskTier: 'governed-commercial',
+        taskPlaneCapabilityMode: 'packet-grounded-execution',
+      },
+    ],
+  );
 });
 
 test('capability registry promotes shipped governed profile writes into canonical route metadata', () => {

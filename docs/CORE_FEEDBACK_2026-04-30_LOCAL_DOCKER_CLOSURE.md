@@ -1,0 +1,307 @@
+# Core Feedback — 2026-04-30 Local-Docker Closure Certification
+
+## Purpose
+
+This document is the Core-facing evidence packet for the latest fresh local-docker multi-actor certification run against `bidvia-agent-client` main plus the latest local Core.
+
+It is intentionally route-level and lane-specific. It does not redefine the client roadmap, and it does not convert partial route success into broader closure claims.
+
+Read this together with:
+
+- `docs/VALIDATION_LANES.md`
+- `docs/ROADMAP.md`
+- `docs/CORE_AGENT_CLIENT_PLANE_CONTRACT_GAPS.md`
+- `docs/superpowers/specs/2026-04-30-client-truth-alignment-v3-design.md`
+- `docs/superpowers/plans/2026-04-30-client-truth-alignment-v3-implementation.md`
+
+## Validation lane and method
+
+The certification run used the following posture:
+
+- **primary lane:** default local docker
+- **actors:** admin, operator, claimant/external-user agent
+- **object strategy:** fresh runtime-generated objects wherever possible
+- **goal:** determine whether the current surfaced runtime proves bounded claimant progression only, or the deeper commercial-universe continuation and closure path required for scale-growth claims
+
+## 2026-05-06 harness refresh
+
+The current execution program added a repeatable machine-readable validation harness at:
+
+- `scripts/verify-client-bounded-matrix.ts`
+
+It was executed against local docker with:
+
+- base URL: `http://127.0.0.1:8787`
+- evidence file: `.sisyphus/evidence/client-bounded-matrix-20260506T161741.json`
+
+This refresh proves two narrower things:
+
+1. the client now has a repo-local, machine-readable bounded-matrix harness that can be rerun without inventing new contract semantics;
+2. the current shell can verify local runtime baseline truth honestly even when fresh multi-actor claimant/admin context is not injected.
+
+The 2026-05-06 harness run produced the following machine-readable result:
+
+- `runtime-baseline` -> `passed`
+- `platform-managed-onboarding` -> `blocked`
+- `dispatch-ready-progression` -> `blocked`
+- `role-collaboration-handoff` -> `blocked`
+- `continuous-task-governed-work-closure` -> `blocked`
+- `commercial-and-integration-readback` -> `blocked`
+
+The blocked scenarios were not treated as failures. They were recorded as blocked because the current shell did not provide the actor context required for fresh claimant/admin execution:
+
+- claimant context missing: `BIDVIA_TENANT_ID`, `BIDVIA_SESSION_ID`, `BIDVIA_AGENT_ID`
+- admin context missing: `BIDVIA_TENANT_ID`, `BIDVIA_ADMIN_SESSION_ID`
+
+This means the harness refresh does **not** supersede the 2026-04-30 fresh multi-actor certification findings below. Instead, it adds a durable client-owned verification entrypoint and preserves honest blocked outcomes when the local shell cannot yet supply the required actor prerequisites.
+
+## 2026-05-06 fresh live rerun after admin bootstrap recovery
+
+After the initial harness refresh, the execution program continued by locating the maintained local-docker admin bootstrap path from the Bidvia main repo, signing in with the seeded local-docker super-admin, issuing a fresh enterprise-account invitation, and rerunning the claimant continuation chain against `http://127.0.0.1:8787`.
+
+Machine-readable evidence for that rerun is now recorded at:
+
+- `.sisyphus/evidence/client-live-rerun-20260506T090535Z.json`
+
+This rerun proved the following bounded live chain on the ordinary surfaced lane:
+
+1. admin sign-in succeeded;
+2. admin invitation issuance succeeded;
+3. enterprise account sign-up / sign-in / account-me succeeded;
+4. provisional create -> query -> claim succeeded;
+5. claimant dispatch-authority request succeeded;
+6. operator/admin review closure succeeded with `APPROVED` request truth and an active authority profile carrying `EXTERNAL_WRITE`;
+7. claimant external-account binding succeeded;
+8. claimant self-service repair succeeded after aligning the capability-profile write payload to the current Core wire contract;
+9. the active installed `bidvia` command path was refreshed and then successfully replayed the claimant self-service repair using camelCase `capabilityProfile` input while the client handled the nested Core wire-format translation;
+10. account-owned execution listing create/activate and materialization-status readback succeeded;
+11. account integration capability-directory and bounded eligibility readback succeeded;
+12. bounded public proof-reading routes (`public/market`, `public/universe`, `public/universe/network-summary`, `public/platform-stats`) succeeded;
+13. seeded V10 proof-lane readback succeeded with admin-session-backed seeded inputs and returned an explicit package/proof continuity snapshot.
+
+One environment-specific issue was also observed and recovered during this rerun:
+
+- the active user-level `bidvia` command path initially remained stale after ordinary npm reinstall attempts because the actual command path and npm global prefix diverged;
+- the final active install was realigned by replacing the user-level installed `dist/` tree with the current worktree build output;
+- after that realignment, the installed command path successfully accepted the repaired claimant self-service payload and returned the eligible dispatch-authority readback above.
+
+This means the current local-docker environment now proves more than the earlier blocked harness-only state. It proves fresh admin bootstrap, fresh claimant onboarding, bounded account-plane continuation, bounded materialization readback, bounded integration-ownership readback, bounded public proof-reading on the ordinary surfaced lane, and seeded V10 proof-lane readback on the operator/admin lane.
+
+It does **not** currently prove a stable transition from account-plane claimant closure into live task-dispatch execution. The latest local-docker runtime now shows a narrower but more actionable gap:
+
+- claimant self-service writes returned `task_dispatch_acceptance.accepts_task_dispatches = true` in the immediate write response,
+- but later authoritative account-agent, closure-status, and dispatch-authority reads still returned `task_dispatch_opt_in_required`,
+- and a direct `POST /runtime/account/agents/:agentId/task-dispatches` attempt using the currently accepted `task_kind = COMMERCIAL_ACTION_REVIEW` remained blocked with `403 task_dispatch_opt_in_required`.
+
+This is no longer a claimant guesswork problem. It is either:
+
+1. a local-docker runtime projection/persistence defect around task-dispatch acceptance, or
+2. a still-unfrozen semantics gap where the write response and the later authoritative reads are not yet aligned.
+
+The latest main-repo code inspection now strongly favors **(1) Core hard defect** over a claimant-precondition interpretation:
+
+- the claimant self-service handler writes `accepts_task_dispatches` and `accepted_task_dispatch_scopes` onto the registration record,
+- later account-agent detail, dispatch-authority, and task-plane eligibility all read those fields back from the same registration truth snapshot,
+- but the Postgres `agent_registrations` schema and persistence/reload path currently omit those fields entirely.
+
+That explains the exact local-docker symptom we observed:
+
+- self-service write response echoes `task_dispatch_acceptance` successfully,
+- later authoritative reads revert to `task_dispatch_opt_in_required`,
+- `POST /runtime/account/agents/:agentId/task-dispatches` remains blocked even with the currently accepted `task_kind = COMMERCIAL_ACTION_REVIEW`.
+
+So the current most accurate classification is:
+
+- **Core hard defect:** task-dispatch acceptance is not being durably projected/reloaded on the current local-docker runtime.
+
+It still does **not** convert the deeper operator-matching / opportunity-emergence / end-state / proof-closure seam into a certified surfaced loop. Those boundaries remain explicit and fail-closed unless new route-level evidence is collected.
+
+The latest deeper observability probes sharpen that boundary further:
+
+- `GET /runtime/v10/proof-lanes/opportunity-package-handoff` is readable with admin-session-backed seeded proof inputs and returns package/proof continuity state;
+- `GET /runtime/v11/launch-lane-observability` still does **not** open on the current claimant account-plane context and currently remains gated behind additional authorized principal context;
+- there is still no open ordinary-lane `GET /runtime/opportunities` root available on the current local-docker runtime.
+
+So the current honest downstream reading is:
+
+- V10 proof-lane remains a seeded/operator-admin observability seam,
+- V11 launch observability remains a principal/operator-gated seam,
+- neither should be misread as a claimant-owned ordinary continuation route.
+
+## What is now proven on the ordinary surfaced lane
+
+The following route families are now fresh-proven on the default local-docker lane.
+
+### 1. Runtime baseline and onboarding chain are real
+
+- `GET /healthz` -> `200`
+- `GET /readyz` -> `200`
+- admin sign-in succeeded
+- invitation issue succeeded
+- enterprise sign-up / sign-in / account-me succeeded
+- provisional create -> query -> claim succeeded
+
+This means the ordinary surfaced onboarding path is no longer the primary blocker for client truth.
+
+### 2. Claimant account-plane continuation is real
+
+The following claimant/account-plane chain is proven:
+
+- self-service agent update
+- dispatch-authority request
+- external-account-binding visibility
+- capability profile self-service visibility
+- participation state reaching `commercial-authority-bound`
+- authorization refresh succeeding on the account-owned plane
+
+This proves that claimant continuation is not limited to public claim alone. The account-owned continuation family is real and should remain the canonical claimant progression surface in the client.
+
+### 3. Claimant operational package is real on account-owned `execution/*`
+
+The following account-owned operational route family is now fresh-proven:
+
+- execution status
+- presence
+- sync download
+- sync upload
+- evidence submissions
+- proposals
+
+This is important because it narrows the remaining gap. The unresolved problem is no longer “claimant cannot execute at all.”
+
+### 4. Business-entry is real, but claimant task-dispatch opening still has a current local-docker gap
+
+The following surfaced business-entry chain is proven:
+
+- listing create
+- listing activate
+- materialization-status readback
+
+The following bounded business-entry and materialization readback chain is proven on fresh objects:
+
+- listing create
+- listing activate
+- materialization-status readback
+
+The current local-docker rerun does **not** freshly prove the claimant-opened task-dispatch chain. The latest direct attempt to open a dispatch with the currently accepted `task_kind = COMMERCIAL_ACTION_REVIEW` remained blocked by `403 task_dispatch_opt_in_required` even after self-service task-dispatch acceptance writes were echoed as successful.
+
+So the current honest reading is:
+
+- bounded business entry is proven,
+- bounded task closure remains proven by the older certification packet and route tests,
+- but fresh claimant-opened task-dispatch creation in the current local-docker runtime still has a concrete follow-up gap that should be treated as a Core-side projection/persistence issue until disproven.
+
+### 5. Public growth readbacks are real but limited in what they prove
+
+The following public readbacks succeeded:
+
+- public market
+- public universe
+- universe search
+- universe network summary
+
+Repeated claimant writes also changed public-market counts.
+
+This proves that surfaced writes can influence surfaced public readbacks. It does **not** by itself prove a self-sustaining opportunity, proof, or reconciliation closure loop.
+
+## What is still not proven
+
+The remaining blockers are not “we did not try enough.” They are the current points where fresh route-level evidence stops proving deeper closure.
+
+### 1. Approval-to-opportunity continuation is still not self-proving on the surfaced lane
+
+Fresh runs reached business-entry materialization feedback with:
+
+- `recommended_next_step = handoff_to_operator_for_matching`
+
+That is a real surfaced result, but it is also the current stop line.
+
+The ordinary claimant lane still does not prove that approval/matching/opportunity emergence continues inside the platform without explicit external handoff or caller-known identifiers.
+
+### 2. Opportunity emergence/readback is not yet proven as a canonical surfaced continuation
+
+After the above handoff point, claimant/account-plane readbacks for deeper opportunity state did not close:
+
+- `GET /runtime/account/agents/:agentId/execution/opportunities/:opportunityId/status`
+  returned `opportunity_not_found`
+- `GET /runtime/account/agents/:agentId/execution/opportunities/:opportunityId/end-state`
+  returned `business_universe_end_state_not_found`
+
+This leaves a real certification gap:
+
+- either surfaced opportunity emergence is not yet happening on the ordinary lane,
+- or the surfaced continuation contract still depends on external/operator-known ids that the client cannot honestly infer.
+
+Either way, the client must stay fail-closed here.
+
+### 3. End-state / proof closure is not yet route-level proven
+
+The current local-docker evidence does not prove a full surfaced chain for:
+
+- opportunity closure
+- provider-proof-closed progression
+- reconciliation-required progression
+- stable end-state visibility after deeper commercial continuation
+
+Because these steps are not fresh-proven on the ordinary lane, the client should not imply that bounded task closure equals commercial-universe closure.
+
+### 4. Authorization projection still has a distinct unresolved seam
+
+Even when account-plane continuation succeeds, governed reads may still remain blocked by `active_role_binding_required`.
+
+The current safe interpretation remains:
+
+- keep dispatch-authority review closure separate from
+- authorization projection / account-session-org repair / role-binding realization
+
+If this gate remains after the account-plane continuation and operator review steps already succeeded, the unresolved seam appears Core-owned rather than claimant-owned.
+
+### 5. Runtime identity evidence is incomplete at `/healthz`
+
+`/healthz.version_markers.*` remains empty.
+
+That means the runtime currently cannot self-identify the exact deployed commit/build markers during local certification. This is not a claimant-lifecycle blocker, but it weakens operational confidence and traceability for regression packets.
+
+## Core-facing conclusions
+
+### What should no longer be treated as open blockers
+
+The latest fresh evidence overturns older concerns that implied the claimant surface was broadly non-functional.
+
+The following should no longer be reported as current blockers:
+
+- claimant operational package unavailable
+- claimant business-entry unavailable
+- operator intervention readback unstable
+
+### What remains the real Core-side gap
+
+The remaining gap is more specific:
+
+1. the ordinary surfaced lane proves bounded onboarding, continuation, operational execution, business entry, and minimal task closure;
+2. it does **not** yet prove deeper operator-matching to opportunity emergence to end-state/proof closure on the same honest surfaced path;
+3. some of that continuation still appears to rely on explicit handoff or caller-known identifiers rather than a fully surfaced discovery/readback chain.
+
+## Client impact rule
+
+Until the above gaps are resolved upstream, the client should continue to do all of the following:
+
+- center claimant truth on the account-owned continuation and `execution/*` surfaces that are now proven
+- keep opportunity/end-state/proof packaging explicitly bounded and fail-closed
+- keep lane selection explicit: ordinary surfaced lane versus proof-lane/admin-session
+- avoid turning route existence into product closure claims
+
+## Requested upstream follow-up
+
+The most valuable Core-side clarifications or fixes would be:
+
+1. make the approval/matching -> opportunity emergence chain discoverable on an honest surfaced lane, without requiring client-side inference;
+2. expose stable surfaced readback for opportunity status and end-state closure once the platform has progressed those objects;
+3. clarify whether authorization projection after successful continuation is expected to be synchronous, delayed, or repaired through a separate surfaced mechanism;
+4. populate `/healthz.version_markers.*` so certification packets can bind observations to a concrete runtime identity.
+
+## Current certification result
+
+The current platform state supports **bounded task closure and bounded commercial entry** on the ordinary surfaced lane.
+
+It does **not yet provide enough fresh route-level evidence to certify** that large-scale agent and external-user onboarding can already expand the commercial universe through a fully surfaced, self-proving task/dispatch/opportunity/proof closure loop.

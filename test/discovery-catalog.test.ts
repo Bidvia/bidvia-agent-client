@@ -2,9 +2,51 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
+  buildLocalDiagnosticCommandCatalog,
   buildLocalDiscoveryCatalog,
+  buildLocalMcpProductizationSnapshot,
   buildLocalMcpToolCatalog,
 } from '../src/discovery-catalog.ts';
+import { buildCapabilityPlaneView } from '../src/capability-plane.ts';
+
+function requireDiscoveryEntry(helperKey: string) {
+  const catalog = buildLocalDiscoveryCatalog();
+  const entry = catalog.find((candidate) => candidate.helperKey === helperKey);
+  assert.ok(entry, `expected discovery catalog entry for ${helperKey}`);
+  return entry;
+}
+
+const approvedTaskPlaneCliParityMatrix = [
+  ['createLease', 'create-lease-execution'],
+  ['createTaskDispatch', 'create-task-dispatch-execution'],
+  ['assignTaskDispatch', 'assign-task-dispatch-execution'],
+  ['suspendTaskDispatch', 'suspend-task-dispatch-execution'],
+  ['resumeTaskDispatch', 'resume-task-dispatch-execution'],
+  ['completeTaskDispatch', 'complete-task-dispatch-execution'],
+  ['failTaskDispatch', 'fail-task-dispatch-execution'],
+  ['createClaim', 'create-claim-execution'],
+  ['acceptClaim', 'accept-claim-execution'],
+  ['rejectClaim', 'reject-claim-execution'],
+] as const;
+
+test('discovery catalog exposes the approved task-plane CLI parity commands alongside their runnable MCP tools', () => {
+  for (const [helperKey, toolName] of approvedTaskPlaneCliParityMatrix) {
+    const entry = requireDiscoveryEntry(helperKey);
+    assert.equal(entry.cliCommands.length, 1, `expected one CLI command for ${helperKey}`);
+    assert.deepEqual(entry.mcpTools, [{ toolName, outputMode: 'execution-result' }]);
+  }
+
+  assert.deepEqual(requireDiscoveryEntry('createLease').cliCommands, ['create-lease']);
+  assert.deepEqual(requireDiscoveryEntry('createTaskDispatch').cliCommands, ['create-task-dispatch']);
+  assert.deepEqual(requireDiscoveryEntry('assignTaskDispatch').cliCommands, ['assign-task-dispatch']);
+  assert.deepEqual(requireDiscoveryEntry('suspendTaskDispatch').cliCommands, ['suspend-task-dispatch']);
+  assert.deepEqual(requireDiscoveryEntry('resumeTaskDispatch').cliCommands, ['resume-task-dispatch']);
+  assert.deepEqual(requireDiscoveryEntry('completeTaskDispatch').cliCommands, ['complete-task-dispatch']);
+  assert.deepEqual(requireDiscoveryEntry('failTaskDispatch').cliCommands, ['fail-task-dispatch']);
+  assert.deepEqual(requireDiscoveryEntry('createClaim').cliCommands, ['create-claim']);
+  assert.deepEqual(requireDiscoveryEntry('acceptClaim').cliCommands, ['accept-claim']);
+  assert.deepEqual(requireDiscoveryEntry('rejectClaim').cliCommands, ['reject-claim']);
+});
 
 test('buildLocalDiscoveryCatalog returns operator-readable local mappings without remote discovery semantics', () => {
   const catalog = buildLocalDiscoveryCatalog();
@@ -32,6 +74,26 @@ test('buildLocalDiscoveryCatalog returns operator-readable local mappings withou
         outputMode: 'truth-fetch-result',
       },
     ],
+  });
+
+  const accountAgentDispatchAuthority = catalog.find((entry) => entry.helperKey === 'getAccountAgentDispatchAuthority');
+  assert.deepEqual(accountAgentDispatchAuthority, {
+    helperKey: 'getAccountAgentDispatchAuthority',
+    routePathTemplate: '/runtime/account/agents/:agentId/dispatch-authority',
+    httpMethod: 'GET',
+    accessContextFamily: 'session',
+    requiredContext: ['tenantId', 'sessionId'],
+    scope: 'read',
+    level: 'atomic-route',
+    localCapabilityTier: 'L0-observe-only',
+    localCapabilityRiskTier: 'observe-only',
+    discoveryKind: 'read',
+    recommendedOutputMode: 'truth-fetch-result',
+    sourceOfTruth: 'local-sdk-helpers',
+    localOnly: true,
+    remoteDiscovery: false,
+    cliCommands: ['account-agent-dispatch-authority'],
+    mcpTools: [],
   });
 
   const industryUniverse = catalog.find((entry) => entry.helperKey === 'buildIndustryUniverseScenarioPlan');
@@ -71,6 +133,33 @@ test('buildLocalDiscoveryCatalog returns operator-readable local mappings withou
     ],
   });
 
+  const industryUniverseExecution = catalog.find((entry) => entry.helperKey === 'executeIndustryUniverseScenario');
+  assert.deepEqual(industryUniverseExecution, {
+    helperKey: 'executeIndustryUniverseScenario',
+    routePathTemplate: '/scenarios/industry-universe',
+    httpMethod: 'POST',
+    accessContextFamily: 'scenario',
+    requiredContext: ['tenantId', 'principalId', 'companyId'],
+    scope: 'write',
+    level: 'scenario-helper',
+    localCapabilityTier: 'L3-governed-commercial',
+    localCapabilityRiskTier: 'governed-commercial',
+    discoveryKind: 'execute',
+    recommendedOutputMode: 'execution-result',
+    sourceOfTruth: 'local-sdk-helpers',
+    localOnly: true,
+    remoteDiscovery: false,
+    runnable: true,
+    blockedBy: null,
+    cliCommands: ['industry-universe-execution'],
+    mcpTools: [
+      {
+        toolName: 'industry-universe-execution',
+        outputMode: 'execution-result',
+      },
+    ],
+  });
+
   const capabilityProfile = catalog.find((entry) => entry.helperKey === 'getAgentCapabilityProfile');
   assert.deepEqual(capabilityProfile, {
     helperKey: 'getAgentCapabilityProfile',
@@ -82,6 +171,9 @@ test('buildLocalDiscoveryCatalog returns operator-readable local mappings withou
     level: 'atomic-route',
     localCapabilityTier: 'L0-observe-only',
     localCapabilityRiskTier: 'observe-only',
+    capabilityPlaneCapabilityMode: 'packet-grounded-read',
+    dispatchEligibilityDerivedFromCapabilityReadTruth: false,
+    governedRunAuthorizationDerivedFromCapabilityReadTruth: false,
     discoveryKind: 'read',
     recommendedOutputMode: 'truth-fetch-result',
     sourceOfTruth: 'local-sdk-helpers',
@@ -94,6 +186,73 @@ test('buildLocalDiscoveryCatalog returns operator-readable local mappings withou
         outputMode: 'truth-fetch-result',
       },
     ],
+  });
+
+  const integrationOnboarding = catalog.find((entry) => entry.helperKey === 'submitIntegrationOnboardingContract');
+  assert.deepEqual(integrationOnboarding, {
+    helperKey: 'submitIntegrationOnboardingContract',
+    routePathTemplate: '/runtime/integrations/:integrationCode/onboarding-contract',
+    httpMethod: 'POST',
+    accessContextFamily: 'principal-governed-read',
+    requiredContext: ['tenantId', 'principalId'],
+    scope: 'write',
+    level: 'atomic-route',
+    localCapabilityTier: 'L3-governed-commercial',
+    localCapabilityRiskTier: 'governed-commercial',
+    discoveryKind: 'blocked',
+    recommendedOutputMode: 'execution-result',
+    sourceOfTruth: 'local-sdk-helpers',
+    localOnly: true,
+    remoteDiscovery: false,
+    runnable: false,
+    blockedBy: null,
+    cliCommands: [],
+    mcpTools: [],
+  });
+
+  const accountIntegrationCapabilities = catalog.find((entry) => entry.helperKey === 'listAccountIntegrationCapabilities');
+  assert.deepEqual(accountIntegrationCapabilities, {
+    helperKey: 'listAccountIntegrationCapabilities',
+    routePathTemplate: '/runtime/account/integration-capabilities',
+    httpMethod: 'GET',
+    accessContextFamily: 'session',
+    requiredContext: ['tenantId', 'sessionId'],
+    scope: 'read',
+    level: 'atomic-route',
+    localCapabilityTier: 'L0-observe-only',
+    localCapabilityRiskTier: 'observe-only',
+    discoveryKind: 'read',
+    recommendedOutputMode: 'truth-fetch-result',
+    sourceOfTruth: 'local-sdk-helpers',
+    localOnly: true,
+    remoteDiscovery: false,
+    cliCommands: ['account-integration-capabilities'],
+    mcpTools: [
+      {
+        toolName: 'account-integration-capabilities-read',
+        outputMode: 'truth-fetch-result',
+      },
+    ],
+  });
+
+  const haisiWarehouses = catalog.find((entry) => entry.helperKey === 'listHaisiWmsWarehouses');
+  assert.deepEqual(haisiWarehouses, {
+    helperKey: 'listHaisiWmsWarehouses',
+    routePathTemplate: '/runtime/integrations/haisi-wms/warehouses',
+    httpMethod: 'GET',
+    accessContextFamily: 'principal-governed-read',
+    requiredContext: ['tenantId', 'principalId'],
+    scope: 'read',
+    level: 'atomic-route',
+    localCapabilityTier: 'L0-observe-only',
+    localCapabilityRiskTier: 'observe-only',
+    discoveryKind: 'read',
+    recommendedOutputMode: 'truth-fetch-result',
+    sourceOfTruth: 'local-sdk-helpers',
+    localOnly: true,
+    remoteDiscovery: false,
+    cliCommands: [],
+    mcpTools: [],
   });
 
   const participationStates = catalog.find((entry) => entry.helperKey === 'listParticipationStates');
@@ -112,6 +271,7 @@ test('buildLocalDiscoveryCatalog returns operator-readable local mappings withou
     sourceOfTruth: 'local-sdk-helpers',
     localOnly: true,
     remoteDiscovery: false,
+    taskPlaneCapabilityMode: 'visibility-only',
     cliCommands: [],
     mcpTools: [
       {
@@ -138,6 +298,8 @@ test('buildLocalDiscoveryCatalog returns operator-readable local mappings withou
     sourceOfTruth: 'local-sdk-helpers',
     localOnly: true,
     remoteDiscovery: false,
+    runnable: true,
+    blockedBy: null,
     cliCommands: [],
     mcpTools: [
       {
@@ -189,35 +351,12 @@ test('buildLocalDiscoveryCatalog returns operator-readable local mappings withou
     sourceOfTruth: 'local-sdk-helpers',
     localOnly: true,
     remoteDiscovery: false,
+    runnable: true,
+    blockedBy: null,
     cliCommands: [],
     mcpTools: [
       {
         toolName: 'claim-provisional-agent-execution',
-        outputMode: 'execution-result',
-      },
-    ],
-  });
-
-  const createTaskDispatch = catalog.find((entry) => entry.helperKey === 'createTaskDispatch');
-  assert.deepEqual(createTaskDispatch, {
-    helperKey: 'createTaskDispatch',
-    routePathTemplate: '/runtime/agents/:agent_registration_id/task-dispatches',
-    httpMethod: 'POST',
-    accessContextFamily: 'operator-company',
-    requiredContext: ['tenantId', 'principalId', 'companyId'],
-    scope: 'write',
-    level: 'atomic-route',
-    localCapabilityTier: 'L3-governed-commercial',
-    localCapabilityRiskTier: 'governed-commercial',
-    discoveryKind: 'execute',
-    recommendedOutputMode: 'execution-result',
-    sourceOfTruth: 'local-sdk-helpers',
-    localOnly: true,
-    remoteDiscovery: false,
-    cliCommands: [],
-    mcpTools: [
-      {
-        toolName: 'create-task-dispatch-execution',
         outputMode: 'execution-result',
       },
     ],
@@ -239,6 +378,8 @@ test('buildLocalDiscoveryCatalog returns operator-readable local mappings withou
     sourceOfTruth: 'local-sdk-helpers',
     localOnly: true,
     remoteDiscovery: false,
+    runnable: true,
+    blockedBy: null,
     cliCommands: [],
     mcpTools: [
       {
@@ -261,23 +402,280 @@ test('buildLocalDiscoveryCatalog returns operator-readable local mappings withou
     level: 'atomic-route',
     localCapabilityTier: 'L3-governed-commercial',
     localCapabilityRiskTier: 'governed-commercial',
+    discoveryKind: 'blocked',
+    recommendedOutputMode: 'execution-result',
+    sourceOfTruth: 'local-sdk-helpers',
+    localOnly: true,
+    remoteDiscovery: false,
+    runnable: false,
+    blockedBy: null,
+    cliCommands: [],
+    mcpTools: [],
+  });
+
+  const createCommercialAction = catalog.find((entry) => entry.helperKey === 'createCommercialAction');
+  assert.deepEqual(createCommercialAction?.mcpTools, []);
+
+  const executeCommercialAction = catalog.find((entry) => entry.helperKey === 'executeCommercialAction');
+  assert.deepEqual(executeCommercialAction?.mcpTools, []);
+
+  assert.equal(catalog.some((entry) => entry.helperKey === 'listAgentCapabilityProfiles'), false);
+  assert.equal(catalog.some((entry) => entry.helperKey === 'listCanonicalSemanticTaxonomyEntries'), false);
+  assert.equal(catalog.some((entry) => entry.helperKey === 'listCanonicalSemanticLineageLinks'), false);
+});
+
+test('buildLocalDiagnosticCommandCatalog exposes a first-class public runtime interpretation probe command', () => {
+  assert.deepEqual(buildLocalDiagnosticCommandCatalog(), [
+    {
+      command: 'install-integrity',
+      scope: 'local-only',
+      summary: 'Reports the active bidvia binary, local package roots, package version, and likely install-path drift.',
+    },
+    {
+      command: 'validation-smoke',
+      scope: 'local-only',
+      summary: 'Runs a bounded local-first smoke pass over install, environment, runtime capability, server capability, and context diagnostics.',
+    },
+    {
+      command: 'diagnostic-bundle-export',
+      scope: 'local-only',
+      summary: 'Exports the bounded smoke report as machine-readable JSON plus a shareable markdown summary.',
+    },
+    {
+      command: 'public-runtime-interpretation-probe',
+      scope: 'local-only',
+      summary: 'Probes live /healthz and /readyz and exports bounded runtime interpretation evidence without overclaiming release truth.',
+    },
+  ]);
+});
+
+test('discovery catalog freezes the approved task-plane CLI parity candidates with explicit CLI bindings', () => {
+  for (const [helperKey, mcpToolName] of approvedTaskPlaneCliParityMatrix) {
+    const entry = requireDiscoveryEntry(helperKey);
+    assert.equal(entry.cliCommands.length, 1);
+    assert.deepEqual(entry.mcpTools, [
+      {
+        toolName: mcpToolName,
+        outputMode: 'execution-result',
+      },
+    ]);
+  }
+});
+
+test('discovery catalog marks the canonical downstream task consumer routes as account-scoped', () => {
+  assert.deepEqual(requireDiscoveryEntry('createTaskDispatch'), {
+    helperKey: 'createTaskDispatch',
+    routePathTemplate: '/runtime/account/agents/:agentId/task-dispatches',
+    httpMethod: 'POST',
+    accessContextFamily: 'operator-company',
+    requiredContext: ['tenantId', 'principalId', 'companyId'],
+    scope: 'write',
+    level: 'atomic-route',
+    localCapabilityTier: 'L3-governed-commercial',
+    localCapabilityRiskTier: 'governed-commercial',
     discoveryKind: 'execute',
     recommendedOutputMode: 'execution-result',
     sourceOfTruth: 'local-sdk-helpers',
     localOnly: true,
     remoteDiscovery: false,
-    cliCommands: [],
+    runnable: true,
+    blockedBy: null,
+    taskPlaneCapabilityMode: 'packet-grounded-execution',
+    cliCommands: ['create-task-dispatch'],
     mcpTools: [
       {
-        toolName: 'request-commercial-action-approval-execution',
+        toolName: 'create-task-dispatch-execution',
         outputMode: 'execution-result',
       },
     ],
   });
 
-  assert.equal(catalog.some((entry) => entry.helperKey === 'listAgentCapabilityProfiles'), false);
-  assert.equal(catalog.some((entry) => entry.helperKey === 'listCanonicalSemanticTaxonomyEntries'), false);
-  assert.equal(catalog.some((entry) => entry.helperKey === 'listCanonicalSemanticLineageLinks'), false);
+  assert.deepEqual(requireDiscoveryEntry('createLease'), {
+    helperKey: 'createLease',
+    routePathTemplate: '/runtime/account/agents/:agentId/leases',
+    httpMethod: 'POST',
+    accessContextFamily: 'operator-company',
+    requiredContext: ['tenantId', 'principalId', 'companyId'],
+    scope: 'write',
+    level: 'atomic-route',
+    localCapabilityTier: 'L3-governed-commercial',
+    localCapabilityRiskTier: 'governed-commercial',
+    discoveryKind: 'execute',
+    recommendedOutputMode: 'execution-result',
+    sourceOfTruth: 'local-sdk-helpers',
+    localOnly: true,
+    remoteDiscovery: false,
+    runnable: true,
+    blockedBy: null,
+    taskPlaneCapabilityMode: 'packet-grounded-execution',
+    cliCommands: ['create-lease'],
+    mcpTools: [
+      {
+        toolName: 'create-lease-execution',
+        outputMode: 'execution-result',
+      },
+    ],
+  });
+
+  assert.deepEqual(requireDiscoveryEntry('createTaskDispatchOutcome'), {
+    helperKey: 'createTaskDispatchOutcome',
+    routePathTemplate: '/runtime/account/agents/:agentId/task-dispatches/:task_dispatch_id/outcomes',
+    httpMethod: 'POST',
+    accessContextFamily: 'operator-company',
+    requiredContext: ['tenantId', 'principalId', 'companyId'],
+    scope: 'write',
+    level: 'atomic-route',
+    localCapabilityTier: 'L3-governed-commercial',
+    localCapabilityRiskTier: 'governed-commercial',
+    discoveryKind: 'execute',
+    recommendedOutputMode: 'execution-result',
+    sourceOfTruth: 'local-sdk-helpers',
+    localOnly: true,
+    remoteDiscovery: false,
+    runnable: true,
+    blockedBy: null,
+    taskPlaneCapabilityMode: 'packet-grounded-execution',
+    cliCommands: ['create-task-dispatch-outcome'],
+    mcpTools: [
+      {
+        toolName: 'create-task-dispatch-outcome-execution',
+        outputMode: 'execution-result',
+      },
+    ],
+  });
+
+  assert.deepEqual(requireDiscoveryEntry('createTaskDispatchEvidenceBundle'), {
+    helperKey: 'createTaskDispatchEvidenceBundle',
+    routePathTemplate: '/runtime/account/agents/:agentId/task-dispatches/:task_dispatch_id/evidence-bundles',
+    httpMethod: 'POST',
+    accessContextFamily: 'operator-company',
+    requiredContext: ['tenantId', 'principalId', 'companyId'],
+    scope: 'write',
+    level: 'atomic-route',
+    localCapabilityTier: 'L3-governed-commercial',
+    localCapabilityRiskTier: 'governed-commercial',
+    discoveryKind: 'execute',
+    recommendedOutputMode: 'execution-result',
+    sourceOfTruth: 'local-sdk-helpers',
+    localOnly: true,
+    remoteDiscovery: false,
+    runnable: true,
+    blockedBy: null,
+    taskPlaneCapabilityMode: 'packet-grounded-execution',
+    cliCommands: ['create-task-dispatch-evidence-bundle'],
+    mcpTools: [
+      {
+        toolName: 'create-task-dispatch-evidence-bundle-execution',
+        outputMode: 'execution-result',
+      },
+    ],
+  });
+
+  assert.deepEqual(requireDiscoveryEntry('createTaskDispatchConfirmationCycle'), {
+    helperKey: 'createTaskDispatchConfirmationCycle',
+    routePathTemplate: '/runtime/account/agents/:agentId/task-dispatches/:task_dispatch_id/confirmation-cycles',
+    httpMethod: 'POST',
+    accessContextFamily: 'operator-company',
+    requiredContext: ['tenantId', 'principalId', 'companyId'],
+    scope: 'write',
+    level: 'atomic-route',
+    localCapabilityTier: 'L3-governed-commercial',
+    localCapabilityRiskTier: 'governed-commercial',
+    discoveryKind: 'execute',
+    recommendedOutputMode: 'execution-result',
+    sourceOfTruth: 'local-sdk-helpers',
+    localOnly: true,
+    remoteDiscovery: false,
+    runnable: true,
+    blockedBy: null,
+    taskPlaneCapabilityMode: 'packet-grounded-execution',
+    cliCommands: ['create-task-dispatch-confirmation-cycle'],
+    mcpTools: [
+      {
+        toolName: 'create-task-dispatch-confirmation-cycle-execution',
+        outputMode: 'execution-result',
+      },
+    ],
+  });
+});
+
+test('discovery catalog marks the canonical downstream notification consumer routes as account-scoped acknowledgement-only execution', () => {
+  const catalog = buildLocalDiscoveryCatalog();
+
+  assert.deepEqual(requireDiscoveryEntry('getNotification'), {
+    helperKey: 'getNotification',
+    routePathTemplate: '/runtime/account/agents/:agentId/notifications/:notification_id',
+    httpMethod: 'GET',
+    accessContextFamily: 'principal-governed-read',
+    requiredContext: ['tenantId', 'principalId'],
+    scope: 'read',
+    level: 'atomic-route',
+    localCapabilityTier: 'L0-observe-only',
+    localCapabilityRiskTier: 'observe-only',
+    discoveryKind: 'read',
+    recommendedOutputMode: 'truth-fetch-result',
+    sourceOfTruth: 'local-sdk-helpers',
+    localOnly: true,
+    remoteDiscovery: false,
+    eventNotificationPlaneCapabilityMode: 'visibility-only',
+    cliCommands: [],
+    mcpTools: [
+      {
+        toolName: 'notification-read',
+        outputMode: 'truth-fetch-result',
+      },
+    ],
+  });
+
+  assert.deepEqual(requireDiscoveryEntry('acknowledgeNotification'), {
+    helperKey: 'acknowledgeNotification',
+    routePathTemplate: '/runtime/account/agents/:agentId/notifications/:notification_id/acknowledgements',
+    httpMethod: 'POST',
+    accessContextFamily: 'operator-company',
+    requiredContext: ['tenantId', 'principalId', 'companyId'],
+    scope: 'write',
+    level: 'atomic-route',
+    localCapabilityTier: 'L3-governed-commercial',
+    localCapabilityRiskTier: 'governed-commercial',
+    discoveryKind: 'execute',
+    recommendedOutputMode: 'execution-result',
+    sourceOfTruth: 'local-sdk-helpers',
+    localOnly: true,
+    remoteDiscovery: false,
+    runnable: true,
+    blockedBy: null,
+    eventNotificationPlaneCapabilityMode: 'packet-grounded-execution',
+    cliCommands: [],
+    mcpTools: [
+      {
+        toolName: 'acknowledge-notification-execution',
+        outputMode: 'execution-result',
+      },
+    ],
+  });
+
+  assert.equal(catalog.some((entry) => entry.helperKey === 'createNotificationDelivery'), false);
+  assert.equal(catalog.some((entry) => entry.helperKey === 'retryNotification'), false);
+  assert.equal(catalog.some((entry) => entry.helperKey === 'expireNotification'), false);
+});
+
+test('discovery catalog includes the dispatch-authority route family in the downstream baseline', () => {
+  const catalog = buildLocalDiscoveryCatalog();
+
+  assert.equal(
+    catalog.some(
+      (entry) => entry.routePathTemplate === '/runtime/account/agents/:agentId/dispatch-authority',
+    ),
+    true,
+  );
+  assert.equal(
+    catalog.some(
+      (entry) =>
+        entry.routePathTemplate ===
+        '/runtime/account/agents/:agentId/dispatch-authority-requests',
+    ),
+    true,
+  );
 });
 
 test('buildLocalMcpToolCatalog derives MCP descriptors from the shared local discovery catalog', () => {
@@ -298,6 +696,9 @@ test('buildLocalMcpToolCatalog derives MCP descriptors from the shared local dis
     localCapabilityRiskTier: 'runtime-execution',
     accessContextFamily: 'registration',
     requiredContext: ['tenantId', 'registrationId', 'principalId'],
+    runnable: true,
+    blockedBy: null,
+    taskPlaneCapabilityMode: 'packet-grounded-execution',
   });
 
   assert.deepEqual(mcpTools.find((tool) => tool.toolName === 'agent-presence-read'), {
@@ -332,6 +733,26 @@ test('buildLocalMcpToolCatalog derives MCP descriptors from the shared local dis
     localCapabilityRiskTier: 'observe-only',
     accessContextFamily: 'principal-governed-read',
     requiredContext: ['tenantId', 'principalId'],
+    capabilityPlaneCapabilityMode: 'packet-grounded-read',
+    dispatchEligibilityDerivedFromCapabilityReadTruth: false,
+    governedRunAuthorizationDerivedFromCapabilityReadTruth: false,
+  });
+
+  assert.deepEqual(mcpTools.find((tool) => tool.toolName === 'account-agent-integration-eligibility-read'), {
+    toolName: 'account-agent-integration-eligibility-read',
+    description: 'Reads the canonical account-agent integration eligibility through the shipped SDK helper.',
+    inputSchemaRef: {
+      schemaKey: 'BidviaAccountAgentIntegrationIdentifierInput',
+    },
+    outputMode: 'truth-fetch-result',
+    helperRef: {
+      helperKey: 'getAccountAgentIntegrationEligibility',
+      capabilityKey: 'getAccountAgentIntegrationEligibility',
+    },
+    localCapabilityTier: 'L0-observe-only',
+    localCapabilityRiskTier: 'observe-only',
+    accessContextFamily: 'session',
+    requiredContext: ['tenantId', 'sessionId'],
   });
 
   assert.deepEqual(mcpTools.find((tool) => tool.toolName === 'query-provisional-agent-read'), {
@@ -356,7 +777,7 @@ test('buildLocalMcpToolCatalog derives MCP descriptors from the shared local dis
     toolName: 'task-dispatches-read',
     description: 'Reads the current governed task dispatches through the shipped SDK helper.',
     inputSchemaRef: {
-      schemaKey: 'BidviaAgentRegistrationIdentifierInput',
+      schemaKey: 'BidviaAccountAgentIdentifierInput',
     },
     outputMode: 'truth-fetch-result',
     helperRef: {
@@ -367,6 +788,7 @@ test('buildLocalMcpToolCatalog derives MCP descriptors from the shared local dis
     localCapabilityRiskTier: 'observe-only',
     accessContextFamily: 'principal-governed-read',
     requiredContext: ['tenantId', 'principalId'],
+    taskPlaneCapabilityMode: 'visibility-only',
   });
 
   assert.deepEqual(mcpTools.find((tool) => tool.toolName === 'agent-capability-profile-write-execution'), {
@@ -384,6 +806,8 @@ test('buildLocalMcpToolCatalog derives MCP descriptors from the shared local dis
     localCapabilityRiskTier: 'governed-commercial',
     accessContextFamily: 'operator-company',
     requiredContext: ['tenantId', 'principalId', 'companyId'],
+    runnable: true,
+    blockedBy: null,
   });
 
   assert.deepEqual(mcpTools.find((tool) => tool.toolName === 'create-provisional-agent-execution'), {
@@ -402,6 +826,8 @@ test('buildLocalMcpToolCatalog derives MCP descriptors from the shared local dis
     accessContextFamily: 'tenant',
     contextSemantic: 'public-provisional',
     requiredContext: ['tenantId'],
+    runnable: true,
+    blockedBy: null,
   });
 
   assert.deepEqual(mcpTools.find((tool) => tool.toolName === 'claim-provisional-agent-execution'), {
@@ -419,5 +845,217 @@ test('buildLocalMcpToolCatalog derives MCP descriptors from the shared local dis
     localCapabilityRiskTier: 'runtime-execution',
     accessContextFamily: 'session',
     requiredContext: ['tenantId', 'sessionId'],
+    runnable: true,
+    blockedBy: null,
   });
+});
+
+test('discovery catalog exposes the first-class account-plane continuation surfaces proven by local-docker evidence', () => {
+  assert.deepEqual(requireDiscoveryEntry('listAccountIntegrationCapabilities'), {
+    helperKey: 'listAccountIntegrationCapabilities',
+    routePathTemplate: '/runtime/account/integration-capabilities',
+    httpMethod: 'GET',
+    accessContextFamily: 'session',
+    requiredContext: ['tenantId', 'sessionId'],
+    scope: 'read',
+    level: 'atomic-route',
+    localCapabilityTier: 'L0-observe-only',
+    localCapabilityRiskTier: 'observe-only',
+    discoveryKind: 'read',
+    recommendedOutputMode: 'truth-fetch-result',
+    sourceOfTruth: 'local-sdk-helpers',
+    localOnly: true,
+    remoteDiscovery: false,
+    cliCommands: ['account-integration-capabilities'],
+    mcpTools: [
+      {
+        toolName: 'account-integration-capabilities-read',
+        outputMode: 'truth-fetch-result',
+      },
+    ],
+  });
+
+  assert.deepEqual(requireDiscoveryEntry('getAccountAgentIntegrationEligibility'), {
+    helperKey: 'getAccountAgentIntegrationEligibility',
+    routePathTemplate: '/runtime/account/agents/:agentId/integrations/:integrationCode/eligibility',
+    httpMethod: 'GET',
+    accessContextFamily: 'session',
+    requiredContext: ['tenantId', 'sessionId'],
+    scope: 'read',
+    level: 'atomic-route',
+    localCapabilityTier: 'L0-observe-only',
+    localCapabilityRiskTier: 'observe-only',
+    discoveryKind: 'read',
+    recommendedOutputMode: 'truth-fetch-result',
+    sourceOfTruth: 'local-sdk-helpers',
+    localOnly: true,
+    remoteDiscovery: false,
+    cliCommands: ['account-agent-integration-eligibility'],
+    mcpTools: [
+      {
+        toolName: 'account-agent-integration-eligibility-read',
+        outputMode: 'truth-fetch-result',
+      },
+    ],
+  });
+
+  assert.deepEqual(requireDiscoveryEntry('getAccountAgentClosureStatus'), {
+    helperKey: 'getAccountAgentClosureStatus',
+    routePathTemplate: '/runtime/account/agents/:agentId/closure-status',
+    httpMethod: 'GET',
+    accessContextFamily: 'session',
+    requiredContext: ['tenantId', 'sessionId'],
+    scope: 'read',
+    level: 'atomic-route',
+    localCapabilityTier: 'L0-observe-only',
+    localCapabilityRiskTier: 'observe-only',
+    discoveryKind: 'read',
+    recommendedOutputMode: 'truth-fetch-result',
+    sourceOfTruth: 'local-sdk-helpers',
+    localOnly: true,
+    remoteDiscovery: false,
+    cliCommands: ['account-agent-closure-status'],
+    mcpTools: [
+      {
+        toolName: 'account-agent-closure-status-read',
+        outputMode: 'truth-fetch-result',
+      },
+    ],
+  });
+
+  assert.deepEqual(requireDiscoveryEntry('refreshAccountAgentAuthorization'), {
+    helperKey: 'refreshAccountAgentAuthorization',
+    routePathTemplate: '/runtime/account/agents/:agentId/governed-runtime/authorization-refresh',
+    httpMethod: 'POST',
+    accessContextFamily: 'session',
+    requiredContext: ['tenantId', 'sessionId'],
+    scope: 'write',
+    level: 'atomic-route',
+    localCapabilityTier: 'L1-review-safe',
+    localCapabilityRiskTier: 'review-safe',
+    discoveryKind: 'review-safe',
+    recommendedOutputMode: 'execution-result',
+    sourceOfTruth: 'local-sdk-helpers',
+    localOnly: true,
+    remoteDiscovery: false,
+    cliCommands: ['account-agent-authorization-refresh'],
+    mcpTools: [
+      {
+        toolName: 'account-agent-authorization-refresh-execution',
+        outputMode: 'execution-result',
+      },
+    ],
+  });
+
+  assert.deepEqual(requireDiscoveryEntry('createAccountAgentExternalBinding'), {
+    helperKey: 'createAccountAgentExternalBinding',
+    routePathTemplate: '/runtime/account/agents/:agentId/external-account-bindings',
+    httpMethod: 'POST',
+    accessContextFamily: 'session',
+    requiredContext: ['tenantId', 'sessionId'],
+    scope: 'write',
+    level: 'atomic-route',
+    localCapabilityTier: 'L1-review-safe',
+    localCapabilityRiskTier: 'review-safe',
+    discoveryKind: 'review-safe',
+    recommendedOutputMode: 'execution-result',
+    sourceOfTruth: 'local-sdk-helpers',
+    localOnly: true,
+    remoteDiscovery: false,
+    cliCommands: ['account-agent-external-binding'],
+    mcpTools: [
+      {
+        toolName: 'account-agent-external-binding-execution',
+        outputMode: 'execution-result',
+      },
+    ],
+  });
+
+  assert.deepEqual(requireDiscoveryEntry('decideDispatchAuthorityRequest'), {
+    helperKey: 'decideDispatchAuthorityRequest',
+    routePathTemplate: '/operator/dispatch-authority-requests/:request_id/decision',
+    httpMethod: 'POST',
+    accessContextFamily: 'admin-session',
+    requiredContext: ['tenantId', 'adminSessionId'],
+    scope: 'write',
+    level: 'atomic-route',
+    localCapabilityTier: 'L3-governed-commercial',
+    localCapabilityRiskTier: 'governed-commercial',
+    discoveryKind: 'execute',
+    recommendedOutputMode: 'execution-result',
+    sourceOfTruth: 'local-sdk-helpers',
+    localOnly: true,
+    remoteDiscovery: false,
+    runnable: true,
+    blockedBy: null,
+    cliCommands: ['operator-dispatch-authority-decision'],
+    mcpTools: [
+      {
+        toolName: 'operator-dispatch-authority-decision-execution',
+        outputMode: 'execution-result',
+      },
+    ],
+  });
+
+  assert.deepEqual(requireDiscoveryEntry('getAccountAgentGovernedWorkClosure'), {
+    helperKey: 'getAccountAgentGovernedWorkClosure',
+    routePathTemplate: '/runtime/account/agents/:agentId/task-dispatches/:task_dispatch_id/governed-work-closure',
+    httpMethod: 'GET',
+    accessContextFamily: 'session',
+    requiredContext: ['tenantId', 'sessionId'],
+    scope: 'read',
+    level: 'atomic-route',
+    localCapabilityTier: 'L0-observe-only',
+    localCapabilityRiskTier: 'observe-only',
+    discoveryKind: 'read',
+    recommendedOutputMode: 'truth-fetch-result',
+    sourceOfTruth: 'local-sdk-helpers',
+    localOnly: true,
+    remoteDiscovery: false,
+    taskPlaneCapabilityMode: 'visibility-only',
+    cliCommands: ['governed-work-closure'],
+    mcpTools: [
+      {
+        toolName: 'governed-work-closure-read',
+        outputMode: 'truth-fetch-result',
+      },
+    ],
+  });
+});
+
+test('discovery and MCP productization snapshots stay local-only under the capability-plane boundary', () => {
+  const capabilityPlane = buildCapabilityPlaneView();
+  const mcpProductization = buildLocalMcpProductizationSnapshot();
+
+  assert.equal(capabilityPlane.localSnapshots.descriptiveOnly, true);
+  assert.equal(capabilityPlane.localSnapshots.liveServerNegotiationClaimed, false);
+  assert.equal(capabilityPlane.localSnapshots.remoteRegistryBehaviorClaimed, false);
+  assert.equal(mcpProductization.serverBoundary.remoteDiscovery, false);
+  assert.equal(mcpProductization.serverBoundary.hosted, false);
+  assert.equal(mcpProductization.serverBoundary.sourceOfTruth, 'local-sdk-helpers');
+});
+
+test('buildLocalDiagnosticCommandCatalog exposes install-integrity as an explicit local-only diagnostic surface', () => {
+  assert.deepEqual(buildLocalDiagnosticCommandCatalog(), [
+    {
+      command: 'install-integrity',
+      scope: 'local-only',
+      summary: 'Reports the active bidvia binary, local package roots, package version, and likely install-path drift.',
+    },
+    {
+      command: 'validation-smoke',
+      scope: 'local-only',
+      summary: 'Runs a bounded local-first smoke pass over install, environment, runtime capability, server capability, and context diagnostics.',
+    },
+    {
+      command: 'diagnostic-bundle-export',
+      scope: 'local-only',
+      summary: 'Exports the bounded smoke report as machine-readable JSON plus a shareable markdown summary.',
+    },
+    {
+      command: 'public-runtime-interpretation-probe',
+      scope: 'local-only',
+      summary: 'Probes live /healthz and /readyz and exports bounded runtime interpretation evidence without overclaiming release truth.',
+    },
+  ]);
 });

@@ -86,6 +86,8 @@ function buildToolsListResponse(id: string | number | null): JsonRpcSuccessRespo
         localCapabilityRiskTier: tool.localCapabilityRiskTier,
         accessContextFamily: tool.accessContextFamily,
         requiredContext: tool.requiredContext,
+        runnable: tool.runnable,
+        blockedBy: tool.blockedBy,
       })),
     },
   };

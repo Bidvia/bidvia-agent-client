@@ -4,6 +4,8 @@ import assert from 'node:assert/strict';
 test('task-participation helpers export local observation builders for offer, claim, ack, lease, timeout, and retry awareness', async () => {
   const taskParticipationModule = await import('../src/index.ts');
 
+  assert.equal(typeof taskParticipationModule.buildTaskPlaneView, 'function');
+  assert.equal(typeof taskParticipationModule.getTaskPlaneCapabilityMode, 'function');
   assert.equal(typeof taskParticipationModule.buildLocalTaskOfferObservation, 'function');
   assert.equal(typeof taskParticipationModule.buildLocalTaskClaimIntent, 'function');
   assert.equal(typeof taskParticipationModule.buildLocalTaskAckObservation, 'function');
@@ -16,6 +18,72 @@ test('task-participation helpers export local observation builders for offer, cl
   assert.equal(typeof taskParticipationModule.buildTaskLeaseShell, 'function');
   assert.equal(typeof taskParticipationModule.buildTaskTimeoutShell, 'function');
   assert.equal(typeof taskParticipationModule.buildTaskRetryAwarenessShell, 'function');
+});
+
+test('task-plane adapter groups governed task semantics while keeping local shells descriptive-only', async () => {
+  const taskParticipationModule = await import('../src/index.ts');
+
+  const taskPlane = taskParticipationModule.buildTaskPlaneView();
+  const sharedAdoptionStatus = taskParticipationModule.listCorePlaneAdoptionStatuses()
+    .find((status: { plane: string }) => status.plane === 'task');
+
+  assert.deepEqual(taskPlane.localShellBoundary, {
+    descriptiveOnly: true,
+    schedulerAuthorityClaim: false,
+    timeoutSemantics: 'local-only',
+    notes: [
+      'Local task shells stay descriptive-only and do not become scheduler authority.',
+      'Do not invent remote timeout payload fields from local timeout observations.',
+    ],
+  });
+  assert.deepEqual(taskPlane.adoptionStatus, sharedAdoptionStatus);
+  assert.equal(taskPlane.timeoutTruth.payloadPacketStatus, 'packet-grounded');
+  assert.equal(taskPlane.timeoutTruth.localOnly, true);
+  assert.equal(taskPlane.timeoutTruth.remotePayloadSupported, true);
+  assert.equal(taskPlane.timeoutTruth.blockedBy, null);
+  assert.equal(taskParticipationModule.getTaskPlaneCapabilityMode('listTaskDispatches'), 'visibility-only');
+  assert.equal(taskParticipationModule.getTaskPlaneCapabilityMode('createTaskDispatch'), 'packet-grounded-execution');
+  assert.equal(taskParticipationModule.getTaskPlaneCapabilityMode('suspendTaskDispatch'), 'packet-grounded-execution');
+  assert.equal(taskParticipationModule.getTaskPlaneCapabilityMode('createParticipationState'), 'packet-grounded-execution');
+  assert.equal(taskParticipationModule.getTaskPlaneCapabilityMode('missingTaskHelper'), undefined);
+});
+
+test('task-plane executable helper coverage derives from the shared plane execution gate', async () => {
+  const taskParticipationModule = await import('../src/index.ts');
+
+  const taskPlane = taskParticipationModule.buildTaskPlaneView();
+  const readHelperKeys = taskParticipationModule.listPlaneExecutionGates()
+    .filter((gate: { plane: string; executionTruth: string }) => (
+      gate.plane === 'task' && gate.executionTruth === 'packet-grounded-read'
+    ))
+    .map((gate: { helperKey: string }) => gate.helperKey);
+  const executableHelperKeys = taskParticipationModule.listPlaneExecutionGates()
+    .filter((gate: { plane: string; executionTruth: string }) => (
+      gate.plane === 'task' && gate.executionTruth === 'packet-grounded-execution'
+    ))
+    .map((gate: { helperKey: string }) => gate.helperKey);
+  const canonicalExecutableHelperKeys = [
+    'createParticipationState',
+    'createLease',
+    'createTaskDispatch',
+    'assignTaskDispatch',
+    'suspendTaskDispatch',
+    'resumeTaskDispatch',
+    'completeTaskDispatch',
+    'failTaskDispatch',
+    'createTaskDispatchOutcome',
+    'createTaskDispatchEvidenceBundle',
+    'createTaskDispatchConfirmationCycle',
+    'createClaim',
+    'acceptClaim',
+    'rejectClaim',
+    'postHeartbeat',
+  ];
+
+  assert.deepEqual(taskPlane.capabilityModes.visibilityOnlyHelperKeys, readHelperKeys);
+  assert.deepEqual(taskPlane.capabilityModes.executableHelperKeys, canonicalExecutableHelperKeys);
+  assert.deepEqual([...taskPlane.capabilityModes.executableHelperKeys].sort(), [...executableHelperKeys].sort());
+  assert.equal(taskParticipationModule.getTaskPlaneCapabilityMode('postHeartbeat'), 'packet-grounded-execution');
 });
 
 test('task-participation helpers keep task offers and retry awareness local and descriptive', async () => {
@@ -169,4 +237,6 @@ test('task-participation helpers keep claim, ack, lease, and timeout shells desc
   assert.equal('dispatchDecision' in ack, false);
   assert.equal('authority' in lease, false);
   assert.equal('retryable' in timeout, false);
+  assert.equal('outcomeRef' in timeout, false);
+  assert.equal('timeoutReason' in timeout, false);
 });

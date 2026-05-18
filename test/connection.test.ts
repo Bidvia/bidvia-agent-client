@@ -7,6 +7,7 @@ import type {
 import { BidviaClient } from '../src/client.ts';
 import {
   buildConnectionApprovalScenarioPlan,
+  executeConnectionApprovalScenario,
   runConnectionApprovalScenario,
 } from '../src/connection.js';
 
@@ -35,10 +36,10 @@ function createConnectionApprovalScenarioInput(): BidviaConnectionApprovalScenar
       sourceMatchId: 'match-1',
       requesterActorId: 'actor-1',
       requesterCompanyId: 'company-a',
-      riskTier: 'medium',
+      riskTier: 'HIGH',
       policyVersion: 'policy-v1',
       approvalMatrixVersion: 'matrix-v1',
-      actionType: 'buyer_contact_request',
+      actionType: 'CONTACT_SHARE',
       now: '2026-03-25T20:22:00Z',
     },
     approveConnectionRequest: {
@@ -56,10 +57,51 @@ test('connection scenario contract expresses createConnectionRequest then approv
   );
 
   assert.equal(plan.envelope.scenarioFamily, 'connection-approval');
+  assert.deepEqual(plan.closureGuidance, {
+    lane: 'runtime-generated',
+    fixedFixtureAssumptions: false,
+    prerequisites: [
+      'create supply and demand listings first',
+      'activate both listings',
+      'use the returned activation event id to generate a real persisted match',
+      'continue downstream with the returned match and approval ids',
+    ],
+  });
   assert.deepEqual(
     plan.envelope.expectedRouteChain.map((step) => step.routeKey),
     ['createConnectionRequest', 'approveConnectionRequest'],
   );
+  assert.deepEqual(
+    plan.envelope.expectedRouteChain.map((step) => ({
+      routeKey: step.routeKey,
+      stepName: step.stepName,
+      actorRole: step.actorRole,
+      checkpointName: step.progressionCheckpoint?.checkpointName ?? null,
+    })),
+    [
+      {
+        routeKey: 'createConnectionRequest',
+        stepName: 'user-submit-connection-request',
+        actorRole: 'user',
+        checkpointName: null,
+      },
+      {
+        routeKey: 'approveConnectionRequest',
+        stepName: 'admin-approve-connection-request',
+        actorRole: 'admin',
+        checkpointName: 'verify-approval-request-before-opportunity-handoff',
+      },
+    ],
+  );
+  assert.deepEqual(plan.envelope.workflowStage, {
+    workflowIds: ['wf-1'],
+    localStageLabel: 'governed-run-execution',
+    localStageSemantics: 'local-only',
+    coreStageIdentifier: null,
+    coreStageSemantics: 'blocked-pending-packet',
+    blockedBy: 'core-write-semantics-not-frozen',
+    transitionRule: null,
+  });
   assert.equal(plan.createConnectionRequestInput.sourceMatchId, 'match-1');
   assert.equal(plan.approveConnectionRequestInput.approvalRequestId, 'approval-1');
 });
@@ -82,6 +124,13 @@ test('buildConnectionApprovalScenarioPlan rejects blank source match ids', () =>
     () => buildConnectionApprovalScenarioPlan(input),
     /sourceMatchId is required for the connection approval scenario plan/,
   );
+});
+
+test('buildConnectionApprovalScenarioPlan keeps proven connection enums explicit', () => {
+  const plan = buildConnectionApprovalScenarioPlan(createConnectionApprovalScenarioInput());
+
+  assert.equal(plan.createConnectionRequestInput.riskTier, 'HIGH');
+  assert.equal(plan.createConnectionRequestInput.actionType, 'CONTACT_SHARE');
 });
 
 test('buildConnectionApprovalScenarioPlan rejects missing approval request ids', () => {
@@ -127,6 +176,44 @@ test('runConnectionApprovalScenario executes createConnectionRequest then approv
   assert.deepEqual(bundle.recordIds, {
     matches: ['match-1'],
     approvals: ['approval-1'],
+  });
+});
+
+test('runConnectionApprovalScenario prefers returned approval request ids for downstream approval and verification records', async () => {
+  const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
+  const responses = [
+    { approval_request_id: 'approval-runtime-1' },
+    { decision: { approval_request_id: 'approval-runtime-1' } },
+  ];
+  const fetchStub: typeof fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
+    calls.push({ input, init });
+    return new Response(JSON.stringify(responses[calls.length - 1] ?? { ok: true }), {
+      status: 200,
+      headers: { 'content-type': 'application/json' },
+    });
+  };
+  const client = new BidviaClient({
+    baseUrl: 'http://127.0.0.1:8787',
+    context: {
+      tenantId: 'tenant-a',
+      principalId: 'actor-1',
+      companyId: 'company-a',
+    },
+    fetchImpl: fetchStub,
+  });
+  const plan = buildConnectionApprovalScenarioPlan(
+    createConnectionApprovalScenarioInput(),
+  );
+
+  const bundle = await runConnectionApprovalScenario(client, plan);
+
+  assert.equal(
+    String(calls[1]?.input),
+    'http://127.0.0.1:8787/runtime/approvals/approval-runtime-1/decision?tenant_id=tenant-a',
+  );
+  assert.deepEqual(bundle.recordIds, {
+    matches: ['match-1'],
+    approvals: ['approval-runtime-1'],
   });
 });
 
@@ -188,4 +275,28 @@ test('runConnectionApprovalScenario surfaces approveConnectionRequest failures w
     /approveConnectionRequest failed/,
   );
   assert.equal(callCount, 2);
+});
+
+test('executeConnectionApprovalScenario returns verification bundle plus execution result', async () => {
+  const { calls, fetchStub } = createFetchStub();
+  const client = new BidviaClient({
+    baseUrl: 'http://127.0.0.1:8787',
+    context: {
+      tenantId: 'tenant-a',
+      principalId: 'actor-1',
+      companyId: 'company-a',
+    },
+    fetchImpl: fetchStub,
+  });
+  const plan = buildConnectionApprovalScenarioPlan(createConnectionApprovalScenarioInput());
+
+  const result = await executeConnectionApprovalScenario(client, plan);
+
+  assert.equal(calls.length, 2);
+  assert.deepEqual(result.verificationBundle.completedRouteChain.map((step) => step.routeKey), [
+    'createConnectionRequest',
+    'approveConnectionRequest',
+  ]);
+  assert.equal(result.executionResult.status, 'succeeded');
+  assert.equal(result.executionResult.ownership, 'claimant');
 });

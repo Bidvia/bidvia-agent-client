@@ -71,7 +71,7 @@ Use this to confirm that the public-first onboarding rows stay primary and the O
 
 ## 4. Use the default public endpoint first
 
-For the normal public operator path, `bidvia` already defaults to `https://api.bidvia.ai`.
+For the normal public operator path, `bidvia` already defaults to `https://api.bidvia.cn`.
 
 Start with that package default. You do not need to export `BIDVIA_BASE_URL` for the baseline public smoke flow.
 
@@ -117,7 +117,7 @@ Use this to confirm:
 
 - resolved `baseUrl`
 - resolved `environmentMode`
-- default public resolution to `https://api.bidvia.ai` when no override is set
+- default public resolution to `https://api.bidvia.cn` when no override is set
 - canonical `api.*` domains
 - compatibility profile mappings
 
@@ -167,7 +167,8 @@ export BIDVIA_BASE_URL="https://api.bidvia.cn"
 
 Active profile/default resolution note:
 
-- default or `global` profile -> `https://api.bidvia.ai`
+- default profile -> `https://api.bidvia.cn`
+- `global` profile -> `https://api.bidvia.ai`
 - `china` profile -> `https://api.bidvia.cn`
 
 Compatibility-window note:

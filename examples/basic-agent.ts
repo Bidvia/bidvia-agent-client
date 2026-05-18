@@ -20,7 +20,7 @@ function createExampleFetch(): typeof fetch {
 
 async function main() {
   const client = new BidviaClient({
-    baseUrl: 'https://api.bidvia.ai',
+    baseUrl: 'https://api.bidvia.cn',
     context: {
       tenantId: 'tenant-a',
       principalId: 'actor-1',
@@ -42,7 +42,7 @@ async function main() {
   console.log({
     guidedJourney: 'public-cli-first-followed-by-sdk-example',
     notes: [
-      'This example relies on the package default public base URL.',
+      'This example uses the current default public base URL explicitly for clarity.',
       'For the guided public path, start with onboarding-readiness and route-context-matrix before running SDK flows.',
     ],
     onboarding,

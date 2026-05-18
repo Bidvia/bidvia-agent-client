@@ -49,6 +49,17 @@ Run the smoke checks in this order:
 
 Do not skip directly to MCP wiring before the earlier checks are clean.
 
+For the current bounded external-user validation layer, the same smoke flow can also be summarized as:
+
+```bash
+bidvia install-integrity
+bidvia validation-smoke
+bidvia diagnostic-bundle-export --output ./bidvia-diagnostic-bundle
+bidvia public-runtime-interpretation-probe
+```
+
+Those commands stay fail-closed. They help prove local install/configuration state, and `public-runtime-interpretation-probe` adds a bounded live runtime-baseline readback, but they do not become a Core-owned certification flow and they do not overclaim full governed or business closure.
+
 ## 1. Build check
 
 ### Command
@@ -180,7 +191,7 @@ bidvia launch-topology-smoke
 
 - the resolved `baseUrl` is what the current environment actually produces
 - the resolved `environmentMode` is visible locally
-- the default public path resolves to `https://api.bidvia.ai` when no override is set
+- the default public path resolves to `https://api.bidvia.cn` when no override is set
 - the canonical production API domains are visible as:
   - `https://api.bidvia.ai`
   - `https://api.bidvia.cn`
@@ -313,6 +324,23 @@ High-level meaning:
 
 - the Gateway cannot yet consume the shipped local stdio MCP surface
 - fall back to CLI-first verification until the local MCP entrypoint is restored
+
+## Bounded task-plane CLI parity commands
+
+When the local install is healthy and the current lane has the right claimant context, the CLI also exposes bounded task-plane write commands over already-shipped helpers only:
+
+- `create-lease`
+- `create-task-dispatch`
+- `assign-task-dispatch`
+- `suspend-task-dispatch`
+- `resume-task-dispatch`
+- `complete-task-dispatch`
+- `fail-task-dispatch`
+- `create-claim`
+- `accept-claim`
+- `reject-claim`
+
+Those commands stay bounded and fail-closed. They do not imply deeper operator-owned continuation, live capability negotiation, or full business closure.
 
 ## Smoke result interpretation
 

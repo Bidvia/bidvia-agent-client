@@ -1,0 +1,453 @@
+{
+  "schemaVersion": "2026-05-06",
+  "generatedAt": "2026-05-06T08:30:58.147Z",
+  "baseUrl": "http://127.0.0.1:8787",
+  "runtime": {
+    "healthz": {
+      "httpStatus": 200,
+      "body": {
+        "status": "ok",
+        "service": "runtime",
+        "mode": "local",
+        "db_mode": "postgres",
+        "version_markers": {
+          "source_main_commit_marker": "",
+          "runtime_reported_version_marker": "",
+          "bootstrap_package_version_marker": "",
+          "scenario_package_version_marker": "",
+          "review_record_path": ""
+        },
+        "runtime_identity_state": "identity_unset",
+        "release_closure_state": "terminal-envelope-bounded"
+      }
+    },
+    "readyz": {
+      "httpStatus": 200,
+      "body": {
+        "status": "ready",
+        "service": "runtime",
+        "readiness_mode": "local-db-minimum",
+        "db": {
+          "enabled": true,
+          "mode": "postgres",
+          "bootstrap": true,
+          "contract": {
+            "dbMode": "postgres",
+            "dbExecMode": null,
+            "readinessMode": "local-db-minimum",
+            "bootstrap": true,
+            "hasDatabaseUrl": true,
+            "requiredEnv": [
+              "BIDVIA_DB_MODE",
+              "DATABASE_URL"
+            ]
+          },
+          "state": "ready",
+          "detail": "postgres connected; minimum runtime tables bootstrapped/verified",
+          "tables": [
+            "accounts",
+            "admin_accounts",
+            "admin_sessions",
+            "agent_authority_ladders",
+            "agent_control_actions",
+            "agent_evidence_submissions",
+            "agent_health_scores",
+            "agent_presences",
+            "agent_proposal_submissions",
+            "agent_recovery_records",
+            "agent_registrations",
+            "agent_session_leases",
+            "agent_sync_records",
+            "agent_takeover_reassignments",
+            "agent_task_claims",
+            "agent_task_dispatch_transitions",
+            "agent_task_dispatches",
+            "agent_task_outcomes",
+            "approval_canonical_events",
+            "approval_continuations",
+            "approval_decisions",
+            "approval_receipts",
+            "approval_requests",
+            "asset_challenges",
+            "asset_council_decisions",
+            "asset_deprecation_records",
+            "asset_proposals",
+            "asset_publication_records",
+            "asset_validations",
+            "assignments",
+            "attachment_bindings",
+            "audit_events",
+            "authority_profiles",
+            "candidates",
+            "canonical_listing_events",
+            "canonical_semantic_concepts",
+            "canonical_semantic_labels",
+            "canonical_semantic_mappings",
+            "canonical_semantic_taxonomy_nodes",
+            "capability_profiles",
+            "commercial_action_approval_bindings",
+            "commercial_action_audit_links",
+            "commercial_action_policy_checks",
+            "commercial_action_receipts",
+            "commercial_action_requests",
+            "commercial_action_rollback_records",
+            "commercial_universe_lineage_records",
+            "confirmation_cycles",
+            "connection_requests",
+            "contribution_ledger_entries",
+            "delegation_grants",
+            "demand_listings",
+            "dispatch_authority_activation_requests",
+            "document_artifacts",
+            "evidence_assets",
+            "evidence_items",
+            "external_account_bindings",
+            "external_operations",
+            "external_write_exceptions",
+            "federated_approval_visibility_records",
+            "federated_challenge_visibility_records",
+            "federated_governance_boundaries",
+            "governance_audits",
+            "governed_assets",
+            "integration_apps",
+            "integration_installation_connections",
+            "integration_installations",
+            "invitation_audits",
+            "invitations",
+            "launch_lane_records",
+            "listing_versions",
+            "match_records",
+            "maturity_transition_records",
+            "media_assets",
+            "membership_bindings",
+            "official_truth_records",
+            "opportunities",
+            "opportunity_continuation_transitions",
+            "opportunity_continuations",
+            "opportunity_package_lineage",
+            "opportunity_packages",
+            "outcomes",
+            "participation_states",
+            "pricing_bases",
+            "pricing_evidence",
+            "pricing_explanations",
+            "pricing_publication_lifecycles",
+            "pricing_rule_atoms",
+            "proposal_packets",
+            "provisional_agents",
+            "quotation_method_modules",
+            "quotations",
+            "quote_templates",
+            "retrieval_evidence_bundles",
+            "retrieval_evidence_records",
+            "retrieval_index_states",
+            "retrieval_intents",
+            "retrieval_lineage_graphs",
+            "retrieval_query_plans",
+            "retrieval_result_sets",
+            "retrieval_scopes",
+            "retrieval_working_set_states",
+            "rollback_records",
+            "sessions",
+            "signals",
+            "supply_listings",
+            "tasks",
+            "template_adoptions",
+            "template_proposals",
+            "template_validations"
+          ]
+        },
+        "version_markers": {
+          "source_main_commit_marker": "",
+          "runtime_reported_version_marker": "",
+          "bootstrap_package_version_marker": "",
+          "scenario_package_version_marker": "",
+          "review_record_path": ""
+        },
+        "runtime_identity_state": "identity_unset",
+        "release_closure_state": "terminal-envelope-bounded"
+      }
+    }
+  },
+  "actorContext": {
+    "claimant": {
+      "availableFields": [],
+      "missingFields": [
+        "BIDVIA_TENANT_ID",
+        "BIDVIA_SESSION_ID",
+        "BIDVIA_AGENT_ID"
+      ]
+    },
+    "admin": {
+      "availableFields": [],
+      "missingFields": [
+        "BIDVIA_TENANT_ID",
+        "BIDVIA_ADMIN_SESSION_ID"
+      ]
+    }
+  },
+  "scenarios": [
+    {
+      "scenarioKey": "runtime-baseline",
+      "lane": "default-local-docker",
+      "status": "passed",
+      "blockedBy": [],
+      "notes": [
+        "Verifies only the local docker runtime baseline through /healthz and /readyz."
+      ],
+      "returnedIds": {},
+      "readbacks": {
+        "healthz": {
+          "status": "ok",
+          "service": "runtime",
+          "mode": "local",
+          "db_mode": "postgres",
+          "version_markers": {
+            "source_main_commit_marker": "",
+            "runtime_reported_version_marker": "",
+            "bootstrap_package_version_marker": "",
+            "scenario_package_version_marker": "",
+            "review_record_path": ""
+          },
+          "runtime_identity_state": "identity_unset",
+          "release_closure_state": "terminal-envelope-bounded"
+        },
+        "readyz": {
+          "status": "ready",
+          "service": "runtime",
+          "readiness_mode": "local-db-minimum",
+          "db": {
+            "enabled": true,
+            "mode": "postgres",
+            "bootstrap": true,
+            "contract": {
+              "dbMode": "postgres",
+              "dbExecMode": null,
+              "readinessMode": "local-db-minimum",
+              "bootstrap": true,
+              "hasDatabaseUrl": true,
+              "requiredEnv": [
+                "BIDVIA_DB_MODE",
+                "DATABASE_URL"
+              ]
+            },
+            "state": "ready",
+            "detail": "postgres connected; minimum runtime tables bootstrapped/verified",
+            "tables": [
+              "accounts",
+              "admin_accounts",
+              "admin_sessions",
+              "agent_authority_ladders",
+              "agent_control_actions",
+              "agent_evidence_submissions",
+              "agent_health_scores",
+              "agent_presences",
+              "agent_proposal_submissions",
+              "agent_recovery_records",
+              "agent_registrations",
+              "agent_session_leases",
+              "agent_sync_records",
+              "agent_takeover_reassignments",
+              "agent_task_claims",
+              "agent_task_dispatch_transitions",
+              "agent_task_dispatches",
+              "agent_task_outcomes",
+              "approval_canonical_events",
+              "approval_continuations",
+              "approval_decisions",
+              "approval_receipts",
+              "approval_requests",
+              "asset_challenges",
+              "asset_council_decisions",
+              "asset_deprecation_records",
+              "asset_proposals",
+              "asset_publication_records",
+              "asset_validations",
+              "assignments",
+              "attachment_bindings",
+              "audit_events",
+              "authority_profiles",
+              "candidates",
+              "canonical_listing_events",
+              "canonical_semantic_concepts",
+              "canonical_semantic_labels",
+              "canonical_semantic_mappings",
+              "canonical_semantic_taxonomy_nodes",
+              "capability_profiles",
+              "commercial_action_approval_bindings",
+              "commercial_action_audit_links",
+              "commercial_action_policy_checks",
+              "commercial_action_receipts",
+              "commercial_action_requests",
+              "commercial_action_rollback_records",
+              "commercial_universe_lineage_records",
+              "confirmation_cycles",
+              "connection_requests",
+              "contribution_ledger_entries",
+              "delegation_grants",
+              "demand_listings",
+              "dispatch_authority_activation_requests",
+              "document_artifacts",
+              "evidence_assets",
+              "evidence_items",
+              "external_account_bindings",
+              "external_operations",
+              "external_write_exceptions",
+              "federated_approval_visibility_records",
+              "federated_challenge_visibility_records",
+              "federated_governance_boundaries",
+              "governance_audits",
+              "governed_assets",
+              "integration_apps",
+              "integration_installation_connections",
+              "integration_installations",
+              "invitation_audits",
+              "invitations",
+              "launch_lane_records",
+              "listing_versions",
+              "match_records",
+              "maturity_transition_records",
+              "media_assets",
+              "membership_bindings",
+              "official_truth_records",
+              "opportunities",
+              "opportunity_continuation_transitions",
+              "opportunity_continuations",
+              "opportunity_package_lineage",
+              "opportunity_packages",
+              "outcomes",
+              "participation_states",
+              "pricing_bases",
+              "pricing_evidence",
+              "pricing_explanations",
+              "pricing_publication_lifecycles",
+              "pricing_rule_atoms",
+              "proposal_packets",
+              "provisional_agents",
+              "quotation_method_modules",
+              "quotations",
+              "quote_templates",
+              "retrieval_evidence_bundles",
+              "retrieval_evidence_records",
+              "retrieval_index_states",
+              "retrieval_intents",
+              "retrieval_lineage_graphs",
+              "retrieval_query_plans",
+              "retrieval_result_sets",
+              "retrieval_scopes",
+              "retrieval_working_set_states",
+              "rollback_records",
+              "sessions",
+              "signals",
+              "supply_listings",
+              "tasks",
+              "template_adoptions",
+              "template_proposals",
+              "template_validations"
+            ]
+          },
+          "version_markers": {
+            "source_main_commit_marker": "",
+            "runtime_reported_version_marker": "",
+            "bootstrap_package_version_marker": "",
+            "scenario_package_version_marker": "",
+            "review_record_path": ""
+          },
+          "runtime_identity_state": "identity_unset",
+          "release_closure_state": "terminal-envelope-bounded"
+        }
+      }
+    },
+    {
+      "scenarioKey": "platform-managed-onboarding",
+      "lane": "default-local-docker",
+      "status": "blocked",
+      "blockedBy": [
+        "BIDVIA_TENANT_ID",
+        "BIDVIA_SESSION_ID",
+        "BIDVIA_AGENT_ID",
+        "valid_invitation_or_bootstrap_input"
+      ],
+      "notes": [
+        "This scenario requires self-bootstrap or provided claimant credentials plus invitation/bootstrap inputs that are not available from the current shell alone."
+      ],
+      "returnedIds": {},
+      "readbacks": {}
+    },
+    {
+      "scenarioKey": "dispatch-ready-progression",
+      "lane": "default-local-docker",
+      "status": "blocked",
+      "blockedBy": [
+        "BIDVIA_TENANT_ID",
+        "BIDVIA_SESSION_ID",
+        "BIDVIA_AGENT_ID"
+      ],
+      "notes": [
+        "This scenario requires claimant account-plane context and runtime-generated claimed-agent identifiers to verify task-write-ready and dispatch-eligibility truth."
+      ],
+      "returnedIds": {},
+      "readbacks": {}
+    },
+    {
+      "scenarioKey": "role-collaboration-handoff",
+      "lane": "default-local-docker",
+      "status": "blocked",
+      "blockedBy": [
+        "BIDVIA_TENANT_ID",
+        "BIDVIA_SESSION_ID",
+        "BIDVIA_AGENT_ID",
+        "BIDVIA_ADMIN_SESSION_ID"
+      ],
+      "notes": [
+        "This scenario requires claimant plus operator/admin context and runtime-generated handoff identifiers for the approval-to-opportunity seam."
+      ],
+      "returnedIds": {},
+      "readbacks": {}
+    },
+    {
+      "scenarioKey": "continuous-task-governed-work-closure",
+      "lane": "default-local-docker",
+      "status": "blocked",
+      "blockedBy": [
+        "BIDVIA_TENANT_ID",
+        "BIDVIA_SESSION_ID",
+        "BIDVIA_AGENT_ID"
+      ],
+      "notes": [
+        "This scenario requires claimant context plus fresh runtime-generated task-dispatch identifiers to verify bounded governed-work closure."
+      ],
+      "returnedIds": {},
+      "readbacks": {}
+    },
+    {
+      "scenarioKey": "commercial-and-integration-readback",
+      "lane": "default-local-docker",
+      "status": "blocked",
+      "blockedBy": [
+        "BIDVIA_TENANT_ID",
+        "BIDVIA_SESSION_ID",
+        "BIDVIA_AGENT_ID",
+        "BIDVIA_ADMIN_SESSION_ID"
+      ],
+      "notes": [
+        "This scenario requires governed claimant/operator identifiers for commercial-action status or integration ownership readback, which are not derivable from the current shell alone."
+      ],
+      "returnedIds": {},
+      "readbacks": {}
+    }
+  ],
+  "summary": {
+    "passedCount": 1,
+    "blockedCount": 5,
+    "failedCount": 0,
+    "blockedScenarioKeys": [
+      "platform-managed-onboarding",
+      "dispatch-ready-progression",
+      "role-collaboration-handoff",
+      "continuous-task-governed-work-closure",
+      "commercial-and-integration-readback"
+    ],
+    "failedScenarioKeys": []
+  }
+}

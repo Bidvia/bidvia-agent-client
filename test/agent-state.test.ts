@@ -265,6 +265,7 @@ test('agent-state helpers keep identity cache snapshots separate from authority 
 
   assert.equal(typeof agentStateModule.buildAgentIdentityState, 'function');
   assert.equal(typeof agentStateModule.buildAgentAuthorityState, 'function');
+  assert.equal(typeof agentStateModule.buildIdentitySessionPlaneView, 'function');
 
   const identity = agentStateModule.buildAgentIdentityState({
     canonical: {
@@ -298,11 +299,15 @@ test('agent-state helpers keep identity cache snapshots separate from authority 
     status: 'none',
     observedAt: '2026-03-27T00:00:04.000Z',
   });
+  const identitySessionPlane = agentStateModule.buildIdentitySessionPlaneView();
 
   assert.equal(identity.kind, 'identity');
   assert.equal(identity.identity.snapshot.source, 'server-derived');
   assert.equal(identity.identity.cache.cacheKey, 'agent-state:identity:agent-1');
   assert.equal(identity.identity.freshness.stale, false);
+  assert.equal(identitySessionPlane.sessionTruth.payloadPacketStatus, 'packet-grounded');
+  assert.equal(identitySessionPlane.sessionTruth.blockedBy, null);
+  assert.equal(identitySessionPlane.sessionTruth.broaderPlatformLoginClaim, false);
   assert.deepEqual(authority, {
     kind: 'authority',
     status: 'none',
@@ -311,6 +316,29 @@ test('agent-state helpers keep identity cache snapshots separate from authority 
   assert.notEqual(authority.status, identity.identity.snapshot.source);
   assert.equal('cache' in authority, false);
   assert.equal('freshness' in authority, false);
+});
+
+test('agent-state helpers keep local participation separate from task-plane authority and packet-grounded timeout truth', async () => {
+  const agentStateModule = await import('../src/index.ts');
+
+  const participation = agentStateModule.buildLocalParticipationState({
+    localStatus: 'timed-out',
+    localTaskRef: 'task-9',
+  });
+  const taskPlane = agentStateModule.buildTaskPlaneView();
+
+  assert.deepEqual(participation, {
+    kind: 'local-participation-state',
+    localStatus: 'timed-out',
+    localTaskRef: 'task-9',
+    status: 'timed-out',
+    taskId: 'task-9',
+  });
+  assert.equal(taskPlane.localShellBoundary.schedulerAuthorityClaim, false);
+  assert.equal(taskPlane.timeoutTruth.payloadPacketStatus, 'packet-grounded');
+  assert.equal(taskPlane.timeoutTruth.localOnly, true);
+  assert.equal('outcomeRef' in participation, false);
+  assert.equal('schedulerAuthority' in participation, false);
 });
 
 test('agent-state helpers build each local governed state without collapsing the dimensions together', async () => {

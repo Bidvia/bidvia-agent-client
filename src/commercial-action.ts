@@ -1,32 +1,87 @@
 import type { BidviaClient } from './client.js';
 import type {
   BidviaReviewPacket,
+  BidviaScenarioExecutionResult,
   BidviaScenarioVerificationBundle,
   BidviaCommercialActionExecuteInput,
   BidviaCommercialActionPolicyCheckInput,
   BidviaCommercialActionRequestApprovalInput,
   BidviaCommercialActionScenarioPlan,
   BidviaCommercialActionScenarioPlanInput,
+  BidviaEnterpriseIntegrationPlaneHelperGroup,
 } from './contracts.js';
+import { getEnterpriseIntegrationPlaneHelperGroup } from './enterprise-integration-plane.js';
 import {
   buildScenarioEnvelope,
   buildScenarioRouteStep,
 } from './scenarios.js';
 import {
   appendCompletedRouteStep,
+  buildScenarioExecutionResult,
   buildReviewPacket,
   buildScenarioVerificationBundle,
 } from './verification.js';
+import { buildWorkflowStageReference } from './workflow-stage-plane.js';
 
 export interface BidviaCommercialActionScenarioResult {
   verificationBundle: BidviaScenarioVerificationBundle;
   reviewPacket: BidviaReviewPacket;
 }
 
+export interface BidviaCommercialActionScenarioExecutionResult extends BidviaCommercialActionScenarioResult {
+  executionResult: BidviaScenarioExecutionResult;
+}
+
 export interface BidviaCommercialActionScenarioReview {
   status: unknown;
   receipt: unknown;
   audit: unknown;
+}
+
+function asRecord(value: unknown): Record<string, unknown> | undefined {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return undefined;
+  }
+
+  return value as Record<string, unknown>;
+}
+
+function readString(value: unknown): string | undefined {
+  return typeof value === 'string' && value.length > 0 ? value : undefined;
+}
+
+function extractCommercialActionRequestId(value: unknown): string | undefined {
+  const record = asRecord(value);
+  if (!record) {
+    return undefined;
+  }
+
+  return readString(record.commercial_action_request_id)
+    ?? readString(asRecord(record.commercial_action)?.commercial_action_request_id)
+    ?? readString(record.commercialActionRequestId)
+    ?? readString(asRecord(record.commercial_action)?.commercialActionRequestId)
+    ?? readString(asRecord(record.commercialAction)?.commercialActionRequestId);
+}
+
+function rebuildVerificationBundle(
+  plan: BidviaCommercialActionScenarioPlan,
+  verificationBundle: BidviaScenarioVerificationBundle,
+  recordIds: BidviaScenarioVerificationBundle['recordIds'],
+): BidviaScenarioVerificationBundle {
+  return buildScenarioVerificationBundle({
+    scenario: plan.envelope,
+    verificationMode: verificationBundle.verificationMode,
+    completedRouteChain: verificationBundle.completedRouteChain,
+    recordIds,
+  });
+}
+
+function resolveCommercialActionRequestId(
+  plan: BidviaCommercialActionScenarioPlan,
+  verificationBundle?: BidviaScenarioVerificationBundle,
+): string {
+  const runtimeCommercialActionRequestId = verificationBundle?.recordIds.commercialActions?.[0];
+  return runtimeCommercialActionRequestId ?? plan.policyCheckCommercialActionInput.commercialActionRequestId;
 }
 
 function requireNonEmptyId(value: string, fieldName: string): string {
@@ -93,6 +148,7 @@ export function buildCommercialActionScenarioPlan(
       evidenceRefs: input.evidenceRefs,
       traceIds: input.traceIds,
       workflowIds: input.workflowIds,
+      workflowStage: buildWorkflowStageReference(input.workflowIds, 'governed-run-execution'),
       expectedRouteChain: [
         buildScenarioRouteStep('createCommercialAction', ['tenantId', 'principalId', 'companyId']),
         buildScenarioRouteStep('policyCheckCommercialAction', ['tenantId', 'principalId', 'companyId']),
@@ -133,25 +189,44 @@ export async function runCommercialActionScenario(
     verificationMode: 'review-safe',
   });
 
-  await client.createCommercialAction(plan.createCommercialActionInput);
+  let commercialActionRequestId = plan.policyCheckCommercialActionInput.commercialActionRequestId;
+
+  const createCommercialActionResult = await client.createCommercialAction(plan.createCommercialActionInput);
+  commercialActionRequestId = extractCommercialActionRequestId(createCommercialActionResult) ?? commercialActionRequestId;
+  const seededApprovals = plan.envelope.recordIds?.approvals ?? [];
+  const seededReceipts = plan.envelope.recordIds?.receipts ?? [];
+  verificationBundle = rebuildVerificationBundle(plan, verificationBundle, {
+    commercialActions: [commercialActionRequestId],
+    approvals: [...seededApprovals],
+    receipts: [...seededReceipts],
+  });
   verificationBundle = appendCompletedRouteStep(
     verificationBundle,
     plan.envelope.expectedRouteChain[0]!,
   );
 
-  await client.policyCheckCommercialAction(plan.policyCheckCommercialActionInput);
+  await client.policyCheckCommercialAction({
+    ...plan.policyCheckCommercialActionInput,
+    commercialActionRequestId,
+  });
   verificationBundle = appendCompletedRouteStep(
     verificationBundle,
     plan.envelope.expectedRouteChain[1]!,
   );
 
-  await client.requestCommercialActionApproval(plan.requestCommercialActionApprovalInput);
+  await client.requestCommercialActionApproval({
+    ...plan.requestCommercialActionApprovalInput,
+    commercialActionRequestId,
+  });
   verificationBundle = appendCompletedRouteStep(
     verificationBundle,
     plan.envelope.expectedRouteChain[2]!,
   );
 
-  await client.executeCommercialAction(plan.executeCommercialActionInput);
+  await client.executeCommercialAction({
+    ...plan.executeCommercialActionInput,
+    commercialActionRequestId,
+  });
   verificationBundle = appendCompletedRouteStep(
     verificationBundle,
     plan.envelope.expectedRouteChain[3]!,
@@ -169,12 +244,59 @@ export async function runCommercialActionScenario(
 export async function readCommercialActionScenarioReview(
   client: BidviaClient,
   plan: BidviaCommercialActionScenarioPlan,
+  verificationBundle?: BidviaScenarioVerificationBundle,
 ): Promise<BidviaCommercialActionScenarioReview> {
-  const commercialActionRequestId = plan.policyCheckCommercialActionInput.commercialActionRequestId;
+  const commercialActionRequestId = resolveCommercialActionRequestId(plan, verificationBundle);
 
   return {
     status: await client.getCommercialActionStatus({ commercialActionRequestId }),
     receipt: await client.getCommercialActionReceipt({ commercialActionRequestId }),
     audit: await client.getCommercialActionAudit({ commercialActionRequestId }),
   };
+}
+
+export async function executeCommercialActionScenario(
+  client: BidviaClient,
+  plan: BidviaCommercialActionScenarioPlan,
+): Promise<BidviaCommercialActionScenarioExecutionResult> {
+  const result = await runCommercialActionScenario(client, plan);
+  const executionResult = buildScenarioExecutionResult({
+    scenarioId: plan.envelope.scenarioId,
+    scenarioFamily: plan.envelope.scenarioFamily,
+    verificationMode: result.verificationBundle.verificationMode,
+    status: 'succeeded',
+    closureStage: 'business-closure-deferred',
+    ownership: 'claimant',
+    resumable: true,
+    evidence: {
+      helperKey: 'runCommercialActionScenario',
+      routePathTemplate: '/runtime/commercial-actions*',
+      actorRole: 'user',
+      contextSummary: {
+        tenantIdPresent: true,
+        principalIdPresent: true,
+        companyIdPresent: true,
+      },
+      requestSummary: {
+        method: 'SCENARIO',
+      },
+      responseSummary: {
+        status: 200,
+      },
+    },
+  });
+
+  return {
+    verificationBundle: result.verificationBundle,
+    reviewPacket: buildReviewPacket({
+      scenario: plan.envelope,
+      bundle: result.verificationBundle,
+      executionResult,
+    }),
+    executionResult,
+  };
+}
+
+export function buildCommercialActionEnterpriseBoundary(): BidviaEnterpriseIntegrationPlaneHelperGroup {
+  return getEnterpriseIntegrationPlaneHelperGroup('commercial-action');
 }

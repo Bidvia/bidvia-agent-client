@@ -12,7 +12,7 @@ It is intentionally bounded to the current shipped model:
 
 It does **not** assume any hosted Bidvia runtime, hosted MCP service, or remote registry behavior.
 
-The current SDK and CLI already expose the widened frozen downstream read surface for agent registrations, authority profiles, capability profiles, the singular per-registration capability profile, and the shipped participation-state/task-dispatch family. The OpenClaw path now uses that same local-first foundation more directly: stdio MCP is the primary OpenClaw runtime path, and the companion bundle is additive packaging around that same local server.
+The current SDK and CLI already expose the widened frozen downstream read surface for agent registrations, authority profiles, capability profiles, the singular per-registration capability profile, and the shipped participation-state/task-dispatch family. Stage 1 of the client-side runtime architecture upgrade is now complete in this repo, so the OpenClaw path uses that same local-first foundation more directly: stdio MCP is the primary OpenClaw runtime path, the companion bundle is additive packaging around that same local server, and execution writes local accumulation through the shared runtime core without changing operator-facing outputs.
 
 The public first-access website work for the same release remains spec-only in `docs/WEBSITE_FIRST_ACCESS_HANDOFF.md`. It does not add website code to this repo and it does not change the OpenClaw runtime order described here.
 
@@ -54,7 +54,7 @@ Follow this order:
 
 1. install the package
 2. run `bidvia openclaw-mcp-config`
-3. optionally run `bidvia openclaw-bundle-export`
+3. optionally run `bidvia openclaw-bundle-export --output ./bidvia-openclaw-bundle`
 4. run `bidvia route-context-matrix`
 5. set the minimum Bidvia context environment variables
 6. run the topology, capability, and local MCP smoke commands
@@ -62,6 +62,17 @@ Follow this order:
 8. only if needed, add an explicit `BIDVIA_BASE_URL` override for local, sim, regional, or operator-managed environments
 
 Do **not** start by assuming hosted runtime or remote negotiation exists.
+
+The same bounded validation story now applies on the Gateway/operator path too:
+
+```bash
+bidvia install-integrity
+bidvia validation-smoke
+bidvia diagnostic-bundle-export --output ./bidvia-diagnostic-bundle
+bidvia public-runtime-interpretation-probe
+```
+
+Those commands stay fail-closed. `install-integrity` is an install-path self-check, `validation-smoke` is the bounded external-user smoke lane, `diagnostic-bundle-export` packages shareable user-facing evidence, and `public-runtime-interpretation-probe` stays bounded to live runtime-baseline interpretation over `/healthz` and `/readyz`. None of them turns this guide into a Core-owned certification flow.
 
 ## Step 1 — install and build
 
@@ -102,7 +113,7 @@ Use the exported fragment as the primary handoff. If the operator or agent wants
 
 ## Step 3 — use the default public endpoint first
 
-For the normal public operator path, `bidvia` now defaults to the canonical public API at `https://api.bidvia.ai`.
+For the normal public operator path, `bidvia` now defaults to the canonical public API at `https://api.bidvia.cn`.
 
 That means the simplest public onboarding flow does not need an initial `BIDVIA_BASE_URL` export. Build the package first, set the minimum context, then use the read-only CLI commands to confirm what the package resolves locally.
 
@@ -164,7 +175,7 @@ Use this to confirm:
 
 - resolved `baseUrl`
 - resolved `environmentMode`
-- default public resolution to `https://api.bidvia.ai` when no override is set
+- default public resolution to `https://api.bidvia.cn` when no override is set
 - canonical `api.*` domains
 - compatibility profile mappings
 
@@ -209,6 +220,8 @@ The current shipped local-only CLI surface includes:
 - the Learn and diagnostics first-access commands such as `onboard`, `context show`, `whoami`, and `doctor`
 - the stable installed MCP subcommand `mcp-server`
 - the companion bundle export command `openclaw-bundle-export`
+- the bounded validation commands `install-integrity`, `validation-smoke`, and `diagnostic-bundle-export --output ...`
+- the bounded task-plane CLI parity commands such as `create-task-dispatch`, `assign-task-dispatch`, `complete-task-dispatch`, `create-claim`, `accept-claim`, and `reject-claim`, all limited to already-shipped helper semantics
 - explicit execution commands for `heartbeat`, `sync-upload`, `evidence`, and `proposal`, each with `--dry-run`
 - review-safe scenario plan and review-packet preview/export commands
 - verification-bundle preview/export commands
@@ -235,7 +248,8 @@ export BIDVIA_BASE_URL="https://api.bidvia.cn"
 
 The active public resolution behavior remains:
 
-- default or `global` profile -> `https://api.bidvia.ai`
+- default profile -> `https://api.bidvia.cn`
+- `global` profile -> `https://api.bidvia.ai`
 - `china` profile -> `https://api.bidvia.cn`
 
 During the compatibility window, the older root-domain mappings may still appear in topology smoke output as informational context:
@@ -278,7 +292,7 @@ For repo-local development/build use, the direct fallback remains:
 node dist/mcp-server.js
 ```
 
-This entrypoint is intentionally bounded to the local stdio loop only. It is not a hosted MCP service, not a remote registry participant, and not a broader runtime platform.
+This entrypoint is intentionally bounded to the local stdio loop only. Its execution tools now run through the same Stage 1 runtime core and local accumulation layer used by the CLI, but it is not a hosted MCP service, not a remote registry participant, and not a broader runtime platform.
 
 In practical terms, the OpenClaw side should treat it as:
 

@@ -45,8 +45,9 @@ test('runCli help lists governance deep-read commands under the visibility group
   assert(lines.includes('  agent-capability-profile --registration-id ...'));
   assert(lines.includes('  participation-states --registration-id ...'));
   assert(lines.includes('  participation-state --registration-id ... --participation-state-id ...'));
-  assert(lines.includes('  task-dispatches --registration-id ...'));
-  assert(lines.includes('  task-dispatch --registration-id ... --task-dispatch-id ...'));
+  assert(lines.includes('  task-dispatches --agent-id ... [--registration-id compatibility-only]'));
+  assert(lines.includes('  task-dispatch --agent-id ... --task-dispatch-id ... [--registration-id compatibility-only]'));
+  assert(lines.includes('  governed-work-closure --agent-id ... --task-dispatch-id ... [--registration-id compatibility-only]'));
   assert(!lines.includes('  agent-capability-profiles --registration-id ...'));
 });
 
@@ -63,8 +64,8 @@ test('runCli returns structured missing required-id failures for governance deep
     ['participation-states', ['--registration-id']],
     ['participation-state', ['--registration-id']],
     ['participation-state', ['--participation-state-id']],
-    ['task-dispatches', ['--registration-id']],
-    ['task-dispatch', ['--registration-id']],
+    ['task-dispatches', ['--agent-id']],
+    ['task-dispatch', ['--agent-id']],
     ['task-dispatch', ['--task-dispatch-id']],
   ] as const;
 
@@ -74,11 +75,11 @@ test('runCli returns structured missing required-id failures for governance deep
     }
 
     const printed: unknown[] = [];
-    const argv =
-      command === 'participation-state' && details[0] === '--participation-state-id'
-        ? [command, '--registration-id', 'areg-1']
-        : command === 'task-dispatch' && details[0] === '--task-dispatch-id'
+      const argv =
+        command === 'participation-state' && details[0] === '--participation-state-id'
           ? [command, '--registration-id', 'areg-1']
+        : command === 'task-dispatch' && details[0] === '--task-dispatch-id'
+          ? [command, '--agent-id', 'agent-1']
           : [command];
 
     const exitCode = await runCli(argv, {
@@ -183,11 +184,11 @@ test('runCli routes governance deep-read commands through the matching SDK metho
     async getParticipationState(registrationId: string, participationStateId: string) {
       return { method: 'getParticipationState', registrationId, participationStateId };
     },
-    async listTaskDispatches(registrationId: string) {
-      return { method: 'listTaskDispatches', registrationId };
+    async listTaskDispatches(agentId: string) {
+      return { method: 'listTaskDispatches', agentId };
     },
-    async getTaskDispatch(registrationId: string, taskDispatchId: string) {
-      return { method: 'getTaskDispatch', registrationId, taskDispatchId };
+    async getTaskDispatch(agentId: string, taskDispatchId: string) {
+      return { method: 'getTaskDispatch', agentId, taskDispatchId };
     },
   };
 
@@ -244,14 +245,14 @@ test('runCli routes governance deep-read commands through the matching SDK metho
       },
     },
     {
-      argv: ['task-dispatches', '--registration-id', 'areg-9'],
-      expected: { method: 'listTaskDispatches', registrationId: 'areg-9' },
+      argv: ['task-dispatches', '--agent-id', 'agent-9'],
+      expected: { method: 'listTaskDispatches', agentId: 'agent-9' },
     },
     {
-      argv: ['task-dispatch', '--registration-id', 'areg-10', '--task-dispatch-id', 'td-1'],
+      argv: ['task-dispatch', '--agent-id', 'agent-10', '--task-dispatch-id', 'td-1'],
       expected: {
         method: 'getTaskDispatch',
-        registrationId: 'areg-10',
+        agentId: 'agent-10',
         taskDispatchId: 'td-1',
       },
     },
@@ -353,5 +354,59 @@ test('runCli default client uses principal-governed env context for governance d
     { ok: true, path: 'http://127.0.0.1:8787/runtime/agents/areg-1/readiness?tenant_id=tenant-a' },
     { ok: true, path: 'http://127.0.0.1:8787/runtime/agents/registrations?tenant_id=tenant-a' },
     { ok: true, path: 'http://127.0.0.1:8787/runtime/capability-profiles?tenant_id=tenant-a' },
+  ]);
+});
+
+test('runCli governance deep reads fall back to local onboarding state for effective tenant and principal context', async () => {
+  const printed: unknown[] = [];
+  const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
+  const restoreEnv = [
+    setEnvVar('BIDVIA_BASE_URL', 'http://127.0.0.1:8787'),
+    setEnvVar('BIDVIA_TENANT_ID', undefined),
+    setEnvVar('BIDVIA_PRINCIPAL_ID', undefined),
+    setEnvVar('BIDVIA_REGISTRATION_ID', undefined),
+  ];
+  const previousFetch = globalThis.fetch;
+
+  globalThis.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
+    calls.push({ input, init });
+
+    return new Response(JSON.stringify({ ok: true, path: String(input) }), {
+      status: 200,
+      headers: { 'content-type': 'application/json' },
+    });
+  };
+
+  try {
+    const exitCode = await runCli(['agent-readiness', '--registration-id', 'areg-1'], {
+      readLocalOnboardingState: async () => ({
+        tenantId: 'tenant-local',
+        principalId: 'principal-local',
+        registrationId: 'areg-local',
+        createdAt: '2026-04-01T12:00:00.000Z',
+        updatedAt: '2026-04-01T12:00:00.000Z',
+      }),
+      printJson: (value) => {
+        printed.push(value);
+      },
+      printLine: () => {
+        throw new Error('governance deep reads should not print help');
+      },
+    });
+
+    assert.equal(exitCode, 0);
+  } finally {
+    globalThis.fetch = previousFetch;
+    for (const restore of restoreEnv.reverse()) {
+      restore();
+    }
+  }
+
+  assert.equal(calls.length, 1);
+  assert.equal(String(calls[0]?.input), 'http://127.0.0.1:8787/runtime/agents/areg-1/readiness?tenant_id=tenant-local');
+  assert.equal((calls[0]?.init?.headers as Record<string, string>)['x-authorized-tenant-id'], 'tenant-local');
+  assert.equal((calls[0]?.init?.headers as Record<string, string>)['x-bidvia-principal-id'], 'principal-local');
+  assert.deepEqual(printed, [
+    { ok: true, path: 'http://127.0.0.1:8787/runtime/agents/areg-1/readiness?tenant_id=tenant-local' },
   ]);
 });
