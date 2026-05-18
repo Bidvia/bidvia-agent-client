@@ -5,3 +5,14 @@ dist/
 .wotktree/
 .worktrees/
 .sisyphus/
+
+# Internal planning and coordination docs should not re-enter the public repo
+docs/superpowers/
+docs/CORE_FEEDBACK_*.md
+docs/INTERNAL_RELEASE_CHECKLIST.md
+docs/CLIENT_TEAM_TAKEOVER.md
+docs/WEBSITE_FIRST_ACCESS_HANDOFF.md
+docs/OPTIMIZATION_BACKLOG.md
+docs/REPOSITORY_STRUCTURE_PROPOSAL.md
+docs/PRODUCT_POSITIONING.md
+docs/RELEASE_NOTES_LOCAL_ONLY_NEXT_VERSION.md
