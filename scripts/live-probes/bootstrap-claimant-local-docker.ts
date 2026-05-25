@@ -12,6 +12,8 @@ export interface BootstrapClaimantLocalDockerArgs {
   email?: string;
   password?: string;
   companyName?: string;
+  stopBeforeDispatchAuthorityRequest?: boolean;
+  stopBeforeDispatchAuthorityApproval?: boolean;
 }
 
 export interface BootstrapClaimantLocalDockerReport {
@@ -41,12 +43,12 @@ export interface BootstrapClaimantLocalDockerReport {
     registrationId: string;
   };
   dispatchAuthority: {
-    requestId: string;
+    requestId: string | null;
     status: string;
     authorityProfileId: string | null;
   };
   externalBinding: {
-    bindingId: string;
+    bindingId: string | null;
     status: string;
     systemName: string;
     externalAccountRef: string;
@@ -308,84 +310,100 @@ export async function runBootstrapClaimantLocalDocker(
   const claimedPrincipalId = requireBootstrapString(claim.registration?.principal_id, 'claim', claim);
   const claimedRegistrationId = requireBootstrapString(claim.registration?.agent_registration_id, 'claim', claim);
 
-  const dispatchAuthorityRequest = await fetchJson(fetchImpl, `${args.baseUrl}/runtime/account/agents/${encodeURIComponent(claimedAgentId)}/dispatch-authority-requests`, {
-    method: 'POST',
-    headers: {
-      'content-type': 'application/json',
-      'x-bidvia-session-id': signIn.session.session_id,
-    },
-    body: JSON.stringify({
-      requested_target: 'bounded_dispatch_authority_activation',
-      now: timestamp,
-    }),
-  }) as {
-    request: {
-      dispatch_authority_activation_request_id: string;
-      status: string;
-    };
-  };
-  const dispatchAuthorityRequestId = requireBootstrapString(
-    dispatchAuthorityRequest.request?.dispatch_authority_activation_request_id,
-    'dispatch-authority request',
-    dispatchAuthorityRequest,
-  );
+  let approvedDispatchAuthorityRequestId: string | null = null;
+  let dispatchAuthorityStatus = 'NOT_REQUESTED';
+  let authorityProfileId: string | null = null;
+  let externalBindingId: string | null = null;
+  let externalBindingStatus = 'missing';
 
-  const dispatchAuthorityDecision = await fetchJson(fetchImpl, `${args.baseUrl}/operator/dispatch-authority-requests/${encodeURIComponent(dispatchAuthorityRequestId)}/decision?tenant_id=${encodeURIComponent(accountMe.account.tenant_id)}`, {
-    method: 'POST',
-    headers: {
-      'content-type': 'application/json',
-      'x-bidvia-admin-session-id': adminSignIn.admin_session.admin_session_id,
-      'x-authorized-tenant-id': accountMe.account.tenant_id,
-    },
-    body: JSON.stringify({
-      decision: 'APPROVE',
-      resolution_reason: 'bootstrap-claimant-local-docker',
-      now: timestamp,
-    }),
-  }) as {
-    request: {
-      dispatch_authority_activation_request_id: string;
-      status: string;
+  if (!args.stopBeforeDispatchAuthorityRequest) {
+    const dispatchAuthorityRequest = await fetchJson(fetchImpl, `${args.baseUrl}/runtime/account/agents/${encodeURIComponent(claimedAgentId)}/dispatch-authority-requests`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-bidvia-session-id': signIn.session.session_id,
+      },
+      body: JSON.stringify({
+        requested_target: 'bounded_dispatch_authority_activation',
+        now: timestamp,
+      }),
+    }) as {
+      request: {
+        dispatch_authority_activation_request_id: string;
+        status: string;
+      };
     };
-    authority_profile?: {
-      authority_profile_id?: string;
-      status?: string;
-    };
-  };
-  const approvedDispatchAuthorityRequestId = requireBootstrapString(
-    dispatchAuthorityDecision.request?.dispatch_authority_activation_request_id,
-    'dispatch-authority decision',
-    dispatchAuthorityDecision,
-  );
+    const dispatchAuthorityRequestId = requireBootstrapString(
+      dispatchAuthorityRequest.request?.dispatch_authority_activation_request_id,
+      'dispatch-authority request',
+      dispatchAuthorityRequest,
+    );
+    approvedDispatchAuthorityRequestId = dispatchAuthorityRequestId;
+    dispatchAuthorityStatus = dispatchAuthorityRequest.request?.status ?? 'OPEN';
 
-  const externalBinding = await fetchJson(fetchImpl, `${args.baseUrl}/runtime/account/agents/${encodeURIComponent(claimedAgentId)}/external-account-bindings?tenant_id=${encodeURIComponent(accountMe.account.tenant_id)}`, {
-    method: 'POST',
-    headers: {
-      'content-type': 'application/json',
-      'x-bidvia-session-id': signIn.session.session_id,
-    },
-    body: JSON.stringify({
-      system_type: 'wms',
-      system_name: externalSystemName,
-      external_account_ref: externalAccountRef,
-      now: timestamp,
-    }),
-  }) as {
-    external_account_binding: {
-      external_account_binding_id: string;
-      status: string;
+    if (args.stopBeforeDispatchAuthorityApproval) {
+      dispatchAuthorityStatus = 'OPEN';
+    } else {
+    const dispatchAuthorityDecision = await fetchJson(fetchImpl, `${args.baseUrl}/operator/dispatch-authority-requests/${encodeURIComponent(dispatchAuthorityRequestId)}/decision?tenant_id=${encodeURIComponent(accountMe.account.tenant_id)}`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-bidvia-admin-session-id': adminSignIn.admin_session.admin_session_id,
+        'x-authorized-tenant-id': accountMe.account.tenant_id,
+      },
+      body: JSON.stringify({
+        decision: 'APPROVE',
+        resolution_reason: 'bootstrap-claimant-local-docker',
+        now: timestamp,
+      }),
+    }) as {
+      request: {
+        dispatch_authority_activation_request_id: string;
+        status: string;
+      };
+      authority_profile?: {
+        authority_profile_id?: string;
+        status?: string;
+      };
     };
-  };
-  const externalBindingId = requireBootstrapString(
-    externalBinding.external_account_binding?.external_account_binding_id,
-    'external-account binding',
-    externalBinding,
-  );
-  const externalBindingStatus = requireBootstrapString(
-    externalBinding.external_account_binding?.status,
-    'external-account binding',
-    externalBinding,
-  );
+    approvedDispatchAuthorityRequestId = requireBootstrapString(
+      dispatchAuthorityDecision.request?.dispatch_authority_activation_request_id,
+      'dispatch-authority decision',
+      dispatchAuthorityDecision,
+    );
+    dispatchAuthorityStatus = dispatchAuthorityDecision.request.status;
+    authorityProfileId = dispatchAuthorityDecision.authority_profile?.authority_profile_id ?? null;
+
+    const externalBinding = await fetchJson(fetchImpl, `${args.baseUrl}/runtime/account/agents/${encodeURIComponent(claimedAgentId)}/external-account-bindings?tenant_id=${encodeURIComponent(accountMe.account.tenant_id)}`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-bidvia-session-id': signIn.session.session_id,
+      },
+      body: JSON.stringify({
+        system_type: 'wms',
+        system_name: externalSystemName,
+        external_account_ref: externalAccountRef,
+        now: timestamp,
+      }),
+    }) as {
+      external_account_binding: {
+        external_account_binding_id: string;
+        status: string;
+      };
+    };
+    externalBindingId = requireBootstrapString(
+      externalBinding.external_account_binding?.external_account_binding_id,
+      'external-account binding',
+      externalBinding,
+    );
+    externalBindingStatus = requireBootstrapString(
+      externalBinding.external_account_binding?.status,
+      'external-account binding',
+      externalBinding,
+    );
+    }
+  }
 
   await writeState({
     tenantId: accountMe.account.tenant_id,
@@ -429,8 +447,8 @@ export async function runBootstrapClaimantLocalDocker(
     },
     dispatchAuthority: {
       requestId: approvedDispatchAuthorityRequestId,
-      status: dispatchAuthorityDecision.request.status,
-      authorityProfileId: dispatchAuthorityDecision.authority_profile?.authority_profile_id ?? null,
+      status: dispatchAuthorityStatus,
+      authorityProfileId,
     },
     externalBinding: {
       bindingId: externalBindingId,
