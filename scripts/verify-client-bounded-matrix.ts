@@ -22,6 +22,14 @@ import {
   runPlatformManagedIntegrationHandoff,
   type RunPlatformManagedIntegrationHandoffReport,
 } from './live-probes/run-platform-managed-integration-handoff.js';
+import {
+  runGovernedRuntimeProjectionEntry,
+  type RunGovernedRuntimeProjectionEntryReport,
+} from './live-probes/run-governed-runtime-projection-entry.js';
+import {
+  runDispatchAuthorityClosure,
+  type RunDispatchAuthorityClosureReport,
+} from './live-probes/run-dispatch-authority-closure.js';
 
 export interface VerifyClientBoundedMatrixArgs {
   baseUrl: string;
@@ -38,6 +46,8 @@ export interface BoundedMatrixScenarioEvidence {
     | 'runtime-baseline'
     | 'platform-managed-onboarding'
     | 'dispatch-ready-progression'
+    | 'governed-runtime-projection-entry'
+    | 'dispatch-authority-reviewed-closure'
     | 'role-collaboration-handoff'
     | 'continuous-task-governed-work-closure'
     | 'commercial-and-integration-readback';
@@ -105,6 +115,16 @@ interface RunClientBoundedMatrixDependencies {
     statePath: string;
     outputPath: string;
   }) => Promise<RunP1IntegrationLifecycleReport>;
+  runGovernedRuntimeProjectionEntry?: (args: {
+    baseUrl: string;
+    statePath: string;
+    outputPath: string;
+  }) => Promise<RunGovernedRuntimeProjectionEntryReport>;
+  runDispatchAuthorityClosure?: (args: {
+    baseUrl: string;
+    statePath: string;
+    outputPath: string;
+  }) => Promise<RunDispatchAuthorityClosureReport>;
   runPackBTaskProgression?: (args: {
     baseUrl: string;
     statePath: string;
@@ -302,6 +322,215 @@ function buildArtifactPath(rootPath: string, fileName: string): string {
   return path.join(rootPath, fileName);
 }
 
+interface CommercialReadbackInputs {
+  integrationAppId: string;
+  integrationInstallationId: string;
+  integrationAvailabilityState: string;
+  platformManagedAgentId: string;
+  installationId: string;
+  connectionId: string;
+  readinessState: string;
+  invocationRoute: string | null;
+  inboundErrorCode: string | null;
+}
+
+type CommercialReadbackExtractionResult =
+  | {
+      ok: true;
+      value: CommercialReadbackInputs;
+    }
+  | {
+      ok: false;
+      blockedBy: ['missing-commercial-readback-field'];
+      notes: [string];
+    };
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
+function readRequiredString(
+  value: unknown,
+  fieldPath: string,
+): { ok: true; value: string } | { ok: false; note: string } {
+  return typeof value === 'string' && value.length > 0
+    ? { ok: true, value }
+    : { ok: false, note: `Missing required commercial readback field: ${fieldPath}` };
+}
+
+function readRequiredNullableStringField(
+  parent: unknown,
+  fieldName: string,
+  fieldPath: string,
+): { ok: true; value: string | null } | { ok: false; note: string } {
+  if (!isRecord(parent) || !(fieldName in parent)) {
+    return {
+      ok: false,
+      note: `Missing required commercial readback field: ${fieldPath}`,
+    };
+  }
+
+  const value = parent[fieldName];
+  if (typeof value === 'string' || value === null) {
+    return { ok: true, value };
+  }
+
+  return {
+    ok: false,
+    note: `Missing required commercial readback field: ${fieldPath}`,
+  };
+}
+
+function extractCommercialReadbackInputs(
+  integrationReport: RunP1IntegrationLifecycleReport,
+  platformManagedReport: RunPlatformManagedIntegrationHandoffReport,
+): CommercialReadbackExtractionResult {
+  const integrationAppId = readRequiredString(
+    integrationReport.ids.integrationAppId,
+    'ids.integrationAppId',
+  );
+  if (!integrationAppId.ok) {
+    return {
+      ok: false,
+      blockedBy: ['missing-commercial-readback-field'],
+      notes: [integrationAppId.note],
+    };
+  }
+
+  const integrationInstallationId = readRequiredString(
+    integrationReport.ids.integrationInstallationId,
+    'ids.integrationInstallationId',
+  );
+  if (!integrationInstallationId.ok) {
+    return {
+      ok: false,
+      blockedBy: ['missing-commercial-readback-field'],
+      notes: [integrationInstallationId.note],
+    };
+  }
+
+  const integrationEligibilityStep = integrationReport.steps.find(
+    (step) => step.stepKey === 'account-agent-integration-eligibility',
+  );
+  const integrationEligibility = isRecord(integrationEligibilityStep?.responseBody)
+    ? integrationEligibilityStep.responseBody
+    : null;
+  const integrationAvailabilityState = readRequiredString(
+    integrationEligibility?.availability_state,
+    'account-agent-integration-eligibility.responseBody.availability_state',
+  );
+  if (!integrationAvailabilityState.ok) {
+    return {
+      ok: false,
+      blockedBy: ['missing-commercial-readback-field'],
+      notes: [integrationAvailabilityState.note],
+    };
+  }
+
+  const platformManagedAgentId = readRequiredString(
+    platformManagedReport.platformManagedAgentId,
+    'platformManagedAgentId',
+  );
+  if (!platformManagedAgentId.ok) {
+    return {
+      ok: false,
+      blockedBy: ['missing-commercial-readback-field'],
+      notes: [platformManagedAgentId.note],
+    };
+  }
+
+  const installationId = readRequiredString(
+    platformManagedReport.installationId,
+    'installationId',
+  );
+  if (!installationId.ok) {
+    return {
+      ok: false,
+      blockedBy: ['missing-commercial-readback-field'],
+      notes: [installationId.note],
+    };
+  }
+
+  const connectionId = readRequiredString(
+    platformManagedReport.connectionId,
+    'connectionId',
+  );
+  if (!connectionId.ok) {
+    return {
+      ok: false,
+      blockedBy: ['missing-commercial-readback-field'],
+      notes: [connectionId.note],
+    };
+  }
+
+  const platformManagedEligibility = isRecord(platformManagedReport.platformManagedEligibility)
+    ? platformManagedReport.platformManagedEligibility
+    : null;
+  const eligibility = isRecord(platformManagedEligibility?.eligibility)
+    ? platformManagedEligibility.eligibility
+    : null;
+  const readinessState = readRequiredString(
+    eligibility?.readiness_state,
+    'platformManagedEligibility.eligibility.readiness_state',
+  );
+  if (!readinessState.ok) {
+    return {
+      ok: false,
+      blockedBy: ['missing-commercial-readback-field'],
+      notes: [readinessState.note],
+    };
+  }
+
+  const invocationRoute = readRequiredNullableStringField(
+    eligibility,
+    'invocation_route',
+    'platformManagedEligibility.eligibility.invocation_route',
+  );
+  if (!invocationRoute.ok) {
+    return {
+      ok: false,
+      blockedBy: ['missing-commercial-readback-field'],
+      notes: [invocationRoute.note],
+    };
+  }
+
+  const inboundAttempt = isRecord(platformManagedReport.inboundAttempt)
+    ? platformManagedReport.inboundAttempt
+    : null;
+  const inboundError = isRecord(inboundAttempt?.error)
+    ? inboundAttempt.error
+    : null;
+  const inboundErrorCode = inboundError !== null
+    ? readRequiredNullableStringField(
+        inboundError,
+        'code',
+        'inboundAttempt.error.code',
+      )
+    : { ok: true as const, value: null };
+  if (!inboundErrorCode.ok) {
+    return {
+      ok: false,
+      blockedBy: ['missing-commercial-readback-field'],
+      notes: [inboundErrorCode.note],
+    };
+  }
+
+  return {
+    ok: true,
+    value: {
+      integrationAppId: integrationAppId.value,
+      integrationInstallationId: integrationInstallationId.value,
+      integrationAvailabilityState: integrationAvailabilityState.value,
+      platformManagedAgentId: platformManagedAgentId.value,
+      installationId: installationId.value,
+      connectionId: connectionId.value,
+      readinessState: readinessState.value,
+      invocationRoute: invocationRoute.value,
+      inboundErrorCode: inboundErrorCode.value,
+    },
+  };
+}
+
 function summarizeBootstrap(
   bootstrap: BootstrapClaimantLocalDockerReport,
 ): Pick<BoundedMatrixScenarioEvidence, 'returnedIds' | 'readbacks'> {
@@ -310,8 +539,8 @@ function summarizeBootstrap(
       agentId: bootstrap.claimant.agentId,
       principalId: bootstrap.claimant.principalId,
       registrationId: bootstrap.claimant.registrationId,
-      dispatchAuthorityRequestId: bootstrap.dispatchAuthority.requestId,
-      externalBindingId: bootstrap.externalBinding.bindingId,
+      dispatchAuthorityRequestId: bootstrap.dispatchAuthority.requestId ?? '',
+      externalBindingId: bootstrap.externalBinding.bindingId ?? '',
     },
     readbacks: {
       claimant: bootstrap.claimant,
@@ -340,6 +569,20 @@ async function buildExecutableScenarioCluster(
         'direct-executable',
         ['fresh-bootstrap-state-required'],
         ['This scenario becomes executable only when the bounded matrix can create a fresh bootstrap state file.'],
+      ),
+      buildBlockedScenario(
+        'governed-runtime-projection-entry',
+        ['identity-entry', 'governed-runtime-projection'],
+        'direct-executable',
+        ['fresh-bootstrap-state-required'],
+        ['This scenario becomes executable only when the bounded matrix can create a fresh bootstrap state file for governed runtime projection.'],
+      ),
+      buildBlockedScenario(
+        'dispatch-authority-reviewed-closure',
+        ['account-plane-readiness-and-repair', 'operator-review-boundary'],
+        'direct-executable',
+        ['fresh-bootstrap-state-required'],
+        ['This scenario becomes executable only when the bounded matrix can create a fresh bootstrap state file for dispatch-authority closure.'],
       ),
       buildBlockedScenario(
         'role-collaboration-handoff',
@@ -371,6 +614,10 @@ async function buildExecutableScenarioCluster(
     ?? (async (args: { baseUrl: string; statePath: string; outputPath: string }) => runP1OperatorDeeperChain(args));
   const integrationProbe = dependencies.runP1IntegrationLifecycle
     ?? (async (args: { baseUrl: string; statePath: string; outputPath: string }) => runP1IntegrationLifecycle(args));
+  const projectionProbe = dependencies.runGovernedRuntimeProjectionEntry
+    ?? (async (args: { baseUrl: string; statePath: string; outputPath: string }) => runGovernedRuntimeProjectionEntry(args));
+  const dispatchAuthorityProbe = dependencies.runDispatchAuthorityClosure
+    ?? (async (args: { baseUrl: string; statePath: string; outputPath: string }) => runDispatchAuthorityClosure(args));
   const packBProbe = dependencies.runPackBTaskProgression
     ?? (async (args: { baseUrl: string; statePath: string; outputPath: string }) => runPackBTaskProgression(args));
   const platformManagedProbe = dependencies.runPlatformManagedIntegrationHandoff
@@ -425,6 +672,112 @@ async function buildExecutableScenarioCluster(
       ['account-plane-readiness-and-repair', 'operator-review-boundary'],
       'direct-executable',
       'Bootstrap claimant probe failed before dispatch-ready truth could be evaluated',
+      error,
+    );
+  }
+
+  let projectionScenario: BoundedMatrixScenarioEvidence;
+  try {
+    const projectionReport = await projectionProbe({
+      baseUrl: options.baseUrl,
+      statePath: buildArtifactPath(options.artifactRootPath, 'bounded-matrix-projection-state.json'),
+      outputPath: buildArtifactPath(options.artifactRootPath, 'bounded-matrix-projection-report.json'),
+    });
+    projectionScenario = projectionReport.status === 'passed'
+      ? buildPassedScenario(
+          'governed-runtime-projection-entry',
+          ['identity-entry', 'governed-runtime-projection'],
+          'direct-executable',
+          ['The checked-in governed-runtime projection probe reached governed reads through a session-projected enterprise account.'],
+          {
+            tenantId: projectionReport.claimant?.tenantId ?? '',
+            companyId: projectionReport.claimant?.companyId ?? '',
+          },
+          { projection: projectionReport },
+        )
+      : projectionReport.status === 'blocked'
+        ? buildBoundedStopScenario(
+            'governed-runtime-projection-entry',
+            ['identity-entry', 'governed-runtime-projection'],
+            'direct-executable',
+            ['governed-runtime-projection-blocked'],
+            ['The checked-in governed-runtime projection probe reached a bounded stop instead of opening governed reads.'],
+            {
+              tenantId: projectionReport.claimant?.tenantId ?? '',
+              companyId: projectionReport.claimant?.companyId ?? '',
+            },
+            { projection: projectionReport },
+          )
+        : buildContradictionScenario(
+            'governed-runtime-projection-entry',
+            ['identity-entry', 'governed-runtime-projection'],
+            'direct-executable',
+            ['The checked-in governed-runtime projection probe returned a failed result.'],
+            {
+              tenantId: projectionReport.claimant?.tenantId ?? '',
+              companyId: projectionReport.claimant?.companyId ?? '',
+            },
+            { projection: projectionReport },
+          );
+  } catch (error) {
+    projectionScenario = buildProbeFailureScenario(
+      'governed-runtime-projection-entry',
+      ['identity-entry', 'governed-runtime-projection'],
+      'direct-executable',
+      'Governed runtime projection probe failed before projected access could be classified',
+      error,
+    );
+  }
+
+  let dispatchAuthorityScenario: BoundedMatrixScenarioEvidence;
+  try {
+    const dispatchAuthorityReport = await dispatchAuthorityProbe({
+      baseUrl: options.baseUrl,
+      statePath: buildArtifactPath(options.artifactRootPath, 'bounded-matrix-dispatch-authority-state.json'),
+      outputPath: buildArtifactPath(options.artifactRootPath, 'bounded-matrix-dispatch-authority-report.json'),
+    });
+    dispatchAuthorityScenario = dispatchAuthorityReport.status === 'passed'
+      ? buildPassedScenario(
+          'dispatch-authority-reviewed-closure',
+          ['account-plane-readiness-and-repair', 'operator-review-boundary'],
+          'direct-executable',
+          ['The checked-in dispatch-authority closure probe completed claimant request, operator approval, and claimant reread truth.'],
+          {
+            requestId: dispatchAuthorityReport.requestId ?? '',
+            agentId: dispatchAuthorityReport.claimant?.agentId ?? '',
+          },
+          { dispatchAuthorityClosure: dispatchAuthorityReport },
+        )
+      : dispatchAuthorityReport.status === 'blocked'
+        ? buildBoundedStopScenario(
+            'dispatch-authority-reviewed-closure',
+            ['account-plane-readiness-and-repair', 'operator-review-boundary'],
+            'direct-executable',
+            ['dispatch-authority-closure-blocked'],
+            ['The checked-in dispatch-authority closure probe reached a bounded stop before approval closure was confirmed.'],
+            {
+              requestId: dispatchAuthorityReport.requestId ?? '',
+              agentId: dispatchAuthorityReport.claimant?.agentId ?? '',
+            },
+            { dispatchAuthorityClosure: dispatchAuthorityReport },
+          )
+        : buildContradictionScenario(
+            'dispatch-authority-reviewed-closure',
+            ['account-plane-readiness-and-repair', 'operator-review-boundary'],
+            'direct-executable',
+            ['The checked-in dispatch-authority closure probe returned a failed result.'],
+            {
+              requestId: dispatchAuthorityReport.requestId ?? '',
+              agentId: dispatchAuthorityReport.claimant?.agentId ?? '',
+            },
+            { dispatchAuthorityClosure: dispatchAuthorityReport },
+          );
+  } catch (error) {
+    dispatchAuthorityScenario = buildProbeFailureScenario(
+      'dispatch-authority-reviewed-closure',
+      ['account-plane-readiness-and-repair', 'operator-review-boundary'],
+      'direct-executable',
+      'Dispatch-authority closure probe failed before claimant/operator closure could be classified',
       error,
     );
   }
@@ -550,37 +903,44 @@ async function buildExecutableScenarioCluster(
       outputPath: buildArtifactPath(options.artifactRootPath, 'bounded-matrix-platform-managed-report.json'),
     });
 
-    const platformManagedEligibility = platformManagedReport.platformManagedEligibility as {
-      eligibility?: {
-        readiness_state?: string;
-        invocation_route?: string | null;
-      };
-    };
-    const inboundAttempt = platformManagedReport.inboundAttempt as {
-      error?: {
-        code?: string;
-      };
-    };
-    const integrationEligibilityStep = integrationReport.steps.find((step) => step.stepKey === 'account-agent-integration-eligibility');
-    const integrationEligibility = integrationEligibilityStep?.responseBody as {
-      availability_state?: string;
-    } | undefined;
+    const commercialInputs = extractCommercialReadbackInputs(
+      integrationReport,
+      platformManagedReport,
+    );
     const commercialReturnedIds = {
-      integrationAppId: integrationReport.ids.integrationAppId ?? '',
-      integrationInstallationId: integrationReport.ids.integrationInstallationId ?? '',
-      platformManagedAgentId: platformManagedReport.platformManagedAgentId ?? '',
-      installationId: platformManagedReport.installationId ?? '',
-      connectionId: platformManagedReport.connectionId ?? '',
+      integrationAppId: commercialInputs.ok ? commercialInputs.value.integrationAppId : '',
+      integrationInstallationId: commercialInputs.ok ? commercialInputs.value.integrationInstallationId : '',
+      platformManagedAgentId: commercialInputs.ok ? commercialInputs.value.platformManagedAgentId : '',
+      installationId: commercialInputs.ok ? commercialInputs.value.installationId : '',
+      connectionId: commercialInputs.ok ? commercialInputs.value.connectionId : '',
     };
     const commercialReadbacks = {
       integrationLifecycle: integrationReport,
       platformManagedHandoff: platformManagedReport,
     };
+    const connectorBoundedStopCode = commercialInputs.ok
+      && (commercialInputs.value.inboundErrorCode === 'connector_dispatcher_not_configured'
+        || commercialInputs.value.inboundErrorCode === 'connector_inbound_not_supported')
+      ? commercialInputs.value.inboundErrorCode
+      : null;
+    const configuredNotInvokableBoundedStop = commercialInputs.ok
+      && commercialInputs.value.readinessState === 'configured_not_invokable'
+      && commercialInputs.value.invocationRoute === null;
+    const integrationAvailabilityBoundedStop = commercialInputs.ok
+      && commercialInputs.value.integrationAvailabilityState === 'configured_actor_ineligible';
 
-    commercialScenario = platformManagedEligibility.eligibility?.readiness_state === 'configured_invokable'
-      && platformManagedEligibility.eligibility.invocation_route === null
-      && inboundAttempt.error?.code !== 'connector_dispatcher_not_configured'
-      && inboundAttempt.error?.code !== 'connector_inbound_not_supported'
+    commercialScenario = !commercialInputs.ok
+      ? buildBlockedScenario(
+          'commercial-and-integration-readback',
+          ['integration-center-lifecycle-and-retired-seam-validation'],
+          'bounded-stop-proof',
+          commercialInputs.blockedBy,
+          commercialInputs.notes,
+        )
+      : commercialInputs.value.readinessState === 'configured_invokable'
+      && commercialInputs.value.invocationRoute === null
+      && commercialInputs.value.inboundErrorCode !== 'connector_dispatcher_not_configured'
+      && commercialInputs.value.inboundErrorCode !== 'connector_inbound_not_supported'
       ? buildContradictionScenario(
           'commercial-and-integration-readback',
           ['integration-center-lifecycle-and-retired-seam-validation'],
@@ -589,17 +949,23 @@ async function buildExecutableScenarioCluster(
           commercialReturnedIds,
           commercialReadbacks,
         )
-      : inboundAttempt.error?.code === 'connector_dispatcher_not_configured'
-        || inboundAttempt.error?.code === 'connector_inbound_not_supported'
-        || (platformManagedEligibility.eligibility?.readiness_state === 'configured_not_invokable'
-          && platformManagedEligibility.eligibility.invocation_route === null)
-        || integrationEligibility?.availability_state === 'configured_actor_ineligible'
+      : connectorBoundedStopCode !== null
+        || configuredNotInvokableBoundedStop
+        || integrationAvailabilityBoundedStop
         ? buildBoundedStopScenario(
             'commercial-and-integration-readback',
             ['integration-center-lifecycle-and-retired-seam-validation'],
             'bounded-stop-proof',
-            [inboundAttempt.error?.code === 'connector_inbound_not_supported' ? 'connector_inbound_not_supported' : 'connector_dispatcher_not_configured'],
-            ['The checked-in integration probes reached the maintained bounded stop at the configured-but-not-invokable connector boundary instead of contradicting readiness truth.'],
+            connectorBoundedStopCode !== null
+              ? [connectorBoundedStopCode]
+              : configuredNotInvokableBoundedStop
+                ? ['configured_not_invokable']
+                : ['configured_actor_ineligible'],
+            connectorBoundedStopCode !== null
+              ? ['The checked-in integration probes reached the maintained bounded stop at the connector boundary instead of contradicting readiness truth.']
+              : configuredNotInvokableBoundedStop
+                ? ['Platform-managed eligibility reported configured_not_invokable with a null invocation route, so the commercial readback remains at the maintained bounded stop.']
+                : ['Integration eligibility reported configured_actor_ineligible, so the commercial readback remains at the maintained bounded stop.'],
             commercialReturnedIds,
             commercialReadbacks,
           )
@@ -624,6 +990,8 @@ async function buildExecutableScenarioCluster(
   return [
     onboardingScenario,
     dispatchReadyScenario,
+    projectionScenario,
+    dispatchAuthorityScenario,
     roleCollaborationScenario,
     packBScenario,
     commercialScenario,
