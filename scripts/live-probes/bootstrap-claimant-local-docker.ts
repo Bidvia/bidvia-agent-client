@@ -190,14 +190,24 @@ export async function runBootstrapClaimantLocalDocker(
       now: timestamp,
     }),
   }) as {
-    admin_session: { admin_session_id: string; admin_account_id: string };
+    admin_session?: { admin_session_id?: string; admin_account_id?: string };
   };
+  const adminSessionId = requireBootstrapString(
+    adminSignIn.admin_session?.admin_session_id,
+    'admin sign-in',
+    adminSignIn,
+  );
+  const adminAccountId = requireBootstrapString(
+    adminSignIn.admin_session?.admin_account_id,
+    'admin sign-in',
+    adminSignIn,
+  );
 
   const invitation = await fetchJson(fetchImpl, `${args.baseUrl}/runtime/admin/invitations/issue`, {
     method: 'POST',
     headers: {
       'content-type': 'application/json',
-      'x-bidvia-admin-session-id': adminSignIn.admin_session.admin_session_id,
+      'x-bidvia-admin-session-id': adminSessionId,
     },
     body: JSON.stringify({
       invitation_type: 'ENTERPRISE_ACCOUNT',
@@ -348,7 +358,7 @@ export async function runBootstrapClaimantLocalDocker(
       method: 'POST',
       headers: {
         'content-type': 'application/json',
-        'x-bidvia-admin-session-id': adminSignIn.admin_session.admin_session_id,
+        'x-bidvia-admin-session-id': adminSessionId,
         'x-authorized-tenant-id': accountMe.account.tenant_id,
       },
       body: JSON.stringify({
@@ -425,8 +435,8 @@ export async function runBootstrapClaimantLocalDocker(
     statePath: args.statePath,
     admin: {
       email: seededAdminEmail,
-      adminSessionId: adminSignIn.admin_session.admin_session_id,
-      adminAccountId: adminSignIn.admin_session.admin_account_id,
+      adminSessionId,
+      adminAccountId,
     },
     invitation: {
       invitationId: invitation.invitation.invitation_id,

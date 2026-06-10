@@ -59,6 +59,35 @@ test('parseBootstrapClaimantLocalDockerArgs requires base-url and state-path', (
   );
 });
 
+test('runBootstrapClaimantLocalDocker surfaces admin sign-in errors with explicit step context instead of TypeError', async () => {
+  const { fetchStub } = createFetchStub([
+    {
+      status: 401,
+      body: {
+        error: {
+          code: 'admin_session_denied',
+          message: 'seeded admin session is unavailable',
+        },
+      },
+    },
+  ]);
+
+  await assert.rejects(
+    () => runBootstrapClaimantLocalDocker(
+      {
+        baseUrl: 'http://127.0.0.1:8787',
+        statePath: '/tmp/bidvia-live-state.json',
+      },
+      {
+        fetchImpl: fetchStub,
+        now: () => '2026-05-14T10:00:00Z',
+        randomSuffix: () => 'seeded-suffix',
+      },
+    ),
+    /bootstrap admin sign-in failed: admin_session_denied: seeded admin session is unavailable/,
+  );
+});
+
 test('runBootstrapClaimantLocalDocker performs the local-docker claimant bootstrap sequence and persists local onboarding state', async () => {
   const { calls, fetchStub } = createFetchStub([
     {
