@@ -41,6 +41,19 @@ export interface OperatorDeeperChainStepResult {
   responseBody: unknown;
 }
 
+type CommercialActionStepKey = Extract<
+  OperatorDeeperChainStepResult['stepKey'],
+  `operator-commercial-action-${string}`
+>;
+
+export interface OperatorCommercialActionDiagnostic {
+  classification: 'operator-transitional-diagnostic';
+  status: 'passed' | 'failed' | 'blocked';
+  blockedBy: string[];
+  notes: string[];
+  stepKeys: CommercialActionStepKey[];
+}
+
 export interface RunP1OperatorDeeperChainReport {
   command: 'run-p1-operator-deeper-chain';
   generatedAt: string;
@@ -65,6 +78,7 @@ export interface RunP1OperatorDeeperChainReport {
     materialization: unknown;
     stageSnapshot: ReturnType<typeof normalizeMaterializationStatus>;
   };
+  commercialActionDiagnostic?: OperatorCommercialActionDiagnostic;
   claimantReadbacks: {
     status: unknown;
     endState: unknown;
@@ -157,6 +171,73 @@ function pushBlockedStep(
       blockedBy,
     },
   });
+}
+
+function readResponseErrorCode(payload: unknown): string | null {
+  const error = typeof payload === 'object' && payload !== null && 'error' in payload
+    ? payload.error
+    : null;
+  if (typeof error !== 'object' || error === null || !('code' in error)) {
+    return null;
+  }
+
+  return typeof error.code === 'string' && error.code.length > 0 ? error.code : null;
+}
+
+function pushCommercialActionCreateStep(
+  steps: OperatorDeeperChainStepResult[],
+  route: string,
+  requestBody: unknown,
+  response: { status: number; body: unknown },
+) {
+  const errorCode = readResponseErrorCode(response.body);
+  steps.push({
+    stepKey: 'operator-commercial-action-create',
+    status: response.status === 200
+      ? 'passed'
+      : errorCode === 'auth_source_disallowed'
+        ? 'blocked'
+        : 'failed',
+    route,
+    requestBody,
+    responseBody: response.body,
+  });
+}
+
+function isCommercialActionStepKey(
+  stepKey: OperatorDeeperChainStepResult['stepKey'],
+): stepKey is CommercialActionStepKey {
+  return stepKey.startsWith('operator-commercial-action-');
+}
+
+function buildCommercialActionDiagnostic(
+  steps: OperatorDeeperChainStepResult[],
+): OperatorCommercialActionDiagnostic {
+  const commercialSteps = steps.filter(
+    (step): step is OperatorDeeperChainStepResult & { stepKey: CommercialActionStepKey } => isCommercialActionStepKey(step.stepKey),
+  );
+  const firstUnpassedStep = commercialSteps.find((step) => step.status !== 'passed');
+  if (!firstUnpassedStep) {
+    return {
+      classification: 'operator-transitional-diagnostic',
+      status: 'passed',
+      blockedBy: [],
+      notes: ['Commercial action diagnostic completed through create, approval, execution, and readback routes.'],
+      stepKeys: commercialSteps.map((step) => step.stepKey),
+    };
+  }
+
+  const errorCode = readResponseErrorCode(firstUnpassedStep.responseBody)
+    ?? (firstUnpassedStep.status === 'blocked' ? 'commercial_action_diagnostic_blocked' : 'commercial_action_diagnostic_failed');
+  return {
+    classification: 'operator-transitional-diagnostic',
+    status: firstUnpassedStep.status,
+    blockedBy: [errorCode],
+    notes: firstUnpassedStep.stepKey === 'operator-commercial-action-create'
+      ? ['Commercial action create stopped at the operator/transitional diagnostic boundary; downstream commercial action routes were not attempted without a request id.']
+      : [`Commercial action diagnostic stopped at ${firstUnpassedStep.stepKey}.`],
+    stepKeys: commercialSteps.map((step) => step.stepKey),
+  };
 }
 
 export async function runP1OperatorDeeperChain(
@@ -445,84 +526,99 @@ export async function runP1OperatorDeeperChain(
     },
     body: JSON.stringify(commercialActionCreateBody),
   });
-  pushStep(steps, 'operator-commercial-action-create', '/runtime/commercial-actions', commercialActionCreateBody, commercialActionCreate);
+  pushCommercialActionCreateStep(steps, '/runtime/commercial-actions', commercialActionCreateBody, commercialActionCreate);
 
   const commercialActionRequestId = (commercialActionCreate.body as { request?: { commercial_action_request_id?: string } }).request?.commercial_action_request_id ?? null;
-  const policyCheckBody = {
-    policy_version: 'policy-v1',
-    outcome: 'APPROVAL_REQUIRED',
-    now: timestamp,
-  };
-  const policyCheck = await requestJson(fetchImpl, `${args.baseUrl}/runtime/commercial-actions/${encodeURIComponent(commercialActionRequestId ?? '')}/policy-check?tenant_id=tenant-public`, {
-    method: 'POST',
-    headers: {
-      ...adminHeaders,
-      'x-authorized-company-id': 'company-public',
-      'x-bidvia-principal-id': 'operator-system',
-    },
-    body: JSON.stringify(policyCheckBody),
-  });
-  pushStep(steps, 'operator-commercial-action-policy-check', '/runtime/commercial-actions/:commercialActionRequestId/policy-check', policyCheckBody, policyCheck);
+  let commercialActionApprovalRequestId: string | null = null;
+  let receiptId: string | null = null;
+  let auditId: string | null = null;
 
-  const requestApprovalBody = {
-    approval_request_id: `apr-request-${suffix}`,
-    now: timestamp,
-  };
-  const requestApproval = await requestJson(fetchImpl, `${args.baseUrl}/runtime/commercial-actions/${encodeURIComponent(commercialActionRequestId ?? '')}/request-approval?tenant_id=tenant-public`, {
-    method: 'POST',
-    headers: {
-      ...adminHeaders,
-      'x-authorized-company-id': 'company-public',
-      'x-bidvia-principal-id': 'operator-system',
-    },
-    body: JSON.stringify(requestApprovalBody),
-  });
-  pushStep(steps, 'operator-commercial-action-request-approval', '/runtime/commercial-actions/:commercialActionRequestId/request-approval', requestApprovalBody, requestApproval);
+  if (commercialActionRequestId !== null) {
+    const policyCheckBody = {
+      policy_version: 'policy-v1',
+      outcome: 'APPROVAL_REQUIRED',
+      now: timestamp,
+    };
+    const policyCheck = await requestJson(fetchImpl, `${args.baseUrl}/runtime/commercial-actions/${encodeURIComponent(commercialActionRequestId)}/policy-check?tenant_id=tenant-public`, {
+      method: 'POST',
+      headers: {
+        ...adminHeaders,
+        'x-authorized-company-id': 'company-public',
+        'x-bidvia-principal-id': 'operator-system',
+      },
+      body: JSON.stringify(policyCheckBody),
+    });
+    pushStep(steps, 'operator-commercial-action-policy-check', '/runtime/commercial-actions/:commercialActionRequestId/policy-check', policyCheckBody, policyCheck);
 
-  const commercialActionApprovalRequestId = (requestApproval.body as { approval_binding?: { approval_request_id?: string } }).approval_binding?.approval_request_id
-    ?? requestApprovalBody.approval_request_id;
-  const executeBody = {
-    approval_request_id: commercialActionApprovalRequestId,
-    receipt_id: `receipt-${suffix}`,
-    approval_result: 'APPROVED',
-    result_status: 'SUCCEEDED',
-    audit_id: `audit-${suffix}`,
-    now: timestamp,
-  };
-  const execute = await requestJson(fetchImpl, `${args.baseUrl}/runtime/commercial-actions/${encodeURIComponent(commercialActionRequestId ?? '')}/execute?tenant_id=tenant-public`, {
-    method: 'POST',
-    headers: {
-      ...adminHeaders,
-      'x-authorized-company-id': 'company-public',
-      'x-bidvia-principal-id': 'operator-system',
-    },
-    body: JSON.stringify(executeBody),
-  });
-  pushStep(steps, 'operator-commercial-action-execute', '/runtime/commercial-actions/:commercialActionRequestId/execute', executeBody, execute);
+    const requestApprovalBody = {
+      approval_request_id: `apr-request-${suffix}`,
+      now: timestamp,
+    };
+    const requestApproval = await requestJson(fetchImpl, `${args.baseUrl}/runtime/commercial-actions/${encodeURIComponent(commercialActionRequestId)}/request-approval?tenant_id=tenant-public`, {
+      method: 'POST',
+      headers: {
+        ...adminHeaders,
+        'x-authorized-company-id': 'company-public',
+        'x-bidvia-principal-id': 'operator-system',
+      },
+      body: JSON.stringify(requestApprovalBody),
+    });
+    pushStep(steps, 'operator-commercial-action-request-approval', '/runtime/commercial-actions/:commercialActionRequestId/request-approval', requestApprovalBody, requestApproval);
 
-  const status = await requestJson(fetchImpl, `${args.baseUrl}/runtime/commercial-actions/${encodeURIComponent(commercialActionRequestId ?? '')}/status?tenant_id=tenant-public`, {
-    method: 'GET',
-    headers: {
-      'x-bidvia-admin-session-id': bootstrap.admin.adminSessionId,
-    },
-  });
-  pushStep(steps, 'operator-commercial-action-status', '/runtime/commercial-actions/:commercialActionRequestId/status', null, status);
+    commercialActionApprovalRequestId = (requestApproval.body as { approval_binding?: { approval_request_id?: string } }).approval_binding?.approval_request_id
+      ?? requestApprovalBody.approval_request_id;
+    const executeBody = {
+      approval_request_id: commercialActionApprovalRequestId,
+      receipt_id: `receipt-${suffix}`,
+      approval_result: 'APPROVED',
+      result_status: 'SUCCEEDED',
+      audit_id: `audit-${suffix}`,
+      now: timestamp,
+    };
+    const execute = await requestJson(fetchImpl, `${args.baseUrl}/runtime/commercial-actions/${encodeURIComponent(commercialActionRequestId)}/execute?tenant_id=tenant-public`, {
+      method: 'POST',
+      headers: {
+        ...adminHeaders,
+        'x-authorized-company-id': 'company-public',
+        'x-bidvia-principal-id': 'operator-system',
+      },
+      body: JSON.stringify(executeBody),
+    });
+    pushStep(steps, 'operator-commercial-action-execute', '/runtime/commercial-actions/:commercialActionRequestId/execute', executeBody, execute);
 
-  const receipt = await requestJson(fetchImpl, `${args.baseUrl}/runtime/commercial-actions/${encodeURIComponent(commercialActionRequestId ?? '')}/receipt?tenant_id=tenant-public`, {
-    method: 'GET',
-    headers: {
-      'x-bidvia-admin-session-id': bootstrap.admin.adminSessionId,
-    },
-  });
-  pushStep(steps, 'operator-commercial-action-receipt', '/runtime/commercial-actions/:commercialActionRequestId/receipt', null, receipt);
+    const status = await requestJson(fetchImpl, `${args.baseUrl}/runtime/commercial-actions/${encodeURIComponent(commercialActionRequestId)}/status?tenant_id=tenant-public`, {
+      method: 'GET',
+      headers: {
+        'x-bidvia-admin-session-id': bootstrap.admin.adminSessionId,
+      },
+    });
+    pushStep(steps, 'operator-commercial-action-status', '/runtime/commercial-actions/:commercialActionRequestId/status', null, status);
 
-  const audit = await requestJson(fetchImpl, `${args.baseUrl}/runtime/commercial-actions/${encodeURIComponent(commercialActionRequestId ?? '')}/audit?tenant_id=tenant-public`, {
-    method: 'GET',
-    headers: {
-      'x-bidvia-admin-session-id': bootstrap.admin.adminSessionId,
-    },
-  });
-  pushStep(steps, 'operator-commercial-action-audit', '/runtime/commercial-actions/:commercialActionRequestId/audit', null, audit);
+    const receipt = await requestJson(fetchImpl, `${args.baseUrl}/runtime/commercial-actions/${encodeURIComponent(commercialActionRequestId)}/receipt?tenant_id=tenant-public`, {
+      method: 'GET',
+      headers: {
+        'x-bidvia-admin-session-id': bootstrap.admin.adminSessionId,
+      },
+    });
+    pushStep(steps, 'operator-commercial-action-receipt', '/runtime/commercial-actions/:commercialActionRequestId/receipt', null, receipt);
+
+    const audit = await requestJson(fetchImpl, `${args.baseUrl}/runtime/commercial-actions/${encodeURIComponent(commercialActionRequestId)}/audit?tenant_id=tenant-public`, {
+      method: 'GET',
+      headers: {
+        'x-bidvia-admin-session-id': bootstrap.admin.adminSessionId,
+      },
+    });
+    pushStep(steps, 'operator-commercial-action-audit', '/runtime/commercial-actions/:commercialActionRequestId/audit', null, audit);
+
+    receiptId = (execute.body as { receipt?: { receipt_id?: string } }).receipt?.receipt_id
+      ?? (receipt.body as { receipt?: { receipt_id?: string } }).receipt?.receipt_id
+      ?? null;
+    auditId = (execute.body as { audit_link?: { audit_id?: string } }).audit_link?.audit_id
+      ?? (audit.body as { audit_link?: { audit_id?: string } }).audit_link?.audit_id
+      ?? null;
+  }
+
+  const commercialActionDiagnostic = buildCommercialActionDiagnostic(steps);
 
   const claimantOpportunityStatus = await requestJson(fetchImpl, `${args.baseUrl}/runtime/account/agents/${encodeURIComponent(bootstrap.claimant.agentId)}/execution/opportunities/${encodeURIComponent(opportunityId ?? '')}/status?tenant_id=${encodeURIComponent(bootstrap.claimant.tenantId)}`, {
     method: 'GET',
@@ -553,12 +649,8 @@ export async function runP1OperatorDeeperChain(
       packageId,
       commercialActionRequestId,
       commercialActionApprovalRequestId,
-      receiptId: (execute.body as { receipt?: { receipt_id?: string } }).receipt?.receipt_id
-        ?? (receipt.body as { receipt?: { receipt_id?: string } }).receipt?.receipt_id
-        ?? null,
-      auditId: (execute.body as { audit_link?: { audit_id?: string } }).audit_link?.audit_id
-        ?? (audit.body as { audit_link?: { audit_id?: string } }).audit_link?.audit_id
-        ?? null,
+      receiptId,
+      auditId,
     },
     materializationReadback: {
       materialization: materializationStatus.body,
@@ -578,6 +670,7 @@ export async function runP1OperatorDeeperChain(
         principalId: bootstrap.claimant.principalId,
       }),
     },
+    commercialActionDiagnostic,
     claimantReadbacks: {
       status: claimantOpportunityStatus.body,
       endState: claimantOpportunityEndState.body,
