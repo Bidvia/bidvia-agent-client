@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 
 import {
   runBootstrapClaimantLocalDocker,
+  type BootstrapClaimantLocalDockerArgs,
   type BootstrapClaimantLocalDockerReport,
 } from './live-probes/bootstrap-claimant-local-docker.js';
 import {
@@ -101,10 +102,7 @@ interface RunClientBoundedMatrixDependencies {
   fetchImpl?: typeof fetch;
   env?: Record<string, string | undefined>;
   now?: () => string;
-  bootstrapClaimantLocalDocker?: (args: {
-    baseUrl: string;
-    statePath: string;
-  }) => Promise<BootstrapClaimantLocalDockerReport>;
+  bootstrapClaimantLocalDocker?: (args: BootstrapClaimantLocalDockerArgs) => Promise<BootstrapClaimantLocalDockerReport>;
   runP1OperatorDeeperChain?: (args: {
     baseUrl: string;
     statePath: string;
@@ -295,6 +293,37 @@ function buildContradictionScenario(
   };
 }
 
+function isBootstrapAdminSignInRateLimited(message: string): boolean {
+  return message.includes('bootstrap admin sign-in failed: rate_limited:');
+}
+
+function buildProbeBlockedScenario(
+  scenarioKey: BoundedMatrixScenarioEvidence['scenarioKey'],
+  coveredFamilies: string[],
+  proofClass: BoundedMatrixScenarioEvidence['proofClass'],
+  note: string,
+  message: string,
+): BoundedMatrixScenarioEvidence {
+  return {
+    scenarioKey,
+    lane: 'default-local-docker',
+    status: 'blocked',
+    resultClass: 'blocked',
+    coveredFamilies,
+    proofClass,
+    blockedBy: ['bootstrap-admin-sign-in-rate-limited'],
+    notes: [`${note}: ${message}`],
+    returnedIds: {},
+    readbacks: {
+      error: {
+        code: 'probe_execution_blocked',
+        blockerCode: 'rate_limited',
+        message,
+      },
+    },
+  };
+}
+
 function buildProbeFailureScenario(
   scenarioKey: BoundedMatrixScenarioEvidence['scenarioKey'],
   coveredFamilies: string[],
@@ -303,6 +332,16 @@ function buildProbeFailureScenario(
   error: unknown,
 ): BoundedMatrixScenarioEvidence {
   const message = error instanceof Error ? error.message : 'unknown probe failure';
+  if (isBootstrapAdminSignInRateLimited(message)) {
+    return buildProbeBlockedScenario(
+      scenarioKey,
+      coveredFamilies,
+      proofClass,
+      note,
+      message,
+    );
+  }
+
   return buildContradictionScenario(
     scenarioKey,
     coveredFamilies,
@@ -320,6 +359,38 @@ function buildProbeFailureScenario(
 
 function buildArtifactPath(rootPath: string, fileName: string): string {
   return path.join(rootPath, fileName);
+}
+
+function buildBootstrapCacheKey(args: BootstrapClaimantLocalDockerArgs): string {
+  return JSON.stringify({
+    baseUrl: args.baseUrl,
+    email: args.email ?? null,
+    password: args.password ?? null,
+    companyName: args.companyName ?? null,
+    stopBeforeDispatchAuthorityRequest: args.stopBeforeDispatchAuthorityRequest ?? false,
+    stopBeforeDispatchAuthorityApproval: args.stopBeforeDispatchAuthorityApproval ?? false,
+  });
+}
+
+export function createBoundedMatrixBootstrapCache(
+  bootstrapClaimant: (args: BootstrapClaimantLocalDockerArgs) => Promise<BootstrapClaimantLocalDockerReport>,
+): (args: BootstrapClaimantLocalDockerArgs) => Promise<BootstrapClaimantLocalDockerReport> {
+  const cache = new Map<string, BootstrapClaimantLocalDockerReport>();
+
+  return async (args) => {
+    const cacheKey = buildBootstrapCacheKey(args);
+    const cached = cache.get(cacheKey);
+    if (cached) {
+      return {
+        ...cached,
+        statePath: args.statePath,
+      };
+    }
+
+    const report = await bootstrapClaimant(args);
+    cache.set(cacheKey, report);
+    return report;
+  };
 }
 
 interface CommercialReadbackInputs {
@@ -344,6 +415,13 @@ type CommercialReadbackExtractionResult =
       blockedBy: ['missing-commercial-readback-field'];
       notes: [string];
     };
+
+interface CommercialKnownBoundedStop {
+  blockedBy: string[];
+  notes: string[];
+  returnedIds: Record<string, string>;
+  readbacks: Record<string, unknown>;
+}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
@@ -379,6 +457,76 @@ function readRequiredNullableStringField(
     ok: false,
     note: `Missing required commercial readback field: ${fieldPath}`,
   };
+}
+
+function readResponseError(payload: unknown): { code: string; message: string | null } | null {
+  const error = isRecord(payload) && isRecord(payload.error) ? payload.error : null;
+  const code = error?.code;
+  if (typeof code !== 'string' || code.length === 0) {
+    return null;
+  }
+
+  const messageValue = error === null ? null : error.message;
+  const message = typeof messageValue === 'string' && messageValue.length > 0
+    ? messageValue
+    : null;
+  return { code, message };
+}
+
+function buildCommercialPartialReturnedIds(
+  integrationReport: RunP1IntegrationLifecycleReport,
+  platformManagedReport: RunPlatformManagedIntegrationHandoffReport,
+): Record<string, string> {
+  return {
+    integrationAppId: typeof integrationReport.ids.integrationAppId === 'string' ? integrationReport.ids.integrationAppId : '',
+    integrationInstallationId: typeof integrationReport.ids.integrationInstallationId === 'string' ? integrationReport.ids.integrationInstallationId : '',
+    platformManagedAgentId: typeof platformManagedReport.platformManagedAgentId === 'string' ? platformManagedReport.platformManagedAgentId : '',
+    installationId: typeof platformManagedReport.installationId === 'string' ? platformManagedReport.installationId : '',
+    connectionId: typeof platformManagedReport.connectionId === 'string' ? platformManagedReport.connectionId : '',
+  };
+}
+
+function buildCommercialProbeReadbacks(
+  integrationReport: RunP1IntegrationLifecycleReport,
+  platformManagedReport: RunPlatformManagedIntegrationHandoffReport,
+): Record<string, unknown> {
+  return {
+    integrationLifecycle: integrationReport,
+    platformManagedHandoff: platformManagedReport,
+  };
+}
+
+function extractKnownCommercialBoundedStop(
+  integrationReport: RunP1IntegrationLifecycleReport,
+  platformManagedReport: RunPlatformManagedIntegrationHandoffReport,
+): CommercialKnownBoundedStop | null {
+  const installationStop = integrationReport.steps
+    .map((step) => readResponseError(step.responseBody))
+    .find((error) => error?.code === 'integration_app_not_installable');
+  if (installationStop) {
+    return {
+      blockedBy: [installationStop.code],
+      notes: [installationStop.message
+        ? `Core reported ${installationStop.code}: ${installationStop.message}.`
+        : 'Core reported integration_app_not_installable before installation and connection readback could be created.'],
+      returnedIds: buildCommercialPartialReturnedIds(integrationReport, platformManagedReport),
+      readbacks: buildCommercialProbeReadbacks(integrationReport, platformManagedReport),
+    };
+  }
+
+  const inboundStop = readResponseError(platformManagedReport.inboundAttempt);
+  if (inboundStop?.code === 'integration_installation_not_ready') {
+    return {
+      blockedBy: [inboundStop.code],
+      notes: [inboundStop.message
+        ? `Core reported ${inboundStop.code}: ${inboundStop.message}.`
+        : 'Core reported integration_installation_not_ready before platform-managed inbound invocation could run.'],
+      returnedIds: buildCommercialPartialReturnedIds(integrationReport, platformManagedReport),
+      readbacks: buildCommercialProbeReadbacks(integrationReport, platformManagedReport),
+    };
+  }
+
+  return null;
 }
 
 function extractCommercialReadbackInputs(
@@ -608,20 +756,22 @@ async function buildExecutableScenarioCluster(
     ];
   }
 
-  const bootstrapClaimant = dependencies.bootstrapClaimantLocalDocker
-    ?? (async (args: { baseUrl: string; statePath: string }) => runBootstrapClaimantLocalDocker(args));
+  const bootstrapClaimant = createBoundedMatrixBootstrapCache(
+    dependencies.bootstrapClaimantLocalDocker
+      ?? (async (args: BootstrapClaimantLocalDockerArgs) => runBootstrapClaimantLocalDocker(args)),
+  );
   const operatorProbe = dependencies.runP1OperatorDeeperChain
-    ?? (async (args: { baseUrl: string; statePath: string; outputPath: string }) => runP1OperatorDeeperChain(args));
+    ?? (async (args: { baseUrl: string; statePath: string; outputPath: string }) => runP1OperatorDeeperChain(args, { bootstrapClaimant }));
   const integrationProbe = dependencies.runP1IntegrationLifecycle
-    ?? (async (args: { baseUrl: string; statePath: string; outputPath: string }) => runP1IntegrationLifecycle(args));
+    ?? (async (args: { baseUrl: string; statePath: string; outputPath: string }) => runP1IntegrationLifecycle(args, { bootstrapClaimant }));
   const projectionProbe = dependencies.runGovernedRuntimeProjectionEntry
-    ?? (async (args: { baseUrl: string; statePath: string; outputPath: string }) => runGovernedRuntimeProjectionEntry(args));
+    ?? (async (args: { baseUrl: string; statePath: string; outputPath: string }) => runGovernedRuntimeProjectionEntry(args, { bootstrapClaimant }));
   const dispatchAuthorityProbe = dependencies.runDispatchAuthorityClosure
-    ?? (async (args: { baseUrl: string; statePath: string; outputPath: string }) => runDispatchAuthorityClosure(args));
+    ?? (async (args: { baseUrl: string; statePath: string; outputPath: string }) => runDispatchAuthorityClosure(args, { bootstrapClaimant }));
   const packBProbe = dependencies.runPackBTaskProgression
-    ?? (async (args: { baseUrl: string; statePath: string; outputPath: string }) => runPackBTaskProgression(args));
+    ?? (async (args: { baseUrl: string; statePath: string; outputPath: string }) => runPackBTaskProgression(args, { bootstrapClaimant }));
   const platformManagedProbe = dependencies.runPlatformManagedIntegrationHandoff
-    ?? (async (args: { baseUrl: string; statePath: string; outputPath: string }) => runPlatformManagedIntegrationHandoff(args));
+    ?? (async (args: { baseUrl: string; statePath: string; outputPath: string }) => runPlatformManagedIntegrationHandoff(args, { bootstrapClaimant }));
 
   const bootstrapStatePath = buildArtifactPath(options.artifactRootPath, 'bounded-matrix-bootstrap-state.json');
   let onboardingScenario: BoundedMatrixScenarioEvidence;
@@ -803,6 +953,7 @@ async function buildExecutableScenarioCluster(
           },
           {
             claimantReadbacks: operatorReport.claimantReadbacks,
+            commercialActionDiagnostic: operatorReport.commercialActionDiagnostic,
             steps: operatorReport.steps,
           },
         )
@@ -820,6 +971,7 @@ async function buildExecutableScenarioCluster(
           },
           {
             claimantReadbacks: operatorReport.claimantReadbacks,
+            commercialActionDiagnostic: operatorReport.commercialActionDiagnostic,
             steps: operatorReport.steps,
           },
         );
@@ -907,6 +1059,9 @@ async function buildExecutableScenarioCluster(
       integrationReport,
       platformManagedReport,
     );
+    const knownCommercialBoundedStop = commercialInputs.ok
+      ? null
+      : extractKnownCommercialBoundedStop(integrationReport, platformManagedReport);
     const commercialReturnedIds = {
       integrationAppId: commercialInputs.ok ? commercialInputs.value.integrationAppId : '',
       integrationInstallationId: commercialInputs.ok ? commercialInputs.value.integrationInstallationId : '',
@@ -914,10 +1069,7 @@ async function buildExecutableScenarioCluster(
       installationId: commercialInputs.ok ? commercialInputs.value.installationId : '',
       connectionId: commercialInputs.ok ? commercialInputs.value.connectionId : '',
     };
-    const commercialReadbacks = {
-      integrationLifecycle: integrationReport,
-      platformManagedHandoff: platformManagedReport,
-    };
+    const commercialReadbacks = buildCommercialProbeReadbacks(integrationReport, platformManagedReport);
     const connectorBoundedStopCode = commercialInputs.ok
       && (commercialInputs.value.inboundErrorCode === 'connector_dispatcher_not_configured'
         || commercialInputs.value.inboundErrorCode === 'connector_inbound_not_supported')
@@ -930,13 +1082,23 @@ async function buildExecutableScenarioCluster(
       && commercialInputs.value.integrationAvailabilityState === 'configured_actor_ineligible';
 
     commercialScenario = !commercialInputs.ok
-      ? buildBlockedScenario(
-          'commercial-and-integration-readback',
-          ['integration-center-lifecycle-and-retired-seam-validation'],
-          'bounded-stop-proof',
-          commercialInputs.blockedBy,
-          commercialInputs.notes,
-        )
+      ? knownCommercialBoundedStop !== null
+        ? buildBoundedStopScenario(
+            'commercial-and-integration-readback',
+            ['integration-center-lifecycle-and-retired-seam-validation'],
+            'bounded-stop-proof',
+            knownCommercialBoundedStop.blockedBy,
+            knownCommercialBoundedStop.notes,
+            knownCommercialBoundedStop.returnedIds,
+            knownCommercialBoundedStop.readbacks,
+          )
+        : buildBlockedScenario(
+            'commercial-and-integration-readback',
+            ['integration-center-lifecycle-and-retired-seam-validation'],
+            'bounded-stop-proof',
+            commercialInputs.blockedBy,
+            commercialInputs.notes,
+          )
       : commercialInputs.value.readinessState === 'configured_invokable'
       && commercialInputs.value.invocationRoute === null
       && commercialInputs.value.inboundErrorCode !== 'connector_dispatcher_not_configured'

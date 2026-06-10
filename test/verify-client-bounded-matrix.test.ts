@@ -5,10 +5,12 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 
 import {
+  createBoundedMatrixBootstrapCache,
   parseVerifyClientBoundedMatrixArgs,
   runClientBoundedMatrix,
   writeClientBoundedMatrixEvidence,
 } from '../scripts/verify-client-bounded-matrix.ts';
+import type { BootstrapClaimantLocalDockerReport } from '../scripts/live-probes/bootstrap-claimant-local-docker.ts';
 import type { RunP1OperatorDeeperChainReport } from '../scripts/live-probes/run-p1-operator-deeper-chain.ts';
 
 type RunClientBoundedMatrixDependencies = NonNullable<Parameters<typeof runClientBoundedMatrix>[1]>;
@@ -50,7 +52,83 @@ const commercialFetchImpl: typeof fetch = async () => new Response(JSON.stringif
   headers: { 'content-type': 'application/json' },
 });
 
+function buildBootstrapReport(statePath: string, suffix: string): BootstrapClaimantLocalDockerReport {
+  return {
+    command: 'bootstrap-claimant-local-docker',
+    baseUrl: 'http://127.0.0.1:8787',
+    statePath,
+    admin: {
+      email: 'ops-admin@example.com',
+      adminSessionId: `admin-session-${suffix}`,
+      adminAccountId: 'admin-acct-1',
+    },
+    invitation: {
+      invitationId: `invite-${suffix}`,
+      invitationType: 'ENTERPRISE_ACCOUNT',
+      status: 'ACTIVE',
+    },
+    claimant: {
+      email: `live-${suffix}@example.com`,
+      accountId: `acct-${suffix}`,
+      sessionId: `sess-${suffix}`,
+      tenantId: 'tenant-public',
+      companyId: `company-${suffix}`,
+      membershipRole: 'enterprise_admin',
+      agentOnboardingAllowed: true,
+      agentId: `agent-${suffix}`,
+      principalId: `claimed:agent-${suffix}`,
+      registrationId: `areg-${suffix}`,
+    },
+    dispatchAuthority: {
+      requestId: `daar-${suffix}`,
+      status: 'APPROVED',
+      authorityProfileId: `authp-${suffix}`,
+    },
+    externalBinding: {
+      bindingId: `eab-${suffix}`,
+      status: 'active',
+      systemName: `bootstrap-live-${suffix}`,
+      externalAccountRef: `ext-${suffix}`,
+    },
+  };
+}
+
+test('createBoundedMatrixBootstrapCache reuses matching bootstrap modes while preserving requested state paths', async () => {
+  const calls: Array<{ statePath: string; stopBeforeDispatchAuthorityRequest?: boolean }> = [];
+  const cachedBootstrap = createBoundedMatrixBootstrapCache(async (args) => {
+    calls.push({
+      statePath: args.statePath,
+      ...(args.stopBeforeDispatchAuthorityRequest === undefined ? {} : { stopBeforeDispatchAuthorityRequest: args.stopBeforeDispatchAuthorityRequest }),
+    });
+    return buildBootstrapReport(args.statePath, `${calls.length}`);
+  });
+
+  const first = await cachedBootstrap({
+    baseUrl: 'http://127.0.0.1:8787',
+    statePath: '/tmp/bootstrap-a.json',
+  });
+  const second = await cachedBootstrap({
+    baseUrl: 'http://127.0.0.1:8787',
+    statePath: '/tmp/bootstrap-b.json',
+  });
+  const claimOnly = await cachedBootstrap({
+    baseUrl: 'http://127.0.0.1:8787',
+    statePath: '/tmp/bootstrap-claim-only.json',
+    stopBeforeDispatchAuthorityRequest: true,
+  });
+
+  assert.deepEqual(calls, [
+    { statePath: '/tmp/bootstrap-a.json' },
+    { statePath: '/tmp/bootstrap-claim-only.json', stopBeforeDispatchAuthorityRequest: true },
+  ]);
+  assert.equal(first.claimant.agentId, 'agent-1');
+  assert.equal(second.claimant.agentId, 'agent-1');
+  assert.equal(second.statePath, '/tmp/bootstrap-b.json');
+  assert.equal(claimOnly.claimant.agentId, 'agent-2');
+});
+
 function buildCommercialMatrixDependencies(overrides: {
+  operatorReport?: Partial<RunP1OperatorDeeperChainReport>;
   integrationReport?: Partial<RunP1IntegrationLifecycleReport>;
   platformManagedReport?: Partial<RunPlatformManagedIntegrationHandoffReport>;
   platformManagedProbeError?: Error;
@@ -182,6 +260,7 @@ function buildCommercialMatrixDependencies(overrides: {
         endState: { closure_class: 'product_closed' },
       },
       steps: [],
+      ...overrides.operatorReport,
     }),
     runPackBTaskProgression: async () => ({
       command: 'run-pack-b-task-progression',
@@ -708,6 +787,94 @@ test('runClientBoundedMatrix blocks missing required commercial readback fields'
   );
 });
 
+test('runClientBoundedMatrix preserves explicit integration lifecycle stops instead of reporting missing commercial fields', async () => {
+  const evidence = await runClientBoundedMatrix(
+    commercialMatrixOptions,
+    buildCommercialMatrixDependencies({
+      integrationReport: {
+        status: 'passed',
+        phases: [
+          { phaseKey: 'bootstrap', status: 'passed', classification: 'pass', detail: 'bootstrap claimant completed successfully' },
+          { phaseKey: 'bounded-stop', status: 'blocked', classification: 'bounded-stop', detail: 'integration lifecycle reached at least one bounded stop' },
+        ],
+        ids: {
+          integrationAppId: 'iapp-1',
+          integrationInstallationId: null,
+        },
+        steps: [
+          {
+            stepKey: 'create-account-integration-installation',
+            status: 'blocked',
+            route: '/runtime/account/integration-installations',
+            requestBody: { integration_app_id: 'iapp-1' },
+            responseBody: {
+              error: {
+                code: 'integration_app_not_installable',
+                message: 'integration app must be approved and active before installation',
+              },
+            },
+          },
+        ],
+      },
+      platformManagedReport: {
+        installationId: null,
+        connectionId: null,
+        inboundAttempt: {
+          error: {
+            code: 'integration_installation_not_ready',
+          },
+        },
+      },
+    }),
+  );
+
+  const commercialScenario = requireCommercialScenario(evidence);
+  assert.equal(commercialScenario?.status, 'blocked');
+  assert.equal(commercialScenario?.resultClass, 'bounded-stop');
+  assert.deepEqual(commercialScenario.blockedBy, ['integration_app_not_installable']);
+  assert.match(commercialScenario.notes[0] ?? '', /approved and active/);
+  assert.equal(commercialScenario.returnedIds.integrationAppId, 'iapp-1');
+  assert.equal(commercialScenario.returnedIds.integrationInstallationId, '');
+  assert.equal(evidence.summary.boundedStopCount, 1);
+});
+
+test('runClientBoundedMatrix reports commercial actions as operator diagnostics without downgrading opportunity closure', async () => {
+  const evidence = await runClientBoundedMatrix(
+    commercialMatrixOptions,
+    buildCommercialMatrixDependencies({
+      operatorReport: {
+        commercialActionDiagnostic: {
+          classification: 'operator-transitional-diagnostic',
+          status: 'blocked',
+          blockedBy: ['auth_source_disallowed'],
+          notes: ['Commercial action create stopped at the operator/transitional diagnostic boundary; downstream commercial action routes were not attempted without a request id.'],
+          stepKeys: ['operator-commercial-action-create'],
+        },
+      },
+    }),
+  );
+
+  const roleScenario = evidence.scenarios.find((scenario) => scenario.scenarioKey === 'role-collaboration-handoff');
+  assert.ok(roleScenario);
+  assert.equal(roleScenario.status, 'passed');
+  assert.equal(roleScenario.resultClass, 'pass');
+
+  const roleReadbacks = roleScenario.readbacks as {
+    commercialActionDiagnostic?: {
+      classification?: string;
+      status?: string;
+      blockedBy?: string[];
+    };
+  };
+  assert.deepEqual(roleReadbacks.commercialActionDiagnostic, {
+    classification: 'operator-transitional-diagnostic',
+    status: 'blocked',
+    blockedBy: ['auth_source_disallowed'],
+    notes: ['Commercial action create stopped at the operator/transitional diagnostic boundary; downstream commercial action routes were not attempted without a request id.'],
+    stepKeys: ['operator-commercial-action-create'],
+  });
+});
+
 test('runClientBoundedMatrix blocks incomplete inboundAttempt error objects in commercial readback evidence', async () => {
   const evidence = await runClientBoundedMatrix(
     commercialMatrixOptions,
@@ -910,6 +1077,38 @@ test('runClientBoundedMatrix captures thrown upstream probe failures as contradi
   assert.equal(probeFailureReadback.error.code, 'probe_execution_failed');
   assert.equal(probeFailureReadback.error.message, 'platform-managed handoff probe crashed unexpectedly');
   assert.equal(evidence.summary.contradictionCount, 1);
+});
+
+test('runClientBoundedMatrix classifies bootstrap admin sign-in rate limiting as an execution-lane blocker', async () => {
+  const evidence = await runClientBoundedMatrix(
+    commercialMatrixOptions,
+    buildCommercialMatrixDependencies({
+      platformManagedProbeError: new Error('bootstrap admin sign-in failed: rate_limited: rate limit exceeded'),
+    }),
+  );
+
+  const commercialScenario = requireCommercialScenario(evidence);
+  assert.equal(commercialScenario?.status, 'blocked');
+  assert.equal(commercialScenario?.resultClass, 'blocked');
+  assert.deepEqual(commercialScenario.blockedBy, ['bootstrap-admin-sign-in-rate-limited']);
+  assert.equal(
+    commercialScenario.notes[0],
+    'Integration lifecycle or platform-managed handoff probe failed before connector-boundary evidence could be classified: bootstrap admin sign-in failed: rate_limited: rate limit exceeded',
+  );
+
+  const probeFailureReadback = commercialScenario.readbacks as {
+    error: {
+      code: string;
+      blockerCode: string;
+      message: string;
+    };
+  };
+  assert.equal(probeFailureReadback.error.code, 'probe_execution_blocked');
+  assert.equal(probeFailureReadback.error.blockerCode, 'rate_limited');
+  assert.equal(probeFailureReadback.error.message, 'bootstrap admin sign-in failed: rate_limited: rate limit exceeded');
+  assert.equal(evidence.summary.blockedCount, 1);
+  assert.equal(evidence.summary.failedCount, 0);
+  assert.equal(evidence.summary.contradictionCount, 0);
 });
 
 test('writeClientBoundedMatrixEvidence persists pretty-printed machine-readable evidence', async () => {
