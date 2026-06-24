@@ -473,6 +473,39 @@ function readResponseError(payload: unknown): { code: string; message: string | 
   return { code, message };
 }
 
+function isSuccessfulPlatformManagedInboundAttempt(inboundAttempt: unknown): boolean {
+  if (!isRecord(inboundAttempt)) {
+    return false;
+  }
+
+  return isRecord(inboundAttempt.result)
+    && (!('exception' in inboundAttempt) || inboundAttempt.exception === null)
+    && !isRecord(inboundAttempt.error);
+}
+
+function readIntegrationAvailabilityStateWhenPresent(
+  integrationReport: RunP1IntegrationLifecycleReport,
+): { ok: true; value: string } | { ok: false; note: string } {
+  const integrationEligibilityStep = integrationReport.steps.find(
+    (step) => step.stepKey === 'account-agent-integration-eligibility',
+  );
+  if (!integrationEligibilityStep) {
+    return { ok: true, value: 'configured' };
+  }
+
+  const integrationEligibility = isRecord(integrationEligibilityStep.responseBody)
+    ? integrationEligibilityStep.responseBody
+    : null;
+  if (!isRecord(integrationEligibility) || !('availability_state' in integrationEligibility)) {
+    return { ok: true, value: 'configured' };
+  }
+
+  return readRequiredString(
+    integrationEligibility.availability_state,
+    'account-agent-integration-eligibility.responseBody.availability_state',
+  );
+}
+
 function buildCommercialPartialReturnedIds(
   integrationReport: RunP1IntegrationLifecycleReport,
   platformManagedReport: RunPlatformManagedIntegrationHandoffReport,
@@ -677,6 +710,165 @@ function extractCommercialReadbackInputs(
       inboundErrorCode: inboundErrorCode.value,
     },
   };
+}
+
+function extractPlatformManagedCommercialReadbackInputs(
+  integrationReport: RunP1IntegrationLifecycleReport,
+  platformManagedReport: RunPlatformManagedIntegrationHandoffReport,
+): CommercialReadbackExtractionResult {
+  const selectedApp = isRecord(platformManagedReport.selectedApp)
+    ? platformManagedReport.selectedApp
+    : null;
+  const integrationAppId = readRequiredString(
+    selectedApp?.integration_app_id,
+    'platformManagedHandoff.selectedApp.integration_app_id',
+  );
+  if (!integrationAppId.ok) {
+    return {
+      ok: false,
+      blockedBy: ['missing-commercial-readback-field'],
+      notes: [integrationAppId.note],
+    };
+  }
+
+  const platformManagedAgentId = readRequiredString(
+    platformManagedReport.platformManagedAgentId,
+    'platformManagedAgentId',
+  );
+  if (!platformManagedAgentId.ok) {
+    return {
+      ok: false,
+      blockedBy: ['missing-commercial-readback-field'],
+      notes: [platformManagedAgentId.note],
+    };
+  }
+
+  const installationId = readRequiredString(
+    platformManagedReport.installationId,
+    'installationId',
+  );
+  if (!installationId.ok) {
+    return {
+      ok: false,
+      blockedBy: ['missing-commercial-readback-field'],
+      notes: [installationId.note],
+    };
+  }
+
+  const connectionId = readRequiredString(
+    platformManagedReport.connectionId,
+    'connectionId',
+  );
+  if (!connectionId.ok) {
+    return {
+      ok: false,
+      blockedBy: ['missing-commercial-readback-field'],
+      notes: [connectionId.note],
+    };
+  }
+
+  const platformManagedEligibility = isRecord(platformManagedReport.platformManagedEligibility)
+    ? platformManagedReport.platformManagedEligibility
+    : null;
+  const eligibility = isRecord(platformManagedEligibility?.eligibility)
+    ? platformManagedEligibility.eligibility
+    : null;
+  const readinessState = readRequiredString(
+    eligibility?.readiness_state,
+    'platformManagedEligibility.eligibility.readiness_state',
+  );
+  if (!readinessState.ok) {
+    return {
+      ok: false,
+      blockedBy: ['missing-commercial-readback-field'],
+      notes: [readinessState.note],
+    };
+  }
+
+  const invocationRoute = readRequiredNullableStringField(
+    eligibility,
+    'invocation_route',
+    'platformManagedEligibility.eligibility.invocation_route',
+  );
+  if (!invocationRoute.ok) {
+    return {
+      ok: false,
+      blockedBy: ['missing-commercial-readback-field'],
+      notes: [invocationRoute.note],
+    };
+  }
+
+  const inboundAttempt = isRecord(platformManagedReport.inboundAttempt)
+    ? platformManagedReport.inboundAttempt
+    : null;
+  if (!isSuccessfulPlatformManagedInboundAttempt(inboundAttempt)) {
+    return {
+      ok: false,
+      blockedBy: ['missing-commercial-readback-field'],
+      notes: ['Missing required commercial readback field: platformManagedHandoff.inboundAttempt.result'],
+    };
+  }
+
+  const inboundError = isRecord(inboundAttempt?.error)
+    ? inboundAttempt.error
+    : null;
+  const inboundErrorCode = inboundError !== null
+    ? readRequiredNullableStringField(
+        inboundError,
+        'code',
+        'inboundAttempt.error.code',
+      )
+    : { ok: true as const, value: null };
+  if (!inboundErrorCode.ok) {
+    return {
+      ok: false,
+      blockedBy: ['missing-commercial-readback-field'],
+      notes: [inboundErrorCode.note],
+    };
+  }
+
+  const integrationAvailabilityState = readIntegrationAvailabilityStateWhenPresent(integrationReport);
+  if (!integrationAvailabilityState.ok) {
+    return {
+      ok: false,
+      blockedBy: ['missing-commercial-readback-field'],
+      notes: [integrationAvailabilityState.note],
+    };
+  }
+
+  return {
+    ok: true,
+    value: {
+      integrationAppId: integrationAppId.value,
+      integrationInstallationId: installationId.value,
+      integrationAvailabilityState: integrationAvailabilityState.value,
+      platformManagedAgentId: platformManagedAgentId.value,
+      installationId: installationId.value,
+      connectionId: connectionId.value,
+      readinessState: readinessState.value,
+      invocationRoute: invocationRoute.value,
+      inboundErrorCode: inboundErrorCode.value,
+    },
+  };
+}
+
+function shouldFallbackToLegacyCommercialReadbackInputs(
+  platformManagedCommercialInputs: CommercialReadbackExtractionResult,
+  platformManagedReport: RunPlatformManagedIntegrationHandoffReport,
+): boolean {
+  if (platformManagedCommercialInputs.ok) {
+    return false;
+  }
+
+  const [note] = platformManagedCommercialInputs.notes;
+  if (!note.includes('platformManagedHandoff.inboundAttempt.result')) {
+    return false;
+  }
+
+  const inboundAttempt = isRecord(platformManagedReport.inboundAttempt)
+    ? platformManagedReport.inboundAttempt
+    : null;
+  return inboundAttempt?.status === 'not-attempted' || isRecord(inboundAttempt?.error);
 }
 
 function summarizeBootstrap(
@@ -1055,10 +1247,22 @@ async function buildExecutableScenarioCluster(
       outputPath: buildArtifactPath(options.artifactRootPath, 'bounded-matrix-platform-managed-report.json'),
     });
 
-    const commercialInputs = extractCommercialReadbackInputs(
+    const platformManagedCommercialInputs = extractPlatformManagedCommercialReadbackInputs(
       integrationReport,
       platformManagedReport,
     );
+    const shouldUseLegacyCommercialInputs = shouldFallbackToLegacyCommercialReadbackInputs(
+      platformManagedCommercialInputs,
+      platformManagedReport,
+    );
+    const commercialInputs = platformManagedCommercialInputs.ok
+      ? platformManagedCommercialInputs
+      : shouldUseLegacyCommercialInputs
+        ? extractCommercialReadbackInputs(
+            integrationReport,
+            platformManagedReport,
+          )
+        : platformManagedCommercialInputs;
     const knownCommercialBoundedStop = commercialInputs.ok
       ? null
       : extractKnownCommercialBoundedStop(integrationReport, platformManagedReport);
@@ -1073,6 +1277,11 @@ async function buildExecutableScenarioCluster(
     const connectorBoundedStopCode = commercialInputs.ok
       && (commercialInputs.value.inboundErrorCode === 'connector_dispatcher_not_configured'
         || commercialInputs.value.inboundErrorCode === 'connector_inbound_not_supported')
+      ? commercialInputs.value.inboundErrorCode
+      : null;
+    const unexpectedConnectorErrorCode = commercialInputs.ok
+      && commercialInputs.value.inboundErrorCode !== null
+      && connectorBoundedStopCode === null
       ? commercialInputs.value.inboundErrorCode
       : null;
     const configuredNotInvokableBoundedStop = commercialInputs.ok
@@ -1111,6 +1320,15 @@ async function buildExecutableScenarioCluster(
           commercialReturnedIds,
           commercialReadbacks,
         )
+      : unexpectedConnectorErrorCode !== null
+        ? buildContradictionScenario(
+            'commercial-and-integration-readback',
+            ['integration-center-lifecycle-and-retired-seam-validation'],
+            'bounded-stop-proof',
+            [`Platform-managed inbound returned unexpected connector error ${unexpectedConnectorErrorCode}.`],
+            commercialReturnedIds,
+            commercialReadbacks,
+          )
       : connectorBoundedStopCode !== null
         || configuredNotInvokableBoundedStop
         || integrationAvailabilityBoundedStop

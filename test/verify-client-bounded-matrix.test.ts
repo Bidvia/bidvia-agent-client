@@ -182,7 +182,11 @@ function buildCommercialMatrixDependencies(overrides: {
       },
     },
     inboundAttempt: {
-      status: 'passed',
+      result: {
+        fixture: true,
+        code: 'RKF9828CB2A5E6',
+      },
+      exception: null,
     },
     steps: [],
   };
@@ -367,6 +371,213 @@ function requireCommercialScenario(evidence: ClientBoundedMatrixEvidence) {
   assert.ok(commercialScenario);
   return commercialScenario;
 }
+
+test('runClientBoundedMatrix classifies single-connector platform-managed provider proof ahead of generic integration lifecycle stop', async () => {
+  const evidence = await runClientBoundedMatrix(
+    commercialMatrixOptions,
+    buildCommercialMatrixDependencies({
+      integrationReport: {
+        ids: {
+          integrationAppId: 'iapp-generic-p1',
+          integrationInstallationId: null,
+        },
+        steps: [
+          {
+            stepKey: 'create-account-integration-installation',
+            status: 'blocked',
+            route: '/runtime/account/integration-installations',
+            requestBody: { integration_app_id: 'iapp-generic-p1' },
+            responseBody: {
+              error: {
+                code: 'integration_app_not_installable',
+                message: 'integration app must be approved and active before installation',
+              },
+            },
+          },
+        ],
+      },
+      platformManagedReport: {
+        selectedApp: { integration_app_id: 'iapp-haisi' },
+        installationId: 'iinst-haisi',
+        connectionId: 'iiconn-haisi',
+        platformManagedAgentId: 'pm-agent-haisi',
+        platformManagedEligibility: {
+          eligibility: {
+            readiness_state: 'configured_invokable',
+            invocation_route: '/runtime/account/agents/:agentId/integrations/haisi-wms/inbound',
+          },
+        },
+        inboundAttempt: {
+          result: {
+            fixture: true,
+            code: 'RKF9828CB2A5E6',
+          },
+          exception: null,
+        },
+      },
+    }),
+  );
+
+  const commercialScenario = requireCommercialScenario(evidence);
+  assert.equal(commercialScenario.status, 'passed');
+  assert.equal(commercialScenario.resultClass, 'pass');
+  assert.equal(commercialScenario.returnedIds.integrationAppId, 'iapp-haisi');
+  assert.equal(commercialScenario.returnedIds.installationId, 'iinst-haisi');
+  assert.equal(commercialScenario.returnedIds.connectionId, 'iiconn-haisi');
+});
+
+test('runClientBoundedMatrix blocks status-only platform-managed inbound evidence', async () => {
+  const evidence = await runClientBoundedMatrix(
+    commercialMatrixOptions,
+    buildCommercialMatrixDependencies({
+      platformManagedReport: {
+        inboundAttempt: {
+          status: 'passed',
+        },
+      },
+    }),
+  );
+
+  const commercialScenario = requireCommercialScenario(evidence);
+  assert.equal(commercialScenario.status, 'blocked');
+  assert.equal(commercialScenario.resultClass, 'blocked');
+  assert.deepEqual(commercialScenario.blockedBy, ['missing-commercial-readback-field']);
+  assert.match(commercialScenario.notes[0] ?? '', /platformManagedHandoff\.inboundAttempt\.result/);
+});
+
+test('runClientBoundedMatrix accepts platform-managed provider result when exception is omitted', async () => {
+  const evidence = await runClientBoundedMatrix(
+    commercialMatrixOptions,
+    buildCommercialMatrixDependencies({
+      platformManagedReport: {
+        inboundAttempt: {
+          result: {
+            fixture: true,
+            code: 'RKF9828CB2A5E6',
+          },
+        },
+      },
+    }),
+  );
+
+  const commercialScenario = requireCommercialScenario(evidence);
+  assert.equal(commercialScenario.status, 'passed');
+  assert.equal(commercialScenario.resultClass, 'pass');
+});
+
+test('runClientBoundedMatrix keeps integration availability bounded stops even with successful platform-managed proof', async () => {
+  const evidence = await runClientBoundedMatrix(
+    commercialMatrixOptions,
+    buildCommercialMatrixDependencies({
+      integrationReport: {
+        steps: [
+          {
+            stepKey: 'account-agent-integration-eligibility',
+            status: 'passed',
+            route: '/runtime/account/agents/:agentId/integrations/:integrationCode/eligibility',
+            requestBody: null,
+            responseBody: { availability_state: 'configured_actor_ineligible' },
+          },
+        ],
+      },
+      platformManagedReport: {
+        inboundAttempt: {
+          result: {
+            fixture: true,
+            code: 'RKF9828CB2A5E6',
+          },
+          exception: null,
+        },
+      },
+    }),
+  );
+
+  const commercialScenario = requireCommercialScenario(evidence);
+  assert.equal(commercialScenario.status, 'blocked');
+  assert.equal(commercialScenario.resultClass, 'bounded-stop');
+  assert.deepEqual(commercialScenario.blockedBy, ['configured_actor_ineligible']);
+});
+
+test('runClientBoundedMatrix ignores stale generic P1 eligibility without availability state when platform proof succeeds', async () => {
+  const evidence = await runClientBoundedMatrix(
+    commercialMatrixOptions,
+    buildCommercialMatrixDependencies({
+      integrationReport: {
+        ids: {
+          integrationAppId: 'iapp-generic-p1',
+          integrationInstallationId: null,
+        },
+        steps: [
+          {
+            stepKey: 'account-agent-integration-eligibility',
+            status: 'passed',
+            route: '/runtime/account/agents/:agentId/integrations/:integrationCode/eligibility',
+            requestBody: null,
+            responseBody: {
+              integration_code: 'p1-integration-1',
+              eligibility: {
+                readiness_state: 'undiscovered',
+              },
+            },
+          },
+          {
+            stepKey: 'create-account-integration-installation',
+            status: 'blocked',
+            route: '/runtime/account/integration-installations',
+            requestBody: { integration_app_id: 'iapp-generic-p1' },
+            responseBody: {
+              error: {
+                code: 'integration_app_not_installable',
+                message: 'integration app must be approved and active before installation',
+              },
+            },
+          },
+        ],
+      },
+      platformManagedReport: {
+        selectedApp: { integration_app_id: 'iapp-haisi' },
+        installationId: 'iinst-haisi',
+        connectionId: 'iiconn-haisi',
+        platformManagedAgentId: 'pm-agent-haisi',
+        inboundAttempt: {
+          result: {
+            fixture: true,
+            code: 'RKF9828CB2A5E6',
+          },
+        },
+      },
+    }),
+  );
+
+  const commercialScenario = requireCommercialScenario(evidence);
+  assert.equal(commercialScenario.status, 'passed');
+  assert.equal(commercialScenario.resultClass, 'pass');
+  assert.equal(commercialScenario.returnedIds.integrationAppId, 'iapp-haisi');
+});
+
+test('runClientBoundedMatrix blocks missing platform-managed proof fields instead of falling back to generic pass', async () => {
+  const evidence = await runClientBoundedMatrix(
+    commercialMatrixOptions,
+    buildCommercialMatrixDependencies({
+      platformManagedReport: {
+        selectedApp: null,
+        inboundAttempt: {
+          result: {
+            fixture: true,
+            code: 'RKF9828CB2A5E6',
+          },
+          exception: null,
+        },
+      },
+    }),
+  );
+
+  const commercialScenario = requireCommercialScenario(evidence);
+  assert.equal(commercialScenario.status, 'blocked');
+  assert.equal(commercialScenario.resultClass, 'blocked');
+  assert.deepEqual(commercialScenario.blockedBy, ['missing-commercial-readback-field']);
+  assert.match(commercialScenario.notes[0] ?? '', /platformManagedHandoff\.selectedApp\.integration_app_id/);
+});
 
 test('parseVerifyClientBoundedMatrixArgs requires base-url and output', () => {
   assert.deepEqual(
