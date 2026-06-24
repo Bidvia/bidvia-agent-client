@@ -34,6 +34,7 @@ test('parseRunPlatformManagedIntegrationHandoffArgs requires base-url, state-pat
       '--state-path', ' /tmp/state.json ',
       '--output', ' /tmp/report.json ',
       '--integration-code', ' haisi-wms ',
+      '--connector-endpoint-base-url', ' http://connector.internal:8791 ',
       '--email', ' user@example.com ',
       '--password', ' secret-live-1 ',
       '--company-name', ' Example Co ',
@@ -43,6 +44,7 @@ test('parseRunPlatformManagedIntegrationHandoffArgs requires base-url, state-pat
       statePath: '/tmp/state.json',
       outputPath: '/tmp/report.json',
       integrationCode: 'haisi-wms',
+      connectorEndpointBaseUrl: 'http://connector.internal:8791',
       email: 'user@example.com',
       password: 'secret-live-1',
       companyName: 'Example Co',
@@ -117,6 +119,12 @@ test('runPlatformManagedIntegrationHandoff classifies same-org handoff through p
 
   assert.equal(calls.length, 7);
   assert.equal(String(calls[0]?.input), 'http://127.0.0.1:8787/runtime/public/integration-apps?tenant_id=tenant-public');
+  const connectionRequestBody = calls[2]?.init?.body;
+  if (typeof connectionRequestBody !== 'string') {
+    throw new Error('expected integration connection request body');
+  }
+  const parsedConnectionRequestBody = JSON.parse(connectionRequestBody) as { endpoint_base_url?: string };
+  assert.equal(parsedConnectionRequestBody.endpoint_base_url, 'http://haisi-wms-fixture-connector:8791');
   assert.equal(String(calls[4]?.input), 'http://127.0.0.1:8787/runtime/account/agents/platform-managed-registrations?tenant_id=tenant-public');
   assert.equal(String(calls[5]?.input), 'http://127.0.0.1:8787/runtime/account/agents/pm-agent-1/integrations/haisi-wms/eligibility');
   assert.equal(String(calls[6]?.input), 'http://127.0.0.1:8787/runtime/account/agents/pm-agent-1/integrations/haisi-wms/inbound');
