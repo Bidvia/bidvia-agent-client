@@ -1,0 +1,43 @@
+{
+  "proof_class": "provider-proof-terminal-client-evidence-publication",
+  "publication_state": "published_for_review",
+  "client_owned_conclusion": "passed",
+  "core_baseline": "fc536ec018ab1373fa10ab486c25146811e8c4f5",
+  "runtime_base_url": "http://127.0.0.1:59788",
+  "release_environment": "dev-docker",
+  "client_commit": "af9de83dc2fdba4eca025d9e041d89a469625805",
+  "client_package": "@bidvia/client@1.0.0",
+  "client_branch": "fix/haisi-client-bounded-matrix",
+  "client_worktree_state": "dirty",
+  "fresh_attempt": "20260714T091529Z",
+  "archive_path": "provider-proof-terminal-client-validation-artifacts/client-provider-proof-terminal-fc536ec-dev-docker-full-matrix-20260714T091529Z.tar.gz",
+  "archive_sha256": "dd74aabf469d188054fec19214818ed80d9a7be28f56bbe68ac7e93597e9ca06",
+  "archive_size_bytes": 200004,
+  "internal_hash_manifest": "client-provider-proof-terminal-fc536ec-dev-docker-full-matrix-20260714T091529Z/SHA256SUMS.txt",
+  "issue_url": "https://github.com/Bidvia/bidvia-agent-client/issues/5",
+  "validation": {
+    "client_tests": "657 passed, 0 failed",
+    "static_and_install_gates": "passed",
+    "ten_family_matrix": "10 passed, 0 blocked, 0 ambiguous",
+    "route_results": 30,
+    "request_id_coverage": "30/30",
+    "runtime_sanity": "passed",
+    "admitted_commercial_path": "passed",
+    "owner_correct_recovery_path": "passed",
+    "secret_review": "passed",
+    "package_structure": "passed",
+    "internal_hash_verification": "passed"
+  },
+  "publication_branch_baseline": "7e277323f467cd525f95014599cdaf5f8ebf8431",
+  "publication_baseline_note": "The evidence archive is publication-only. The remote main baseline has one pre-existing non-portable test that depends on untracked .sisyphus/status files; isolated baseline verification recorded 629 passed and 1 failed, while the Client evidence run bound to af9de83 plus its captured dirty patch recorded 657 passed and 0 failed.",
+  "non_claims": [
+    "not production readiness",
+    "not governed release acceptance",
+    "not prd-aliyun promotion",
+    "not active-prod",
+    "not all-connector support",
+    "not full site or ecosystem completion",
+    "not payment settlement or reputation closure",
+    "not a Core-authored Client conclusion"
+  ]
+}
