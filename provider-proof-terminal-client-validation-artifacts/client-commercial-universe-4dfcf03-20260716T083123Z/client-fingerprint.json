@@ -1,0 +1,10 @@
+{
+  "client_commit": "6ee6e0785d8e42173b883ff91c686d026f87f62b",
+  "client_package": "@bidvia/client@1.0.0",
+  "package_lock_sha256": "92544096de62a366c66ba7c307ed6fa3ab9d2890bd7a6d6220adb4a0d7f627c6",
+  "branch": "evidence/8c534f8-client-full-matrix",
+  "core_executable_sha": "4dfcf03f416925eb81dd8654ffb73ed3dff69026",
+  "runtime_url": "http://127.0.0.1:58890",
+  "runtime_state_source": "restart-durable final-closure PostgreSQL volume recreated under exact Core executable markers",
+  "working_tree_source_state": "behavior commits and prior evidence publication clean; generated superseding publication package untracked before evidence commit"
+}
