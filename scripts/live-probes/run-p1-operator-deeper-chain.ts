@@ -519,11 +519,7 @@ export async function runP1OperatorDeeperChain(
   };
   const commercialActionCreate = await requestJson(fetchImpl, `${args.baseUrl}/runtime/commercial-actions?tenant_id=tenant-public`, {
     method: 'POST',
-    headers: {
-      ...adminHeaders,
-      'x-authorized-company-id': 'company-public',
-      'x-bidvia-principal-id': 'operator-system',
-    },
+    headers: adminHeaders,
     body: JSON.stringify(commercialActionCreateBody),
   });
   pushCommercialActionCreateStep(steps, '/runtime/commercial-actions', commercialActionCreateBody, commercialActionCreate);
@@ -541,11 +537,7 @@ export async function runP1OperatorDeeperChain(
     };
     const policyCheck = await requestJson(fetchImpl, `${args.baseUrl}/runtime/commercial-actions/${encodeURIComponent(commercialActionRequestId)}/policy-check?tenant_id=tenant-public`, {
       method: 'POST',
-      headers: {
-        ...adminHeaders,
-        'x-authorized-company-id': 'company-public',
-        'x-bidvia-principal-id': 'operator-system',
-      },
+      headers: adminHeaders,
       body: JSON.stringify(policyCheckBody),
     });
     pushStep(steps, 'operator-commercial-action-policy-check', '/runtime/commercial-actions/:commercialActionRequestId/policy-check', policyCheckBody, policyCheck);
@@ -556,11 +548,7 @@ export async function runP1OperatorDeeperChain(
     };
     const requestApproval = await requestJson(fetchImpl, `${args.baseUrl}/runtime/commercial-actions/${encodeURIComponent(commercialActionRequestId)}/request-approval?tenant_id=tenant-public`, {
       method: 'POST',
-      headers: {
-        ...adminHeaders,
-        'x-authorized-company-id': 'company-public',
-        'x-bidvia-principal-id': 'operator-system',
-      },
+      headers: adminHeaders,
       body: JSON.stringify(requestApprovalBody),
     });
     pushStep(steps, 'operator-commercial-action-request-approval', '/runtime/commercial-actions/:commercialActionRequestId/request-approval', requestApprovalBody, requestApproval);
@@ -577,11 +565,7 @@ export async function runP1OperatorDeeperChain(
     };
     const execute = await requestJson(fetchImpl, `${args.baseUrl}/runtime/commercial-actions/${encodeURIComponent(commercialActionRequestId)}/execute?tenant_id=tenant-public`, {
       method: 'POST',
-      headers: {
-        ...adminHeaders,
-        'x-authorized-company-id': 'company-public',
-        'x-bidvia-principal-id': 'operator-system',
-      },
+      headers: adminHeaders,
       body: JSON.stringify(executeBody),
     });
     pushStep(steps, 'operator-commercial-action-execute', '/runtime/commercial-actions/:commercialActionRequestId/execute', executeBody, execute);

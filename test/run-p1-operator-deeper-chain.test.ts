@@ -229,6 +229,10 @@ test('runP1OperatorDeeperChain executes the operator chain and finishes with cla
   });
   assert.equal(String(calls[6]?.input), 'http://127.0.0.1:8787/operator/matches?tenant_id=tenant-public&source_listing_id=source-listing-seeded');
   assert.equal(String(calls[9]?.input), 'http://127.0.0.1:8787/operator/opportunities/opp-1/package-export?tenant_id=tenant-public');
+  const commercialCreateHeaders = new Headers(calls[10]?.init?.headers);
+  assert.equal(commercialCreateHeaders.get('x-bidvia-admin-session-id'), 'admin-session-1');
+  assert.equal(commercialCreateHeaders.get('x-bidvia-principal-id'), null);
+  assert.equal(commercialCreateHeaders.get('x-authorized-company-id'), null);
   assert.equal(String(calls[17]?.input), 'http://127.0.0.1:8787/runtime/account/agents/agent-1/execution/opportunities/opp-1/status?tenant_id=tenant-public');
   assert.equal(String(calls[18]?.input), 'http://127.0.0.1:8787/runtime/account/agents/agent-1/execution/opportunities/opp-1/end-state?tenant_id=tenant-public');
 
