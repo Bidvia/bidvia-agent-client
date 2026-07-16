@@ -19,6 +19,8 @@ export interface PlatformManagedIntegrationHandoffStepResult {
   stepKey:
     | 'bootstrap-claimant'
     | 'public-integration-apps'
+    | 'create-account-integration-app'
+    | 'approve-integration-app'
     | 'create-account-integration-installation'
     | 'connect-account-integration-installation'
     | 'ordinary-external-eligibility'
@@ -160,7 +162,8 @@ export async function runPlatformManagedIntegrationHandoff(
   });
 
   const ordinaryAgentId = bootstrap.claimant.agentId;
-  const ordinaryPrincipalId = bootstrap.claimant.principalId;
+  const requestedPlatformManagedAgentId = `pm-${ordinaryAgentId}`;
+  const requestedPlatformManagedPrincipalId = `platform-managed:${requestedPlatformManagedAgentId}`;
   const sessionHeaders = {
     'content-type': 'application/json',
     'x-bidvia-session-id': bootstrap.claimant.sessionId,
@@ -183,7 +186,43 @@ export async function runPlatformManagedIntegrationHandoff(
   pushStep(steps, 'public-integration-apps', '/runtime/public/integration-apps', null, publicApps);
 
   const apps = (publicApps.body as { items?: Array<{ integration_app_id?: string; integration_code?: string }> }).items ?? [];
-  const selectedApp = apps.find((item) => item.integration_code === integrationCode) ?? null;
+  let selectedApp = apps.find((item) => item.integration_code === integrationCode) ?? null;
+  if (selectedApp === null) {
+    const createAppBody = {
+      integration_code: integrationCode,
+      display_name: integrationCode === 'haisi-wms' ? 'Haisi WMS' : integrationCode,
+      short_description: 'Prepared by the platform-managed integration handoff probe.',
+      system_class: integrationCode === 'haisi-wms' ? 'WMS' : 'OTHER',
+      public_display_opt_in: true,
+      now: timestamp,
+    };
+    const createApp = await requestJson(fetchImpl, `${args.baseUrl}/runtime/account/integration-apps`, {
+      method: 'POST',
+      headers: sessionHeaders,
+      body: JSON.stringify(createAppBody),
+    });
+    pushStep(steps, 'create-account-integration-app', '/runtime/account/integration-apps', createAppBody, createApp);
+
+    const createdApp = (createApp.body as { integration_app?: { integration_app_id?: string; integration_code?: string } }).integration_app ?? null;
+    const createdAppId = createdApp?.integration_app_id ?? null;
+    const reviewBody = {
+      decision: 'APPROVE',
+      now: timestamp,
+    };
+    const reviewApp = createdAppId === null
+      ? { status: 0, body: { skipped: true } }
+      : await requestJson(fetchImpl, `${args.baseUrl}/runtime/integration-apps/${encodeURIComponent(createdAppId)}/review-decisions?tenant_id=tenant-public`, {
+          method: 'POST',
+          headers: {
+            'content-type': 'application/json',
+            'x-bidvia-admin-session-id': bootstrap.admin.adminSessionId,
+          },
+          body: JSON.stringify(reviewBody),
+        });
+    pushStep(steps, 'approve-integration-app', '/runtime/integration-apps/:integrationAppId/review-decisions', reviewBody, reviewApp);
+    selectedApp = (reviewApp.body as { integration_app?: { integration_app_id?: string; integration_code?: string } }).integration_app
+      ?? createdApp;
+  }
   const selectedAppId = selectedApp?.integration_app_id ?? null;
 
   const createInstallation = selectedAppId === null
@@ -226,12 +265,12 @@ export async function runPlatformManagedIntegrationHandoff(
     method: 'POST',
     headers: sessionHeaders,
     body: JSON.stringify({
-      agent_id: ordinaryAgentId,
-      principal_id: ordinaryPrincipalId,
+      agent_id: requestedPlatformManagedAgentId,
+      principal_id: requestedPlatformManagedPrincipalId,
       now: timestamp,
     }),
   });
-  pushStep(steps, 'platform-managed-registration', '/runtime/account/agents/platform-managed-registrations', { agent_id: ordinaryAgentId, principal_id: ordinaryPrincipalId, now: timestamp }, platformManagedRegistration);
+  pushStep(steps, 'platform-managed-registration', '/runtime/account/agents/platform-managed-registrations', { agent_id: requestedPlatformManagedAgentId, principal_id: requestedPlatformManagedPrincipalId, now: timestamp }, platformManagedRegistration);
 
   const platformManagedAgentId = (platformManagedRegistration.body as { registration?: { agent_id?: string } }).registration?.agent_id
     ?? (platformManagedRegistration.body as { agent?: { agent_id?: string } }).agent?.agent_id
