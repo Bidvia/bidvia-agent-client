@@ -6,6 +6,7 @@ Client-owned technical conclusion: `passed`.
 - Client behavior commit: `fa7efeb2974fa36bfa10ef9210bfb95f0dccd498`
 - Superseded Client publication commit: `077b30afddf626a395c072a930abe15167a43cad`
 - Verification source: clean detached checkout of the exact behavior commit with no `.sisyphus` directory
+- Machine-readable checkout proof: exact `HEAD`, empty porcelain status, and `.sisyphus` absence commands recorded in `command-log.json`
 - Targeted clean-checkout tests: `8/8`
 - Full suite: `660/660`
 - Static and package gates: all passed

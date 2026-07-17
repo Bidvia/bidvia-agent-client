@@ -12,6 +12,12 @@
   "runtime_url": "http://127.0.0.1:58890",
   "runtime_state_source": "restart-durable final-closure PostgreSQL volume under exact Core executable markers",
   "verification_source_state": "clean detached checkout of the exact client commit with no .sisyphus directory",
+  "checkout_proof": {
+    "head_commit": "fa7efeb2974fa36bfa10ef9210bfb95f0dccd498",
+    "detached_head": true,
+    "porcelain_status": "empty",
+    "sisyphus_path_present": false
+  },
   "verified_files": [
     "scripts/validate-agent-first-business-universe.ts",
     "test/evidence-packet-productization.test.ts"
