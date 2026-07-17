@@ -16,6 +16,6 @@ Client-owned technical conclusion: `passed`.
 
 The earlier publication commit is superseded for Client technical acceptance because it could not reproduce the claimed full-suite result from a clean checkout without ignored local state. The successor behavior commit removes that dependency and reproduces the result from its immutable SHA.
 
-This package contains publication-safe summaries, fingerprints, command exits, hashes, and the Client-owned conclusion. Raw matrix bodies, raw logs, credentials, session identifiers, generated account identifiers, and email addresses are intentionally excluded.
+This package contains publication-safe summaries, fingerprints, command exits, required request-correlation IDs, hashes, and the Client-owned conclusion. Raw matrix bodies, raw logs, credentials, session identifiers, generated account identifiers, and email addresses are intentionally excluded.
 
 This conclusion is not production readiness, governed release acceptance, all-connector support, payment or settlement finality, physical fulfillment, after-sales completion, reputation authority, human commercial acceptance, or independent personnel sign-off.

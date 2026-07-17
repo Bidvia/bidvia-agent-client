@@ -62,5 +62,9 @@
       "proof_class": "bounded-stop-proof"
     }
   ],
-  "publication_scope": "summary rows only; raw readbacks, probe bodies, returned identifiers, sessions, and email addresses are excluded"
+  "request_ids": [
+    "daar-c24bfc4d-30bf-4cb2-9272-675c2d0e8c1a",
+    "daar-97fcd4fe-e9e0-4be6-ae58-8de800fdece0"
+  ],
+  "publication_scope": "summary rows and required request-correlation IDs only; raw readbacks, probe bodies, sensitive returned identifiers, sessions, and email addresses are excluded"
 }
