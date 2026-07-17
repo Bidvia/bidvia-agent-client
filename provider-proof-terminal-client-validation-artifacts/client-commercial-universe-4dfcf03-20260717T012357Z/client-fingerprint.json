@@ -1,0 +1,19 @@
+{
+  "schema_version": "bidvia-client-clean-checkout-fingerprint/v1",
+  "repository": "Bidvia/bidvia-agent-client",
+  "branch": "evidence/8c534f8-client-full-matrix",
+  "client_commit": "fa7efeb2974fa36bfa10ef9210bfb95f0dccd498",
+  "superseded_publication_commit": "077b30afddf626a395c072a930abe15167a43cad",
+  "core_executable_sha": "4dfcf03f416925eb81dd8654ffb73ed3dff69026",
+  "client_package": "@bidvia/client@1.0.0",
+  "package_lock_sha256": "92544096de62a366c66ba7c307ed6fa3ab9d2890bd7a6d6220adb4a0d7f627c6",
+  "live_matrix_sha256": "52b265b355d58ee0a48a74d7e103d9fcbec605aefa8a5781a2a8bd3f75f8a8a3",
+  "live_matrix_generated_at": "2026-07-17T01:23:57.477Z",
+  "runtime_url": "http://127.0.0.1:58890",
+  "runtime_state_source": "restart-durable final-closure PostgreSQL volume under exact Core executable markers",
+  "verification_source_state": "clean detached checkout of the exact client commit with no .sisyphus directory",
+  "verified_files": [
+    "scripts/validate-agent-first-business-universe.ts",
+    "test/evidence-packet-productization.test.ts"
+  ]
+}

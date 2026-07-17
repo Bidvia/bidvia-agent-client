@@ -1,0 +1,34 @@
+{
+  "schema_version": "bidvia-client-owner-conclusion/v1",
+  "evidence_owner": "client",
+  "conclusion": "passed",
+  "core_executable_sha": "4dfcf03f416925eb81dd8654ffb73ed3dff69026",
+  "client_commit": "fa7efeb2974fa36bfa10ef9210bfb95f0dccd498",
+  "supersedes_client_publication_commit": "077b30afddf626a395c072a930abe15167a43cad",
+  "supersession_reason": "the prior publication commit did not reproduce the claimed full-suite result from a clean checkout without ignored local state",
+  "test_summary": {
+    "targeted_clean_checkout": "8/8",
+    "full_suite": "660/660"
+  },
+  "matrix_summary": {
+    "passedCount": 8,
+    "blockedCount": 0,
+    "failedCount": 0,
+    "boundedStopCount": 0,
+    "contradictionCount": 0,
+    "blockedScenarioKeys": [],
+    "failedScenarioKeys": []
+  },
+  "reason_codes": [],
+  "non_claims": [
+    "not production readiness",
+    "not governed release acceptance",
+    "not all-connector support",
+    "not payment or settlement finality",
+    "not physical fulfillment completion",
+    "not after-sales completion",
+    "not reputation authority",
+    "not human commercial acceptance",
+    "not independent personnel sign-off"
+  ]
+}
