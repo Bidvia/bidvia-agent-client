@@ -1,0 +1,70 @@
+{
+  "schema_version": "bidvia-client-clean-checkout-scenario-matrix/v1",
+  "client_commit": "fa7efeb2974fa36bfa10ef9210bfb95f0dccd498",
+  "core_executable_sha": "4dfcf03f416925eb81dd8654ffb73ed3dff69026",
+  "matrix_source_sha256": "52b265b355d58ee0a48a74d7e103d9fcbec605aefa8a5781a2a8bd3f75f8a8a3",
+  "generated_at": "2026-07-17T01:23:57.477Z",
+  "runtime_url": "http://127.0.0.1:58890",
+  "runtime_markers": {
+    "source_main_commit_marker": "4dfcf03f416925eb81dd8654ffb73ed3dff69026",
+    "runtime_reported_version_marker": "4dfcf03f416925eb81dd8654ffb73ed3dff69026",
+    "bootstrap_package_version_marker": "4dfcf03f416925eb81dd8654ffb73ed3dff69026",
+    "scenario_package_version_marker": "4dfcf03f416925eb81dd8654ffb73ed3dff69026"
+  },
+  "summary": {
+    "passedCount": 8,
+    "blockedCount": 0,
+    "failedCount": 0,
+    "boundedStopCount": 0,
+    "contradictionCount": 0,
+    "blockedScenarioKeys": [],
+    "failedScenarioKeys": []
+  },
+  "scenarios": [
+    {
+      "scenario_key": "runtime-baseline",
+      "status": "passed",
+      "proof_class": "baseline-interpretation"
+    },
+    {
+      "scenario_key": "platform-managed-onboarding",
+      "status": "passed",
+      "proof_class": "direct-executable"
+    },
+    {
+      "scenario_key": "dispatch-ready-progression",
+      "status": "passed",
+      "proof_class": "direct-executable"
+    },
+    {
+      "scenario_key": "governed-runtime-projection-entry",
+      "status": "passed",
+      "proof_class": "direct-executable"
+    },
+    {
+      "scenario_key": "dispatch-authority-reviewed-closure",
+      "status": "passed",
+      "proof_class": "direct-executable"
+    },
+    {
+      "scenario_key": "role-collaboration-handoff",
+      "status": "passed",
+      "proof_class": "partial-executable"
+    },
+    {
+      "scenario_key": "continuous-task-governed-work-closure",
+      "status": "passed",
+      "proof_class": "direct-executable"
+    },
+    {
+      "scenario_key": "commercial-and-integration-readback",
+      "status": "passed",
+      "proof_class": "bounded-stop-proof"
+    }
+  ],
+  "request_ids": [
+    "daar-c24bfc4d-30bf-4cb2-9272-675c2d0e8c1a",
+    "daar-97fcd4fe-e9e0-4be6-ae58-8de800fdece0"
+  ],
+  "publication_scope": "summary rows and required request-correlation IDs only; raw readbacks, probe bodies, sensitive returned identifiers, sessions, and email addresses are excluded"
+}

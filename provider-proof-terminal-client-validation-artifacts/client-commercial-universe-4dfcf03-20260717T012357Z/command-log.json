@@ -1,0 +1,69 @@
+{
+  "schema_version": "bidvia-client-clean-checkout-command-log/v1",
+  "client_commit": "fa7efeb2974fa36bfa10ef9210bfb95f0dccd498",
+  "core_executable_sha": "4dfcf03f416925eb81dd8654ffb73ed3dff69026",
+  "commands": [
+    {
+      "command": "git rev-parse HEAD",
+      "exit_code": 0,
+      "result": "fa7efeb2974fa36bfa10ef9210bfb95f0dccd498"
+    },
+    {
+      "command": "git status --porcelain=v1 --untracked-files=all",
+      "exit_code": 0,
+      "result": "empty"
+    },
+    {
+      "command": "test ! -e .sisyphus",
+      "exit_code": 0,
+      "result": ".sisyphus absent"
+    },
+    {
+      "command": "npm ci",
+      "exit_code": 0,
+      "result": "34 packages installed in the clean detached checkout"
+    },
+    {
+      "command": "npx tsx --test test/evidence-packet-productization.test.ts",
+      "exit_code": 0,
+      "result": "8/8 targeted clean-checkout tests passed"
+    },
+    {
+      "command": "npm test",
+      "exit_code": 0,
+      "result": "660/660 full-suite tests passed"
+    },
+    {
+      "command": "npm run build",
+      "exit_code": 0,
+      "result": "passed"
+    },
+    {
+      "command": "npm run typecheck",
+      "exit_code": 0,
+      "result": "passed"
+    },
+    {
+      "command": "npm run validate",
+      "exit_code": 0,
+      "result": "passed"
+    },
+    {
+      "command": "npm run validate:release-readiness",
+      "exit_code": 0,
+      "result": "passed"
+    },
+    {
+      "command": "npm run validate:release-gate",
+      "exit_code": 0,
+      "result": "passed"
+    },
+    {
+      "command": "npx tsx scripts/verify-client-bounded-matrix.ts --base-url http://127.0.0.1:58890 --output <raw-local-path>",
+      "exit_code": 0,
+      "result": "8 passed, 0 blocked, 0 failed, 0 bounded stops, 0 contradictions",
+      "generated_at": "2026-07-17T01:23:57.477Z",
+      "raw_matrix_sha256": "52b265b355d58ee0a48a74d7e103d9fcbec605aefa8a5781a2a8bd3f75f8a8a3"
+    }
+  ]
+}

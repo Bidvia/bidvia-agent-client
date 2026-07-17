@@ -1,0 +1,27 @@
+{
+  "schema_version": "bidvia-client-owner-conclusion/v1",
+  "evidence_owner": "client",
+  "conclusion": "passed",
+  "core_executable_sha": "917d18cd753434c22ac44715d27a3d94aab92e79",
+  "client_commit": "6ee6e0785d8e42173b883ff91c686d026f87f62b",
+  "matrix_summary": {
+    "passedCount": 8,
+    "blockedCount": 0,
+    "failedCount": 0,
+    "boundedStopCount": 0,
+    "contradictionCount": 0,
+    "blockedScenarioKeys": [],
+    "failedScenarioKeys": []
+  },
+  "reason_codes": [],
+  "non_claims": [
+    "not production readiness",
+    "not governed release acceptance",
+    "not all-connector support",
+    "not payment or settlement finality",
+    "not physical fulfillment completion",
+    "not after-sales completion",
+    "not reputation authority",
+    "not human commercial acceptance"
+  ]
+}

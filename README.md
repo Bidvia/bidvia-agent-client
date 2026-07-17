@@ -12,15 +12,13 @@ Bidvia is the governed platform for onboarding, running, and integrating agents.
 
 The package is agent-first but login-capable: external users may need bounded account/session setup before they continue, but the product promise stays centered on the governed agent path rather than on a general account-admin or platform-auth shell.
 
-This repo now presents itself as an **agent-first operating entry** organized around a **role-stage** model rather than a helper bundle. The product-facing surfaces are `client.claimant.*`, `client.operator.*`, `client.platformManaged.*`, and `client.universe.*`, and the CLI/MCP surfaces mirror the same role-stage operating entry.
-
-For the next-version role of this repo, use one explicit three-layer client architecture: atomic helpers, executable scenario runners, and productized CLI/MCP surfaces.
+This repo presents itself as an **agent-first operating entry** organized around a **role-stage** model rather than a helper bundle. The product-facing surfaces are `client.claimant.*`, `client.operator.*`, `client.platformManaged.*`, and `client.universe.*`, and the CLI/MCP surfaces mirror the same role-stage operating entry.
 
 ## Current version and release maturity
 
 The current package version is `1.0.0`.
 
-This is the customer-facing `1.0.0` package state for the current local client surface. The shipped SDK, CLI, MCP handoff, account/session prerequisite support, governed onboarding path, and frozen downstream read visibility are documented here, but the Stage 3 release gate remains blocked while workflow-stage truth and the remaining route-model adoption seams still require Core-frozen payload truth. npm publication is still a separate final human step.
+This README documents the current public package surface for `@bidvia/client`. The shipped SDK, CLI, MCP handoff, account/session prerequisite support, governed onboarding path, and bounded validation tooling are described here, together with the limits that still remain in the current release boundary.
 
 ## Installation
 
@@ -54,7 +52,7 @@ npm run validate:release-readiness
 npm run validate:release-gate
 ```
 
-Those validator commands must stay green together before any human release packet can describe public closure. This README treats validator commands to stay green together as a formal `1.0.0` release requirement, not as optional evidence. For product-wave regression, also run `npx tsx scripts/validate-agent-first-business-universe.ts` so the role-stage status artifacts stay machine-checkable.
+Those validator commands should stay green together before you treat the local package surface as healthy.
 
 For bounded external-user validation, start with these local-first commands before assuming the problem is deeper than the current machine or shell state:
 

@@ -20,6 +20,47 @@ function createFetchStub(responseBodies: Array<{ status: number; body: unknown }
   return { calls, fetchStub };
 }
 
+function buildBootstrapReport() {
+  return {
+    command: 'bootstrap-claimant-local-docker' as const,
+    baseUrl: 'http://127.0.0.1:8787',
+    statePath: '/tmp/bidvia-live-state.json',
+    admin: {
+      email: 'ops-admin@example.com',
+      adminSessionId: 'admin-session-1',
+      adminAccountId: 'admin-acct-1',
+    },
+    invitation: {
+      invitationId: 'invite-1',
+      invitationType: 'ENTERPRISE_ACCOUNT' as const,
+      status: 'ACTIVE',
+    },
+    claimant: {
+      email: 'live@example.com',
+      accountId: 'acct-1',
+      sessionId: 'sess-1',
+      tenantId: 'tenant-public',
+      companyId: 'company-public',
+      membershipRole: 'enterprise_admin',
+      agentOnboardingAllowed: true,
+      agentId: 'agent-1',
+      principalId: 'claimed:agent-1',
+      registrationId: 'areg-1',
+    },
+    dispatchAuthority: {
+      requestId: 'daar-1',
+      status: 'APPROVED',
+      authorityProfileId: 'authp-1',
+    },
+    externalBinding: {
+      bindingId: 'eab-1',
+      status: 'active',
+      systemName: 'bootstrap-live-seeded',
+      externalAccountRef: 'ext-seeded',
+    },
+  };
+}
+
 test('parseRunP1OperatorDeeperChainArgs requires base-url, state-path, and output', () => {
   assert.throws(
     () => parseRunP1OperatorDeeperChainArgs([]),
@@ -188,6 +229,10 @@ test('runP1OperatorDeeperChain executes the operator chain and finishes with cla
   });
   assert.equal(String(calls[6]?.input), 'http://127.0.0.1:8787/operator/matches?tenant_id=tenant-public&source_listing_id=source-listing-seeded');
   assert.equal(String(calls[9]?.input), 'http://127.0.0.1:8787/operator/opportunities/opp-1/package-export?tenant_id=tenant-public');
+  const commercialCreateHeaders = new Headers(calls[10]?.init?.headers);
+  assert.equal(commercialCreateHeaders.get('x-bidvia-admin-session-id'), 'admin-session-1');
+  assert.equal(commercialCreateHeaders.get('x-bidvia-principal-id'), null);
+  assert.equal(commercialCreateHeaders.get('x-authorized-company-id'), null);
   assert.equal(String(calls[17]?.input), 'http://127.0.0.1:8787/runtime/account/agents/agent-1/execution/opportunities/opp-1/status?tenant_id=tenant-public');
   assert.equal(String(calls[18]?.input), 'http://127.0.0.1:8787/runtime/account/agents/agent-1/execution/opportunities/opp-1/end-state?tenant_id=tenant-public');
 
@@ -221,6 +266,70 @@ test('runP1OperatorDeeperChain executes the operator chain and finishes with cla
   assert.equal(typedResult.claimantReadbacks.status.continuation_state, 'ALLOCATED');
   assert.equal(typedResult.claimantReadbacks.endState.closure_class, 'product_closed');
   assert.deepEqual(writtenReport, result);
+});
+
+test('runP1OperatorDeeperChain stops commercial action diagnostics after create failure while preserving claimant closure readbacks', async () => {
+  const { calls, fetchStub } = createFetchStub([
+    { status: 200, body: { listing: { listing_id: 'source-listing-1' } } },
+    { status: 200, body: { listing: { listing_id: 'source-listing-1', status: 'active', last_event_id: 'evt-source-activate-1' } } },
+    { status: 200, body: { materialization_stage: 'match_prerequisites_ready', recommended_next_step: 'handoff_to_operator_for_matching', next_step_kind: 'handoff_to_operator', operator_handoff: { owner: 'operator', route: '/operator/matches?tenant_id=tenant-public&source_listing_id=source-listing-seeded' } } },
+    { status: 200, body: { listing: { listing_id: 'candidate-listing-1' } } },
+    { status: 200, body: { listing: { listing_id: 'candidate-listing-1', status: 'active' } } },
+    { status: 200, body: { upserts: [{ match_id: 'match-1' }] } },
+    { status: 200, body: { items: [{ match_id: 'match-1' }] } },
+    { status: 200, body: { connectionRequest: { connection_request_id: 'conn-1', approval_request_id: 'apr-conn-1', source_match_id: 'match-1' } } },
+    { status: 200, body: { resolution: { artifacts: { opportunity: { opportunity_id: 'opp-1' } } } } },
+    { status: 200, body: { package: { package_id: 'pkg-1', opportunity_id: 'opp-1' }, handoff: { package_id: 'pkg-1', bound_account_id: 'company-public' } } },
+    { status: 403, body: { error: { code: 'auth_source_disallowed', message: 'operator auth is not accepted on this commercial action route' } } },
+    { status: 200, body: { continuation_state: 'ALLOCATED', operator_handoff: { owner: 'operator', opportunity_id: 'opp-1' } } },
+    { status: 200, body: { closure_class: 'product_closed', proof_class: 'product_closure_only', operator_handoff: { owner: 'operator', opportunity_id: 'opp-1' } } },
+  ]);
+
+  const result = await runP1OperatorDeeperChain({
+    baseUrl: 'http://127.0.0.1:8787',
+    statePath: '/tmp/bidvia-live-state.json',
+    outputPath: '/tmp/operator-report.json',
+  }, {
+    fetchImpl: fetchStub,
+    now: () => '2026-05-14T12:00:00Z',
+    randomSuffix: () => 'seeded',
+    bootstrapClaimant: async () => buildBootstrapReport(),
+  });
+
+  const requestedUrls = calls.map((call) => String(call.input));
+  assert.equal(calls.length, 13);
+  assert.ok(!requestedUrls.some((url) => url.includes('/policy-check')));
+  assert.ok(!requestedUrls.some((url) => url.includes('/request-approval')));
+  assert.ok(!requestedUrls.some((url) => url.includes('/execute')));
+  assert.ok(!requestedUrls.some((url) => url.includes('/receipt')));
+  assert.ok(!requestedUrls.some((url) => url.includes('/audit')));
+  assert.equal(String(calls[11]?.input), 'http://127.0.0.1:8787/runtime/account/agents/agent-1/execution/opportunities/opp-1/status?tenant_id=tenant-public');
+  assert.equal(String(calls[12]?.input), 'http://127.0.0.1:8787/runtime/account/agents/agent-1/execution/opportunities/opp-1/end-state?tenant_id=tenant-public');
+
+  assert.equal(result.ids.commercialActionRequestId, null);
+  assert.equal(result.ids.commercialActionApprovalRequestId, null);
+  assert.equal(result.ids.receiptId, null);
+  assert.equal(result.ids.auditId, null);
+  assert.deepEqual(
+    result.steps
+      .filter((step) => step.stepKey.startsWith('operator-commercial-action'))
+      .map((step) => [step.stepKey, step.status, step.responseBody]),
+    [
+      ['operator-commercial-action-create', 'blocked', { error: { code: 'auth_source_disallowed', message: 'operator auth is not accepted on this commercial action route' } }],
+    ],
+  );
+  assert.deepEqual(result.commercialActionDiagnostic, {
+    classification: 'operator-transitional-diagnostic',
+    status: 'blocked',
+    blockedBy: ['auth_source_disallowed'],
+    notes: ['Commercial action create stopped at the operator/transitional diagnostic boundary; downstream commercial action routes were not attempted without a request id.'],
+    stepKeys: ['operator-commercial-action-create'],
+  });
+  assert.deepEqual(result.claimantReadbacks.endState, {
+    closure_class: 'product_closed',
+    proof_class: 'product_closure_only',
+    operator_handoff: { owner: 'operator', opportunity_id: 'opp-1' },
+  });
 });
 
 test('runP1OperatorDeeperChain stops at the deeper boundary when approval does not yield an opportunity id', async () => {

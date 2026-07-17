@@ -1,6 +1,6 @@
 # Onboarding Guide
 
-This guide supports the current local-first package surface. For the current truth-alignment execution wave, use `docs/superpowers/plans/2026-04-30-client-truth-alignment-v3-implementation.md` as the active implementation plan. That current wave keeps the repo aligned to the latest fresh local-docker evidence and the agent-first-but-login-capable V1 release boundary.
+This guide supports the current local-first package surface. It explains how to use the shipped onboarding and governed-run flows without requiring any internal planning context.
 
 ## Goal
 
@@ -11,7 +11,7 @@ This guide shows one primary public journey and one secondary Governed Run journ
 
 The V1 boundary is agent-first but login-capable. The visible journey still stays Learn -> Public Provisional create -> query -> claim -> Governed Run, while bounded account/session prerequisite support exists when an external user still needs context establishment before that agent-first path can succeed.
 
-This guide is intentionally more than an API quickstart. It explains how an agent should approach the shipped package surface in the order that matches the current repo boundary. The outward story is now explicitly **role-stage** oriented: claimant, operator, platform-managed, and universe orchestration all describe one agent-first operating entry.
+This guide is intentionally more than an API quickstart. It explains how an agent should approach the shipped package surface in the order that matches the current public boundary. The outward story is **role-stage** oriented: claimant, operator, platform-managed, and universe orchestration all describe one agent-first operating entry.
 
 Before you begin runtime validation, choose the correct lane and do not mix them implicitly:
 
@@ -27,7 +27,7 @@ Separately, if account-plane continuation succeeds but governed reads or governe
 
 This onboarding layer must also explain where admin/operator context is required, so agents do not misread proof-lane or operator-assisted steps as if they were ordinary external-user flows.
 
-Stage 1 of the client-side runtime architecture upgrade is now complete in this repo. That means the CLI and local stdio MCP surfaces share one local runtime core and write local accumulation records for onboarding memory, task execution memory, capability usage memory, and result memory. It does not mean Stage 2 Core plane contracts are complete, and it does not change the rule that Core still owns platform truth. For next-version architecture language, keep one explicit three-layer client architecture in mind: atomic helpers, executable scenario runners, and productized CLI/MCP surfaces over those bounded layers.
+The CLI and local stdio MCP surfaces share one local runtime core and write local accumulation records for onboarding memory, task execution memory, capability usage memory, and result memory. This improves local ergonomics without changing the rule that Core still owns platform truth.
 
 For current downstream contract truth, use the Bidvia Core downstream contract center (`docs/downstream-contract-center/**` in the main Bidvia repo) as the routine implementation source, then apply this repo's fail-closed adoption rules where packet-complete payload truth is still pending.
 
@@ -212,8 +212,6 @@ After that handoff, continue in the dedicated docs:
 - `docs/OPENCLAW_GATEWAY_SMOKE.md`
 
 Keep the packaging boundary explicit: local stdio MCP on your side, remote HTTPS Bidvia API on the other side. MCP execution now routes through the same local runtime core and writes the same local accumulation layers the CLI uses, but that remains local-only runtime behavior. Explicit endpoint override stays secondary and operator-only.
-
-Website work for this same first-access journey stays spec-only in `docs/WEBSITE_FIRST_ACCESS_HANDOFF.md`. It does not change the shipped OpenClaw runtime order in this repo.
 
 ## Environment mode visibility
 
@@ -583,10 +581,9 @@ Compatibility mapping still shown as informational launch-window context:
 
 ## Read next
 
-- `docs/PRODUCT_POSITIONING.md`
 - `docs/CONTRACT_BOUNDARY.md`
 - `docs/ROADMAP.md`
-- `docs/OPTIMIZATION_BACKLOG.md`
+- `docs/VALIDATION_LANES.md`
 
 ## Role-stage product entry
 

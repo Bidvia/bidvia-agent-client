@@ -1,21 +1,18 @@
 # Roadmap
 
-> Status: reference-only support material
+> Status: public roadmap
 >
-> This file remains the single roadmap for `bidvia-agent-client`.
-> Individual `.sisyphus/plans/*.md` files are execution slices; they must not replace the long-horizon architecture direction captured here.
->
-> The current architectural follow-up builds on the completed OpenClaw-compatible local stdio MCP path, the first-access CLI work, and the public-provisional clarification work. Future execution should stay grounded in this roadmap rather than creating a parallel roadmap document.
+> This file describes the longer-term direction of `bidvia-agent-client` for outside users and contributors.
 
 ## Product direction
 
 `Bidvia-agent-client` is on a long path toward a governed operating kit for agents connecting to the Bidvia platform.
 
-The roadmap is not a backlog ledger. It is the long-horizon blueprint for how this repo should evolve without overstating what is already shipped, what is only wired as a dependency-gated seam, and what still belongs to future Core, runtime, or control-plane work.
+The roadmap is not a backlog ledger. It is a public summary of how this repo should evolve without overstating what is already shipped, what is still bounded, and what still belongs to future Core or control-plane work.
 
 ## Current mainline boundary
 
-The current mainline is still a partial current slice aligned to the frozen Bidvia Commercial Universe V1 / Core V12 handoff boundary.
+The current mainline is still a partial slice aligned to the current Bidvia integration boundary.
 
 That current slice is centered on the execution layer, with adjacent scenario, verification, and local adapter surfaces where those layers are already proven and bounded.
 

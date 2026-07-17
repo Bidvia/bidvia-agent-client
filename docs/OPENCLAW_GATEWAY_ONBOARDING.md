@@ -14,7 +14,7 @@ It does **not** assume any hosted Bidvia runtime, hosted MCP service, or remote 
 
 The current SDK and CLI already expose the widened frozen downstream read surface for agent registrations, authority profiles, capability profiles, the singular per-registration capability profile, and the shipped participation-state/task-dispatch family. Stage 1 of the client-side runtime architecture upgrade is now complete in this repo, so the OpenClaw path uses that same local-first foundation more directly: stdio MCP is the primary OpenClaw runtime path, the companion bundle is additive packaging around that same local server, and execution writes local accumulation through the shared runtime core without changing operator-facing outputs.
 
-The public first-access website work for the same release remains spec-only in `docs/WEBSITE_FIRST_ACCESS_HANDOFF.md`. It does not add website code to this repo and it does not change the OpenClaw runtime order described here.
+
 
 ## Scope boundary
 

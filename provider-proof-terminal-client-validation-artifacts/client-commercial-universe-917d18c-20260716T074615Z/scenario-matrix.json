@@ -1,0 +1,186 @@
+{
+  "schema_version": "bidvia-client-commercial-universe-closure/v1",
+  "generated_at": "2026-07-16T07:46:40.787Z",
+  "core_executable_sha": "917d18cd753434c22ac44715d27a3d94aab92e79",
+  "runtime_url": "http://127.0.0.1:58890",
+  "runtime_markers": {
+    "source_main_commit_marker": "917d18cd753434c22ac44715d27a3d94aab92e79",
+    "runtime_reported_version_marker": "917d18cd753434c22ac44715d27a3d94aab92e79",
+    "bootstrap_package_version_marker": "917d18cd753434c22ac44715d27a3d94aab92e79",
+    "scenario_package_version_marker": "917d18cd753434c22ac44715d27a3d94aab92e79",
+    "review_record_path": "docs/org/review-records/artifacts/2026-07-18-917d18c-docker-core-closure-001.json"
+  },
+  "summary": {
+    "passedCount": 8,
+    "blockedCount": 0,
+    "failedCount": 0,
+    "boundedStopCount": 0,
+    "contradictionCount": 0,
+    "blockedScenarioKeys": [],
+    "failedScenarioKeys": []
+  },
+  "scenarios": [
+    {
+      "scenario_key": "runtime-baseline",
+      "lane": "default-local-docker",
+      "status": "passed",
+      "result_class": "pass",
+      "covered_families": [
+        "public-runtime-interpretation"
+      ],
+      "proof_class": "baseline-interpretation",
+      "blocked_by": [],
+      "notes": [
+        "Verifies only the local docker runtime baseline through /healthz and /readyz."
+      ],
+      "returned_ids": {}
+    },
+    {
+      "scenario_key": "platform-managed-onboarding",
+      "lane": "default-local-docker",
+      "status": "passed",
+      "result_class": "pass",
+      "covered_families": [
+        "identity-entry"
+      ],
+      "proof_class": "direct-executable",
+      "blocked_by": [],
+      "notes": [
+        "Fresh bootstrap claimant state was created successfully for the bounded matrix executor."
+      ],
+      "returned_ids": {
+        "agentId": "prov-8ddfcc7d-abde-4a37-93e4-29ca4e6b730e",
+        "principalId": "claimed:prov-8ddfcc7d-abde-4a37-93e4-29ca4e6b730e",
+        "registrationId": "areg-6b13f001-a2a5-4dfa-8ca6-bb90b17a3102",
+        "dispatchAuthorityRequestId": "daar-8ea2c7d7-fdd9-4f1a-ae15-7eff38863aa7",
+        "externalBindingId": "eab-1784187998017-dd21975c-dcbc-4a0d-90ce-1c8a46f7f1a7"
+      }
+    },
+    {
+      "scenario_key": "dispatch-ready-progression",
+      "lane": "default-local-docker",
+      "status": "passed",
+      "result_class": "pass",
+      "covered_families": [
+        "account-plane-readiness-and-repair",
+        "operator-review-boundary"
+      ],
+      "proof_class": "direct-executable",
+      "blocked_by": [],
+      "notes": [
+        "Fresh bootstrap evidence confirms approved dispatch authority and an active external binding."
+      ],
+      "returned_ids": {
+        "agentId": "prov-8ddfcc7d-abde-4a37-93e4-29ca4e6b730e",
+        "principalId": "claimed:prov-8ddfcc7d-abde-4a37-93e4-29ca4e6b730e",
+        "registrationId": "areg-6b13f001-a2a5-4dfa-8ca6-bb90b17a3102",
+        "dispatchAuthorityRequestId": "daar-8ea2c7d7-fdd9-4f1a-ae15-7eff38863aa7",
+        "externalBindingId": "eab-1784187998017-dd21975c-dcbc-4a0d-90ce-1c8a46f7f1a7"
+      }
+    },
+    {
+      "scenario_key": "governed-runtime-projection-entry",
+      "lane": "default-local-docker",
+      "status": "passed",
+      "result_class": "pass",
+      "covered_families": [
+        "identity-entry",
+        "governed-runtime-projection"
+      ],
+      "proof_class": "direct-executable",
+      "blocked_by": [],
+      "notes": [
+        "The checked-in governed-runtime projection probe reached governed reads through a session-projected enterprise account."
+      ],
+      "returned_ids": {
+        "tenantId": "tenant-public",
+        "companyId": "acct-97450e2b-81f8-4ff7-a4ac-b847f3a6d4d4"
+      }
+    },
+    {
+      "scenario_key": "dispatch-authority-reviewed-closure",
+      "lane": "default-local-docker",
+      "status": "passed",
+      "result_class": "pass",
+      "covered_families": [
+        "account-plane-readiness-and-repair",
+        "operator-review-boundary"
+      ],
+      "proof_class": "direct-executable",
+      "blocked_by": [],
+      "notes": [
+        "The checked-in dispatch-authority closure probe completed claimant request, operator approval, and claimant reread truth."
+      ],
+      "returned_ids": {
+        "requestId": "daar-ba2a0a9b-6c8f-43a5-9da2-eef402a8e9aa",
+        "agentId": "prov-26183c31-5c13-47b9-a908-77d338680a23"
+      }
+    },
+    {
+      "scenario_key": "role-collaboration-handoff",
+      "lane": "default-local-docker",
+      "status": "passed",
+      "result_class": "pass",
+      "covered_families": [
+        "selected-claimant-execution-and-materialization-readback",
+        "opportunity-continuation-and-end-state"
+      ],
+      "proof_class": "partial-executable",
+      "blocked_by": [],
+      "notes": [
+        "The checked-in operator deeper-chain probe reached claimant opportunity readback and product-closed end-state evidence."
+      ],
+      "returned_ids": {
+        "matchId": "match-641797727004e0af",
+        "connectionRequestId": "conn-9a4272df-d30c-41e7-b016-5840b872d1a3",
+        "opportunityId": "opp-e52f8580-f2d5-4858-ab6a-158c9e166c06",
+        "packageId": "pkg-ff1caf3a-05bb-4851-8b95-1f539b9c6ff3"
+      }
+    },
+    {
+      "scenario_key": "continuous-task-governed-work-closure",
+      "lane": "default-local-docker",
+      "status": "passed",
+      "result_class": "pass",
+      "covered_families": [
+        "bounded-task-plane-progression"
+      ],
+      "proof_class": "direct-executable",
+      "blocked_by": [],
+      "notes": [
+        "The checked-in Pack B progression probe reached bounded governed-work closure with canonical refs."
+      ],
+      "returned_ids": {
+        "dispatchRef": "dispatch-5391b303-5c41-423b-a4ab-b769a26d6140",
+        "outcomeRef": "outcome://complete-task-dispatch/dispatch-5391b303-5c41-423b-a4ab-b769a26d6140",
+        "evidenceBundleRef": "evidence-bundle:dispatch-5391b303-5c41-423b-a4ab-b769a26d6140",
+        "confirmationCycleRef": "cycle-9019e1aa-9c5d-43f1-825d-b530ab2b98e5"
+      }
+    },
+    {
+      "scenario_key": "commercial-and-integration-readback",
+      "lane": "default-local-docker",
+      "status": "passed",
+      "result_class": "pass",
+      "covered_families": [
+        "integration-center-lifecycle-and-retired-seam-validation"
+      ],
+      "proof_class": "bounded-stop-proof",
+      "blocked_by": [],
+      "notes": [
+        "The checked-in integration lifecycle and platform-managed handoff probes completed without the known bounded dispatcher stop."
+      ],
+      "returned_ids": {
+        "integrationAppId": "917d18c-docker-core-closure-001-execution-integration-app",
+        "integrationInstallationId": "iinst-ddd744ea9fd2",
+        "platformManagedAgentId": "pm-prov-8ddfcc7d-abde-4a37-93e4-29ca4e6b730e",
+        "installationId": "iinst-ddd744ea9fd2",
+        "connectionId": "iiconn-6ee345b34dd7"
+      }
+    }
+  ],
+  "request_ids": [
+    "daar-8ea2c7d7-fdd9-4f1a-ae15-7eff38863aa7",
+    "daar-ba2a0a9b-6c8f-43a5-9da2-eef402a8e9aa"
+  ]
+}

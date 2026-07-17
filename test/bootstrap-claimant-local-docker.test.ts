@@ -59,6 +59,35 @@ test('parseBootstrapClaimantLocalDockerArgs requires base-url and state-path', (
   );
 });
 
+test('runBootstrapClaimantLocalDocker surfaces admin sign-in errors with explicit step context instead of TypeError', async () => {
+  const { fetchStub } = createFetchStub([
+    {
+      status: 401,
+      body: {
+        error: {
+          code: 'admin_session_denied',
+          message: 'seeded admin session is unavailable',
+        },
+      },
+    },
+  ]);
+
+  await assert.rejects(
+    () => runBootstrapClaimantLocalDocker(
+      {
+        baseUrl: 'http://127.0.0.1:8787',
+        statePath: '/tmp/bidvia-live-state.json',
+      },
+      {
+        fetchImpl: fetchStub,
+        now: () => '2026-05-14T10:00:00Z',
+        randomSuffix: () => 'seeded-suffix',
+      },
+    ),
+    /bootstrap admin sign-in failed: admin_session_denied: seeded admin session is unavailable/,
+  );
+});
+
 test('runBootstrapClaimantLocalDocker performs the local-docker claimant bootstrap sequence and persists local onboarding state', async () => {
   const { calls, fetchStub } = createFetchStub([
     {
@@ -276,6 +305,134 @@ test('runBootstrapClaimantLocalDocker performs the local-docker claimant bootstr
     createdAt: '2026-05-14T10:00:00Z',
     updatedAt: '2026-05-14T10:00:00Z',
   });
+});
+
+test('runBootstrapClaimantLocalDocker can stop before dispatch-authority request for claim-only validation lanes', async () => {
+  const { calls, fetchStub } = createFetchStub([
+    {
+      status: 200,
+      body: {
+        admin_session: {
+          admin_session_id: 'admin-session-1',
+          admin_account_id: 'admin-seeded-super-admin',
+        },
+        admin_account: {
+          email: 'ops-admin@example.com',
+          role: 'super_admin',
+          status: 'active',
+        },
+      },
+    },
+    {
+      status: 200,
+      body: {
+        invitation: {
+          invitation_id: 'invite-1',
+          invitation_token: 'invite-token-1',
+          invitation_type: 'ENTERPRISE_ACCOUNT',
+          status: 'ACTIVE',
+        },
+      },
+    },
+    {
+      status: 200,
+      body: {
+        account: {
+          account_id: 'acct-1',
+          account_type: 'enterprise',
+          email: 'live@example.com',
+          company_name: 'Live Co',
+          tenant_id: 'tenant-public',
+        },
+      },
+    },
+    {
+      status: 200,
+      body: {
+        session: {
+          session_id: 'sess-1',
+          account_id: 'acct-1',
+          tenant_id: 'tenant-public',
+          active_org_context: {
+            org_id: 'org-1',
+            org_name: 'Live Co',
+            tenant_id: 'tenant-public',
+          },
+        },
+      },
+    },
+    {
+      status: 200,
+      body: {
+        account: {
+          account_id: 'acct-1',
+          account_type: 'enterprise',
+          tenant_id: 'tenant-public',
+        },
+        session: {
+          session_id: 'sess-1',
+          tenant_id: 'tenant-public',
+          active_org_context: {
+            org_id: 'org-1',
+            org_name: 'Live Co',
+            tenant_id: 'tenant-public',
+          },
+        },
+        memberships: [{ role: 'enterprise_admin', status: 'active' }],
+        agent_onboarding_allowed: true,
+      },
+    },
+    {
+      status: 200,
+      body: {
+        provisional_agent_ref: 'prov-1',
+        claim_token: 'claim-token-1',
+      },
+    },
+    {
+      status: 200,
+      body: {
+        provisional_agent: {
+          provisional_agent_ref: 'prov-1',
+          claim_token: 'claim-token-1',
+        },
+      },
+    },
+    {
+      status: 200,
+      body: {
+        registration: {
+          agent_registration_id: 'areg-1',
+          agent_id: 'prov-1',
+          principal_id: 'claimed:prov-1',
+          status: 'registered',
+        },
+      },
+    },
+  ]);
+
+  const result = await runBootstrapClaimantLocalDocker(
+    {
+      baseUrl: 'http://127.0.0.1:8787',
+      statePath: '/tmp/bidvia-live-state.json',
+      stopBeforeDispatchAuthorityRequest: true,
+    },
+    {
+      fetchImpl: fetchStub,
+      now: () => '2026-05-14T10:00:00Z',
+      writeState: async (state, options) => ({
+        path: options?.path ?? '/tmp/bidvia-live-state.json',
+        state: state as never,
+      }),
+      randomSuffix: () => 'seeded-suffix',
+    },
+  );
+
+  assert.equal(calls.length, 8);
+  assert.equal(result.dispatchAuthority.requestId, null);
+  assert.equal(result.dispatchAuthority.status, 'NOT_REQUESTED');
+  assert.equal(result.externalBinding.bindingId, null);
+  assert.equal(result.externalBinding.status, 'missing');
 });
 
 test('runBootstrapClaimantLocalDocker generates unique bootstrap identifiers across repeated runs even when Date.now is stable', async () => {

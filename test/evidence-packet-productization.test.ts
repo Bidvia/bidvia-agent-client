@@ -1,6 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -12,12 +14,57 @@ import {
 } from '../src/business-universe/evidence.ts';
 import {
   buildAgentFirstBusinessUniverseValidationReport,
+  resolveAgentFirstBusinessUniverseWorkspaceRoot,
 } from '../scripts/validate-agent-first-business-universe.ts';
 
 const workspaceRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   '..',
 );
+
+const completedWaveNames = [
+  'wave-0-baseline-freeze',
+  'wave-1-semantic-kernel',
+  'wave-2-claimant-package',
+  'wave-3-operator-package',
+  'wave-4-universe-orchestrator',
+  'wave-5-sdk-product-facade',
+  'wave-6-mcp-discovery-route-context-alignment',
+  'wave-7-platform-managed-formal-entry',
+] as const;
+
+function createCompletedWaveFixtureWorkspace(
+  waveNames: readonly string[] = completedWaveNames,
+) {
+  const tempWorkspaceRoot = mkdtempSync(
+    path.join(os.tmpdir(), 'bidvia-agent-first-business-universe-'),
+  );
+  try {
+    const statusDir = path.join(
+      tempWorkspaceRoot,
+      '.sisyphus/status/agent-first-business-universe',
+    );
+
+    mkdirSync(statusDir, { recursive: true });
+
+    for (const [index, wave] of waveNames.entries()) {
+      writeFileSync(
+        path.join(statusDir, `wave-${index}.json`),
+        JSON.stringify({ wave, status: 'completed' }, null, 2),
+      );
+    }
+  } catch (error) {
+    rmSync(tempWorkspaceRoot, { recursive: true, force: true });
+    throw error;
+  }
+
+  return {
+    workspaceRoot: tempWorkspaceRoot,
+    cleanup: () => {
+      rmSync(tempWorkspaceRoot, { recursive: true, force: true });
+    },
+  };
+}
 
 test('product evidence helpers derive stable result taxonomy and evidence packet from role-stage outputs', () => {
   const envelope = buildProductEvidenceEnvelope({
@@ -88,26 +135,84 @@ test('dispatchMcpToolCall returns evidence packets for productized role-stage to
 });
 
 test('validate-agent-first-business-universe script reports completed waves and next-wave readiness', () => {
-  const report = buildAgentFirstBusinessUniverseValidationReport('/Users/liujiao/develop/Bidvia-agent-client');
+  const fixtureWorkspace = createCompletedWaveFixtureWorkspace();
 
-  assert.equal(report.status, 'ok');
-  assert.equal(report.completedWaves.includes('wave-7-platform-managed-formal-entry'), true);
-  assert.equal(report.nextExpectedWave, 'wave-8-diagnostics-and-evidence-layer');
+  try {
+    const report = buildAgentFirstBusinessUniverseValidationReport(fixtureWorkspace.workspaceRoot);
+
+    assert.equal(report.status, 'ok');
+    assert.deepEqual(report.completedWaves, [...completedWaveNames]);
+    assert.equal(report.nextExpectedWave, 'wave-8-diagnostics-and-evidence-layer');
+  } finally {
+    fixtureWorkspace.cleanup();
+  }
+});
+
+test('validate-agent-first-business-universe workspace root resolver prefers a trimmed explicit override', () => {
+  const fallbackRoot = '/fallback/workspace-root';
+
+  assert.equal(
+    resolveAgentFirstBusinessUniverseWorkspaceRoot(
+      {
+        BIDVIA_AGENT_FIRST_WORKSPACE_ROOT: '  /explicit/workspace-root  ',
+      },
+      fallbackRoot,
+    ),
+    '/explicit/workspace-root',
+  );
+});
+
+test('validate-agent-first-business-universe workspace root resolver falls back when override is blank', () => {
+  const fallbackRoot = '/fallback/workspace-root';
+
+  assert.equal(
+    resolveAgentFirstBusinessUniverseWorkspaceRoot(
+      {
+        BIDVIA_AGENT_FIRST_WORKSPACE_ROOT: '   ',
+      },
+      fallbackRoot,
+    ),
+    fallbackRoot,
+  );
+});
+
+test('validate-agent-first-business-universe workspace root resolver falls back when override is absent', () => {
+  const fallbackRoot = '/fallback/workspace-root';
+
+  assert.equal(
+    resolveAgentFirstBusinessUniverseWorkspaceRoot({}, fallbackRoot),
+    fallbackRoot,
+  );
 });
 
 test('validate-agent-first-business-universe script prints the validation report when executed directly', () => {
-  const output = execFileSync('npx', ['tsx', 'scripts/validate-agent-first-business-universe.ts'], {
-    cwd: workspaceRoot,
-    encoding: 'utf8',
-  });
+  const fixtureWaveNames = [
+    'fixture-wave-0-explicit-workspace-root',
+    ...completedWaveNames.slice(1),
+  ];
+  const fixtureWorkspace = createCompletedWaveFixtureWorkspace(fixtureWaveNames);
 
-  const report = JSON.parse(output) as {
-    status: string;
-    completedWaves: string[];
-    nextExpectedWave: string;
-  };
+  try {
+    const output = execFileSync('npx', ['tsx', 'scripts/validate-agent-first-business-universe.ts'], {
+      cwd: workspaceRoot,
+      encoding: 'utf8',
+      env: {
+        ...process.env,
+        BIDVIA_AGENT_FIRST_WORKSPACE_ROOT: fixtureWorkspace.workspaceRoot,
+      },
+    });
 
-  assert.equal(report.status, 'ok');
-  assert.equal(report.completedWaves.includes('wave-7-platform-managed-formal-entry'), true);
-  assert.equal(report.nextExpectedWave, 'wave-8-diagnostics-and-evidence-layer');
+    const report = JSON.parse(output) as {
+      status: string;
+      completedWaves: string[];
+      nextExpectedWave: string;
+    };
+
+    assert.equal(report.status, 'ok');
+    assert.equal(report.completedWaves.includes('fixture-wave-0-explicit-workspace-root'), true);
+    assert.equal(report.completedWaves.includes('wave-7-platform-managed-formal-entry'), true);
+    assert.equal(report.nextExpectedWave, 'wave-8-diagnostics-and-evidence-layer');
+  } finally {
+    fixtureWorkspace.cleanup();
+  }
 });

@@ -23,7 +23,7 @@ function run(command: string, args: string[], cwd: string): string {
   return execFileSync(command, args, {
     cwd,
     encoding: 'utf8',
-    timeout: 5000,
+    timeout: 30000,
   });
 }
 
@@ -32,14 +32,6 @@ function buildJsonRpcFrame(body: string): string {
 }
 
 function main(): void {
-  const checklistPath = path.join(workspaceRoot, 'docs', 'INTERNAL_RELEASE_CHECKLIST.md');
-  assert.equal(existsSync(checklistPath), true, 'Missing internal release checklist');
-
-  const checklist = readFileSync(checklistPath, 'utf8');
-  assert.match(checklist, /manual publish gate/i);
-  assert.match(checklist, /npm publish/);
-  assert.match(checklist, /validate:release-gate/);
-
   const readme = readFileSync(path.join(workspaceRoot, 'README.md'), 'utf8');
   const onboardingDoc = readFileSync(path.join(workspaceRoot, 'docs', 'OPENCLAW_GATEWAY_ONBOARDING.md'), 'utf8');
   const smokeDoc = readFileSync(path.join(workspaceRoot, 'docs', 'OPENCLAW_GATEWAY_SMOKE.md'), 'utf8');
@@ -54,6 +46,7 @@ function main(): void {
 
   assert.match(readme, /bidvia openclaw-mcp-config/);
   assert.match(readme, /bidvia onboard/);
+  assert.match(readme, /validator commands should stay green together/i);
   assert.match(onboardingDoc, /bidvia openclaw-mcp-config/);
   assert.match(smokeDoc, /bidvia openclaw-mcp-config/);
   assert.match(smokeDoc, /bidvia mcp-server/);

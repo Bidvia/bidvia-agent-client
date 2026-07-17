@@ -1,0 +1,39 @@
+{
+  "commands": [
+    {
+      "command": "npm test",
+      "exit_code": 0,
+      "result": "657 passed, 0 failed"
+    },
+    {
+      "command": "npm run typecheck",
+      "exit_code": 0,
+      "result": "passed"
+    },
+    {
+      "command": "npm run build",
+      "exit_code": 0,
+      "result": "passed"
+    },
+    {
+      "command": "npm run validate",
+      "exit_code": 0,
+      "result": "passed"
+    },
+    {
+      "command": "npm run validate:release-readiness",
+      "exit_code": 0,
+      "result": "passed"
+    },
+    {
+      "command": "npm run validate:release-gate",
+      "exit_code": 0,
+      "result": "passed"
+    },
+    {
+      "command": "npx tsx scripts/verify-client-bounded-matrix.ts --base-url http://127.0.0.1:58890 --output <raw-local-path>",
+      "exit_code": 0,
+      "result": "8 passed, 0 blocked, 0 failed"
+    }
+  ]
+}

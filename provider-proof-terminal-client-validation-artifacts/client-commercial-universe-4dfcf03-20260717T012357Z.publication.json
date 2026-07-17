@@ -1,0 +1,41 @@
+{
+  "proof_class": "client-commercial-universe-clean-checkout-evidence-publication",
+  "publication_state": "published_for_review",
+  "client_owned_conclusion": "passed",
+  "core_executable_sha": "4dfcf03f416925eb81dd8654ffb73ed3dff69026",
+  "runtime_base_url": "http://127.0.0.1:58890",
+  "client_commit": "fa7efeb2974fa36bfa10ef9210bfb95f0dccd498",
+  "client_package": "@bidvia/client@1.0.0",
+  "publication_branch": "evidence/8c534f8-client-full-matrix",
+  "publication_parent_commit": "e36686d252acf23d5715c2f23259d75d99ca51ee",
+  "fresh_attempt": "20260717T012357Z",
+  "archive_path": "provider-proof-terminal-client-validation-artifacts/client-commercial-universe-4dfcf03-20260717T012357Z.tar.gz",
+  "archive_sha256": "428906a34f1ebbb5f814ab93d05b15e4eed9f48549e3dc336e187a09ae83acf2",
+  "archive_size_bytes": 3867,
+  "internal_hash_manifest": "client-commercial-universe-4dfcf03-20260717T012357Z/SHA256SUMS.txt",
+  "issue_url": "https://github.com/Bidvia/bidvia-agent-client/issues/5",
+  "pull_request_url": "https://github.com/Bidvia/bidvia-agent-client/pull/7",
+  "validation": {
+    "targeted_clean_checkout": "8 passed, 0 failed",
+    "client_tests": "660 passed, 0 failed",
+    "static_and_package_gates": "passed",
+    "scenario_matrix": "8 passed, 0 blocked, 0 failed, 0 bounded stops, 0 contradictions",
+    "request_ids_retained": 2,
+    "machine_checkout_proof": "passed",
+    "secret_review": "passed",
+    "package_structure": "passed",
+    "internal_hash_verification": "passed",
+    "remote_archive_hash_verification": "passed"
+  },
+  "non_claims": [
+    "not independent personnel sign-off",
+    "not production readiness",
+    "not governed release acceptance",
+    "not all-connector support",
+    "not payment or settlement finality",
+    "not physical fulfillment completion",
+    "not after-sales completion",
+    "not reputation authority",
+    "not human commercial acceptance"
+  ]
+}
