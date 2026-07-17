@@ -52,9 +52,19 @@ export function buildAgentFirstBusinessUniverseValidationReport(
   };
 }
 
+export function resolveAgentFirstBusinessUniverseWorkspaceRoot(
+  environment: NodeJS.ProcessEnv,
+  fallbackRoot: string,
+): string {
+  return environment.BIDVIA_AGENT_FIRST_WORKSPACE_ROOT?.trim() || fallbackRoot;
+}
+
 function main(): void {
   const scriptDir = path.dirname(fileURLToPath(import.meta.url));
-  const workspaceRoot = path.resolve(scriptDir, '..');
+  const workspaceRoot = resolveAgentFirstBusinessUniverseWorkspaceRoot(
+    process.env,
+    path.resolve(scriptDir, '..'),
+  );
   const report = buildAgentFirstBusinessUniverseValidationReport(workspaceRoot);
 
   process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
