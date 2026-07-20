@@ -1,0 +1,57 @@
+{
+  "schema_version": "bidvia-client-task10-owner-conclusion/v1",
+  "evidence_owner": "client",
+  "attempt_id": "attempt-2026-07-18-task10-postmerge-002",
+  "conclusion": "blocked",
+  "reason_codes": [
+    "execution.candidate.blocked",
+    "producer.reportable-blocked:core-producer-private-root-contract-unsatisfied",
+    "scenario.dispatch.blocked:core-producer-private-root-contract-unsatisfied",
+    "scenario.dispatch.blocked:unexecuted-success-001",
+    "scenario.dispatch.blocked:unexecuted-success-001-evidence",
+    "scenario.readiness.blocked:core-producer-private-root-contract-unsatisfied",
+    "scenario.readiness.blocked:unexecuted-reset-evidence",
+    "scenario.readiness.blocked:unexecuted-reset-readiness",
+    "scenario.readiness.blocked:unexecuted-runtime-evidence",
+    "scenario.readiness.blocked:unexecuted-runtime-readiness",
+    "scenario.replay-recovery.blocked:core-producer-private-root-contract-unsatisfied",
+    "scenario.replay-recovery.blocked:unexecuted-recovery-001",
+    "scenario.replay-recovery.blocked:unexecuted-recovery-001-evidence",
+    "scenario.replay-recovery.blocked:unexecuted-success-002-reuse",
+    "scenario.replay-recovery.blocked:unexecuted-success-002-reuse-evidence",
+    "scenario.result-submission.blocked:core-producer-private-root-contract-unsatisfied",
+    "scenario.result-submission.blocked:unexecuted-result-submission",
+    "scenario.result-submission.blocked:unexecuted-success-001-evidence",
+    "scenario.session-access.blocked:core-producer-private-root-contract-unsatisfied",
+    "scenario.session-access.blocked:unexecuted-preflight-evidence",
+    "scenario.session-access.blocked:unexecuted-session-access"
+  ],
+  "missing_evidence": [
+    "producer-family:dispatch",
+    "producer-family:replay-recovery",
+    "producer-family:result-submission",
+    "producer-mode:producer-contract-probe"
+  ],
+  "authority_ref": {
+    "issue_url": "https://github.com/Bidvia/bidvia-agent-client/issues/8",
+    "core_handoff_runbook_url": "https://github.com/Bidvia/bidvia-main/blob/97e2fbe3934ea821daf654afa0adaef2c3e16077/docs/runbooks/merged-main-reproducibility-client-handoff.md",
+    "core_bundle_url": "https://github.com/Bidvia/bidvia-main/blob/8d2692fea8a450225717c067628bbc0b372c7536/docs/org/review-records/artifacts/attempt-2026-07-18-task10-postmerge-002-output/core-execution-evidence.json",
+    "core_bundle_path": "docs/org/review-records/artifacts/attempt-2026-07-18-task10-postmerge-002-output/core-execution-evidence.json",
+    "core_bundle_sha256": "e438232e982722fd4ec431260053eafe369723f93659070688f961a5c740b3db",
+    "core_preflight_path": "docs/org/review-records/artifacts/attempt-2026-07-18-task10-postmerge-002-output/preflight-artifact.json",
+    "core_preflight_sha256": "1eee8a5d6de9a34486b287be425b6f747f155c8c83ef436c448e13baf08ad685"
+  },
+  "non_claims": [
+    "not production readiness",
+    "not governed release acceptance",
+    "not prd promotion",
+    "not contract acceptance",
+    "not purchase-order truth",
+    "not payment or settlement finality",
+    "not fulfillment or after-sales completion",
+    "not dispute or arbitration completion",
+    "not provider execution completion",
+    "not human commercial acceptance",
+    "not a Core-authored conclusion"
+  ]
+}
