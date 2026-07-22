@@ -40,7 +40,7 @@ import type {
 
 const RUN_STARTED_AT = '2026-07-19T07:15:30.000Z';
 const GENERATED_AT = '2026-07-19T07:16:00.000Z';
-const PACKAGE_NAME = 'client-task10-reproducibility-attempt-2026-07-18-task10-postmerge-002-20260719T071530Z';
+const PACKAGE_NAME = 'client-task10-reproducibility-attempt-2026-07-20-task10-postmerge-007-20260719T071530Z';
 
 function buildHandle(seed: string): `sha256:${string}` {
   return `sha256:${seed.repeat(64).slice(0, 64)}`;
@@ -420,23 +420,77 @@ function buildFixture(): {
   };
 }
 
-test('Task 10 frozen authority constants, exported aliases, and wrapper prefix match the approved iteration-3 contract', () => {
-  assert.equal(TASK10_AUTHORITY.corePreflightSha256, '1eee8a5d6de9a34486b287be425b6f747f155c8c83ef436c448e13baf08ad685');
-  assert.equal(TASK10_AUTHORITY.coreBundlePath, 'docs/org/review-records/artifacts/attempt-2026-07-18-task10-postmerge-002-output/core-execution-evidence.json');
+test('Task 10 frozen authority constants, exported aliases, and wrapper prefix match the approved attempt-007 contract', () => {
+  assert.equal(TASK10_AUTHORITY.attemptId, 'attempt-2026-07-20-task10-postmerge-007');
+  assert.equal(TASK10_AUTHORITY.issueUrl, 'https://github.com/Bidvia/bidvia-agent-client/issues/8#issuecomment-5020392826');
+  assert.equal(TASK10_AUTHORITY.coreRuntimeSha, '0b3f266f2c087fb7d808bb3f0ddb57ce86173cc9');
+  assert.equal(TASK10_AUTHORITY.coreEvidenceCommit, '5ab02058491960c305162091316d65e1ffa97347');
+  assert.equal(TASK10_AUTHORITY.corePublicationMergeSha, '8957aaff35436621439f9a62a741c522e95423c8');
+  assert.equal(TASK10_AUTHORITY.coreExecutionEvidencePath, 'docs/org/review-records/artifacts/attempt-2026-07-20-task10-postmerge-007-output/core-execution-evidence.json');
+  assert.equal(TASK10_AUTHORITY.coreExecutionEvidenceSha256, 'c68a783433f8d58c59949a2ab496fc9e3ca1b42fd0b0f0318ebfb81576dc3980');
+  assert.equal(TASK10_AUTHORITY.bundleManifestPath, 'docs/org/review-records/artifacts/attempt-2026-07-20-task10-postmerge-007-output/bundle-manifest.json');
+  assert.equal(TASK10_AUTHORITY.bundleManifestSha256, '8141b41945e79bd0dec4eb48cb4db34cbebb3bd810476d7b8863b591336e8b41');
+  assert.equal(TASK10_AUTHORITY.coreArchivePrefix, 'bidvia-core-task10-postmerge-007/');
+  assert.equal(TASK10_AUTHORITY.coreArchiveRecipe, 'git archive --format=tar.gz --prefix=bidvia-core-task10-postmerge-007/ 5ab02058491960c305162091316d65e1ffa97347 docs/org/review-records/artifacts/attempt-2026-07-20-task10-postmerge-007-inputs docs/org/review-records/artifacts/attempt-2026-07-20-task10-postmerge-007-output');
+  assert.equal(TASK10_AUTHORITY.coreArchiveSha256, '90360fc749b6df227b2935ea115021f0d60e9f0afce6b3eb7169d2dcd90b0563');
+  assert.equal(TASK10_AUTHORITY.corePreflightPath, 'docs/org/review-records/artifacts/attempt-2026-07-20-task10-postmerge-007-output/preflight-artifact.json');
+  assert.equal(TASK10_AUTHORITY.corePreflightSha256, '45139bf82f6ba33793855d03442fbd939e7dbe82f565e5b5ac6a30e8150f27bf');
+  assert.equal(TASK10_AUTHORITY.reusablePacketWrapperPath, 'docs/org/review-records/artifacts/attempt-2026-07-20-task10-postmerge-007-inputs/reusable-packet.json');
+  assert.equal(TASK10_AUTHORITY.reusablePacketWrapperSha256, '96d04e1e77f895db916c94170ee34216bf63422c62711cb06130f30a173b92f1');
+  assert.equal(TASK10_AUTHORITY.reusablePacketEmbeddedArtifactSha256, '0ba97954370ef8f2e362f77dcb5abac5c24d8c8eef83116a2e783307f0cd6210');
+  assert.deepEqual(TASK10_AUTHORITY.reusablePacketSourceRefs, [
+    'core:0b3f266f2c087fb7d808bb3f0ddb57ce86173cc9:docs/org/review-records/artifacts/2026-07-15-cn-vn-industrial-chemical-approved-reusable-asset-packet.json:53f99c0f94f2ec7a388a124bf0bc0969d4cf3b054123b8c7f4693ea1dae67093',
+  ]);
+  assert.deepEqual(TASK10_AUTHORITY.selectedReusableRefs, [
+    'business-method-atom:method-1',
+    'lineage-unit:c1-method-1-publish-lineage',
+    'rules_template:chemical-match-rule-baseline',
+    'evidence-shape:success-001',
+  ]);
+  assert.equal(TASK10_AUTHORITY.selectedSourcePacketPath, 'docs/org/review-records/artifacts/2026-07-15-cn-vn-industrial-chemical-approved-reusable-asset-packet.json');
+  assert.equal(TASK10_AUTHORITY.selectedSourcePacketSha256, '53f99c0f94f2ec7a388a124bf0bc0969d4cf3b054123b8c7f4693ea1dae67093');
+  assert.equal(TASK10_AUTHORITY.coreBundlePath, TASK10_AUTHORITY.coreExecutionEvidencePath);
+  assert.equal(TASK10_AUTHORITY.coreBundleSha256, TASK10_AUTHORITY.coreExecutionEvidenceSha256);
   assert.equal(TASK10_AUTHORITY.packageIdentities.core, 'bidvia-d2-ws6-t1-runtime@0.0.0');
   assert.equal(TASK10_AUTHORITY.packageIdentities.client, '@bidvia/client@1.0.0');
   assert.equal(TASK10_AUTHORITY.packageIdentities.site, 'bidvia-site@0.1.0');
   assert.equal(TASK10_AUTHORITY.lockfileSha256.core, '504007a7fb70616df1409eb2e003a3470ea6e23d990ea61d8eea195a0a1fce62');
   assert.equal(TASK10_AUTHORITY.lockfileSha256.client, '92544096de62a366c66ba7c307ed6fa3ab9d2890bd7a6d6220adb4a0d7f627c6');
   assert.equal(TASK10_AUTHORITY.lockfileSha256.site, 'a0ef0825f04cd9c06bba396f8eff1bda32a557cf77f3c69ecd01ecb99b026732');
-  assert.equal(TASK10_AUTHORITY.runtimeMarkers.runtimeReportedVersionMarker, 'task10-runtime-97e2fbe');
+  assert.equal(TASK10_AUTHORITY.checkoutBranches.producer, 'main');
+  assert.equal(TASK10_AUTHORITY.checkoutUpstreams.producer, 'origin/main');
+  assert.equal(TASK10_AUTHORITY.runtimeMarkers.sourceMainCommitMarker, '0b3f266f2c087fb7d808bb3f0ddb57ce86173cc9');
+  assert.equal(TASK10_AUTHORITY.runtimeMarkers.runtimeReportedVersionMarker, 'task10-runtime-0b3f266');
+  assert.equal(TASK10_AUTHORITY.runtimeMarkers.bootstrapPackageVersionMarker, 'task10-bootstrap-0b3f266');
+  assert.equal(TASK10_AUTHORITY.runtimeMarkers.scenarioPackageVersionMarker, 'task10-scenario-0b3f266');
   assert.equal(TASK10_AUTHORITY.providerFixtureIdentity, 'provider-fixture:haisi-wms:task10');
   assert.equal(TASK10_AUTHORITY.providerProtocolVersion, 'task10-local-http-v1');
+  assert.deepEqual(TASK10_AUTHORITY.ports, {
+    postgres: 59625,
+    runtime: 59626,
+    operator: 59627,
+    fixture: 59628,
+  });
+  assert.equal(TASK10_AUTHORITY.composeProject, 'bidvia-task10-attempt-2026-07-20-task10-postmerge-007');
+  assert.deepEqual(TASK10_AUTHORITY.containerNames, [
+    'bidvia-task10-attempt-2026-07-20-task10-postmerge-007-runtime',
+    'bidvia-task10-attempt-2026-07-20-task10-postmerge-007-postgres',
+    'bidvia-task10-attempt-2026-07-20-task10-postmerge-007-fixture',
+    'bidvia-task10-attempt-2026-07-20-task10-postmerge-007-operator',
+  ]);
+  assert.equal(TASK10_AUTHORITY.networkIdentity, 'bidvia-task10-attempt-2026-07-20-task10-postmerge-007_default');
+  assert.equal(TASK10_AUTHORITY.coreHandoffRunbookUrl, 'https://github.com/Bidvia/bidvia-main/blob/8957aaff35436621439f9a62a741c522e95423c8/docs/runbooks/merged-main-reproducibility-client-handoff.md');
   assert.deepEqual(TASK10_REQUIRED_SCENARIO_FAMILIES, ['session-access', 'readiness', 'dispatch', 'replay-recovery', 'result-submission']);
   assert.deepEqual(REQUIRED_TASK10_SCENARIO_FAMILIES, TASK10_REQUIRED_SCENARIO_FAMILIES);
   assert.deepEqual(TASK10_CONTENT_FILES, ['README.md', 'client-conclusion.json', 'client-fingerprint.json', 'command-log.json', 'scenario-matrix.json']);
   assert.deepEqual(TASK10_PRIVATE_SOURCE_CLASSES, ['preflight', 'runtime', 'reset', 'success-001', 'recovery-001', 'success-002-reuse', 'producer-contract-probe', 'authority-bundle']);
   assert.deepEqual(TASK10_PROHIBITED_VALUE_FAMILIES, ['admin session ids', 'account session ids', 'passwords', 'tokens', 'credential secret refs', 'fixture credentials', 'email addresses', 'generated account identifiers', 'request and response bodies', 'absolute local paths']);
+  assert.equal(TASK10_AUTHORITY.authorityUrls[0], 'https://github.com/Bidvia/bidvia-agent-client/issues/8#issuecomment-5020392826');
+  assert.ok(TASK10_AUTHORITY.authorityUrls.includes(TASK10_AUTHORITY.coreExecutionEvidenceUrl));
+  assert.ok(TASK10_AUTHORITY.authorityUrls.includes(TASK10_AUTHORITY.bundleManifestUrl));
+  assert.ok(TASK10_AUTHORITY.authorityUrls.includes(TASK10_AUTHORITY.corePreflightUrl));
+  assert.ok(TASK10_AUTHORITY.authorityUrls.includes(TASK10_AUTHORITY.reusablePacketWrapperUrl));
+  assert.ok(TASK10_AUTHORITY.authorityUrls.includes(TASK10_AUTHORITY.selectedSourcePacketUrl));
   assert.equal(buildTask10PackageName(RUN_STARTED_AT), PACKAGE_NAME);
   assert.deepEqual(buildTask10WrapperFiles(PACKAGE_NAME), [
     'secret-review.json',
@@ -495,10 +549,10 @@ test('Task 10 builders emit the exact approved wire schemas and key order for co
       scenario_package_version_marker: TASK10_AUTHORITY.runtimeMarkers.scenarioPackageVersionMarker,
       provider_fixture_identity: TASK10_AUTHORITY.providerFixtureIdentity,
       provider_protocol_version: TASK10_AUTHORITY.providerProtocolVersion,
-      postgres_port: 58925,
-      runtime_port: 58926,
-      operator_port: 58927,
-      fixture_port: 58928,
+      postgres_port: 59625,
+      runtime_port: 59626,
+      operator_port: 59627,
+      fixture_port: 59628,
     },
     tool_versions: {
       node: 'v24.6.0',
@@ -679,7 +733,7 @@ test('Task 10 parsers and guards reject extras, wrong tuples, malformed handles,
   assert.throws(() => parseTask10ClientConclusionWire({ ...conclusionWire, conclusion: null }), /conclusion/i);
   assert.throws(() => parseTask10ClientFingerprintWire({ ...fingerprintWire, tool_versions: { ...fingerprintWire.tool_versions, postgres_client: '' } }), /postgres_client/i);
   assert.throws(() => parseTask10ClientFingerprintWire({ ...fingerprintWire, scope: 'wrong' }), /unexpected key/i);
-  assert.throws(() => parseTask10ClientFingerprintWire({ ...fingerprintWire, runtime_markers: { ...fingerprintWire.runtime_markers, postgres_port: 58999 } }), /postgres_port/i);
+  assert.throws(() => parseTask10ClientFingerprintWire({ ...fingerprintWire, runtime_markers: { ...fingerprintWire.runtime_markers, postgres_port: 59699 } }), /postgres_port/i);
   assert.deepEqual(
     parseTask10ClientFingerprintWire({ ...fingerprintWire, checkout_proofs: { ...fingerprintWire.checkout_proofs, core_runtime: { ...fingerprintWire.checkout_proofs.core_runtime, branch: null } } }).checkout_proofs.core_runtime.branch,
     null,
@@ -724,8 +778,8 @@ test('Task 10 parsers and guards reject extras, wrong tuples, malformed handles,
   assert.throws(() => parseTask10SecretReviewWire({ ...secretReviewWire, scanned_files: [...secretReviewWire.scanned_files, 'secret-review.json'] }), /scanned_files/i);
   assert.throws(() => parseTask10SecretReviewWire({ ...secretReviewWire, prohibited_value_families: [...secretReviewWire.prohibited_value_families].reverse() }), /prohibited_value_families/i);
   assert.throws(() => parseTask10SecretReviewWire({ ...secretReviewWire, scope: { ...secretReviewWire.scope, wrapper_files: ['secret-review.json', 'SHA256SUMS.txt', 'wrong.tar.gz', 'wrong.publication.json'] } }), /wrapper_files/i);
-  assert.throws(() => parseTask10SecretReviewWire({ ...secretReviewWire, scope: { ...secretReviewWire.scope, wrapper_files: ['secret-review.json', 'SHA256SUMS.txt', 'client-task10-reproducibility-attempt-2026-07-18-task10-postmerge-002-20269919T071530Z.tar.gz', 'client-task10-reproducibility-attempt-2026-07-18-task10-postmerge-002-20269919T071530Z.publication.json'] } }), /wrapper_files|timestamp|UTC/i);
-  assert.throws(() => parseTask10SecretReviewWire({ ...secretReviewWire, scope: { ...secretReviewWire.scope, wrapper_files: ['secret-review.json', 'SHA256SUMS.txt', 'client-task10-reproducibility-attempt-2026-07-18-task10-postmerge-002-20260719T071530Z-extra.tar.gz', 'client-task10-reproducibility-attempt-2026-07-18-task10-postmerge-002-20260719T071530Z-extra.publication.json'] } }), /wrapper_files|prefix/i);
+  assert.throws(() => parseTask10SecretReviewWire({ ...secretReviewWire, scope: { ...secretReviewWire.scope, wrapper_files: ['secret-review.json', 'SHA256SUMS.txt', 'client-task10-reproducibility-attempt-2026-07-20-task10-postmerge-007-20269919T071530Z.tar.gz', 'client-task10-reproducibility-attempt-2026-07-20-task10-postmerge-007-20269919T071530Z.publication.json'] } }), /wrapper_files|timestamp|UTC/i);
+  assert.throws(() => parseTask10SecretReviewWire({ ...secretReviewWire, scope: { ...secretReviewWire.scope, wrapper_files: ['secret-review.json', 'SHA256SUMS.txt', 'client-task10-reproducibility-attempt-2026-07-20-task10-postmerge-007-20260719T071530Z-extra.tar.gz', 'client-task10-reproducibility-attempt-2026-07-20-task10-postmerge-007-20260719T071530Z-extra.publication.json'] } }), /wrapper_files|prefix/i);
   assert.throws(() => parseTask10SecretReviewWire({ ...secretReviewWire, scope: { ...secretReviewWire.scope, wrapper_files: ['secret-review.json', 'SHA256SUMS.txt', '../escape.tar.gz', '../escape.publication.json'] } }), /wrapper_files|prefix/i);
   assert.throws(() => parseTask10PublicationReceiptWire({ ...receiptWire, non_claims: [...receiptWire.non_claims].reverse() }), /non_claims/i);
   assert.throws(() => parseTask10PublicationReceiptWire({ ...receiptWire, validation: { ...receiptWire.validation, focused_task10_tests: true } }), /unexpected key/i);
@@ -771,8 +825,8 @@ test('Task 10 builders reject contradictory frozen booleans, invalid package nam
 
   assert.throws(() => buildTask10PackageName('2026-99-19T07:15:30.000Z'), /UTC datetime|timestamp/i);
   assert.throws(() => buildTask10WrapperFiles('../escape'), /package prefix|packageName/i);
-  assert.throws(() => buildTask10WrapperFiles('client-task10-reproducibility-attempt-2026-07-18-task10-postmerge-002-2026-07-19T071530Z'), /package prefix|packageName/i);
-  assert.throws(() => buildTask10WrapperFiles('client-task10-reproducibility-attempt-2026-07-18-task10-postmerge-002-20260719T071530Z-extra'), /package prefix|packageName/i);
+  assert.throws(() => buildTask10WrapperFiles('client-task10-reproducibility-attempt-2026-07-20-task10-postmerge-007-2026-07-19T071530Z'), /package prefix|packageName/i);
+  assert.throws(() => buildTask10WrapperFiles('client-task10-reproducibility-attempt-2026-07-20-task10-postmerge-007-20260719T071530Z-extra'), /package prefix|packageName/i);
 
   assert.throws(() => buildTask10CommandLogWire({
     ...fixture.commandLog,
