@@ -26,6 +26,9 @@ import {
   type Task10ScenarioRow,
 } from '../scripts/task10/contracts.ts';
 import {
+  Task10ExpectedEvidenceAccessError,
+} from '../scripts/task10/authority.ts';
+import {
   buildTask10ScenarioRows,
 } from '../scripts/task10/scenario-adapter.ts';
 import {
@@ -36,7 +39,10 @@ import {
   inspectTask10Checkout,
   main,
   parseVerifyTask10ClientReproducibilityArgs,
+  readTask10AuthorityEvidenceFile,
+  recreateTask10AuthorityArchive,
   runVerifyTask10ClientReproducibility,
+  type ReadTask10AuthorityEvidenceFileDependencies,
   type VerifyTask10ClientReproducibilityArgs,
   type VerifyTask10ClientReproducibilityDependencies,
 } from '../scripts/verify-task10-client-reproducibility.ts';
@@ -1312,6 +1318,252 @@ test('runVerifyTask10ClientReproducibility preserves real gate rows, blocks down
     assert.deepEqual((evaluationInput as { commandLog: { commands: unknown[] } }).commandLog.commands, gateRows);
   } finally {
     await harness.cleanup();
+  }
+});
+
+test('readTask10AuthorityEvidenceFile returns bytes, realPath, sizeBytes, and symlink status from one no-follow descriptor', async () => {
+  const tempRoot = await realpath(await mkdtemp(path.join(os.tmpdir(), 'task10-authority-read-')));
+  const evidencePath = path.join(tempRoot, 'evidence.json');
+  const symlinkPath = path.join(tempRoot, 'evidence-link.json');
+  const expectedBytes = new TextEncoder().encode('{"attempt":"007"}');
+
+  try {
+    await writeFile(evidencePath, expectedBytes, { mode: 0o600 });
+    await symlink(evidencePath, symlinkPath);
+
+    const descriptor = readTask10AuthorityEvidenceFile(evidencePath);
+    assert.deepEqual(descriptor, {
+      realPath: await realpath(evidencePath),
+      symlinked: false,
+      sizeBytes: expectedBytes.byteLength,
+      bytes: expectedBytes,
+    });
+
+    assert.throws(() => readTask10AuthorityEvidenceFile(symlinkPath), /missing|unreadable/i);
+  } finally {
+    await rm(tempRoot, { recursive: true, force: true });
+  }
+});
+
+test('readTask10AuthorityEvidenceFile maps only known deterministic filesystem failures and closes the descriptor on expected and unexpected failures', () => {
+  const openedDescriptors: number[] = [];
+  const closedDescriptors: number[] = [];
+  let nextDescriptor = 40;
+
+  const baseDependencies: ReadTask10AuthorityEvidenceFileDependencies = {
+    openSync() {
+      const descriptor = nextDescriptor;
+      nextDescriptor += 1;
+      openedDescriptors.push(descriptor);
+      return descriptor;
+    },
+    closeSync(descriptor: number) {
+      closedDescriptors.push(descriptor);
+    },
+    realpathSync() {
+      return '/real/evidence.json';
+    },
+    statSync() {
+      return { dev: 1, ino: 2 };
+    },
+    readFileSync() {
+      return new Uint8Array([1, 2, 3]);
+    },
+    fstatSync(_descriptor: number) {
+      return {
+        isFile: () => true,
+        size: 3,
+        dev: 1,
+        ino: 2,
+      };
+    },
+  };
+
+  assert.throws(() => readTask10AuthorityEvidenceFile('/tmp/missing.json', {
+    ...baseDependencies,
+    openSync() {
+      const error = new Error('missing') as NodeJS.ErrnoException;
+      error.code = 'ENOENT';
+      throw error;
+    },
+  }), (error: unknown) => error instanceof Task10ExpectedEvidenceAccessError && error.kind === 'missing');
+
+  assert.throws(() => readTask10AuthorityEvidenceFile('/tmp/symlink.json', {
+    ...baseDependencies,
+    realpathSync() {
+      const error = new Error('loop') as NodeJS.ErrnoException;
+      error.code = 'ELOOP';
+      throw error;
+    },
+  }), (error: unknown) => error instanceof Task10ExpectedEvidenceAccessError && error.kind === 'unreadable');
+
+  const internalFailure = new Error('plain-internal-failure');
+  assert.throws(() => readTask10AuthorityEvidenceFile('/tmp/internal.json', {
+    ...baseDependencies,
+    readFileSync() {
+      throw internalFailure;
+    },
+  }), internalFailure);
+
+  assert.deepEqual(openedDescriptors, [40, 41]);
+  assert.deepEqual(closedDescriptors, [40, 41]);
+});
+
+test('readTask10AuthorityEvidenceFile preserves existing expected access errors and rejects intentional regular-file and identity mismatches as unreadable', () => {
+  const preserved = new Task10ExpectedEvidenceAccessError('unreadable');
+
+  assert.throws(() => readTask10AuthorityEvidenceFile('/tmp/preserved.json', {
+    openSync() {
+      throw preserved;
+    },
+  }), preserved);
+
+  assert.throws(() => readTask10AuthorityEvidenceFile('/tmp/not-regular.json', {
+    openSync() {
+      return 55;
+    },
+    closeSync() {
+      return undefined;
+    },
+    fstatSync() {
+      return {
+        isFile: () => false,
+        size: 1,
+        dev: 1,
+        ino: 1,
+      };
+    },
+  }), (error: unknown) => error instanceof Task10ExpectedEvidenceAccessError && error.kind === 'unreadable');
+
+  assert.throws(() => readTask10AuthorityEvidenceFile('/tmp/identity-mismatch.json', {
+    openSync() {
+      return 56;
+    },
+    closeSync() {
+      return undefined;
+    },
+    fstatSync() {
+      return {
+        isFile: () => true,
+        size: 3,
+        dev: 1,
+        ino: 1,
+      };
+    },
+    realpathSync() {
+      return '/real/identity-mismatch.json';
+    },
+    statSync() {
+      return { dev: 9, ino: 9 };
+    },
+    readFileSync() {
+      return new Uint8Array([1, 2, 3]);
+    },
+  }), (error: unknown) => error instanceof Task10ExpectedEvidenceAccessError && error.kind === 'unreadable');
+});
+
+test('recreateTask10AuthorityArchive uses the frozen recipe with argument arrays and no shell interpolation', () => {
+  const calls: Array<{
+    command: string;
+    args: readonly string[];
+    cwd: string;
+    shell: boolean;
+    timeout: number;
+    maxBuffer: number;
+    encoding?: 'buffer';
+    env: NodeJS.ProcessEnv;
+  }> = [];
+
+  const originalToken = process.env.BIDVIA_MERGED_MAIN_REHEARSAL_TOKEN;
+  const originalPath = process.env.PATH;
+  const originalHome = process.env.HOME;
+  const originalSecret = process.env.UNRELATED_SECRET;
+  process.env.BIDVIA_MERGED_MAIN_REHEARSAL_TOKEN = 'super-secret-token';
+  process.env.PATH = '/usr/bin';
+  process.env.HOME = '/Users/tester';
+  process.env.UNRELATED_SECRET = 'ambient-secret';
+
+  try {
+    assert.throws(() => recreateTask10AuthorityArchive({
+      evidenceRootPath: '/tmp/task10-core-evidence',
+      recipe: 'git archive --format=tar.gz HEAD docs/other',
+      prefix: TASK10_AUTHORITY.coreArchivePrefix,
+    }), /frozen Task 10 authority/);
+
+    assert.throws(() => recreateTask10AuthorityArchive({
+      evidenceRootPath: '/tmp/task10-core-evidence',
+      recipe: TASK10_AUTHORITY.coreArchiveRecipe,
+      prefix: 'wrong-prefix/',
+    }), /frozen Task 10 authority/);
+
+    const archiveBytes = recreateTask10AuthorityArchive({
+      evidenceRootPath: '/tmp/task10-core-evidence',
+      recipe: TASK10_AUTHORITY.coreArchiveRecipe,
+      prefix: TASK10_AUTHORITY.coreArchivePrefix,
+    }, {
+      env: {
+        PATH: '/usr/bin',
+        HOME: '/Users/tester',
+        BIDVIA_MERGED_MAIN_REHEARSAL_TOKEN: 'super-secret-token',
+        UNRELATED_SECRET: 'ambient-secret',
+      },
+      execFile(command, args, options) {
+        calls.push({
+          command,
+          args,
+          cwd: options.cwd,
+          shell: options.shell,
+          timeout: options.timeout,
+          maxBuffer: options.maxBuffer,
+          encoding: options.encoding,
+          env: options.env,
+        });
+        return new Uint8Array([1, 2, 3]);
+      },
+    });
+
+    assert.deepEqual(archiveBytes, new Uint8Array([1, 2, 3]));
+    assert.deepEqual(calls, [{
+      command: 'git',
+      args: [
+        'archive',
+        '--format=tar.gz',
+        `--prefix=${TASK10_AUTHORITY.coreArchivePrefix}`,
+        TASK10_AUTHORITY.coreEvidenceCommit,
+        'docs/org/review-records/artifacts/attempt-2026-07-20-task10-postmerge-007-inputs',
+        'docs/org/review-records/artifacts/attempt-2026-07-20-task10-postmerge-007-output',
+      ],
+      cwd: '/tmp/task10-core-evidence',
+      shell: false,
+      timeout: 15_000,
+      maxBuffer: 16_384,
+      encoding: 'buffer',
+      env: {
+        PATH: '/usr/bin',
+        HOME: '/Users/tester',
+      },
+    }]);
+  } finally {
+    if (originalToken === undefined) {
+      delete process.env.BIDVIA_MERGED_MAIN_REHEARSAL_TOKEN;
+    } else {
+      process.env.BIDVIA_MERGED_MAIN_REHEARSAL_TOKEN = originalToken;
+    }
+    if (originalPath === undefined) {
+      delete process.env.PATH;
+    } else {
+      process.env.PATH = originalPath;
+    }
+    if (originalHome === undefined) {
+      delete process.env.HOME;
+    } else {
+      process.env.HOME = originalHome;
+    }
+    if (originalSecret === undefined) {
+      delete process.env.UNRELATED_SECRET;
+    } else {
+      process.env.UNRELATED_SECRET = originalSecret;
+    }
   }
 });
 

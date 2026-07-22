@@ -1,12 +1,14 @@
-import { spawnSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { constants as fsConstants } from 'node:fs';
 import {
   closeSync,
+  fstatSync,
   lstatSync,
   openSync,
   readFileSync,
   realpathSync,
+  statSync,
 } from 'node:fs';
 import {
   lstat,
@@ -19,10 +21,13 @@ import { fileURLToPath } from 'node:url';
 
 import {
   Task10ExpectedCheckoutInspectionError,
+  Task10ExpectedEvidenceAccessError,
   verifyTask10Authority,
+  type Task10ArchiveRecreationRequest,
   type Task10AuthorityVerificationResult,
   type Task10AuthorityVerifierDependencies,
   type Task10CheckoutInspection,
+  type Task10EvidenceFile,
   type VerifyTask10AuthorityInput,
 } from './task10/authority.js';
 import { recordTask10GateCommands } from './task10/command-recorder.js';
@@ -188,6 +193,50 @@ type PrivateSourceCollectionDependencies = {
   maxFileBytes?: number;
   maxTotalBytes?: number;
 };
+
+type RecreateTask10AuthorityArchiveDependencies = {
+  execFile?: (
+    command: string,
+    args: readonly string[],
+    options: {
+      cwd: string;
+      shell: false;
+      env: NodeJS.ProcessEnv;
+      maxBuffer: number;
+      timeout: number;
+      encoding?: 'buffer';
+    },
+  ) => Uint8Array;
+  env?: NodeJS.ProcessEnv;
+};
+
+export interface Task10AuthorityEvidenceFileStat {
+  isFile(): boolean;
+  size: number;
+  dev: number;
+  ino: number;
+}
+
+export interface Task10AuthorityEvidenceIdentityStat {
+  dev: number;
+  ino: number;
+}
+
+export type Task10AuthorityEvidenceOpenFn = (filePath: string, flags: number) => number;
+export type Task10AuthorityEvidenceCloseFn = (descriptor: number) => void;
+export type Task10AuthorityEvidenceFstatFn = (descriptor: number) => Task10AuthorityEvidenceFileStat;
+export type Task10AuthorityEvidenceRealpathFn = (filePath: string) => string;
+export type Task10AuthorityEvidenceStatFn = (filePath: string) => Task10AuthorityEvidenceIdentityStat;
+export type Task10AuthorityEvidenceReadFn = (descriptor: number) => Uint8Array;
+
+export interface ReadTask10AuthorityEvidenceFileDependencies {
+  openSync?: Task10AuthorityEvidenceOpenFn;
+  closeSync?: Task10AuthorityEvidenceCloseFn;
+  fstatSync?: Task10AuthorityEvidenceFstatFn;
+  realpathSync?: Task10AuthorityEvidenceRealpathFn;
+  statSync?: Task10AuthorityEvidenceStatFn;
+  readFileSync?: Task10AuthorityEvidenceReadFn;
+}
 
 export interface VerifyTask10ClientReproducibilityArgs {
   privateInput: string;
@@ -931,6 +980,81 @@ function readBoundedRegularFileSync(filePath: string, maxBytes: number): Uint8Ar
   }
 }
 
+export function readTask10AuthorityEvidenceFile(
+  filePath: string,
+  dependencies: ReadTask10AuthorityEvidenceFileDependencies = {},
+): Task10EvidenceFile {
+  const resolvedPath = path.resolve(filePath);
+  let descriptor: number | null = null;
+  const openSyncDependency = dependencies.openSync ?? openSync;
+  const closeSyncDependency = dependencies.closeSync ?? closeSync;
+  const fstatSyncDependency = dependencies.fstatSync ?? fstatSync;
+  const realpathSyncDependency = dependencies.realpathSync ?? realpathSync;
+  const statSyncDependency = dependencies.statSync ?? statSync;
+  const readFileSyncDependency = dependencies.readFileSync ?? readFileSync;
+
+  try {
+    descriptor = openSyncDependency(resolvedPath, fsConstants.O_RDONLY | fsConstants.O_NOFOLLOW);
+    const initialStats = fstatSyncDependency(descriptor);
+    if (!initialStats.isFile() || initialStats.size > MAX_AUTHORITY_FILE_BYTES) {
+      throw new Task10ExpectedEvidenceAccessError('unreadable');
+    }
+
+    const realPath = realpathSyncDependency(resolvedPath);
+    const realStats = statSyncDependency(realPath);
+    if (realStats.dev !== initialStats.dev || realStats.ino !== initialStats.ino) {
+      throw new Task10ExpectedEvidenceAccessError('unreadable');
+    }
+
+    const bytes = new Uint8Array(readFileSyncDependency(descriptor));
+    const finalStats = fstatSyncDependency(descriptor);
+    if (!finalStats.isFile()
+      || finalStats.dev !== initialStats.dev
+      || finalStats.ino !== initialStats.ino
+      || finalStats.size !== initialStats.size
+      || bytes.byteLength !== initialStats.size) {
+      throw new Task10ExpectedEvidenceAccessError('unreadable');
+    }
+
+    return {
+      realPath,
+      symlinked: false,
+      sizeBytes: initialStats.size,
+      bytes,
+    };
+  } catch (error) {
+    throw mapAuthorityEvidenceAccessError(error);
+  } finally {
+    if (descriptor !== null) {
+      closeSyncDependency(descriptor);
+    }
+  }
+}
+
+export function recreateTask10AuthorityArchive(
+  request: Task10ArchiveRecreationRequest,
+  dependencies: RecreateTask10AuthorityArchiveDependencies = {},
+): Uint8Array {
+  if (request.recipe !== TASK10_AUTHORITY.coreArchiveRecipe || request.prefix !== TASK10_AUTHORITY.coreArchivePrefix) {
+    throw new Error('archive recreation request must match frozen Task 10 authority');
+  }
+
+  const recipeTokens = request.recipe.trim().split(/\s+/u);
+  if (recipeTokens[0] !== 'git' || recipeTokens.length < 2) {
+    throw new Error('archive recreation recipe must be a git archive command');
+  }
+
+  const execFile = dependencies.execFile ?? ((command, args, options) => new Uint8Array(execFileSync(command, args, options)));
+  return execFile(recipeTokens[0], recipeTokens.slice(1), {
+    cwd: request.evidenceRootPath,
+    shell: false,
+    env: buildSafeSpawnEnv(dependencies.env ?? process.env),
+    maxBuffer: SAFE_CHILD_MAX_OUTPUT_BYTES,
+    timeout: SAFE_CHILD_TIMEOUT_MS,
+    encoding: 'buffer',
+  });
+}
+
 function requireToolVersion(
   runVersionCommand: (command: string, args: readonly string[]) => string,
   command: string,
@@ -948,6 +1072,22 @@ function mapInspectionError(error: unknown): Task10ExpectedCheckoutInspectionErr
     return new Task10ExpectedCheckoutInspectionError('missing');
   }
   return new Task10ExpectedCheckoutInspectionError('unreadable');
+}
+
+function mapAuthorityEvidenceAccessError(error: unknown): Task10ExpectedEvidenceAccessError | Error {
+  if (error instanceof Task10ExpectedEvidenceAccessError) {
+    return error;
+  }
+  if (isErrnoCode(error, 'ENOENT') || isErrnoCode(error, 'ENOTDIR')) {
+    return new Task10ExpectedEvidenceAccessError('missing');
+  }
+  if (isErrnoCode(error, 'EACCES') || isErrnoCode(error, 'EPERM') || isErrnoCode(error, 'ELOOP')) {
+    return new Task10ExpectedEvidenceAccessError('unreadable');
+  }
+  if (error instanceof Error) {
+    return error;
+  }
+  return new Error('unexpected authority evidence access failure');
 }
 
 function isErrnoCode(error: unknown, code: string): boolean {
@@ -1390,14 +1530,17 @@ async function defaultVerifyTask10AuthorityWrapper(
   input: VerifyTask10AuthorityInput,
 ): Promise<Task10AuthorityVerificationResult> {
   const authorityDependencies: Task10AuthorityVerifierDependencies = {
-    readFile(filePath) {
-      return readBoundedRegularFileSync(filePath, MAX_AUTHORITY_FILE_BYTES);
-    },
     hashBytes(bytes) {
       return hashBytes(bytes);
     },
     inspectCheckout(rootPath) {
       return inspectTask10Checkout(rootPath);
+    },
+    readEvidenceFile(filePath) {
+      return readTask10AuthorityEvidenceFile(filePath);
+    },
+    recreateArchive(request) {
+      return recreateTask10AuthorityArchive(request);
     },
   };
   return verifyTask10Authority(input, authorityDependencies);
