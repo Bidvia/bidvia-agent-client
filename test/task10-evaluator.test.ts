@@ -442,6 +442,31 @@ test('Task 10 evaluator ignores extra core-passed style fields and depends only 
   });
 });
 
+test('Task 10 finalization does not let core-published pass style fields upgrade a blocked client-owned execution result', () => {
+  const result = finalizeTask10Conclusion({
+    candidateConclusion: 'blocked',
+    reasonCodes: ['scenario.dispatch.blocked:producer-output-readback-blocked'],
+    missingEvidence: ['producer-mode:success-001'],
+    corePublishedPass: true,
+    publishedConclusion: 'passed',
+    core_conclusion: 'passed',
+  } as unknown as Parameters<typeof finalizeTask10Conclusion>[0], {
+    ...buildPassingPublicationChecks(),
+    corePublishedPass: true,
+    publishedConclusion: 'passed',
+    core_conclusion: 'passed',
+  } as unknown as Parameters<typeof finalizeTask10Conclusion>[1]);
+
+  assert.deepEqual(result, {
+    conclusion: 'blocked',
+    reasonCodes: [
+      'execution.candidate.blocked',
+      'scenario.dispatch.blocked:producer-output-readback-blocked',
+    ],
+    missingEvidence: ['producer-mode:success-001'],
+  });
+});
+
 test('Task 10 evaluator fails closed for malformed top-level domains and representative nested malformed objects without throwing', () => {
   const cases: Array<{
     name: string;

@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { TASK10_AUTHORITY, buildTask10ScenarioMatrixWire, requireCompleteTask10ScenarioRow } from '../scripts/task10/contracts.ts';
+import { TASK10_AUTHORITY, buildTask10ScenarioMatrixWire, requireCompleteTask10ScenarioRow, type Task10ScenarioRow } from '../scripts/task10/contracts.ts';
 import {
   buildDispatchRows,
   buildReadinessRows,
@@ -424,7 +424,7 @@ test('Task 10 scenario adapter uses code-unit ordering for canonical row sorting
   const orderedReplayRequests = rows.filter((row) => row.scenarioFamily === 'replay-recovery').map((row) => row.request);
   assert.deepEqual(orderedReplayRequests, ['a-reuse', 'z-recovery']);
 
-  const authorityBundlePassedRows = rows.map((row) => row.scenarioFamily === 'dispatch'
+  const authorityBundlePassedRows = rows.map((row): Task10ScenarioRow => row.scenarioFamily === 'dispatch'
     ? {
         ...row,
         privateEvidenceAttestations: [{
@@ -956,4 +956,32 @@ test('Task 10 scenario adapter uses family-specific success facts and limits pro
   assert.ok(!rows[0]!.reasonCodes.includes('producer-output-readback-blocked'));
   assert.ok(!rows[1]!.reasonCodes.includes('producer-output-readback-blocked'));
   assert.ok(!rows[2]!.reasonCodes.includes('producer-output-readback-blocked'));
+});
+
+test('Task 10 scenario adapter keeps completed attempt-007 rows blocked when completed producer evidence is missing required mode groups', () => {
+  const rows = buildTask10ScenarioRows(buildPassingInput({
+    producerOutcome: {
+      status: 'completed',
+      evidence: {
+        groups: [
+          buildEvidenceGroup('runtime', ['2']),
+          buildEvidenceGroup('reset', ['3']),
+          buildEvidenceGroup('preflight', ['1', '4']),
+          buildEvidenceGroup('success-001', ['5', '6', '7']),
+        ],
+      },
+    },
+  }));
+
+  assert.deepEqual(rows.map((row) => [row.scenarioFamily, row.result]), [
+    ['session-access', 'passed'],
+    ['readiness', 'passed'],
+    ['readiness', 'passed'],
+    ['dispatch', 'passed'],
+    ['replay-recovery', 'blocked'],
+    ['replay-recovery', 'blocked'],
+    ['result-submission', 'passed'],
+  ]);
+  assert.ok(rows[4]!.reasonCodes.includes('missing-recovery-001-evidence'));
+  assert.ok(rows[5]!.reasonCodes.includes('missing-success-002-reuse-evidence'));
 });
