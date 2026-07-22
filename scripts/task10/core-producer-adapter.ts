@@ -17,8 +17,8 @@ import type {
 } from './scenario-adapter.js';
 
 const FROZEN_TOKEN_ENV_NAME = 'BIDVIA_MERGED_MAIN_REHEARSAL_TOKEN';
-const SELECTED_REUSABLE_SOURCE_PACKET_PATH = 'docs/org/review-records/artifacts/2026-07-15-cn-vn-industrial-chemical-approved-reusable-asset-packet.json';
-const SELECTED_REUSABLE_SOURCE_PACKET_SHA256 = '53f99c0f94f2ec7a388a124bf0bc0969d4cf3b054123b8c7f4693ea1dae67093';
+const SELECTED_REUSABLE_SOURCE_PACKET_PATH: typeof TASK10_AUTHORITY.selectedSourcePacketPath = TASK10_AUTHORITY.selectedSourcePacketPath;
+const SELECTED_REUSABLE_SOURCE_PACKET_SHA256: typeof TASK10_AUTHORITY.selectedSourcePacketSha256 = TASK10_AUTHORITY.selectedSourcePacketSha256;
 const SHARED_SCOPE = 'merged-main-reproducibility-and-acknowledged-handoff';
 const SHARED_OWNER = 'bidvia-core-implementation-owner';
 const SHARED_RECORDED_AT = '2026-07-19T16:00:00.000Z';
@@ -38,9 +38,9 @@ const REQUIRED_NON_CLAIMS = [
   'not_release_truth',
 ] as const;
 const RUN_IDS = {
-  success: 'run-success-001',
-  recovery: 'run-recovery-001',
-  reuse: 'run-success-002-reuse',
+  success: 'run:success-001',
+  recovery: 'run:recovery-001',
+  reuse: 'run:success-002-reuse',
 } as const;
 const EXPECTED_PORTS = [
   TASK10_AUTHORITY.ports.postgres,
@@ -56,7 +56,7 @@ const EXPECTED_CONTAINER_NAMES = [
   `${COMPOSE_PROJECT}-operator`,
 ] as const;
 const EXPECTED_REUSABLE_SOURCE_REFS = [
-  'core:97e2fbe3934ea821daf654afa0adaef2c3e16077:docs/org/review-records/artifacts/2026-07-15-cn-vn-industrial-chemical-approved-reusable-asset-packet.json:53f99c0f94f2ec7a388a124bf0bc0969d4cf3b054123b8c7f4693ea1dae67093',
+  `core:${TASK10_AUTHORITY.coreRuntimeSha}:${TASK10_AUTHORITY.selectedSourcePacketPath}:${TASK10_AUTHORITY.selectedSourcePacketSha256}`,
 ] as const;
 const EXPECTED_SELECTED_REUSABLE_REFS = [
   'business-method-atom:method-1',
@@ -203,10 +203,21 @@ export type RunTask10CoreProducerOutcome =
 
 export interface CoreProducerPrivateRootCandidateClassification {
   candidatePath: string;
-  coreRejectsOverlap: boolean;
-  repoRelativeAccepted: boolean;
-  result: 'core-overlap-rejected' | 'repo-relative-rejected';
+  result: 'accepted-external-root' | 'core-overlap-rejected';
 }
+
+export interface CoreProducerPrivateRootContractAcceptedOutcome {
+  status: 'accepted';
+}
+
+export type CoreProducerPrivateRootContractProbeOutcome =
+  | CoreProducerPrivateRootContractAcceptedOutcome
+  | RunTask10CoreProducerReportableBlockedOutcome
+  | RunTask10CoreProducerToolingFailureOutcome;
+
+type BlockedOutcomeBuildResult =
+  | RunTask10CoreProducerReportableBlockedOutcome
+  | RunTask10CoreProducerToolingFailureOutcome;
 
 export interface CoreProducerPrivateRootContractProbeInput {
   coreRuntimeRoot: string;
@@ -236,7 +247,7 @@ export interface RunTask10CoreProducerDependencies {
     input: CoreProducerPrivateRootContractProbeInput,
     persist: RunTask10CoreProducerDependencies['persistAndVerifyDiagnostic'],
     privateOutputRoot: string,
-  ) => Promise<RunTask10CoreProducerOutcome | null>;
+  ) => Promise<CoreProducerPrivateRootContractProbeOutcome>;
   spawnProcess: (command: string, args: readonly string[], options: {
     cwd: string;
     env: NodeJS.ProcessEnv;
@@ -262,6 +273,11 @@ type ArtifactFile = {
   handle: `sha256:${string}`;
 };
 
+type EvidencePair = {
+  handle: `sha256:${string}`;
+  attestation: Task10PrivateEvidenceAttestation;
+};
+
 type SuccessSnapshot = {
   runId: string;
   tenantRef: string;
@@ -275,6 +291,13 @@ type SuccessSnapshot = {
   receiptRef: string;
 };
 
+type ReadbackIdentitySnapshot = {
+  tenantId: string;
+  ownerCompanyId: string;
+  operatorActorId: string;
+  authorityRef: string;
+};
+
 type ValidatedProducerState = {
   runtime?: ArtifactFile;
   reset?: ArtifactFile;
@@ -284,6 +307,7 @@ type ValidatedProducerState = {
   successMaterialized?: ArtifactFile;
   successReadback?: ArtifactFile;
   successSnapshot?: SuccessSnapshot;
+  readbackIdentity?: ReadbackIdentitySnapshot;
   recoveryInput?: ArtifactFile;
   recoveryMaterialized?: ArtifactFile;
   recoveryReadback?: ArtifactFile;
@@ -462,13 +486,9 @@ export function classifyCoreProducerPrivateRootCandidate(
 ): CoreProducerPrivateRootCandidateClassification {
   const normalizedCoreRoot = path.resolve(coreRuntimeRoot);
   const normalizedCandidatePath = path.resolve(candidatePath);
-  const coreRejectsOverlap = rootsOverlap(normalizedCoreRoot, normalizedCandidatePath);
-  const repoRelativeAccepted = toRepoRelative(normalizedCoreRoot, normalizedCandidatePath) !== null;
   return {
     candidatePath: normalizedCandidatePath,
-    coreRejectsOverlap,
-    repoRelativeAccepted,
-    result: coreRejectsOverlap ? 'core-overlap-rejected' : 'repo-relative-rejected',
+    result: rootsOverlap(normalizedCoreRoot, normalizedCandidatePath) ? 'core-overlap-rejected' : 'accepted-external-root',
   };
 }
 
@@ -484,19 +504,24 @@ export async function probeCoreProducerPrivateRootContract(
   dependencies: {
     persistAndVerifyDiagnostic: (input: PersistAndVerifyDiagnosticInput, privateOutputRoot: string) => Promise<PersistAndVerifyDiagnosticResult>;
   },
-): Promise<RunTask10CoreProducerOutcome> {
+): Promise<CoreProducerPrivateRootContractProbeOutcome> {
+  const privateInputRootCandidate = classifyCoreProducerPrivateRootCandidate(input.coreRuntimeRoot, input.privateInputRoot);
+  const privateOutputRootCandidate = classifyCoreProducerPrivateRootCandidate(input.coreRuntimeRoot, input.privateOutputRoot);
+  if (privateInputRootCandidate.result === 'accepted-external-root' && privateOutputRootCandidate.result === 'accepted-external-root') {
+    return { status: 'accepted' };
+  }
   const diagnostic = {
     sourceClass: input.sourceClass,
     reason: 'core-producer-private-root-contract-unsatisfied',
     timestamp: input.now,
     candidates: {
-      privateInputRoot: classifyCoreProducerPrivateRootCandidate(input.coreRuntimeRoot, input.privateInputRoot),
-      privateOutputRoot: classifyCoreProducerPrivateRootCandidate(input.coreRuntimeRoot, input.privateOutputRoot),
+      privateInputRoot: privateInputRootCandidate,
+      privateOutputRoot: privateOutputRootCandidate,
       internalInputCandidate: classifyCoreProducerPrivateRootCandidate(input.coreRuntimeRoot, path.join(input.coreRuntimeRoot, 'private-input')),
       internalOutputCandidate: classifyCoreProducerPrivateRootCandidate(input.coreRuntimeRoot, path.join(input.coreRuntimeRoot, 'private-output')),
     },
   };
-  return await buildBlockedOutcome({
+  const blockedOutcome: BlockedOutcomeBuildResult = await buildBlockedOutcome({
     reasonCode: 'core-producer-private-root-contract-unsatisfied',
     affectedModes: ['producer-contract-probe'],
     affectedFamilies: ['dispatch', 'replay-recovery', 'result-submission'],
@@ -507,16 +532,22 @@ export async function probeCoreProducerPrivateRootContract(
     persistAndVerifyDiagnostic: dependencies.persistAndVerifyDiagnostic,
     privateOutputRoot: input.privateOutputRoot,
   });
+  return blockedOutcome;
 }
 
 export async function buildCoreProducerInvocationPlan(args: RunTask10CoreProducerArgs): Promise<CoreProducerInvocationPlan> {
   const roots = await normalizeRoots(args);
+  const selectedReusableSourcePacketPath = await validateSelectedReusableSourcePacketPath(
+    roots.coreRoot,
+    SELECTED_REUSABLE_SOURCE_PACKET_PATH,
+    'selectedReusableSourcePacketPath',
+  );
   await assertPrivateRootsInitiallyEmpty(roots.privateInputRoot, roots.privateOutputRoot);
   return {
     command: 'npm',
     cwd: roots.coreRoot,
     shell: false,
-    selectedReusableSourcePacketPath: SELECTED_REUSABLE_SOURCE_PACKET_PATH,
+    selectedReusableSourcePacketPath,
     selectedReusableSourcePacketSha256: SELECTED_REUSABLE_SOURCE_PACKET_SHA256,
     args: [
       'run',
@@ -543,7 +574,7 @@ export async function buildCoreProducerInvocationPlan(args: RunTask10CoreProduce
       '--attempt-id', TASK10_AUTHORITY.attemptId,
       '--input-evidence-root', roots.privateInputRoot,
       '--output-root', roots.privateOutputRoot,
-      '--selected-reusable-source-packet', SELECTED_REUSABLE_SOURCE_PACKET_PATH,
+      '--selected-reusable-source-packet', selectedReusableSourcePacketPath,
       '--selected-reusable-source-packet-sha256', SELECTED_REUSABLE_SOURCE_PACKET_SHA256,
       '--source-main-commit-marker', TASK10_AUTHORITY.runtimeMarkers.sourceMainCommitMarker,
       '--runtime-reported-version-marker', TASK10_AUTHORITY.runtimeMarkers.runtimeReportedVersionMarker,
@@ -580,7 +611,7 @@ export async function runTask10CoreProducer(
       now: timestamp,
       sourceClass: 'producer-contract-probe',
     }, resolved.persistAndVerifyDiagnostic, roots.privateOutputRoot);
-    if (contractProbe !== null) {
+    if (contractProbe.status !== 'accepted') {
       return contractProbe;
     }
 
@@ -710,7 +741,8 @@ async function validateOrderedProducerGraph(
         buildSanitizedFacts(validatedState),
       );
     }
-    validatePassedReadback(successReadback.json, 'success-001', successSnapshot);
+    const readbackIdentity = validatePassedReadback(successReadback.json, 'success-001', successSnapshot);
+    validatedState.readbackIdentity = readbackIdentity;
 
     const recoveryInput = await readArtifactFile(privateInputRoot, 'recovery-001/execution-input.json');
     validatedState.recoveryInput = recoveryInput;
@@ -756,13 +788,15 @@ async function validateOrderedProducerGraph(
         buildSanitizedFacts(validatedState),
       );
     }
-    validatePassedReadback(recoveryReadback.json, 'recovery-001', {
-      tenantRef: requireNonEmptyString(recoveryMaterialized.json.tenant_ref, 'recovery.tenant_ref'),
-      companyRef: requireNonEmptyString((requireArrayOfObjects(recoveryMaterialized.json.scenario_rows, 'recovery.scenario_rows')[0]!).company_ref, 'recovery.scenario_rows[0].company_ref'),
-      authorityRef: requireNonEmptyString((requireArrayOfObjects(recoveryMaterialized.json.scenario_rows, 'recovery.scenario_rows')[0]!).authority_ref, 'recovery.scenario_rows[0].authority_ref'),
-      actorRef: requireNonEmptyString((requireArrayOfObjects(recoveryMaterialized.json.scenario_rows, 'recovery.scenario_rows')[0]!).actor_ref, 'recovery.scenario_rows[0].actor_ref'),
-      runId: RUN_IDS.recovery,
-    });
+    validatePassedReadback(
+      recoveryReadback.json,
+      'recovery-001',
+      {
+        tenantRef: requireNonEmptyString(recoveryMaterialized.json.tenant_ref, 'recovery.tenant_ref'),
+        runId: RUN_IDS.recovery,
+      },
+      validatedState.readbackIdentity,
+    );
 
     const reuseInput = await readArtifactFile(privateInputRoot, 'success-002-reuse/execution-input.json');
     validatedState.reuseInput = reuseInput;
@@ -810,13 +844,15 @@ async function validateOrderedProducerGraph(
         buildSanitizedFacts(validatedState),
       );
     }
-    validatePassedReadback(reuseReadback.json, 'success-002-reuse', {
-      tenantRef: requireNonEmptyString(reuseMaterialized.json.tenant_ref, 'reuse.tenant_ref'),
-      companyRef: requireNonEmptyString(reuseMaterialized.json.company_ref, 'reuse.company_ref'),
-      authorityRef: requireNonEmptyString(reuseMaterialized.json.authority_ref, 'reuse.authority_ref'),
-      actorRef: requireNonEmptyString((requireArrayOfObjects(reuseMaterialized.json.scenario_rows, 'reuse.scenario_rows')[0]!).actor_ref, 'reuse.scenario_rows[0].actor_ref'),
-      runId: RUN_IDS.reuse,
-    });
+    validatePassedReadback(
+      reuseReadback.json,
+      'success-002-reuse',
+      {
+        tenantRef: requireNonEmptyString(reuseMaterialized.json.tenant_ref, 'reuse.tenant_ref'),
+        runId: RUN_IDS.reuse,
+      },
+      validatedState.readbackIdentity,
+    );
 
     return {
       status: 'completed',
@@ -865,7 +901,7 @@ async function buildBlockedOutcome(input: {
   persistAndVerifyDiagnostic: RunTask10CoreProducerDependencies['persistAndVerifyDiagnostic'];
   privateOutputRoot: string;
   sanitizedFacts?: Task10SanitizedScenarioFacts;
-}): Promise<RunTask10CoreProducerOutcome> {
+}): Promise<BlockedOutcomeBuildResult> {
   let persisted: PersistAndVerifyDiagnosticResult;
   try {
     persisted = await input.persistAndVerifyDiagnostic({
@@ -885,17 +921,28 @@ async function buildBlockedOutcome(input: {
     verified: true,
     verifiedAt: input.timestamp,
   };
-  const groups = input.evidenceGroups.map((group) => ({
-    ...group,
-    handles: group.sourceClass === input.diagnosticSourceClass ? [...group.handles, persisted.handle] : [...group.handles],
-    attestations: group.sourceClass === input.diagnosticSourceClass ? [...group.attestations, attestation] : [...group.attestations],
-  }));
-  if (!groups.some((group) => group.sourceClass === input.diagnosticSourceClass)) {
-    groups.push({
-      sourceClass: input.diagnosticSourceClass,
-      handles: [persisted.handle],
-      attestations: [attestation],
-    });
+  let groups: Task10PrivateEvidenceGroup[];
+  try {
+    groups = input.evidenceGroups.map((group) => group.sourceClass === input.diagnosticSourceClass
+      ? buildCanonicalEvidenceGroup(
+          group.sourceClass,
+          [
+            ...group.handles.map((handle, index) => ({
+              handle,
+              attestation: group.attestations[index]!,
+            })),
+            {
+              handle: persisted.handle,
+              attestation,
+            },
+          ],
+        )
+      : { ...group, handles: [...group.handles], attestations: [...group.attestations] });
+    if (!groups.some((group) => group.sourceClass === input.diagnosticSourceClass)) {
+      groups.push(buildCanonicalEvidenceGroup(input.diagnosticSourceClass, [{ handle: persisted.handle, attestation }]));
+    }
+  } catch {
+    return { status: 'tooling-failure', errorCode: 'private-diagnostic-verify-failed' };
   }
   return {
     status: 'reportable-blocked',
@@ -1003,9 +1050,9 @@ function validatePreflight(value: Record<string, unknown>, selectedReusableRefs:
 
   const repoIdentity = requireObject(value.repo_identity, 'preflight.repo_identity');
   requireExactKeys(repoIdentity, ['core', 'client', 'site'], 'preflight.repo_identity');
-  validateRepoIdentity(repoIdentity.core, 'core', TASK10_AUTHORITY.coreRuntimeSha, `sha256:${TASK10_AUTHORITY.lockfileSha256.core}`, TASK10_AUTHORITY.packageIdentities.core);
-  validateRepoIdentity(repoIdentity.client, 'client', TASK10_AUTHORITY.clientBaselineSha, `sha256:${TASK10_AUTHORITY.lockfileSha256.client}`, TASK10_AUTHORITY.packageIdentities.client);
-  validateRepoIdentity(repoIdentity.site, 'site', TASK10_AUTHORITY.siteBaselineSha, `sha256:${TASK10_AUTHORITY.lockfileSha256.site}`, TASK10_AUTHORITY.packageIdentities.site);
+  validateRepoIdentity(repoIdentity.core, 'core', TASK10_AUTHORITY.coreRuntimeSha, TASK10_AUTHORITY.lockfileSha256.core, TASK10_AUTHORITY.packageIdentities.core);
+  validateRepoIdentity(repoIdentity.client, 'client', TASK10_AUTHORITY.clientBaselineSha, TASK10_AUTHORITY.lockfileSha256.client, TASK10_AUTHORITY.packageIdentities.client);
+  validateRepoIdentity(repoIdentity.site, 'site', TASK10_AUTHORITY.siteBaselineSha, TASK10_AUTHORITY.lockfileSha256.site, TASK10_AUTHORITY.packageIdentities.site);
 
   const toolIdentity = requireObject(value.tool_identity, 'preflight.tool_identity');
   requireExactKeys(toolIdentity, ['node_version', 'npm_version', 'docker_version', 'compose_version', 'postgres_version', 'browser_runner_version'], 'preflight.tool_identity');
@@ -1189,18 +1236,28 @@ function validateReuseMaterialized(value: Record<string, unknown>, selectedReusa
 function validatePassedReadback(
   value: Record<string, unknown>,
   mode: ModeName,
-  materialized: { tenantRef: string; companyRef: string; authorityRef: string; actorRef: string; runId: string },
-): void {
+  materialized: { tenantRef: string; runId: string },
+  expectedIdentity?: ReadbackIdentitySnapshot,
+): ReadbackIdentitySnapshot {
   requireExactKeys(value, ['result', 'attempt_id', 'run_id', 'mode', 'readback_ref', 'tenant_id', 'owner_company_id', 'operator_actor_id', 'authority_ref'], `${mode}.readback`);
   requireLiteralString(value.result, 'passed', `${mode}.readback.result`);
   requireLiteralString(value.attempt_id, TASK10_AUTHORITY.attemptId, `${mode}.readback.attempt_id`);
   requireLiteralString(value.run_id, materialized.runId, `${mode}.readback.run_id`);
   requireLiteralString(value.mode, mode, `${mode}.readback.mode`);
   requireNonEmptyString(value.readback_ref, `${mode}.readback.readback_ref`);
-  requireLiteralString(value.tenant_id, materialized.tenantRef, `${mode}.readback.tenant_id`);
-  requireLiteralString(value.owner_company_id, materialized.companyRef, `${mode}.readback.owner_company_id`);
-  requireLiteralString(value.operator_actor_id, materialized.actorRef, `${mode}.readback.operator_actor_id`);
-  requireLiteralString(value.authority_ref, materialized.authorityRef, `${mode}.readback.authority_ref`);
+  const identity = {
+    tenantId: requireLiteralString(value.tenant_id, materialized.tenantRef, `${mode}.readback.tenant_id`),
+    ownerCompanyId: requireNonEmptyString(value.owner_company_id, `${mode}.readback.owner_company_id`),
+    operatorActorId: requireNonEmptyString(value.operator_actor_id, `${mode}.readback.operator_actor_id`),
+    authorityRef: requireNonEmptyString(value.authority_ref, `${mode}.readback.authority_ref`),
+  } satisfies ReadbackIdentitySnapshot;
+  if (expectedIdentity) {
+    requireLiteralString(identity.tenantId, expectedIdentity.tenantId, `${mode}.readback.tenant_id`);
+    requireLiteralString(identity.ownerCompanyId, expectedIdentity.ownerCompanyId, `${mode}.readback.owner_company_id`);
+    requireLiteralString(identity.operatorActorId, expectedIdentity.operatorActorId, `${mode}.readback.operator_actor_id`);
+    requireLiteralString(identity.authorityRef, expectedIdentity.authorityRef, `${mode}.readback.authority_ref`);
+  }
+  return identity;
 }
 
 function validateScenarioRows(value: unknown, fieldName: string, runId: string): Record<string, unknown>[] {
@@ -1222,7 +1279,7 @@ function validateScenarioRows(value: unknown, fieldName: string, runId: string):
     requireNonEmptyString(row.proof_class, `${fieldName}.proof_class`);
     requireNonEmptyStringArray(row.evidence_refs, `${fieldName}.evidence_refs`);
     requireIsoTimestamp(row.occurred_at, `${fieldName}.occurred_at`);
-    if (!requireNonEmptyString(row.run_identity_ref, `${fieldName}.run_identity_ref`).includes(runId)) {
+    if (requireNonEmptyString(row.run_identity_ref, `${fieldName}.run_identity_ref`) !== `run:${runId}:1`) {
       throw new Error(`${fieldName}.run_identity_ref mismatch`);
     }
   }
@@ -1243,15 +1300,35 @@ function validateInputEnvelope(value: Record<string, unknown>, keys: readonly st
 }
 
 function buildEvidenceGroup(sourceClass: Task10EvidenceSourceClass, files: ArtifactFile[], timestamp: string): Task10PrivateEvidenceGroup {
+  return buildCanonicalEvidenceGroup(
+    sourceClass,
+    files.map((file) => ({
+      handle: file.handle,
+      attestation: {
+        handle: file.handle,
+        sourceClass,
+        verified: true,
+        verifiedAt: timestamp,
+      },
+    })),
+  );
+}
+
+function compareCodeUnits(left: string, right: string): number {
+  return left < right ? -1 : left > right ? 1 : 0;
+}
+
+function buildCanonicalEvidenceGroup(sourceClass: Task10EvidenceSourceClass, pairs: EvidencePair[]): Task10PrivateEvidenceGroup {
+  const sortedPairs = [...pairs].sort((left, right) => compareCodeUnits(left.handle, right.handle));
+  for (let index = 1; index < sortedPairs.length; index += 1) {
+    if (sortedPairs[index - 1]!.handle === sortedPairs[index]!.handle) {
+      throw new Error('duplicate evidence handle');
+    }
+  }
   return {
     sourceClass,
-    handles: files.map((file) => file.handle),
-    attestations: files.map((file) => ({
-      handle: file.handle,
-      sourceClass,
-      verified: true,
-      verifiedAt: timestamp,
-    })),
+    handles: sortedPairs.map((pair) => pair.handle),
+    attestations: sortedPairs.map((pair) => pair.attestation),
   };
 }
 
@@ -1571,6 +1648,37 @@ function toRepoRelative(repoRoot: string, candidatePath: string): string | null 
   }
   if (relativePath === '..' || relativePath.startsWith(`..${path.sep}`) || path.isAbsolute(relativePath)) {
     return null;
+  }
+  return relativePath;
+}
+
+export async function validateSelectedReusableSourcePacketPath<TPath extends string>(
+  repoRoot: string,
+  relativePath: TPath,
+  fieldName = 'selectedReusableSourcePacketPath',
+): Promise<TPath> {
+  const canonicalPosixPath = requireCanonicalPosixRepoRelativePath(relativePath, fieldName);
+  const resolvedPath = path.resolve(repoRoot, ...canonicalPosixPath.split('/'));
+  const repoRelativePath = toRepoRelative(repoRoot, resolvedPath);
+  if (repoRelativePath === null || repoRelativePath.length === 0 || repoRelativePath.split(path.sep).join('/') !== canonicalPosixPath) {
+    throw new Error(`${fieldName} must resolve within repo root as a canonical POSIX repo path`);
+  }
+  await rejectSymlinkedPathSegments(resolvedPath, fieldName);
+  const entry = await lstat(resolvedPath);
+  if (!entry.isFile() || entry.isSymbolicLink()) {
+    throw new Error(`${fieldName} must reference a regular file within repo root`);
+  }
+  return relativePath;
+}
+
+function requireCanonicalPosixRepoRelativePath<TPath extends string>(relativePath: TPath, fieldName: string): TPath {
+  const trimmed = relativePath.trim();
+  if (!trimmed || trimmed !== relativePath || trimmed.includes('\\') || path.posix.isAbsolute(trimmed) || /^[A-Za-z]:[\\/]/.test(trimmed)) {
+    throw new Error(`${fieldName} must be a canonical POSIX repo path`);
+  }
+  const normalizedPath = path.posix.normalize(trimmed);
+  if (normalizedPath !== trimmed || normalizedPath === '.' || normalizedPath === '..' || normalizedPath.startsWith('../')) {
+    throw new Error(`${fieldName} must be a canonical POSIX repo path`);
   }
   return relativePath;
 }
