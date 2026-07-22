@@ -1,0 +1,60 @@
+{
+  "schema_version": "bidvia-client-task10-command-log/v1",
+  "attempt_id": "attempt-2026-07-20-task10-postmerge-007",
+  "commands": [
+    {
+      "command": "npm test",
+      "cwd": "frozen-client-root",
+      "started_at": "2026-07-22T06:09:03.298Z",
+      "ended_at": "2026-07-22T06:10:08.631Z",
+      "status": "executed",
+      "exit_code": 0,
+      "skipped_due_to": null
+    },
+    {
+      "command": "npm run typecheck",
+      "cwd": "frozen-client-root",
+      "started_at": "2026-07-22T06:10:08.632Z",
+      "ended_at": "2026-07-22T06:10:14.630Z",
+      "status": "executed",
+      "exit_code": 0,
+      "skipped_due_to": null
+    },
+    {
+      "command": "npm run build",
+      "cwd": "frozen-client-root",
+      "started_at": "2026-07-22T06:10:14.630Z",
+      "ended_at": "2026-07-22T06:10:18.826Z",
+      "status": "executed",
+      "exit_code": 0,
+      "skipped_due_to": null
+    },
+    {
+      "command": "npm run validate",
+      "cwd": "frozen-client-root",
+      "started_at": "2026-07-22T06:10:18.826Z",
+      "ended_at": "2026-07-22T06:10:19.269Z",
+      "status": "executed",
+      "exit_code": 0,
+      "skipped_due_to": null
+    },
+    {
+      "command": "npm run validate:release-readiness",
+      "cwd": "frozen-client-root",
+      "started_at": "2026-07-22T06:10:19.269Z",
+      "ended_at": "2026-07-22T06:10:20.217Z",
+      "status": "executed",
+      "exit_code": 0,
+      "skipped_due_to": null
+    },
+    {
+      "command": "npm run validate:release-gate",
+      "cwd": "frozen-client-root",
+      "started_at": "2026-07-22T06:10:20.217Z",
+      "ended_at": "2026-07-22T06:10:25.621Z",
+      "status": "executed",
+      "exit_code": 0,
+      "skipped_due_to": null
+    }
+  ]
+}

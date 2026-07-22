@@ -1,0 +1,75 @@
+{
+  "schema_version": "bidvia-client-task10-fingerprint/v1",
+  "repository": "Bidvia/bidvia-agent-client",
+  "attempt_id": "attempt-2026-07-20-task10-postmerge-007",
+  "client_baseline_sha": "31195b898a6794e78518bb9b71833ecaaf5e563e",
+  "core_runtime_sha": "0b3f266f2c087fb7d808bb3f0ddb57ce86173cc9",
+  "site_baseline_sha": "f0198caf349fad367c016d7ff333172ec71a55be",
+  "core_evidence_publication_commit": "5ab02058491960c305162091316d65e1ffa97347",
+  "core_bundle_path": "docs/org/review-records/artifacts/attempt-2026-07-20-task10-postmerge-007-output/core-execution-evidence.json",
+  "core_bundle_sha256": "c68a783433f8d58c59949a2ab496fc9e3ca1b42fd0b0f0318ebfb81576dc3980",
+  "package_identities": {
+    "core": "bidvia-d2-ws6-t1-runtime@0.0.0",
+    "client": "@bidvia/client@1.0.0",
+    "site": "bidvia-site@0.1.0"
+  },
+  "lockfile_sha256": {
+    "core": "504007a7fb70616df1409eb2e003a3470ea6e23d990ea61d8eea195a0a1fce62",
+    "client": "92544096de62a366c66ba7c307ed6fa3ab9d2890bd7a6d6220adb4a0d7f627c6",
+    "site": "a0ef0825f04cd9c06bba396f8eff1bda32a557cf77f3c69ecd01ecb99b026732"
+  },
+  "runtime_markers": {
+    "source_main_commit_marker": "0b3f266f2c087fb7d808bb3f0ddb57ce86173cc9",
+    "runtime_reported_version_marker": "task10-runtime-0b3f266",
+    "bootstrap_package_version_marker": "task10-bootstrap-0b3f266",
+    "scenario_package_version_marker": "task10-scenario-0b3f266",
+    "provider_fixture_identity": "provider-fixture:haisi-wms:task10",
+    "provider_protocol_version": "task10-local-http-v1",
+    "postgres_port": 59625,
+    "runtime_port": 59626,
+    "operator_port": 59627,
+    "fixture_port": 59628
+  },
+  "tool_versions": {
+    "node": "v24.6.0",
+    "npm": "11.5.1",
+    "docker": "Docker version 28.4.0, build d8eb465",
+    "docker_compose": "Docker Compose version v2.39.4-desktop.1",
+    "postgres_client": "psql (PostgreSQL) 15.13 (Homebrew)"
+  },
+  "checkout_proofs": {
+    "core_runtime": {
+      "head_commit": "0b3f266f2c087fb7d808bb3f0ddb57ce86173cc9",
+      "branch": "main",
+      "upstream_ref": "origin/main",
+      "detached_head": false,
+      "porcelain_status": "empty",
+      "lockfile_sha256": "504007a7fb70616df1409eb2e003a3470ea6e23d990ea61d8eea195a0a1fce62"
+    },
+    "client_validation": {
+      "head_commit": "31195b898a6794e78518bb9b71833ecaaf5e563e",
+      "branch": "main",
+      "upstream_ref": "origin/main",
+      "detached_head": false,
+      "porcelain_status": "empty",
+      "lockfile_sha256": "92544096de62a366c66ba7c307ed6fa3ab9d2890bd7a6d6220adb4a0d7f627c6"
+    },
+    "site_validation": {
+      "head_commit": "f0198caf349fad367c016d7ff333172ec71a55be",
+      "branch": "main",
+      "upstream_ref": "origin/main",
+      "detached_head": false,
+      "porcelain_status": "empty",
+      "lockfile_sha256": "a0ef0825f04cd9c06bba396f8eff1bda32a557cf77f3c69ecd01ecb99b026732"
+    },
+    "core_evidence": {
+      "head_commit": "5ab02058491960c305162091316d65e1ffa97347",
+      "branch": null,
+      "upstream_ref": null,
+      "detached_head": true,
+      "porcelain_status": "empty",
+      "lockfile_sha256": "504007a7fb70616df1409eb2e003a3470ea6e23d990ea61d8eea195a0a1fce62"
+    }
+  },
+  "run_started_at": "2026-07-22T06:09:02.807Z"
+}
