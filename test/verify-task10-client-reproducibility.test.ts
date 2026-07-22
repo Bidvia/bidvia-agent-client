@@ -1117,6 +1117,157 @@ test('runVerifyTask10ClientReproducibility synthesizes exact skipped gates and s
   }
 });
 
+test('runVerifyTask10ClientReproducibility normalizes current authority reason strings into stable actionable blocked reason codes', async () => {
+  const cases = [
+    ['core runtime root head commit mismatch', 'core-runtime-head-mismatch'],
+    ['core runtime root branch mismatch', 'core-runtime-branch-mismatch'],
+    ['core runtime root upstream ref mismatch', 'core-runtime-upstream-mismatch'],
+    ['core runtime root must not be detached', 'core-runtime-detached-mismatch'],
+    ['core runtime root porcelain status mismatch', 'core-runtime-porcelain-mismatch'],
+    ['core runtime root lockfile hash mismatch', 'core-runtime-lockfile-mismatch'],
+    ['client validation root head commit mismatch', 'client-validation-head-mismatch'],
+    ['client validation root branch mismatch', 'client-validation-branch-mismatch'],
+    ['client validation root upstream ref mismatch', 'client-validation-upstream-mismatch'],
+    ['client validation root must not be detached', 'client-validation-detached-mismatch'],
+    ['client validation root porcelain status mismatch', 'client-validation-porcelain-mismatch'],
+    ['client validation root lockfile hash mismatch', 'client-validation-lockfile-mismatch'],
+    ['site validation root head commit mismatch', 'site-validation-head-mismatch'],
+    ['site validation root branch mismatch', 'site-validation-branch-mismatch'],
+    ['site validation root upstream ref mismatch', 'site-validation-upstream-mismatch'],
+    ['site validation root must not be detached', 'site-validation-detached-mismatch'],
+    ['site validation root porcelain status mismatch', 'site-validation-porcelain-mismatch'],
+    ['site validation root lockfile hash mismatch', 'site-validation-lockfile-mismatch'],
+    ['core evidence head commit mismatch', 'core-evidence-head-mismatch'],
+    ['core evidence branch mismatch', 'core-evidence-branch-mismatch'],
+    ['core evidence upstream mismatch', 'core-evidence-upstream-mismatch'],
+    ['core evidence must be detached', 'core-evidence-detached-mismatch'],
+    ['core evidence porcelain status mismatch', 'core-evidence-porcelain-mismatch'],
+    ['checkout inspection is missing or unreadable', 'checkout-inspection-missing-or-unreadable'],
+    ['bundle repo path mismatch', 'bundle-path-mismatch'],
+    ['frozen authority path escaped core evidence root', 'bundle-path-escaped-core-evidence-root'],
+    ['checkout root must not be symlinked', 'checkout-root-symlinked'],
+    ['checkout roots must not resolve to the same real path', 'checkout-root-overlap'],
+    ['checkout roots must not be nested or overlapping', 'checkout-root-overlap'],
+    ['core execution evidence is missing or unreadable', 'bundle-missing-or-unreadable'],
+    ['core execution evidence must not be symlinked', 'bundle-symlinked'],
+    ['core execution evidence real path escaped core evidence root', 'bundle-path-escaped-core-evidence-root'],
+    ['core execution evidence byte count mismatch', 'bundle-sha256-mismatch'],
+    ['core execution evidence sha256 mismatch', 'bundle-sha256-mismatch'],
+    ['bundle manifest is missing or unreadable', 'bundle-missing-or-unreadable'],
+    ['bundle manifest must not be symlinked', 'bundle-symlinked'],
+    ['bundle manifest real path escaped core evidence root', 'bundle-path-escaped-core-evidence-root'],
+    ['bundle manifest byte count mismatch', 'bundle-sha256-mismatch'],
+    ['bundle manifest sha256 mismatch', 'bundle-sha256-mismatch'],
+    ['bundle manifest contains duplicate entry paths', 'bundle-reference-malformed'],
+    ['bundle manifest contains an unsafe path', 'bundle-reference-malformed'],
+    ['bundle manifest entry is missing or unreadable', 'bundle-missing-or-unreadable'],
+    ['bundle manifest entry must not be symlinked', 'bundle-symlinked'],
+    ['bundle manifest entry real path escaped core evidence root', 'bundle-path-escaped-core-evidence-root'],
+    ['bundle manifest entry byte count mismatch', 'bundle-sha256-mismatch'],
+    ['bundle manifest entry sha256 mismatch', 'bundle-sha256-mismatch'],
+    ['preflight artifact is missing or unreadable', 'preflight-artifact-missing-or-unreadable'],
+    ['preflight artifact must not be symlinked', 'preflight-artifact-symlinked'],
+    ['preflight artifact real path escaped core evidence root', 'preflight-artifact-path-escaped-core-evidence-root'],
+    ['preflight artifact byte count mismatch', 'preflight-artifact-hash-mismatch'],
+    ['preflight artifact sha256 mismatch', 'preflight-artifact-hash-mismatch'],
+    ['reusable packet wrapper is missing or unreadable', 'bundle-missing-or-unreadable'],
+    ['reusable packet wrapper must not be symlinked', 'bundle-symlinked'],
+    ['reusable packet wrapper real path escaped core evidence root', 'bundle-path-escaped-core-evidence-root'],
+    ['reusable packet wrapper byte count mismatch', 'bundle-sha256-mismatch'],
+    ['reusable packet wrapper sha256 mismatch', 'bundle-sha256-mismatch'],
+    ['selected source packet is missing or unreadable', 'bundle-missing-or-unreadable'],
+    ['selected source packet must not be symlinked', 'bundle-symlinked'],
+    ['selected source packet real path escaped core evidence root', 'bundle-path-escaped-core-evidence-root'],
+    ['selected source packet byte count mismatch', 'bundle-sha256-mismatch'],
+    ['selected source packet sha256 mismatch', 'bundle-sha256-mismatch'],
+    ['authority evidence JSON is malformed', 'bundle-json-unreadable'],
+    ['authority evidence is malformed: preflight.attempt_id must be a non-empty string', 'preflight-authority-facts-invalid'],
+    ['authority evidence is malformed: preflight.runtime_identity.core_image_digest must be a sha256-prefixed 64-character lowercase hex digest', 'preflight-authority-facts-invalid'],
+    ['authority evidence is malformed: preflight.runtime_identity.build_context_ref must be a non-empty string', 'preflight-authority-facts-invalid'],
+    ['preflight attempt id mismatch', 'preflight-authority-facts-invalid'],
+    ['core lockfile mismatch', 'preflight-authority-facts-invalid'],
+    ['client lockfile mismatch', 'preflight-authority-facts-invalid'],
+    ['site lockfile mismatch', 'preflight-authority-facts-invalid'],
+    ['client sha mismatch', 'preflight-authority-facts-invalid'],
+    ['runtime marker mismatch', 'preflight-authority-facts-invalid'],
+    ['reset state mismatch', 'preflight-authority-facts-invalid'],
+    ['output directory empty mismatch', 'preflight-authority-facts-invalid'],
+    ['output directory symlink mismatch', 'preflight-authority-facts-invalid'],
+    ['fresh business ids mismatch', 'preflight-authority-facts-invalid'],
+    ['schema columns mismatch', 'preflight-authority-facts-invalid'],
+    ['selected source packet path mismatch', 'preflight-authority-facts-invalid'],
+    ['selected source packet sha mismatch', 'preflight-authority-facts-invalid'],
+    ['reusable packet wrapper source refs mismatch', 'preflight-authority-facts-invalid'],
+    ['reusable packet wrapper embedded artifact hash mismatch', 'preflight-authority-facts-invalid'],
+    ['reusable packet wrapper selected reusable refs mismatch', 'preflight-authority-facts-invalid'],
+    ['authority evidence is malformed: preflight.runtime_identity.core_image_digest must be a sha256-prefixed 64-character lowercase hex digest', 'preflight-authority-facts-invalid'],
+    ['authority evidence is malformed: preflight.runtime_identity.build_context_ref must be a non-empty string', 'preflight-authority-facts-invalid'],
+    ['execution evidence attempt mismatch', 'execution-evidence-invalid'],
+    ['execution evidence preflight path mismatch', 'execution-evidence-invalid'],
+    ['execution evidence preflight hash mismatch', 'execution-evidence-invalid'],
+    ['execution evidence frozen identity mismatch', 'execution-evidence-invalid'],
+    ['execution evidence secret scan status mismatch', 'execution-evidence-invalid'],
+    ['execution evidence secret scan finding count mismatch', 'execution-evidence-invalid'],
+    ['execution evidence secret scan scanned artifact hashes mismatch', 'execution-evidence-invalid'],
+    ['execution evidence mutable evidence mismatch', 'execution-evidence-invalid'],
+    ['execution evidence frozen identity mismatch', 'execution-evidence-invalid'],
+    ['execution evidence run artifact count mismatch', 'execution-evidence-invalid'],
+    ['execution evidence duplicate mode mismatch', 'execution-evidence-invalid'],
+    ['execution evidence success-001 path mismatch', 'execution-evidence-invalid'],
+    ['execution evidence recovery-001 path mismatch', 'execution-evidence-invalid'],
+    ['execution evidence success-002-reuse path mismatch', 'execution-evidence-invalid'],
+    ['execution evidence success-001 hash mismatch', 'execution-evidence-invalid'],
+    ['execution evidence recovery-001 hash mismatch', 'execution-evidence-invalid'],
+    ['execution evidence success-002-reuse hash mismatch', 'execution-evidence-invalid'],
+    ['recreated core archive sha256 mismatch', 'bundle-sha256-mismatch'],
+    ['future authority block reason that does not exist today', 'unknown-authority-blocked'],
+  ] as const;
+
+  for (const [rawReason, expectedReason] of cases) {
+    const harness = await createRootHarness();
+    const recorder = createRecorder();
+    let evaluationInput: unknown;
+
+    try {
+      const result = await runVerifyTask10ClientReproducibility(harness.args, createDependencies(recorder, {
+        verifyTask10Authority: async () => {
+          recorder.order.push('authority');
+          return {
+            status: 'reportable-blocked',
+            reasons: [rawReason],
+          };
+        },
+        evaluateExecutionEvidence: async (input) => {
+          recorder.order.push('evaluator');
+          evaluationInput = input;
+          return {
+            candidateConclusion: 'blocked',
+            reasonCodes: ['authority.reportable-blocked:fixture'],
+            missingEvidence: [],
+          };
+        },
+        finalizeTask10Conclusion: async () => {
+          recorder.order.push('finalizer');
+          return {
+            conclusion: 'blocked',
+            reasonCodes: ['authority.reportable-blocked:fixture'],
+            missingEvidence: [],
+          };
+        },
+      }));
+
+      assert.equal(result.exitCode, 0, rawReason);
+      const scenarioRows = (evaluationInput as { scenarioRows: Array<{ reasonCodes: string[] }> }).scenarioRows;
+      assert.deepEqual(scenarioRows[0]?.reasonCodes ?? [], [
+        'authority-verification-blocked',
+        expectedReason,
+      ], rawReason);
+    } finally {
+      await harness.cleanup();
+    }
+  }
+});
+
 test('runVerifyTask10ClientReproducibility short-circuits on authority tooling failure with nonzero exit and no receipt', async () => {
   const harness = await createRootHarness();
   const recorder = createRecorder();
