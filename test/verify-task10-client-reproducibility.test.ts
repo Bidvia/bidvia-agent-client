@@ -5,6 +5,7 @@ import {
   mkdir,
   mkdtemp,
   readFile,
+  rename,
   realpath,
   rm,
   symlink,
@@ -39,6 +40,7 @@ import {
   inspectTask10Checkout,
   main,
   parseVerifyTask10ClientReproducibilityArgs,
+  readFileHandle,
   readTask10AuthorityEvidenceFile,
   recreateTask10AuthorityArchive,
   runVerifyTask10ClientReproducibility,
@@ -1117,6 +1119,32 @@ test('runVerifyTask10ClientReproducibility synthesizes exact skipped gates and s
   }
 });
 
+test('runVerifyTask10ClientReproducibility blocked-scenario rereads reject an authority directory changed to a symlink after preflight in authority reportable-blocked mode', async () => {
+  const harness = await createRootHarness();
+  const recorder = createRecorder();
+
+  try {
+    const result = await runVerifyTask10ClientReproducibility(harness.args, createDependencies(recorder, {
+      verifyTask10Authority: async () => {
+        recorder.order.push('authority');
+        const authorityDirectory = path.dirname(harness.bundlePath);
+        const movedAuthorityDirectory = path.join(harness.tempRoot, 'moved-authority-directory');
+        await rename(authorityDirectory, movedAuthorityDirectory);
+        await symlink(movedAuthorityDirectory, authorityDirectory);
+        return { status: 'reportable-blocked', reasons: ['bundle-sha-mismatch'] };
+      },
+    }));
+
+    assert.equal(result.exitCode, 1);
+    assert.deepEqual(recorder.stdout, []);
+    assert.deepEqual(recorder.order, ['authority']);
+    assert.equal(recorder.order.includes('freeze'), false);
+    assert.equal(recorder.stderr.join(''), 'sanitized tooling failure\n');
+  } finally {
+    await harness.cleanup();
+  }
+});
+
 test('runVerifyTask10ClientReproducibility normalizes current authority reason strings into stable actionable blocked reason codes', async () => {
   const cases = [
     ['core runtime root head commit mismatch', 'core-runtime-head-mismatch'],
@@ -1496,6 +1524,27 @@ test('readTask10AuthorityEvidenceFile returns bytes, realPath, sizeBytes, and sy
   }
 });
 
+test('readTask10AuthorityEvidenceFile rejects a higher-ancestor symlink even when the final file and containing directory are real', async () => {
+  const tempRoot = await realpath(await mkdtemp(path.join(os.tmpdir(), 'task10-authority-ancestor-')));
+  const realRoot = path.join(tempRoot, 'real-root');
+  const realParent = path.join(realRoot, 'nested', 'deeper');
+  const aliasRoot = path.join(tempRoot, 'alias-root');
+  const evidencePath = path.join(realParent, 'evidence.json');
+
+  try {
+    await mkdir(realParent, { recursive: true });
+    await writeFile(evidencePath, '{"attempt":"007"}', { mode: 0o600 });
+    await symlink(realRoot, aliasRoot);
+
+    assert.throws(
+      () => readTask10AuthorityEvidenceFile(path.join(aliasRoot, 'nested', 'deeper', 'evidence.json')),
+      (error: unknown) => error instanceof Task10ExpectedEvidenceAccessError && error.kind === 'unreadable',
+    );
+  } finally {
+    await rm(tempRoot, { recursive: true, force: true });
+  }
+});
+
 test('readTask10AuthorityEvidenceFile maps only known deterministic filesystem failures and closes the descriptor on expected and unexpected failures', () => {
   const openedDescriptors: number[] = [];
   const closedDescriptors: number[] = [];
@@ -1528,7 +1577,33 @@ test('readTask10AuthorityEvidenceFile maps only known deterministic filesystem f
         ino: 2,
       };
     },
+    lstatSync() {
+      return {
+        isSymbolicLink: () => false,
+      };
+    },
   };
+
+  assert.throws(() => readTask10AuthorityEvidenceFile('/tmp/not-a-directory/evidence.json', {
+    ...baseDependencies,
+    lstatSync() {
+      const error = new Error('not-a-directory') as NodeJS.ErrnoException;
+      error.code = 'ENOTDIR';
+      throw error;
+    },
+  }), (error: unknown) => error instanceof Task10ExpectedEvidenceAccessError && error.kind === 'missing');
+
+  const symlinkedAncestor = path.resolve('/tmp', 'symlinked-ancestor');
+  const symlinkedAncestorCandidate = path.join(symlinkedAncestor, 'evidence.json');
+
+  assert.throws(() => readTask10AuthorityEvidenceFile(symlinkedAncestorCandidate, {
+    ...baseDependencies,
+    lstatSync(filePath) {
+      return {
+        isSymbolicLink: () => filePath === symlinkedAncestor,
+      };
+    },
+  }), (error: unknown) => error instanceof Task10ExpectedEvidenceAccessError && error.kind === 'unreadable');
 
   assert.throws(() => readTask10AuthorityEvidenceFile('/tmp/missing.json', {
     ...baseDependencies,
@@ -1556,6 +1631,14 @@ test('readTask10AuthorityEvidenceFile maps only known deterministic filesystem f
     },
   }), internalFailure);
 
+  const unexpectedLstatFailure = new Error('unexpected-lstat-failure');
+  assert.throws(() => readTask10AuthorityEvidenceFile('/tmp/unexpected-lstat.json', {
+    ...baseDependencies,
+    lstatSync() {
+      throw unexpectedLstatFailure;
+    },
+  }), unexpectedLstatFailure);
+
   assert.deepEqual(openedDescriptors, [40, 41]);
   assert.deepEqual(closedDescriptors, [40, 41]);
 });
@@ -1564,12 +1647,22 @@ test('readTask10AuthorityEvidenceFile preserves existing expected access errors 
   const preserved = new Task10ExpectedEvidenceAccessError('unreadable');
 
   assert.throws(() => readTask10AuthorityEvidenceFile('/tmp/preserved.json', {
+    lstatSync() {
+      return {
+        isSymbolicLink: () => false,
+      };
+    },
     openSync() {
       throw preserved;
     },
   }), preserved);
 
   assert.throws(() => readTask10AuthorityEvidenceFile('/tmp/not-regular.json', {
+    lstatSync() {
+      return {
+        isSymbolicLink: () => false,
+      };
+    },
     openSync() {
       return 55;
     },
@@ -1587,6 +1680,11 @@ test('readTask10AuthorityEvidenceFile preserves existing expected access errors 
   }), (error: unknown) => error instanceof Task10ExpectedEvidenceAccessError && error.kind === 'unreadable');
 
   assert.throws(() => readTask10AuthorityEvidenceFile('/tmp/identity-mismatch.json', {
+    lstatSync() {
+      return {
+        isSymbolicLink: () => false,
+      };
+    },
     openSync() {
       return 56;
     },
@@ -2339,6 +2437,22 @@ test('collectTask10PrivateSources resolves only expected handles, rejects symlin
         corePreflight: harness.preflightPath,
       },
     }, { maxFileBytes: 4 }), /missing|oversize|symlink/i);
+  } finally {
+    await harness.cleanup();
+  }
+});
+
+test('readFileHandle rejects files that exceed a caller-supplied maxFileBytes ceiling after the shared guard', async () => {
+  const harness = await createRootHarness();
+  const filePath = path.join(harness.roots.privateOutput, 'custom-max.bin');
+
+  try {
+    await writeFile(filePath, new Uint8Array([1, 2, 3, 4, 5]), { mode: 0o600 });
+
+    await assert.rejects(
+      () => readFileHandle(filePath, 4),
+      /oversize/i,
+    );
   } finally {
     await harness.cleanup();
   }
