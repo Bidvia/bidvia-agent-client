@@ -26,6 +26,9 @@ import {
   type Task10ScenarioRow,
 } from '../scripts/task10/contracts.ts';
 import {
+  Task10ExpectedEvidenceAccessError,
+} from '../scripts/task10/authority.ts';
+import {
   buildTask10ScenarioRows,
 } from '../scripts/task10/scenario-adapter.ts';
 import {
@@ -36,7 +39,10 @@ import {
   inspectTask10Checkout,
   main,
   parseVerifyTask10ClientReproducibilityArgs,
+  readTask10AuthorityEvidenceFile,
+  recreateTask10AuthorityArchive,
   runVerifyTask10ClientReproducibility,
+  type ReadTask10AuthorityEvidenceFileDependencies,
   type VerifyTask10ClientReproducibilityArgs,
   type VerifyTask10ClientReproducibilityDependencies,
 } from '../scripts/verify-task10-client-reproducibility.ts';
@@ -46,6 +52,13 @@ import type {
 } from '../scripts/task10/publication.ts';
 
 const RUN_STARTED_AT = '2026-07-19T18:19:20.000Z';
+const ATTEMPT_002_HISTORICAL_RECORD = Object.freeze({
+  attemptId: 'attempt-2026-07-18-task10-postmerge-002',
+  bundlePath: 'docs/org/review-records/artifacts/attempt-2026-07-18-task10-postmerge-002-output/core-execution-evidence.json',
+  bundleSha256: 'e438232e982722fd4ec431260053eafe369723f93659070688f961a5c740b3db',
+  preflightPath: 'docs/org/review-records/artifacts/attempt-2026-07-18-task10-postmerge-002-output/preflight-artifact.json',
+  preflightSha256: '1eee8a5d6de9a34486b287be425b6f747f155c8c83ef436c448e13baf08ad685',
+});
 
 const REQUIRED_FLAGS = [
   '--private-input',
@@ -1104,6 +1117,157 @@ test('runVerifyTask10ClientReproducibility synthesizes exact skipped gates and s
   }
 });
 
+test('runVerifyTask10ClientReproducibility normalizes current authority reason strings into stable actionable blocked reason codes', async () => {
+  const cases = [
+    ['core runtime root head commit mismatch', 'core-runtime-head-mismatch'],
+    ['core runtime root branch mismatch', 'core-runtime-branch-mismatch'],
+    ['core runtime root upstream ref mismatch', 'core-runtime-upstream-mismatch'],
+    ['core runtime root must not be detached', 'core-runtime-detached-mismatch'],
+    ['core runtime root porcelain status mismatch', 'core-runtime-porcelain-mismatch'],
+    ['core runtime root lockfile hash mismatch', 'core-runtime-lockfile-mismatch'],
+    ['client validation root head commit mismatch', 'client-validation-head-mismatch'],
+    ['client validation root branch mismatch', 'client-validation-branch-mismatch'],
+    ['client validation root upstream ref mismatch', 'client-validation-upstream-mismatch'],
+    ['client validation root must not be detached', 'client-validation-detached-mismatch'],
+    ['client validation root porcelain status mismatch', 'client-validation-porcelain-mismatch'],
+    ['client validation root lockfile hash mismatch', 'client-validation-lockfile-mismatch'],
+    ['site validation root head commit mismatch', 'site-validation-head-mismatch'],
+    ['site validation root branch mismatch', 'site-validation-branch-mismatch'],
+    ['site validation root upstream ref mismatch', 'site-validation-upstream-mismatch'],
+    ['site validation root must not be detached', 'site-validation-detached-mismatch'],
+    ['site validation root porcelain status mismatch', 'site-validation-porcelain-mismatch'],
+    ['site validation root lockfile hash mismatch', 'site-validation-lockfile-mismatch'],
+    ['core evidence head commit mismatch', 'core-evidence-head-mismatch'],
+    ['core evidence branch mismatch', 'core-evidence-branch-mismatch'],
+    ['core evidence upstream mismatch', 'core-evidence-upstream-mismatch'],
+    ['core evidence must be detached', 'core-evidence-detached-mismatch'],
+    ['core evidence porcelain status mismatch', 'core-evidence-porcelain-mismatch'],
+    ['checkout inspection is missing or unreadable', 'checkout-inspection-missing-or-unreadable'],
+    ['bundle repo path mismatch', 'bundle-path-mismatch'],
+    ['frozen authority path escaped core evidence root', 'bundle-path-escaped-core-evidence-root'],
+    ['checkout root must not be symlinked', 'checkout-root-symlinked'],
+    ['checkout roots must not resolve to the same real path', 'checkout-root-overlap'],
+    ['checkout roots must not be nested or overlapping', 'checkout-root-overlap'],
+    ['core execution evidence is missing or unreadable', 'bundle-missing-or-unreadable'],
+    ['core execution evidence must not be symlinked', 'bundle-symlinked'],
+    ['core execution evidence real path escaped core evidence root', 'bundle-path-escaped-core-evidence-root'],
+    ['core execution evidence byte count mismatch', 'bundle-sha256-mismatch'],
+    ['core execution evidence sha256 mismatch', 'bundle-sha256-mismatch'],
+    ['bundle manifest is missing or unreadable', 'bundle-missing-or-unreadable'],
+    ['bundle manifest must not be symlinked', 'bundle-symlinked'],
+    ['bundle manifest real path escaped core evidence root', 'bundle-path-escaped-core-evidence-root'],
+    ['bundle manifest byte count mismatch', 'bundle-sha256-mismatch'],
+    ['bundle manifest sha256 mismatch', 'bundle-sha256-mismatch'],
+    ['bundle manifest contains duplicate entry paths', 'bundle-reference-malformed'],
+    ['bundle manifest contains an unsafe path', 'bundle-reference-malformed'],
+    ['bundle manifest entry is missing or unreadable', 'bundle-missing-or-unreadable'],
+    ['bundle manifest entry must not be symlinked', 'bundle-symlinked'],
+    ['bundle manifest entry real path escaped core evidence root', 'bundle-path-escaped-core-evidence-root'],
+    ['bundle manifest entry byte count mismatch', 'bundle-sha256-mismatch'],
+    ['bundle manifest entry sha256 mismatch', 'bundle-sha256-mismatch'],
+    ['preflight artifact is missing or unreadable', 'preflight-artifact-missing-or-unreadable'],
+    ['preflight artifact must not be symlinked', 'preflight-artifact-symlinked'],
+    ['preflight artifact real path escaped core evidence root', 'preflight-artifact-path-escaped-core-evidence-root'],
+    ['preflight artifact byte count mismatch', 'preflight-artifact-hash-mismatch'],
+    ['preflight artifact sha256 mismatch', 'preflight-artifact-hash-mismatch'],
+    ['reusable packet wrapper is missing or unreadable', 'bundle-missing-or-unreadable'],
+    ['reusable packet wrapper must not be symlinked', 'bundle-symlinked'],
+    ['reusable packet wrapper real path escaped core evidence root', 'bundle-path-escaped-core-evidence-root'],
+    ['reusable packet wrapper byte count mismatch', 'bundle-sha256-mismatch'],
+    ['reusable packet wrapper sha256 mismatch', 'bundle-sha256-mismatch'],
+    ['selected source packet is missing or unreadable', 'bundle-missing-or-unreadable'],
+    ['selected source packet must not be symlinked', 'bundle-symlinked'],
+    ['selected source packet real path escaped core evidence root', 'bundle-path-escaped-core-evidence-root'],
+    ['selected source packet byte count mismatch', 'bundle-sha256-mismatch'],
+    ['selected source packet sha256 mismatch', 'bundle-sha256-mismatch'],
+    ['authority evidence JSON is malformed', 'bundle-json-unreadable'],
+    ['authority evidence is malformed: preflight.attempt_id must be a non-empty string', 'preflight-authority-facts-invalid'],
+    ['authority evidence is malformed: preflight.runtime_identity.core_image_digest must be a sha256-prefixed 64-character lowercase hex digest', 'preflight-authority-facts-invalid'],
+    ['authority evidence is malformed: preflight.runtime_identity.build_context_ref must be a non-empty string', 'preflight-authority-facts-invalid'],
+    ['preflight attempt id mismatch', 'preflight-authority-facts-invalid'],
+    ['core lockfile mismatch', 'preflight-authority-facts-invalid'],
+    ['client lockfile mismatch', 'preflight-authority-facts-invalid'],
+    ['site lockfile mismatch', 'preflight-authority-facts-invalid'],
+    ['client sha mismatch', 'preflight-authority-facts-invalid'],
+    ['runtime marker mismatch', 'preflight-authority-facts-invalid'],
+    ['reset state mismatch', 'preflight-authority-facts-invalid'],
+    ['output directory empty mismatch', 'preflight-authority-facts-invalid'],
+    ['output directory symlink mismatch', 'preflight-authority-facts-invalid'],
+    ['fresh business ids mismatch', 'preflight-authority-facts-invalid'],
+    ['schema columns mismatch', 'preflight-authority-facts-invalid'],
+    ['selected source packet path mismatch', 'preflight-authority-facts-invalid'],
+    ['selected source packet sha mismatch', 'preflight-authority-facts-invalid'],
+    ['reusable packet wrapper source refs mismatch', 'preflight-authority-facts-invalid'],
+    ['reusable packet wrapper embedded artifact hash mismatch', 'preflight-authority-facts-invalid'],
+    ['reusable packet wrapper selected reusable refs mismatch', 'preflight-authority-facts-invalid'],
+    ['authority evidence is malformed: preflight.runtime_identity.core_image_digest must be a sha256-prefixed 64-character lowercase hex digest', 'preflight-authority-facts-invalid'],
+    ['authority evidence is malformed: preflight.runtime_identity.build_context_ref must be a non-empty string', 'preflight-authority-facts-invalid'],
+    ['execution evidence attempt mismatch', 'execution-evidence-invalid'],
+    ['execution evidence preflight path mismatch', 'execution-evidence-invalid'],
+    ['execution evidence preflight hash mismatch', 'execution-evidence-invalid'],
+    ['execution evidence frozen identity mismatch', 'execution-evidence-invalid'],
+    ['execution evidence secret scan status mismatch', 'execution-evidence-invalid'],
+    ['execution evidence secret scan finding count mismatch', 'execution-evidence-invalid'],
+    ['execution evidence secret scan scanned artifact hashes mismatch', 'execution-evidence-invalid'],
+    ['execution evidence mutable evidence mismatch', 'execution-evidence-invalid'],
+    ['execution evidence frozen identity mismatch', 'execution-evidence-invalid'],
+    ['execution evidence run artifact count mismatch', 'execution-evidence-invalid'],
+    ['execution evidence duplicate mode mismatch', 'execution-evidence-invalid'],
+    ['execution evidence success-001 path mismatch', 'execution-evidence-invalid'],
+    ['execution evidence recovery-001 path mismatch', 'execution-evidence-invalid'],
+    ['execution evidence success-002-reuse path mismatch', 'execution-evidence-invalid'],
+    ['execution evidence success-001 hash mismatch', 'execution-evidence-invalid'],
+    ['execution evidence recovery-001 hash mismatch', 'execution-evidence-invalid'],
+    ['execution evidence success-002-reuse hash mismatch', 'execution-evidence-invalid'],
+    ['recreated core archive sha256 mismatch', 'bundle-sha256-mismatch'],
+    ['future authority block reason that does not exist today', 'unknown-authority-blocked'],
+  ] as const;
+
+  for (const [rawReason, expectedReason] of cases) {
+    const harness = await createRootHarness();
+    const recorder = createRecorder();
+    let evaluationInput: unknown;
+
+    try {
+      const result = await runVerifyTask10ClientReproducibility(harness.args, createDependencies(recorder, {
+        verifyTask10Authority: async () => {
+          recorder.order.push('authority');
+          return {
+            status: 'reportable-blocked',
+            reasons: [rawReason],
+          };
+        },
+        evaluateExecutionEvidence: async (input) => {
+          recorder.order.push('evaluator');
+          evaluationInput = input;
+          return {
+            candidateConclusion: 'blocked',
+            reasonCodes: ['authority.reportable-blocked:fixture'],
+            missingEvidence: [],
+          };
+        },
+        finalizeTask10Conclusion: async () => {
+          recorder.order.push('finalizer');
+          return {
+            conclusion: 'blocked',
+            reasonCodes: ['authority.reportable-blocked:fixture'],
+            missingEvidence: [],
+          };
+        },
+      }));
+
+      assert.equal(result.exitCode, 0, rawReason);
+      const scenarioRows = (evaluationInput as { scenarioRows: Array<{ reasonCodes: string[] }> }).scenarioRows;
+      assert.deepEqual(scenarioRows[0]?.reasonCodes ?? [], [
+        'authority-verification-blocked',
+        expectedReason,
+      ], rawReason);
+    } finally {
+      await harness.cleanup();
+    }
+  }
+});
+
 test('runVerifyTask10ClientReproducibility short-circuits on authority tooling failure with nonzero exit and no receipt', async () => {
   const harness = await createRootHarness();
   const recorder = createRecorder();
@@ -1305,6 +1469,252 @@ test('runVerifyTask10ClientReproducibility preserves real gate rows, blocks down
     assert.deepEqual((evaluationInput as { commandLog: { commands: unknown[] } }).commandLog.commands, gateRows);
   } finally {
     await harness.cleanup();
+  }
+});
+
+test('readTask10AuthorityEvidenceFile returns bytes, realPath, sizeBytes, and symlink status from one no-follow descriptor', async () => {
+  const tempRoot = await realpath(await mkdtemp(path.join(os.tmpdir(), 'task10-authority-read-')));
+  const evidencePath = path.join(tempRoot, 'evidence.json');
+  const symlinkPath = path.join(tempRoot, 'evidence-link.json');
+  const expectedBytes = new TextEncoder().encode('{"attempt":"007"}');
+
+  try {
+    await writeFile(evidencePath, expectedBytes, { mode: 0o600 });
+    await symlink(evidencePath, symlinkPath);
+
+    const descriptor = readTask10AuthorityEvidenceFile(evidencePath);
+    assert.deepEqual(descriptor, {
+      realPath: await realpath(evidencePath),
+      symlinked: false,
+      sizeBytes: expectedBytes.byteLength,
+      bytes: expectedBytes,
+    });
+
+    assert.throws(() => readTask10AuthorityEvidenceFile(symlinkPath), /missing|unreadable/i);
+  } finally {
+    await rm(tempRoot, { recursive: true, force: true });
+  }
+});
+
+test('readTask10AuthorityEvidenceFile maps only known deterministic filesystem failures and closes the descriptor on expected and unexpected failures', () => {
+  const openedDescriptors: number[] = [];
+  const closedDescriptors: number[] = [];
+  let nextDescriptor = 40;
+
+  const baseDependencies: ReadTask10AuthorityEvidenceFileDependencies = {
+    openSync() {
+      const descriptor = nextDescriptor;
+      nextDescriptor += 1;
+      openedDescriptors.push(descriptor);
+      return descriptor;
+    },
+    closeSync(descriptor: number) {
+      closedDescriptors.push(descriptor);
+    },
+    realpathSync() {
+      return '/real/evidence.json';
+    },
+    statSync() {
+      return { dev: 1, ino: 2 };
+    },
+    readFileSync() {
+      return new Uint8Array([1, 2, 3]);
+    },
+    fstatSync(_descriptor: number) {
+      return {
+        isFile: () => true,
+        size: 3,
+        dev: 1,
+        ino: 2,
+      };
+    },
+  };
+
+  assert.throws(() => readTask10AuthorityEvidenceFile('/tmp/missing.json', {
+    ...baseDependencies,
+    openSync() {
+      const error = new Error('missing') as NodeJS.ErrnoException;
+      error.code = 'ENOENT';
+      throw error;
+    },
+  }), (error: unknown) => error instanceof Task10ExpectedEvidenceAccessError && error.kind === 'missing');
+
+  assert.throws(() => readTask10AuthorityEvidenceFile('/tmp/symlink.json', {
+    ...baseDependencies,
+    realpathSync() {
+      const error = new Error('loop') as NodeJS.ErrnoException;
+      error.code = 'ELOOP';
+      throw error;
+    },
+  }), (error: unknown) => error instanceof Task10ExpectedEvidenceAccessError && error.kind === 'unreadable');
+
+  const internalFailure = new Error('plain-internal-failure');
+  assert.throws(() => readTask10AuthorityEvidenceFile('/tmp/internal.json', {
+    ...baseDependencies,
+    readFileSync() {
+      throw internalFailure;
+    },
+  }), internalFailure);
+
+  assert.deepEqual(openedDescriptors, [40, 41]);
+  assert.deepEqual(closedDescriptors, [40, 41]);
+});
+
+test('readTask10AuthorityEvidenceFile preserves existing expected access errors and rejects intentional regular-file and identity mismatches as unreadable', () => {
+  const preserved = new Task10ExpectedEvidenceAccessError('unreadable');
+
+  assert.throws(() => readTask10AuthorityEvidenceFile('/tmp/preserved.json', {
+    openSync() {
+      throw preserved;
+    },
+  }), preserved);
+
+  assert.throws(() => readTask10AuthorityEvidenceFile('/tmp/not-regular.json', {
+    openSync() {
+      return 55;
+    },
+    closeSync() {
+      return undefined;
+    },
+    fstatSync() {
+      return {
+        isFile: () => false,
+        size: 1,
+        dev: 1,
+        ino: 1,
+      };
+    },
+  }), (error: unknown) => error instanceof Task10ExpectedEvidenceAccessError && error.kind === 'unreadable');
+
+  assert.throws(() => readTask10AuthorityEvidenceFile('/tmp/identity-mismatch.json', {
+    openSync() {
+      return 56;
+    },
+    closeSync() {
+      return undefined;
+    },
+    fstatSync() {
+      return {
+        isFile: () => true,
+        size: 3,
+        dev: 1,
+        ino: 1,
+      };
+    },
+    realpathSync() {
+      return '/real/identity-mismatch.json';
+    },
+    statSync() {
+      return { dev: 9, ino: 9 };
+    },
+    readFileSync() {
+      return new Uint8Array([1, 2, 3]);
+    },
+  }), (error: unknown) => error instanceof Task10ExpectedEvidenceAccessError && error.kind === 'unreadable');
+});
+
+test('recreateTask10AuthorityArchive uses the frozen recipe with argument arrays and no shell interpolation', () => {
+  const calls: Array<{
+    command: string;
+    args: readonly string[];
+    cwd: string;
+    shell: boolean;
+    timeout: number;
+    maxBuffer: number;
+    encoding?: 'buffer';
+    env: NodeJS.ProcessEnv;
+  }> = [];
+
+  const originalToken = process.env.BIDVIA_MERGED_MAIN_REHEARSAL_TOKEN;
+  const originalPath = process.env.PATH;
+  const originalHome = process.env.HOME;
+  const originalSecret = process.env.UNRELATED_SECRET;
+  process.env.BIDVIA_MERGED_MAIN_REHEARSAL_TOKEN = 'super-secret-token';
+  process.env.PATH = '/usr/bin';
+  process.env.HOME = '/Users/tester';
+  process.env.UNRELATED_SECRET = 'ambient-secret';
+
+  try {
+    assert.throws(() => recreateTask10AuthorityArchive({
+      evidenceRootPath: '/tmp/task10-core-evidence',
+      recipe: 'git archive --format=tar.gz HEAD docs/other',
+      prefix: TASK10_AUTHORITY.coreArchivePrefix,
+    }), /frozen Task 10 authority/);
+
+    assert.throws(() => recreateTask10AuthorityArchive({
+      evidenceRootPath: '/tmp/task10-core-evidence',
+      recipe: TASK10_AUTHORITY.coreArchiveRecipe,
+      prefix: 'wrong-prefix/',
+    }), /frozen Task 10 authority/);
+
+    const archiveBytes = recreateTask10AuthorityArchive({
+      evidenceRootPath: '/tmp/task10-core-evidence',
+      recipe: TASK10_AUTHORITY.coreArchiveRecipe,
+      prefix: TASK10_AUTHORITY.coreArchivePrefix,
+    }, {
+      env: {
+        PATH: '/usr/bin',
+        HOME: '/Users/tester',
+        BIDVIA_MERGED_MAIN_REHEARSAL_TOKEN: 'super-secret-token',
+        UNRELATED_SECRET: 'ambient-secret',
+      },
+      execFile(command, args, options) {
+        calls.push({
+          command,
+          args,
+          cwd: options.cwd,
+          shell: options.shell,
+          timeout: options.timeout,
+          maxBuffer: options.maxBuffer,
+          encoding: options.encoding,
+          env: options.env,
+        });
+        return new Uint8Array([1, 2, 3]);
+      },
+    });
+
+    assert.deepEqual(archiveBytes, new Uint8Array([1, 2, 3]));
+    assert.deepEqual(calls, [{
+      command: 'git',
+      args: [
+        'archive',
+        '--format=tar.gz',
+        `--prefix=${TASK10_AUTHORITY.coreArchivePrefix}`,
+        TASK10_AUTHORITY.coreEvidenceCommit,
+        'docs/org/review-records/artifacts/attempt-2026-07-20-task10-postmerge-007-inputs',
+        'docs/org/review-records/artifacts/attempt-2026-07-20-task10-postmerge-007-output',
+      ],
+      cwd: '/tmp/task10-core-evidence',
+      shell: false,
+      timeout: 15_000,
+      maxBuffer: 16_384,
+      encoding: 'buffer',
+      env: {
+        PATH: '/usr/bin',
+        HOME: '/Users/tester',
+      },
+    }]);
+  } finally {
+    if (originalToken === undefined) {
+      delete process.env.BIDVIA_MERGED_MAIN_REHEARSAL_TOKEN;
+    } else {
+      process.env.BIDVIA_MERGED_MAIN_REHEARSAL_TOKEN = originalToken;
+    }
+    if (originalPath === undefined) {
+      delete process.env.PATH;
+    } else {
+      process.env.PATH = originalPath;
+    }
+    if (originalHome === undefined) {
+      delete process.env.HOME;
+    } else {
+      process.env.HOME = originalHome;
+    }
+    if (originalSecret === undefined) {
+      delete process.env.UNRELATED_SECRET;
+    } else {
+      process.env.UNRELATED_SECRET = originalSecret;
+    }
   }
 });
 
@@ -2241,13 +2651,13 @@ test('buildDefaultTask10ProhibitedValues includes resolved roots and optional to
   }
 });
 
-test('TASK10_CLIENT_REPRODUCIBILITY runbook publishes the frozen owner-only blocked audit procedure without private leakage', async () => {
+test('TASK10_CLIENT_REPRODUCIBILITY runbook publishes the frozen owner-only attempt-007 handoff procedure without private leakage', async () => {
   const markdown = await readFile(new URL('../docs/TASK10_CLIENT_REPRODUCIBILITY.md', import.meta.url), 'utf8');
   const requiredDocFiles = [...TASK10_CONTENT_FILES, 'secret-review.json', 'SHA256SUMS.txt'];
   const rootPreparationSection = extractSection(markdown, '2. Clean producer root preparation');
   const privateRootsSection = extractSection(markdown, '3. Private roots and token boundary');
   const coreProducerSection = extractSection(markdown, '4. Reconstructed Core producer command');
-  const lifecycleSection = extractSection(markdown, '5. Producer lifecycle and current blocked expectation');
+  const lifecycleSection = extractSection(markdown, '5. Producer lifecycle and current attempt-007 execution truth');
   const coordinatorSection = extractSection(markdown, '7. Coordinator command');
   const resultSection = extractSection(markdown, '8. Result interpretation, package membership, and handoff');
   const rootPreparationBlock = extractSingleBashBlock(rootPreparationSection, '2. Clean producer root preparation');
@@ -2278,31 +2688,48 @@ test('TASK10_CLIENT_REPRODUCIBILITY runbook publishes the frozen owner-only bloc
   assert.match(markdown, /## 2\. Clean producer root preparation/);
   assert.match(markdown, /## 3\. Private roots and token boundary/);
   assert.match(markdown, /## 4\. Reconstructed Core producer command/);
-  assert.match(markdown, /## 5\. Producer lifecycle and current blocked expectation/);
+  assert.match(markdown, /## 5\. Producer lifecycle and current attempt-007 execution truth/);
   assert.match(markdown, /## 6\. Client-side six gates/);
   assert.match(markdown, /## 7\. Coordinator command/);
   assert.match(markdown, /## 8\. Result interpretation, package membership, and handoff/);
 
-  assert.match(markdown, /97e2fbe3934ea821daf654afa0adaef2c3e16077/);
-  assert.match(markdown, /31195b898a6794e78518bb9b71833ecaaf5e563e/);
-  assert.match(markdown, /f0198caf349fad367c016d7ff333172ec71a55be/);
-  assert.match(markdown, /8d2692fea8a450225717c067628bbc0b372c7536/);
-  assert.match(markdown, /e438232e982722fd4ec431260053eafe369723f93659070688f961a5c740b3db/);
   assert.match(markdown, new RegExp(TASK10_AUTHORITY.attemptId));
+  assert.match(markdown, new RegExp(TASK10_AUTHORITY.coreRuntimeSha));
+  assert.match(markdown, new RegExp(TASK10_AUTHORITY.clientBaselineSha));
+  assert.match(markdown, new RegExp(TASK10_AUTHORITY.siteBaselineSha));
+  assert.match(markdown, new RegExp(TASK10_AUTHORITY.coreEvidencePublicationCommit));
+  assert.match(markdown, new RegExp(TASK10_AUTHORITY.coreBundleSha256));
   assert.match(markdown, new RegExp(escapeRegExp(TASK10_AUTHORITY.coreBundlePath)));
+  assert.match(markdown, new RegExp(escapeRegExp(TASK10_AUTHORITY.bundleManifestPath)));
+  assert.match(markdown, new RegExp(TASK10_AUTHORITY.bundleManifestSha256));
   assert.match(markdown, new RegExp(escapeRegExp(TASK10_AUTHORITY.corePreflightPath)));
-  assert.match(markdown, /1eee8a5d6de9a34486b287be425b6f747f155c8c83ef436c448e13baf08ad685/);
-  assert.match(markdown, /docs\/org\/review-records\/artifacts\/2026-07-15-cn-vn-industrial-chemical-approved-reusable-asset-packet\.json/);
-  assert.match(markdown, /53f99c0f94f2ec7a388a124bf0bc0969d4cf3b054123b8c7f4693ea1dae67093/);
+  assert.match(markdown, new RegExp(TASK10_AUTHORITY.corePreflightSha256));
+  assert.match(markdown, new RegExp(escapeRegExp(TASK10_AUTHORITY.reusablePacketWrapperPath)));
+  assert.match(markdown, new RegExp(TASK10_AUTHORITY.reusablePacketWrapperSha256));
+  assert.match(markdown, new RegExp(TASK10_AUTHORITY.reusablePacketEmbeddedArtifactSha256));
+  assert.match(markdown, new RegExp(escapeRegExp(TASK10_AUTHORITY.reusablePacketSourceRefs[0] ?? '')));
+  for (const ref of TASK10_AUTHORITY.selectedReusableRefs) {
+    assert.match(markdown, new RegExp(escapeRegExp(ref)));
+  }
+  assert.match(markdown, new RegExp(escapeRegExp(TASK10_AUTHORITY.selectedSourcePacketPath)));
+  assert.match(markdown, new RegExp(TASK10_AUTHORITY.selectedSourcePacketSha256));
+  assert.match(markdown, new RegExp(escapeRegExp(TASK10_AUTHORITY.coreArchiveRecipe)));
+  assert.match(markdown, new RegExp(TASK10_AUTHORITY.coreArchiveSha256));
+  assert.match(markdown, /manifest\.files must contain exactly 14 entries/i);
+  assert.match(markdown, /historical attempt-2026-07-18-task10-postmerge-002 package remains the preserved historical record and is not superseded by this attempt-007 runbook/i);
+  assert.doesNotMatch(markdown, new RegExp(ATTEMPT_002_HISTORICAL_RECORD.bundleSha256));
+  assert.doesNotMatch(markdown, new RegExp(escapeRegExp(ATTEMPT_002_HISTORICAL_RECORD.bundlePath)));
+  assert.doesNotMatch(markdown, new RegExp(escapeRegExp(ATTEMPT_002_HISTORICAL_RECORD.preflightPath)));
+  assert.doesNotMatch(markdown, new RegExp(ATTEMPT_002_HISTORICAL_RECORD.preflightSha256));
 
-  assert.match(coreProducerSection, /fully populated terminal command is \*\*reconstructed from the authoritative frozen Core CLI contract because no exact PR #51 terminal transcript was published\*\*/);
+  assert.doesNotMatch(coreProducerSection, /PR #51 terminal transcript/i);
   assert.match(coreProducerSection, /owner uses this template for audit, not a second competing execution/i);
   assert.equal(coreProducerBlock.startsWith('npm run run:merged-main-reproducibility-producers -- \\\n'), true);
   assert.deepEqual(parseQuotedFlagValuePairs(coreProducerBlock), [
     ['--core-root', '<absolute-clean-core-main-root>'],
     ['--client-root', '<absolute-clean-client-main-root>'],
     ['--site-root', '<absolute-clean-site-main-root>'],
-    ['--core-sha', TASK10_AUTHORITY.coreRuntimeSha],
+      ['--core-sha', TASK10_AUTHORITY.coreRuntimeSha],
     ['--client-sha', TASK10_AUTHORITY.clientBaselineSha],
     ['--site-sha', TASK10_AUTHORITY.siteBaselineSha],
     ['--core-branch', 'main'],
@@ -2317,21 +2744,21 @@ test('TASK10_CLIENT_REPRODUCIBILITY runbook publishes the frozen owner-only bloc
     ['--core-package-identity', TASK10_AUTHORITY.packageIdentities.core],
     ['--client-package-identity', TASK10_AUTHORITY.packageIdentities.client],
     ['--site-package-identity', TASK10_AUTHORITY.packageIdentities.site],
-    ['--attempt-id', TASK10_AUTHORITY.attemptId],
+      ['--attempt-id', TASK10_AUTHORITY.attemptId],
     ['--input-evidence-root', '<empty-private-input-root>'],
     ['--output-root', '<empty-private-output-root>'],
-    ['--selected-reusable-source-packet', 'docs/org/review-records/artifacts/2026-07-15-cn-vn-industrial-chemical-approved-reusable-asset-packet.json'],
-    ['--selected-reusable-source-packet-sha256', '53f99c0f94f2ec7a388a124bf0bc0969d4cf3b054123b8c7f4693ea1dae67093'],
-    ['--source-main-commit-marker', TASK10_AUTHORITY.runtimeMarkers.sourceMainCommitMarker],
-    ['--runtime-reported-version-marker', TASK10_AUTHORITY.runtimeMarkers.runtimeReportedVersionMarker],
-    ['--bootstrap-package-version-marker', TASK10_AUTHORITY.runtimeMarkers.bootstrapPackageVersionMarker],
-    ['--scenario-package-version-marker', TASK10_AUTHORITY.runtimeMarkers.scenarioPackageVersionMarker],
-    ['--provider-protocol-version', TASK10_AUTHORITY.providerProtocolVersion],
-    ['--postgres-port', String(TASK10_AUTHORITY.ports.postgres)],
-    ['--runtime-port', String(TASK10_AUTHORITY.ports.runtime)],
-    ['--operator-port', String(TASK10_AUTHORITY.ports.operator)],
-    ['--fixture-port', String(TASK10_AUTHORITY.ports.fixture)],
-    ['--provider-fixture-identity', TASK10_AUTHORITY.providerFixtureIdentity],
+      ['--selected-reusable-source-packet', TASK10_AUTHORITY.selectedSourcePacketPath],
+      ['--selected-reusable-source-packet-sha256', TASK10_AUTHORITY.selectedSourcePacketSha256],
+      ['--source-main-commit-marker', TASK10_AUTHORITY.runtimeMarkers.sourceMainCommitMarker],
+      ['--runtime-reported-version-marker', TASK10_AUTHORITY.runtimeMarkers.runtimeReportedVersionMarker],
+      ['--bootstrap-package-version-marker', TASK10_AUTHORITY.runtimeMarkers.bootstrapPackageVersionMarker],
+      ['--scenario-package-version-marker', TASK10_AUTHORITY.runtimeMarkers.scenarioPackageVersionMarker],
+      ['--provider-protocol-version', TASK10_AUTHORITY.providerProtocolVersion],
+      ['--postgres-port', String(TASK10_AUTHORITY.ports.postgres)],
+      ['--runtime-port', String(TASK10_AUTHORITY.ports.runtime)],
+      ['--operator-port', String(TASK10_AUTHORITY.ports.operator)],
+      ['--fixture-port', String(TASK10_AUTHORITY.ports.fixture)],
+      ['--provider-fixture-identity', TASK10_AUTHORITY.providerFixtureIdentity],
   ]);
 
   const coreLock = extractQuotedFlagValue(coreProducerBlock, '--core-lockfile-hash');
@@ -2347,7 +2774,7 @@ test('TASK10_CLIENT_REPRODUCIBILITY runbook publishes the frozen owner-only bloc
 
   assert.equal(coordinatorBlock.startsWith('npm run validate:task10-client-reproducibility -- \\\n'), true);
   assert.deepEqual(parseFlagSequence(coordinatorBlock), [...REQUIRED_FLAGS]);
-  assert.match(coordinatorBlock, /--core-bundle "<absolute-detached-core-evidence-root>\/docs\/org\/review-records\/artifacts\/attempt-2026-07-18-task10-postmerge-002-output\/core-execution-evidence\.json"/);
+  assert.match(coordinatorBlock, /--core-bundle "<absolute-detached-core-evidence-root>\/docs\/org\/review-records\/artifacts\/attempt-2026-07-20-task10-postmerge-007-output\/core-execution-evidence\.json"/);
   assert.match(coordinatorSection, /run the client-side coordinator from the Task 10 implementation worktree/i);
   assert.match(coordinatorSection, /frozen Client checkout is passed only through `--client-checkout`/i);
   assert.doesNotMatch(coordinatorSection, /from the frozen client checkout/i);
@@ -2378,6 +2805,11 @@ test('TASK10_CLIENT_REPRODUCIBILITY runbook publishes the frozen owner-only bloc
   assert.match(markdown, /result-submission: 1/);
 
   assert.match(privateRootsSection, /BIDVIA_MERGED_MAIN_REHEARSAL_TOKEN/);
+  assert.match(privateRootsSection, /presence check/i);
+  assert.match(privateRootsSection, /child-only producer injection boundary/i);
+  assert.match(privateRootsSection, /if \[\[ -z "\$\{BIDVIA_MERGED_MAIN_REHEARSAL_TOKEN:-\}" \]\]; then/i);
+  assert.match(privateRootsSection, /missing required rehearsal token/i);
+  assert.doesNotMatch(privateRootsSection, /printenv|env \||echo "\$BIDVIA_MERGED_MAIN_REHEARSAL_TOKEN"/i);
   assert.match(rootPreparationSection, /correspond to the coordinator placeholders/i);
   assert.doesNotMatch(markdown, /BIDVIA_MERGED_MAIN_REHEARSAL_TOKEN\s*=/);
   assert.doesNotMatch(markdown, /TOKEN=/);
@@ -2385,7 +2817,11 @@ test('TASK10_CLIENT_REPRODUCIBILITY runbook publishes the frozen owner-only bloc
 
   assert.match(rootPreparationSection, /owner-only 0700/i);
   assert.match(rootPreparationSection, /outside Git/i);
+  assert.match(rootPreparationSection, /outside all repositories/i);
   assert.match(rootPreparationSection, /initially empty/i);
+  assert.match(rootPreparationSection, /distinct\/non-overlapping\/non-symlinked/i);
+  assert.match(rootPreparationSection, /external absolute private roots are valid/i);
+  assert.match(rootPreparationSection, /selected source packet stays repo-relative/i);
   assert.match(rootPreparationSection, /never install or modify the evidence checkout/i);
   assert.match(rootPreparationSection, /implementation worktree is not a producer root/i);
   assert.match(rootPreparationSection, /no `\.sisyphus` dependency/i);
@@ -2394,7 +2830,10 @@ test('TASK10_CLIENT_REPRODUCIBILITY runbook publishes the frozen owner-only bloc
   assert.match(rootPreparationBlock, /mktemp -d/);
   assert.match(rootPreparationBlock, /session_root="\$\(realpath "\$\(mktemp -d/);
   assert.match(rootPreparationBlock, /umask 077/);
+  assert.match(rootPreparationBlock, /publication_root="\$session_root\/provider-proof-terminal-client-validation-artifacts"/);
+  assert.doesNotMatch(rootPreparationBlock, /publication_root_parent/);
   assert.match(rootPreparationBlock, /mkdir -m 700/);
+  assert.doesNotMatch(rootPreparationBlock, /publication-root"/);
   assert.match(rootPreparationBlock, /realpath/);
   assert.match(rootPreparationBlock, /stat -f '%Lp'/);
   assert.match(rootPreparationBlock, /find "\$root" -mindepth 1 -maxdepth 1 -print -quit/);
@@ -2402,26 +2841,48 @@ test('TASK10_CLIENT_REPRODUCIBILITY runbook publishes the frozen owner-only bloc
   assert.match(rootPreparationBlock, /path\.relative/);
   assert.match(rootPreparationBlock, /publication_root/);
   assert.match(rootPreparationBlock, /\[\[ "\$canonical_root" = "\$root" \]\]/);
+  assert.match(rootPreparationSection, /`<absolute-publication-root>`/);
+  assert.doesNotMatch(rootPreparationSection, /<absolute-publication-root>\/provider-proof-terminal-client-validation-artifacts/);
+  assert.match(coordinatorBlock, /--publication-root "<absolute-publication-root>"/);
 
-  assert.match(markdown, /bidvia-task10-attempt-2026-07-18-task10-postmerge-002/);
-  for (const containerName of [
-    'bidvia-task10-attempt-2026-07-18-task10-postmerge-002-runtime',
-    'bidvia-task10-attempt-2026-07-18-task10-postmerge-002-postgres',
-    'bidvia-task10-attempt-2026-07-18-task10-postmerge-002-fixture',
-    'bidvia-task10-attempt-2026-07-18-task10-postmerge-002-operator',
-  ]) {
+  assert.match(markdown, new RegExp(TASK10_AUTHORITY.composeProject));
+  assert.match(markdown, new RegExp(TASK10_AUTHORITY.networkIdentity));
+  for (const containerName of TASK10_AUTHORITY.containerNames) {
     assert.match(markdown, new RegExp(containerName));
+  }
+  for (const authorityUrl of TASK10_AUTHORITY.authorityUrls) {
+    assert.match(markdown, new RegExp(escapeRegExp(authorityUrl)));
   }
   assert.match(lifecycleSection, /startup, readiness `\/readyz`, reset, success-001, recovery-001, success-002-reuse, restart\/readback, and finally teardown is specified and owned by the frozen Core producer contract/i);
   assert.match(lifecycleSection, /client coordinator\/adapter performs authority\/checkout\/private-root checks, delegates one Core command only if probe permits, validates returned artifacts, and does not implement or independently attest Docker teardown/i);
-  assert.match(lifecycleSection, /current pre-spawn blocked path proves no Core command was launched and therefore no Compose resources should exist/i);
-  assert.match(lifecycleSection, /if a future probe permits execution, the owner must independently inspect Core producer evidence and the host for finally teardown before accepting the package/i);
-  assert.match(lifecycleSection, /external private roots fail repo-relative/i);
-  assert.match(lifecycleSection, /internal roots fail non-overlap/i);
+  assert.match(lifecycleSection, /current frozen expectation is `passed`, but it is never forced, only the client evaluator and package validation may decide `passed` or `blocked`/i);
+  assert.match(lifecycleSection, /valid external private roots permit producer execution now/i);
+  assert.match(lifecycleSection, /invalid overlap or root-contract violations may still block before producer launch/i);
+  assert.match(lifecycleSection, /after any launched producer, the owner must inspect Core producer evidence and verify teardown on the host before accepting the package/i);
+  assert.match(lifecycleSection, /docker ps -a --filter "name=\^bidvia-task10-attempt-2026-07-20-task10-postmerge-007-runtime\$" --format '\{\{\.Names\}\}'/);
+  assert.match(lifecycleSection, /docker ps -a --filter "name=\^bidvia-task10-attempt-2026-07-20-task10-postmerge-007-postgres\$" --format '\{\{\.Names\}\}'/);
+  assert.match(lifecycleSection, /docker ps -a --filter "name=\^bidvia-task10-attempt-2026-07-20-task10-postmerge-007-fixture\$" --format '\{\{\.Names\}\}'/);
+  assert.match(lifecycleSection, /docker ps -a --filter "name=\^bidvia-task10-attempt-2026-07-20-task10-postmerge-007-operator\$" --format '\{\{\.Names\}\}'/);
+  assert.match(lifecycleSection, /docker network ls --filter "name=\^bidvia-task10-attempt-2026-07-20-task10-postmerge-007_default\$" --format '\{\{\.Name\}\}'/);
+  assert.match(lifecycleSection, /docker volume ls --filter "label=com\.docker\.compose\.project=bidvia-task10-attempt-2026-07-20-task10-postmerge-007" --format '\{\{\.Name\}\}'/);
+  assert.match(lifecycleSection, /runtime_container_query="\$\(docker ps -a --filter "name=\^bidvia-task10-attempt-2026-07-20-task10-postmerge-007-runtime\$" --format '\{\{\.Names\}\}'\)" \|\| \{/);
+  assert.match(lifecycleSection, /postgres_container_query="\$\(docker ps -a --filter "name=\^bidvia-task10-attempt-2026-07-20-task10-postmerge-007-postgres\$" --format '\{\{\.Names\}\}'\)" \|\| \{/);
+  assert.match(lifecycleSection, /fixture_container_query="\$\(docker ps -a --filter "name=\^bidvia-task10-attempt-2026-07-20-task10-postmerge-007-fixture\$" --format '\{\{\.Names\}\}'\)" \|\| \{/);
+  assert.match(lifecycleSection, /operator_container_query="\$\(docker ps -a --filter "name=\^bidvia-task10-attempt-2026-07-20-task10-postmerge-007-operator\$" --format '\{\{\.Names\}\}'\)" \|\| \{/);
+  assert.match(lifecycleSection, /network_query="\$\(docker network ls --filter "name=\^bidvia-task10-attempt-2026-07-20-task10-postmerge-007_default\$" --format '\{\{\.Name\}\}'\)" \|\| \{/);
+  assert.match(lifecycleSection, /volume_query="\$\(docker volume ls --filter "label=com\.docker\.compose\.project=bidvia-task10-attempt-2026-07-20-task10-postmerge-007" --format '\{\{\.Name\}\}'\)" \|\| \{/);
+  assert.doesNotMatch(lifecycleSection, /if \[\[ -n "\$\(docker ps -a/);
+  assert.match(lifecycleSection, /all must be absent or empty after a launched producer/i);
+  assert.match(lifecycleSection, /external private roots outside every repository are valid when they stay distinct, non-overlapping, non-symlinked, 0700, and empty/i);
+  assert.match(lifecycleSection, /selected source packet remains the repo-relative frozen path/i);
   assert.match(lifecycleSection, /never relocate private evidence into the repo or modify Core to force pass/i);
+  assert.doesNotMatch(markdown, /current blocked expectation/i);
+  assert.doesNotMatch(markdown, /current probe result proves no Core command was launched/i);
+  assert.doesNotMatch(markdown, /If a future probe permits execution/i);
+  assert.doesNotMatch(markdown, /expected pre-spawn root contract block/i);
 
   assert.match(markdown, /exit 0 only after an immutable valid `passed` or `blocked` package/i);
-  assert.match(markdown, /current expected result is a valid blocked package/i);
+  assert.match(markdown, /the current owner expectation is `passed`, but the package may still end `blocked` when evaluator or package validation finds a reportable problem/i);
   assert.match(markdown, /core-producer-private-root-contract-unsatisfied/);
   assert.match(markdown, /tooling failures exit nonzero and emit no success receipt/i);
   assert.match(markdown, /a `passed` conclusion is invalid unless the probe and every downstream check execute and pass/i);
@@ -2440,6 +2901,70 @@ test('TASK10_CLIENT_REPRODUCIBILITY runbook publishes the frozen owner-only bloc
   assert.match(resultSection, /only approved sanitized opaque SHA handles and attestations may cross the boundary/i);
   assert.match(resultSection, /cleanup after the owner retention policy allows it/i);
   assert.match(resultSection, /offline handoff/i);
+  assert.match(resultSection, /offline validation/i);
+  assert.match(resultSection, /byte-for-byte copy/i);
+  assert.match(resultSection, /revalidate the copied package and archive before relying on it/i);
+  assert.match(resultSection, /verify\/recompute hashes, not rewrite `SHA256SUMS\.txt` contents/i);
+  assert.match(resultSection, /EXTERNAL_PUBLICATION_ROOT/);
+  assert.match(resultSection, /PACKAGE_NAME/);
+  assert.match(resultSection, /validateOfflinePublication\(/);
+  assert.doesNotMatch(resultSection, /publication\.ts"; const publicationRoot = process\.argv\[1\]; const packageName = process\.argv\[2\]; if \(!publicationRoot \|\| !packageName\) throw new Error\("publication root and package name are required"\); const result = await validateOfflinePublication\(/);
+  assert.equal((resultSection.match(/void \(async \(\) => \{/g) ?? []).length, 3);
+  assert.equal((resultSection.match(/await validateOfflinePublication\(/g) ?? []).length, 3);
+  assert.equal((resultSection.match(/\}\)\(\);' --/g) ?? []).length, 3);
+  assert.match(resultSection, /process\.argv\[1\]/);
+  assert.match(resultSection, /process\.argv\[2\]/);
+  assert.doesNotMatch(resultSection, /process\.argv\[3\]/);
+  assert.doesNotMatch(resultSection, /const EXTERNAL_PUBLICATION_ROOT = process\.env\./);
+  assert.doesNotMatch(resultSection, /const PACKAGE_NAME = process\.env\./);
+  assert.match(resultSection, /archiveVerified: true/);
+  assert.match(resultSection, /receiptVerified: true/);
+  assert.match(resultSection, /internalManifestVerified: true/);
+  assert.match(resultSection, /secretScanVerified: true/);
+  assert.match(resultSection, /\$PWD\/provider-proof-terminal-client-validation-artifacts/);
+  assert.match(resultSection, /set -euo pipefail/);
+  assert.match(resultSection, /staging_parent="\$\(mktemp -d "\$PWD\/\.task10-publication-copy\.XXXXXX"\)"/);
+  assert.match(resultSection, /staging_root="\$staging_parent\/provider-proof-terminal-client-validation-artifacts"/);
+  assert.match(resultSection, /final_root="\$PWD\/provider-proof-terminal-client-validation-artifacts"/);
+  assert.doesNotMatch(resultSection, /provider-proof-terminal-client-validation-artifacts\.staging/);
+  assert.match(resultSection, /if \[\[ -e "\$final_root\/\$PACKAGE_NAME" \|\| -e "\$final_root\/\$PACKAGE_NAME\.tar\.gz" \|\| -e "\$final_root\/\$PACKAGE_NAME\.publication\.json" \]\]; then/);
+  assert.match(resultSection, /trap cleanup_staging EXIT/);
+  const precheckIndex = resultSection.indexOf('if [[ -e "$final_root/$PACKAGE_NAME" || -e "$final_root/$PACKAGE_NAME.tar.gz" || -e "$final_root/$PACKAGE_NAME.publication.json" ]]; then');
+  const mktempIndex = resultSection.indexOf('staging_parent="$(mktemp -d "$PWD/.task10-publication-copy.XXXXXX")"');
+  const trapIndex = resultSection.indexOf('trap cleanup_staging EXIT');
+  assert.ok(precheckIndex !== -1 && mktempIndex !== -1 && precheckIndex < mktempIndex, 'final target absence must be checked before staging is created');
+  assert.ok(mktempIndex !== -1 && trapIndex !== -1 && mktempIndex < trapIndex, 'trap must be installed immediately after fresh staging is created');
+  assert.match(resultSection, /mkdir "\$final_root\/\$PACKAGE_NAME"/);
+  assert.match(resultSection, /promoted_package_dir=1\ncp -R "\$staging_root\/\$PACKAGE_NAME\/\." "\$final_root\/\$PACKAGE_NAME"/);
+  assert.match(resultSection, /cp -R "\$staging_root\/\$PACKAGE_NAME\/\." "\$final_root\/\$PACKAGE_NAME"/);
+  assert.match(resultSection, /ln "\$staging_root\/\$PACKAGE_NAME\.tar\.gz" "\$final_root\/\$PACKAGE_NAME\.tar\.gz"/);
+  assert.match(resultSection, /ln "\$staging_root\/\$PACKAGE_NAME\.publication\.json" "\$final_root\/\$PACKAGE_NAME\.publication\.json"/);
+  assert.doesNotMatch(resultSection, /mv "\$staging_root\/\$PACKAGE_NAME" "\$final_root\/\$PACKAGE_NAME"/);
+  assert.doesNotMatch(resultSection, /mv "\$staging_root\/\$PACKAGE_NAME\.tar\.gz" "\$final_root\/\$PACKAGE_NAME\.tar\.gz"/);
+  assert.doesNotMatch(resultSection, /mv "\$staging_root\/\$PACKAGE_NAME\.publication\.json" "\$final_root\/\$PACKAGE_NAME\.publication\.json"/);
+  assert.match(resultSection, /cp -R "\$EXTERNAL_PUBLICATION_ROOT\/\$PACKAGE_NAME" "\$staging_root\/\$PACKAGE_NAME"/);
+  assert.match(resultSection, /cp "\$EXTERNAL_PUBLICATION_ROOT\/\$PACKAGE_NAME\.tar\.gz" "\$staging_root\/\$PACKAGE_NAME\.tar\.gz"/);
+  assert.match(resultSection, /cp "\$EXTERNAL_PUBLICATION_ROOT\/\$PACKAGE_NAME\.publication\.json" "\$staging_root\/\$PACKAGE_NAME\.publication\.json"/);
+  assert.doesNotMatch(resultSection, /cp -R "\$EXTERNAL_PUBLICATION_ROOT\/\$PACKAGE_NAME" "\$PWD\/provider-proof-terminal-client-validation-artifacts\/\$PACKAGE_NAME"/);
+  assert.match(resultSection, /never rewrite receipt paths/i);
+  assert.match(resultSection, /cmp -s "\$EXTERNAL_PUBLICATION_ROOT\/\$PACKAGE_NAME\.tar\.gz" "\$PWD\/provider-proof-terminal-client-validation-artifacts\/\$PACKAGE_NAME\.tar\.gz"/);
+  assert.match(resultSection, /cmp -s "\$EXTERNAL_PUBLICATION_ROOT\/\$PACKAGE_NAME\/client-conclusion\.json" "\$PWD\/provider-proof-terminal-client-validation-artifacts\/\$PACKAGE_NAME\/client-conclusion\.json"/);
+  assert.match(resultSection, /cmp -s "\$EXTERNAL_PUBLICATION_ROOT\/\$PACKAGE_NAME\/SHA256SUMS\.txt" "\$PWD\/provider-proof-terminal-client-validation-artifacts\/\$PACKAGE_NAME\/SHA256SUMS\.txt"/);
+  const finalValidationIndex = resultSection.lastIndexOf('npx tsx -e');
+  const firstCmpIndex = resultSection.indexOf('if ! cmp -s "$EXTERNAL_PUBLICATION_ROOT/$PACKAGE_NAME.tar.gz"');
+  const removeStagingIndex = resultSection.lastIndexOf('rm -rf -- "$staging_parent"');
+  const clearPackageFlagIndex = resultSection.lastIndexOf('promoted_package_dir=0');
+  const clearArchiveFlagIndex = resultSection.lastIndexOf('promoted_archive=0');
+  const clearReceiptFlagIndex = resultSection.lastIndexOf('promoted_receipt=0');
+  const trapDisableIndex = resultSection.lastIndexOf('trap - EXIT');
+  assert.ok(finalValidationIndex !== -1 && firstCmpIndex !== -1 && finalValidationIndex < firstCmpIndex, 'final offline validation must run before cmp checks');
+  assert.ok(trapDisableIndex !== -1 && firstCmpIndex !== -1 && trapDisableIndex > firstCmpIndex, 'trap must remain active through final comparisons');
+  assert.ok(removeStagingIndex !== -1 && clearPackageFlagIndex !== -1 && removeStagingIndex < clearPackageFlagIndex, 'staging must be removed before clearing rollback flags');
+  assert.ok(clearPackageFlagIndex < clearArchiveFlagIndex && clearArchiveFlagIndex < clearReceiptFlagIndex, 'rollback flags must be cleared in the success tail');
+  assert.ok(clearReceiptFlagIndex !== -1 && trapDisableIndex !== -1 && clearReceiptFlagIndex < trapDisableIndex, 'trap must be disabled only after clearing rollback flags');
+  assert.doesNotMatch(resultSection, /shasum -a 256 "\$PWD\/provider-proof-terminal-client-validation-artifacts\/\$PACKAGE_NAME\.tar\.gz"/);
+  assert.doesNotMatch(resultSection, /shasum -a 256 "\$PWD\/provider-proof-terminal-client-validation-artifacts\/\$PACKAGE_NAME\/client-conclusion\.json"/);
+  assert.doesNotMatch(resultSection, /shasum -a 256 "\$PWD\/provider-proof-terminal-client-validation-artifacts\/\$PACKAGE_NAME\/SHA256SUMS\.txt"/);
 
   assert.doesNotMatch(markdown, /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
   assert.doesNotMatch(markdown, /\/Users\//);

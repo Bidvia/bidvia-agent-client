@@ -1,0 +1,30 @@
+{
+  "schema_version": "bidvia-client-task10-owner-conclusion/v1",
+  "evidence_owner": "client",
+  "attempt_id": "attempt-2026-07-20-task10-postmerge-007",
+  "conclusion": "passed",
+  "reason_codes": [],
+  "missing_evidence": [],
+  "authority_ref": {
+    "issue_url": "https://github.com/Bidvia/bidvia-agent-client/issues/8#issuecomment-5020392826",
+    "core_handoff_runbook_url": "https://github.com/Bidvia/bidvia-main/blob/8957aaff35436621439f9a62a741c522e95423c8/docs/runbooks/merged-main-reproducibility-client-handoff.md",
+    "core_bundle_url": "https://github.com/Bidvia/bidvia-main/blob/5ab02058491960c305162091316d65e1ffa97347/docs/org/review-records/artifacts/attempt-2026-07-20-task10-postmerge-007-output/core-execution-evidence.json",
+    "core_bundle_path": "docs/org/review-records/artifacts/attempt-2026-07-20-task10-postmerge-007-output/core-execution-evidence.json",
+    "core_bundle_sha256": "c68a783433f8d58c59949a2ab496fc9e3ca1b42fd0b0f0318ebfb81576dc3980",
+    "core_preflight_path": "docs/org/review-records/artifacts/attempt-2026-07-20-task10-postmerge-007-output/preflight-artifact.json",
+    "core_preflight_sha256": "45139bf82f6ba33793855d03442fbd939e7dbe82f565e5b5ac6a30e8150f27bf"
+  },
+  "non_claims": [
+    "not production readiness",
+    "not governed release acceptance",
+    "not prd promotion",
+    "not contract acceptance",
+    "not purchase-order truth",
+    "not payment or settlement finality",
+    "not fulfillment or after-sales completion",
+    "not dispute or arbitration completion",
+    "not provider execution completion",
+    "not human commercial acceptance",
+    "not a Core-authored conclusion"
+  ]
+}

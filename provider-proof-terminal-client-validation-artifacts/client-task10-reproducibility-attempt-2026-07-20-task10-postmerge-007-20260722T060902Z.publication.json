@@ -1,0 +1,39 @@
+{
+  "schema_version": "bidvia-client-task10-publication/v1",
+  "publication_state": "published_for_review",
+  "attempt_id": "attempt-2026-07-20-task10-postmerge-007",
+  "client_owned_conclusion": "passed",
+  "issue_url": "https://github.com/Bidvia/bidvia-agent-client/issues/8#issuecomment-5020392826",
+  "package_directory": "provider-proof-terminal-client-validation-artifacts/client-task10-reproducibility-attempt-2026-07-20-task10-postmerge-007-20260722T060902Z",
+  "conclusion_path": "provider-proof-terminal-client-validation-artifacts/client-task10-reproducibility-attempt-2026-07-20-task10-postmerge-007-20260722T060902Z/client-conclusion.json",
+  "conclusion_sha256": "225b65a64f7f1369949756fe50b80384038f5c0ffa5e72b183629dcb3a928de7",
+  "archive_path": "provider-proof-terminal-client-validation-artifacts/client-task10-reproducibility-attempt-2026-07-20-task10-postmerge-007-20260722T060902Z.tar.gz",
+  "archive_sha256": "f2fb98ef6bbd56123280176fbaa55a85bd8a9efa2057a56f378445eb51624fa3",
+  "archive_size_bytes": 5189,
+  "internal_hash_manifest": "provider-proof-terminal-client-validation-artifacts/client-task10-reproducibility-attempt-2026-07-20-task10-postmerge-007-20260722T060902Z/SHA256SUMS.txt",
+  "internal_hash_manifest_sha256": "664a9924851bdcb62256be93e25cd28bf09f8f283eaea175ca02cf37ba6a7ae9",
+  "validation": {
+    "authority_verified": true,
+    "commands_verified": true,
+    "scenarios_verified": true,
+    "private_handle_attestations_verified": true,
+    "secret_review_verified": true,
+    "package_membership_verified": true,
+    "internal_hashes_verified": true,
+    "archive_verified": true,
+    "receipt_bindings_verified": true
+  },
+  "non_claims": [
+    "not production readiness",
+    "not governed release acceptance",
+    "not prd promotion",
+    "not contract acceptance",
+    "not purchase-order truth",
+    "not payment or settlement finality",
+    "not fulfillment or after-sales completion",
+    "not dispute or arbitration completion",
+    "not provider execution completion",
+    "not human commercial acceptance",
+    "not a Core-authored conclusion"
+  ]
+}

@@ -1,12 +1,14 @@
-import { spawnSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { constants as fsConstants } from 'node:fs';
 import {
   closeSync,
+  fstatSync,
   lstatSync,
   openSync,
   readFileSync,
   realpathSync,
+  statSync,
 } from 'node:fs';
 import {
   lstat,
@@ -19,10 +21,13 @@ import { fileURLToPath } from 'node:url';
 
 import {
   Task10ExpectedCheckoutInspectionError,
+  Task10ExpectedEvidenceAccessError,
   verifyTask10Authority,
+  type Task10ArchiveRecreationRequest,
   type Task10AuthorityVerificationResult,
   type Task10AuthorityVerifierDependencies,
   type Task10CheckoutInspection,
+  type Task10EvidenceFile,
   type VerifyTask10AuthorityInput,
 } from './task10/authority.js';
 import { recordTask10GateCommands } from './task10/command-recorder.js';
@@ -152,24 +157,39 @@ type AuthorityReasonCode =
   | 'bundle-path-escaped-core-evidence-root'
   | 'bundle-path-mismatch'
   | 'bundle-missing-or-unreadable'
+  | 'bundle-symlinked'
   | 'checkout-root-overlap'
   | 'checkout-root-symlinked'
   | 'core-evidence-head-mismatch'
+  | 'core-evidence-branch-mismatch'
   | 'core-evidence-detached-mismatch'
   | 'core-evidence-porcelain-mismatch'
   | 'core-evidence-upstream-mismatch'
   | 'core-runtime-branch-mismatch'
+  | 'core-runtime-detached-mismatch'
   | 'core-runtime-head-mismatch'
   | 'core-runtime-lockfile-mismatch'
+  | 'core-runtime-porcelain-mismatch'
   | 'core-runtime-upstream-mismatch'
+  | 'client-validation-branch-mismatch'
+  | 'client-validation-detached-mismatch'
+  | 'client-validation-head-mismatch'
+  | 'client-validation-lockfile-mismatch'
+  | 'client-validation-porcelain-mismatch'
+  | 'client-validation-upstream-mismatch'
   | 'preflight-artifact-hash-mismatch'
   | 'preflight-artifact-missing-or-unreadable'
   | 'preflight-artifact-path-escaped-core-evidence-root'
   | 'preflight-artifact-path-mismatch'
+  | 'preflight-artifact-symlinked'
   | 'preflight-authority-facts-invalid'
   | 'preflight-json-unreadable'
+  | 'execution-evidence-invalid'
+  | 'site-validation-branch-mismatch'
+  | 'site-validation-detached-mismatch'
   | 'site-validation-head-mismatch'
   | 'site-validation-lockfile-mismatch'
+  | 'site-validation-porcelain-mismatch'
   | 'site-validation-upstream-mismatch'
   | 'unknown-authority-blocked';
 
@@ -188,6 +208,50 @@ type PrivateSourceCollectionDependencies = {
   maxFileBytes?: number;
   maxTotalBytes?: number;
 };
+
+type RecreateTask10AuthorityArchiveDependencies = {
+  execFile?: (
+    command: string,
+    args: readonly string[],
+    options: {
+      cwd: string;
+      shell: false;
+      env: NodeJS.ProcessEnv;
+      maxBuffer: number;
+      timeout: number;
+      encoding?: 'buffer';
+    },
+  ) => Uint8Array;
+  env?: NodeJS.ProcessEnv;
+};
+
+export interface Task10AuthorityEvidenceFileStat {
+  isFile(): boolean;
+  size: number;
+  dev: number;
+  ino: number;
+}
+
+export interface Task10AuthorityEvidenceIdentityStat {
+  dev: number;
+  ino: number;
+}
+
+export type Task10AuthorityEvidenceOpenFn = (filePath: string, flags: number) => number;
+export type Task10AuthorityEvidenceCloseFn = (descriptor: number) => void;
+export type Task10AuthorityEvidenceFstatFn = (descriptor: number) => Task10AuthorityEvidenceFileStat;
+export type Task10AuthorityEvidenceRealpathFn = (filePath: string) => string;
+export type Task10AuthorityEvidenceStatFn = (filePath: string) => Task10AuthorityEvidenceIdentityStat;
+export type Task10AuthorityEvidenceReadFn = (descriptor: number) => Uint8Array;
+
+export interface ReadTask10AuthorityEvidenceFileDependencies {
+  openSync?: Task10AuthorityEvidenceOpenFn;
+  closeSync?: Task10AuthorityEvidenceCloseFn;
+  fstatSync?: Task10AuthorityEvidenceFstatFn;
+  realpathSync?: Task10AuthorityEvidenceRealpathFn;
+  statSync?: Task10AuthorityEvidenceStatFn;
+  readFileSync?: Task10AuthorityEvidenceReadFn;
+}
 
 export interface VerifyTask10ClientReproducibilityArgs {
   privateInput: string;
@@ -931,6 +995,81 @@ function readBoundedRegularFileSync(filePath: string, maxBytes: number): Uint8Ar
   }
 }
 
+export function readTask10AuthorityEvidenceFile(
+  filePath: string,
+  dependencies: ReadTask10AuthorityEvidenceFileDependencies = {},
+): Task10EvidenceFile {
+  const resolvedPath = path.resolve(filePath);
+  let descriptor: number | null = null;
+  const openSyncDependency = dependencies.openSync ?? openSync;
+  const closeSyncDependency = dependencies.closeSync ?? closeSync;
+  const fstatSyncDependency = dependencies.fstatSync ?? fstatSync;
+  const realpathSyncDependency = dependencies.realpathSync ?? realpathSync;
+  const statSyncDependency = dependencies.statSync ?? statSync;
+  const readFileSyncDependency = dependencies.readFileSync ?? readFileSync;
+
+  try {
+    descriptor = openSyncDependency(resolvedPath, fsConstants.O_RDONLY | fsConstants.O_NOFOLLOW);
+    const initialStats = fstatSyncDependency(descriptor);
+    if (!initialStats.isFile() || initialStats.size > MAX_AUTHORITY_FILE_BYTES) {
+      throw new Task10ExpectedEvidenceAccessError('unreadable');
+    }
+
+    const realPath = realpathSyncDependency(resolvedPath);
+    const realStats = statSyncDependency(realPath);
+    if (realStats.dev !== initialStats.dev || realStats.ino !== initialStats.ino) {
+      throw new Task10ExpectedEvidenceAccessError('unreadable');
+    }
+
+    const bytes = new Uint8Array(readFileSyncDependency(descriptor));
+    const finalStats = fstatSyncDependency(descriptor);
+    if (!finalStats.isFile()
+      || finalStats.dev !== initialStats.dev
+      || finalStats.ino !== initialStats.ino
+      || finalStats.size !== initialStats.size
+      || bytes.byteLength !== initialStats.size) {
+      throw new Task10ExpectedEvidenceAccessError('unreadable');
+    }
+
+    return {
+      realPath,
+      symlinked: false,
+      sizeBytes: initialStats.size,
+      bytes,
+    };
+  } catch (error) {
+    throw mapAuthorityEvidenceAccessError(error);
+  } finally {
+    if (descriptor !== null) {
+      closeSyncDependency(descriptor);
+    }
+  }
+}
+
+export function recreateTask10AuthorityArchive(
+  request: Task10ArchiveRecreationRequest,
+  dependencies: RecreateTask10AuthorityArchiveDependencies = {},
+): Uint8Array {
+  if (request.recipe !== TASK10_AUTHORITY.coreArchiveRecipe || request.prefix !== TASK10_AUTHORITY.coreArchivePrefix) {
+    throw new Error('archive recreation request must match frozen Task 10 authority');
+  }
+
+  const recipeTokens = request.recipe.trim().split(/\s+/u);
+  if (recipeTokens[0] !== 'git' || recipeTokens.length < 2) {
+    throw new Error('archive recreation recipe must be a git archive command');
+  }
+
+  const execFile = dependencies.execFile ?? ((command, args, options) => new Uint8Array(execFileSync(command, args, options)));
+  return execFile(recipeTokens[0], recipeTokens.slice(1), {
+    cwd: request.evidenceRootPath,
+    shell: false,
+    env: buildSafeSpawnEnv(dependencies.env ?? process.env),
+    maxBuffer: SAFE_CHILD_MAX_OUTPUT_BYTES,
+    timeout: SAFE_CHILD_TIMEOUT_MS,
+    encoding: 'buffer',
+  });
+}
+
 function requireToolVersion(
   runVersionCommand: (command: string, args: readonly string[]) => string,
   command: string,
@@ -948,6 +1087,22 @@ function mapInspectionError(error: unknown): Task10ExpectedCheckoutInspectionErr
     return new Task10ExpectedCheckoutInspectionError('missing');
   }
   return new Task10ExpectedCheckoutInspectionError('unreadable');
+}
+
+function mapAuthorityEvidenceAccessError(error: unknown): Task10ExpectedEvidenceAccessError | Error {
+  if (error instanceof Task10ExpectedEvidenceAccessError) {
+    return error;
+  }
+  if (isErrnoCode(error, 'ENOENT') || isErrnoCode(error, 'ENOTDIR')) {
+    return new Task10ExpectedEvidenceAccessError('missing');
+  }
+  if (isErrnoCode(error, 'EACCES') || isErrnoCode(error, 'EPERM') || isErrnoCode(error, 'ELOOP')) {
+    return new Task10ExpectedEvidenceAccessError('unreadable');
+  }
+  if (error instanceof Error) {
+    return error;
+  }
+  return new Error('unexpected authority evidence access failure');
 }
 
 function isErrnoCode(error: unknown, code: string): boolean {
@@ -1248,7 +1403,12 @@ async function buildAuthorityBlockedScenarioRowsFromFilesystem(
 ): Promise<Task10ScenarioRow[]> {
   const bundleBytes = await readFileHandle(roots.coreBundle, (await lstat(roots.coreBundle)).size);
   const preflightBytes = await readFileHandle(roots.corePreflight, (await lstat(roots.corePreflight)).size);
-  const reasonCodes = sortUniqueStrings(['authority-verification-blocked', ...reasons.map(sanitizeAuthorityReason)]);
+  const reasonCodes = sortUniqueStrings([
+    'authority-verification-blocked',
+    ...reasons
+      .filter((reason) => reason !== 'authority-verification-blocked')
+      .map(sanitizeAuthorityReason),
+  ]);
   return [
     buildBlockedScenarioRow('session-access', TASK10_AUTHORITY.corePreflightUrl, 'POST /runtime/admin/sessions/sign-in request:session-access:001', 'admin-session-bootstrap', 'rehearsal-run-identity', 'session-access-proof', preflightBytes.handle, 'preflight', runStartedAt, reasonCodes),
     buildBlockedScenarioRow('readiness', TASK10_AUTHORITY.corePreflightUrl, 'GET /readyz request:readiness:001', 'runtime-readyz', 'runtime-identity-check', 'readiness-runtime-proof', preflightBytes.handle, 'preflight', runStartedAt, reasonCodes),
@@ -1301,20 +1461,76 @@ function sanitizeAuthorityReason(reason: string): AuthorityReasonCode {
   if (normalized.includes('bundle sha256 mismatch') || normalized.includes('bundle sha mismatch')) {
     return 'bundle-sha256-mismatch';
   }
+  if (normalized.includes('recreated core archive sha256 mismatch')) {
+    return 'bundle-sha256-mismatch';
+  }
+  if (normalized.includes('sha256 mismatch') || normalized.includes('byte count mismatch')) {
+    if (normalized.includes('preflight artifact')) {
+      return 'preflight-artifact-hash-mismatch';
+    }
+    if (normalized.includes('core execution evidence')
+      || normalized.includes('bundle manifest')
+      || normalized.includes('reusable packet wrapper')
+      || normalized.includes('selected source packet')) {
+      return 'bundle-sha256-mismatch';
+    }
+  }
   if (normalized.includes('bundle json is unreadable')) {
+    return 'bundle-json-unreadable';
+  }
+  if (normalized.includes('authority evidence json is malformed')) {
     return 'bundle-json-unreadable';
   }
   if (normalized.includes('bundle reference is malformed')) {
     return 'bundle-reference-malformed';
   }
+  if (normalized.includes('bundle manifest contains duplicate entry paths')
+    || normalized.includes('bundle manifest contains an unsafe path')) {
+    return 'bundle-reference-malformed';
+  }
   if (normalized.includes('bundle path escaped')) {
     return 'bundle-path-escaped-core-evidence-root';
+  }
+  if (normalized.includes('frozen authority path escaped core evidence root')) {
+    return 'bundle-path-escaped-core-evidence-root';
+  }
+  if (normalized.includes('real path escaped core evidence root')) {
+    if (normalized.includes('preflight artifact')) {
+      return 'preflight-artifact-path-escaped-core-evidence-root';
+    }
+    if (normalized.includes('core execution evidence')
+      || normalized.includes('bundle manifest')
+      || normalized.includes('reusable packet wrapper')
+      || normalized.includes('selected source packet')) {
+      return 'bundle-path-escaped-core-evidence-root';
+    }
   }
   if (normalized.includes('bundle repo path mismatch') || normalized.includes('bundle path mismatch')) {
     return 'bundle-path-mismatch';
   }
+  if (normalized.includes('must not be symlinked')) {
+    if (normalized.includes('preflight artifact')) {
+      return 'preflight-artifact-symlinked';
+    }
+    if (normalized.includes('core execution evidence')
+      || normalized.includes('bundle manifest')
+      || normalized.includes('reusable packet wrapper')
+      || normalized.includes('selected source packet')) {
+      return 'bundle-symlinked';
+    }
+  }
   if (normalized.includes('bundle is missing or unreadable')) {
     return 'bundle-missing-or-unreadable';
+  }
+  if (normalized.includes('core execution evidence is missing or unreadable')
+    || normalized.includes('bundle manifest is missing or unreadable')
+    || normalized.includes('reusable packet wrapper is missing or unreadable')
+    || normalized.includes('selected source packet is missing or unreadable')
+    || normalized.includes('bundle manifest entry is missing or unreadable')) {
+    return 'bundle-missing-or-unreadable';
+  }
+  if (normalized.includes('preflight artifact must not be symlinked')) {
+    return 'preflight-artifact-symlinked';
   }
   if (normalized.includes('preflight artifact hash mismatch')) {
     return 'preflight-artifact-hash-mismatch';
@@ -1337,7 +1553,7 @@ function sanitizeAuthorityReason(reason: string): AuthorityReasonCode {
   if (normalized.includes('checkout roots must not resolve to the same real path') || normalized.includes('nested or overlapping')) {
     return 'checkout-root-overlap';
   }
-  if (normalized.includes('symlinked path')) {
+  if (normalized.includes('symlinked path') || normalized.includes('checkout root must not be symlinked')) {
     return 'checkout-root-symlinked';
   }
   if (normalized.includes('checkout inspection is missing or unreadable')) {
@@ -1349,14 +1565,44 @@ function sanitizeAuthorityReason(reason: string): AuthorityReasonCode {
   if (normalized.includes('core runtime root branch mismatch')) {
     return 'core-runtime-branch-mismatch';
   }
+  if (normalized.includes('core runtime root must not be detached')) {
+    return 'core-runtime-detached-mismatch';
+  }
   if (normalized.includes('core runtime root upstream ref mismatch')) {
     return 'core-runtime-upstream-mismatch';
   }
   if (normalized.includes('core runtime root lockfile hash mismatch')) {
     return 'core-runtime-lockfile-mismatch';
   }
+  if (normalized.includes('core runtime root porcelain status mismatch')) {
+    return 'core-runtime-porcelain-mismatch';
+  }
+  if (normalized.includes('client validation root head commit mismatch')) {
+    return 'client-validation-head-mismatch';
+  }
+  if (normalized.includes('client validation root branch mismatch')) {
+    return 'client-validation-branch-mismatch';
+  }
+  if (normalized.includes('client validation root upstream ref mismatch')) {
+    return 'client-validation-upstream-mismatch';
+  }
+  if (normalized.includes('client validation root must not be detached')) {
+    return 'client-validation-detached-mismatch';
+  }
+  if (normalized.includes('client validation root porcelain status mismatch')) {
+    return 'client-validation-porcelain-mismatch';
+  }
+  if (normalized.includes('client validation root lockfile hash mismatch')) {
+    return 'client-validation-lockfile-mismatch';
+  }
   if (normalized.includes('site validation root head commit mismatch')) {
     return 'site-validation-head-mismatch';
+  }
+  if (normalized.includes('site validation root branch mismatch')) {
+    return 'site-validation-branch-mismatch';
+  }
+  if (normalized.includes('site validation root must not be detached')) {
+    return 'site-validation-detached-mismatch';
   }
   if (normalized.includes('site validation root upstream ref mismatch')) {
     return 'site-validation-upstream-mismatch';
@@ -1364,17 +1610,80 @@ function sanitizeAuthorityReason(reason: string): AuthorityReasonCode {
   if (normalized.includes('site validation root lockfile hash mismatch')) {
     return 'site-validation-lockfile-mismatch';
   }
-  if (normalized.includes('core evidence root head commit mismatch')) {
+  if (normalized.includes('site validation root porcelain status mismatch')) {
+    return 'site-validation-porcelain-mismatch';
+  }
+  if (normalized.includes('core evidence root head commit mismatch') || normalized.includes('core evidence head commit mismatch')) {
     return 'core-evidence-head-mismatch';
   }
-  if (normalized.includes('core evidence root must be detached')) {
+  if (normalized.includes('core evidence branch mismatch')) {
+    return 'core-evidence-branch-mismatch';
+  }
+  if (normalized.includes('core evidence root must be detached') || normalized.includes('core evidence must be detached')) {
     return 'core-evidence-detached-mismatch';
   }
-  if (normalized.includes('core evidence root upstream ref must be null')) {
+  if (normalized.includes('core evidence root upstream ref must be null') || normalized.includes('core evidence upstream mismatch')) {
     return 'core-evidence-upstream-mismatch';
   }
-  if (normalized.includes('core evidence root porcelain status')) {
+  if (normalized.includes('core evidence root porcelain status') || normalized.includes('core evidence porcelain status mismatch')) {
     return 'core-evidence-porcelain-mismatch';
+  }
+  if (normalized.includes('authority evidence is malformed:')
+    || normalized.includes('preflight attempt id mismatch')
+    || /^(core|client|site) repo name mismatch$/u.test(normalized)
+    || /^(core|client|site) sha mismatch$/u.test(normalized)
+    || /^(core|client|site) branch mismatch$/u.test(normalized)
+    || /^(core|client|site) upstream mismatch$/u.test(normalized)
+    || /^(core|client|site) tracked dirty mismatch$/u.test(normalized)
+    || /^(core|client|site) untracked dirty mismatch$/u.test(normalized)
+    || /^(core|client|site) detached mismatch$/u.test(normalized)
+    || /^(core|client|site) lockfile mismatch$/u.test(normalized)
+    || /^(core|client|site) package identity mismatch$/u.test(normalized)
+    || /^(core|client|site) sisyphus dependency mismatch$/u.test(normalized)
+    || normalized.includes('source marker mismatch')
+    || normalized.includes('runtime marker mismatch')
+    || normalized.includes('reset state mismatch')
+    || normalized.includes('output directory empty mismatch')
+    || normalized.includes('output directory symlink mismatch')
+    || normalized.includes('fresh business ids mismatch')
+    || normalized.includes('schema columns mismatch')
+    || normalized.includes('bootstrap marker mismatch')
+    || normalized.includes('scenario marker mismatch')
+    || normalized.includes('provider fixture mismatch')
+    || normalized.includes('provider protocol mismatch')
+    || normalized.includes('compose project mismatch')
+    || normalized.includes('container names mismatch')
+    || normalized.includes('runtime ports mismatch')
+    || normalized.includes('network identity mismatch')
+    || normalized.includes('selected source packet path mismatch')
+    || normalized.includes('selected source packet sha mismatch')
+    || normalized.includes('reusable packet wrapper source refs mismatch')
+    || normalized.includes('reusable packet wrapper embedded artifact hash mismatch')
+    || normalized.includes('reusable packet wrapper selected reusable refs mismatch')) {
+    return 'preflight-authority-facts-invalid';
+  }
+  if (normalized.includes('execution evidence attempt mismatch')
+    || normalized.includes('execution evidence result mismatch')
+    || normalized.includes('execution evidence scope mismatch')
+    || normalized.includes('execution evidence authority effect mismatch')
+    || normalized.includes('execution evidence release effect mismatch')
+    || normalized.includes('execution evidence proof class mismatch')
+    || normalized.includes('execution evidence preflight path mismatch')
+    || normalized.includes('execution evidence preflight hash mismatch')
+    || normalized.includes('execution evidence frozen identity mismatch')
+    || normalized.includes('execution evidence mutable evidence mismatch')
+    || normalized.includes('execution evidence secret scan status mismatch')
+    || normalized.includes('execution evidence secret scan finding count mismatch')
+    || normalized.includes('execution evidence secret scan scanned artifact hashes mismatch')
+    || normalized.includes('execution evidence run artifact count mismatch')
+    || normalized.includes('execution evidence duplicate mode mismatch')
+    || normalized.includes('execution evidence success-001 path mismatch')
+    || normalized.includes('execution evidence recovery-001 path mismatch')
+    || normalized.includes('execution evidence success-002-reuse path mismatch')
+    || normalized.includes('execution evidence success-001 hash mismatch')
+    || normalized.includes('execution evidence recovery-001 hash mismatch')
+    || normalized.includes('execution evidence success-002-reuse hash mismatch')) {
+    return 'execution-evidence-invalid';
   }
   return 'unknown-authority-blocked';
 }
@@ -1390,14 +1699,17 @@ async function defaultVerifyTask10AuthorityWrapper(
   input: VerifyTask10AuthorityInput,
 ): Promise<Task10AuthorityVerificationResult> {
   const authorityDependencies: Task10AuthorityVerifierDependencies = {
-    readFile(filePath) {
-      return readBoundedRegularFileSync(filePath, MAX_AUTHORITY_FILE_BYTES);
-    },
     hashBytes(bytes) {
       return hashBytes(bytes);
     },
     inspectCheckout(rootPath) {
       return inspectTask10Checkout(rootPath);
+    },
+    readEvidenceFile(filePath) {
+      return readTask10AuthorityEvidenceFile(filePath);
+    },
+    recreateArchive(request) {
+      return recreateTask10AuthorityArchive(request);
     },
   };
   return verifyTask10Authority(input, authorityDependencies);

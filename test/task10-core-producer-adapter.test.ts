@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { chmod, mkdtemp, mkdir, readFile, readdir, realpath, rm, stat, writeFile } from 'node:fs/promises';
+import { chmod, lstat, mkdtemp, mkdir, readFile, readdir, realpath, rm, stat, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { PassThrough } from 'node:stream';
@@ -12,6 +12,7 @@ import {
   buildTask10PackageIdentity,
   buildCoreProducerInvocationPlan,
   createInMemoryDiagnosticPersistence,
+  validateSelectedReusableSourcePacketPath,
   runTask10CoreProducer,
   type Task10CheckoutInspection,
 } from '../scripts/task10/core-producer-adapter.ts';
@@ -38,7 +39,7 @@ const SHARED_NON_CLAIMS = [
   'not_release_truth',
 ] as const;
 const REUSABLE_SOURCE_REFS = [
-  'core:97e2fbe3934ea821daf654afa0adaef2c3e16077:docs/org/review-records/artifacts/2026-07-15-cn-vn-industrial-chemical-approved-reusable-asset-packet.json:53f99c0f94f2ec7a388a124bf0bc0969d4cf3b054123b8c7f4693ea1dae67093',
+  `core:${TASK10_AUTHORITY.coreRuntimeSha}:${TASK10_AUTHORITY.selectedSourcePacketPath}:${TASK10_AUTHORITY.selectedSourcePacketSha256}`,
 ] as const;
 const REUSABLE_REFS = [
   'business-method-atom:method-1',
@@ -47,17 +48,46 @@ const REUSABLE_REFS = [
   'evidence-shape:success-001',
 ] as const;
 const RUN_IDS = {
-  success: 'run-success-001',
-  recovery: 'run-recovery-001',
-  reuse: 'run-success-002-reuse',
+  success: 'run:success-001',
+  recovery: 'run:recovery-001',
+  reuse: 'run:success-002-reuse',
+} as const;
+const SHARED_READBACK_IDENTITY = {
+  tenantId: 'tenant:001',
+  ownerCompanyId: 'company:rehearsal-shared',
+  operatorActorId: 'actor:rehearsal-shared',
+  authorityRef: 'authority:rehearsal-shared',
 } as const;
 const COMPOSE_PROJECT = `bidvia-task10-${TASK10_AUTHORITY.attemptId}`;
 
 type JsonRecord = Record<string, unknown>;
 type Graph = { inputFiles: Record<string, string>; outputFiles: Record<string, string> };
 
+function expectSelectedSourcePacketPathLiteral(
+  value: typeof TASK10_AUTHORITY.selectedSourcePacketPath,
+): typeof TASK10_AUTHORITY.selectedSourcePacketPath {
+  return value;
+}
+
 function sha256(value: string): string {
   return createHash('sha256').update(value).digest('hex');
+}
+
+function compareCodeUnits(left: string, right: string): number {
+  return left < right ? -1 : left > right ? 1 : 0;
+}
+
+function isLexicallySorted(values: readonly string[]): boolean {
+  for (let index = 1; index < values.length; index += 1) {
+    if (compareCodeUnits(values[index - 1]!, values[index]!) > 0) {
+      return false;
+    }
+  }
+  return true;
+}
+
+function groupForSourceClass(result: { evidence: { groups: Array<{ sourceClass: string; handles: string[]; attestations: Array<{ handle: string; sourceClass: string }> }> } }, sourceClass: string) {
+  return result.evidence.groups.find((group) => group.sourceClass === sourceClass);
 }
 
 function buildInspection(kind: 'core' | 'client' | 'site', overrides: Partial<Task10CheckoutInspection> = {}): Task10CheckoutInspection {
@@ -137,7 +167,7 @@ function buildScenarioRow(runId: string, suffix: string): JsonRecord {
     proof_class: `proof:${suffix}`,
     evidence_refs: [`evidence:${suffix}`],
     occurred_at: SHARED_RECORDED_AT,
-    run_identity_ref: `run-identity:${runId}`,
+    run_identity_ref: `run:${runId}:1`,
   };
 }
 
@@ -213,6 +243,50 @@ function buildSuccessExecutionInput(overrides: Partial<JsonRecord> = {}): JsonRe
     execution_result: executionResult,
     ...overrides,
   };
+}
+
+function buildDescendingSuccessGroupOverrides(): {
+  successExecutionInput: JsonRecord;
+  successMaterializedRun: JsonRecord;
+  successReadback: JsonRecord;
+  unsortedHandles: string[];
+  sortedHandles: string[];
+} {
+  for (let executionNonce = 1; executionNonce <= 40; executionNonce += 1) {
+    const executionResult = {
+      ...(buildSuccessExecutionInput().execution_result as JsonRecord),
+      audit_ref: `audit:success-001:${executionNonce}`,
+    };
+    const successExecutionInput = buildSuccessExecutionInput({
+      execution_result: executionResult,
+      artifact_hash: sha256(JSON.stringify({ mode: 'success-001', execution_result: executionResult })),
+    });
+    for (let materializedNonce = 1; materializedNonce <= 40; materializedNonce += 1) {
+      const successMaterializedRun = buildSuccessMaterializedRun({
+        audit_ref: `audit:success-001:${materializedNonce}`,
+      });
+      for (let readbackNonce = 1; readbackNonce <= 40; readbackNonce += 1) {
+        const successReadback = buildPassedReadback('success-001', RUN_IDS.success, {
+          readback_ref: `readback:success-001:${readbackNonce}`,
+        });
+        const unsortedHandles = [
+          `sha256:${sha256(JSON.stringify(successExecutionInput))}`,
+          `sha256:${sha256(JSON.stringify(successMaterializedRun))}`,
+          `sha256:${sha256(JSON.stringify(successReadback))}`,
+        ];
+        if (!isLexicallySorted(unsortedHandles)) {
+          return {
+            successExecutionInput,
+            successMaterializedRun,
+            successReadback,
+            unsortedHandles,
+            sortedHandles: [...unsortedHandles].sort(compareCodeUnits),
+          };
+        }
+      }
+    }
+  }
+  throw new Error('unable to synthesize unsorted success group handles');
 }
 
 function buildRecoveryExecutionInput(overrides: Partial<JsonRecord> = {}): JsonRecord {
@@ -297,7 +371,7 @@ function buildPreflightArtifact(overrides: Partial<JsonRecord> = {}): JsonRecord
         tracked_dirty: false,
         untracked_dirty: false,
         detached: false,
-        lockfile_hash: `sha256:${TASK10_AUTHORITY.lockfileSha256.core}`,
+        lockfile_hash: TASK10_AUTHORITY.lockfileSha256.core,
         package_identity: TASK10_AUTHORITY.packageIdentities.core,
         contains_sisyphus_dependency: false,
       },
@@ -309,7 +383,7 @@ function buildPreflightArtifact(overrides: Partial<JsonRecord> = {}): JsonRecord
         tracked_dirty: false,
         untracked_dirty: false,
         detached: false,
-        lockfile_hash: `sha256:${TASK10_AUTHORITY.lockfileSha256.client}`,
+        lockfile_hash: TASK10_AUTHORITY.lockfileSha256.client,
         package_identity: TASK10_AUTHORITY.packageIdentities.client,
         contains_sisyphus_dependency: false,
       },
@@ -321,7 +395,7 @@ function buildPreflightArtifact(overrides: Partial<JsonRecord> = {}): JsonRecord
         tracked_dirty: false,
         untracked_dirty: false,
         detached: false,
-        lockfile_hash: `sha256:${TASK10_AUTHORITY.lockfileSha256.site}`,
+        lockfile_hash: TASK10_AUTHORITY.lockfileSha256.site,
         package_identity: TASK10_AUTHORITY.packageIdentities.site,
         contains_sisyphus_dependency: false,
       },
@@ -476,17 +550,17 @@ function buildReuseMaterializedRun(overrides: Partial<JsonRecord> = {}): JsonRec
   };
 }
 
-function buildPassedReadback(mode: 'success-001' | 'recovery-001' | 'success-002-reuse', runId: string, actorRef: string, overrides: Partial<JsonRecord> = {}): JsonRecord {
+function buildPassedReadback(mode: 'success-001' | 'recovery-001' | 'success-002-reuse', runId: string, overrides: Partial<JsonRecord> = {}): JsonRecord {
   return {
     result: 'passed',
     attempt_id: TASK10_AUTHORITY.attemptId,
     run_id: runId,
     mode,
     readback_ref: `readback:${mode}`,
-    tenant_id: 'tenant:001',
-    owner_company_id: 'company:001',
-    operator_actor_id: actorRef,
-    authority_ref: 'authority:001',
+    tenant_id: SHARED_READBACK_IDENTITY.tenantId,
+    owner_company_id: SHARED_READBACK_IDENTITY.ownerCompanyId,
+    operator_actor_id: SHARED_READBACK_IDENTITY.operatorActorId,
+    authority_ref: SHARED_READBACK_IDENTITY.authorityRef,
     ...overrides,
   };
 }
@@ -537,11 +611,11 @@ function buildGraph(overrides: GraphOverrides = {}): Graph {
   const outputFiles: Record<string, string> = {
     'preflight-artifact.json': JSON.stringify(overrides.preflightArtifact ?? buildPreflightArtifact()),
     'success-001/materialize-output/materialized-run.json': JSON.stringify(overrides.successMaterializedRun ?? buildSuccessMaterializedRun()),
-    'success-001/readback.json': JSON.stringify(overrides.successReadback ?? buildPassedReadback('success-001', RUN_IDS.success, 'actor:success-001')),
+    'success-001/readback.json': JSON.stringify(overrides.successReadback ?? buildPassedReadback('success-001', RUN_IDS.success)),
     'recovery-001/materialize-output/materialized-run.json': JSON.stringify(overrides.recoveryMaterializedRun ?? buildRecoveryMaterializedRun()),
-    'recovery-001/readback.json': JSON.stringify(overrides.recoveryReadback ?? buildPassedReadback('recovery-001', RUN_IDS.recovery, 'actor:recovery-001')),
+    'recovery-001/readback.json': JSON.stringify(overrides.recoveryReadback ?? buildPassedReadback('recovery-001', RUN_IDS.recovery)),
     'success-002-reuse/materialize-output/materialized-run.json': JSON.stringify(overrides.reuseMaterializedRun ?? buildReuseMaterializedRun()),
-    'success-002-reuse/readback.json': JSON.stringify(overrides.reuseReadback ?? buildPassedReadback('success-002-reuse', RUN_IDS.reuse, 'actor:success-002-reuse')),
+    'success-002-reuse/readback.json': JSON.stringify(overrides.reuseReadback ?? buildPassedReadback('success-002-reuse', RUN_IDS.reuse)),
   };
   if (overrides.inputRename) {
     inputFiles[overrides.inputRename.to] = inputFiles[overrides.inputRename.from]!;
@@ -603,6 +677,9 @@ async function createHarness() {
   for (const directory of [coreRoot, clientRoot, siteRoot, privateInputRoot, privateOutputRoot]) {
     await mkdir(directory, { recursive: true, mode: 0o700 });
   }
+  const selectedPacketPath = path.join(coreRoot, ...TASK10_AUTHORITY.selectedSourcePacketPath.split('/'));
+  await mkdir(path.dirname(selectedPacketPath), { recursive: true, mode: 0o700 });
+  await writeFile(selectedPacketPath, '{"selected":true}', 'utf8');
   return {
     args: { coreRoot, clientRoot, siteRoot, privateInputRoot, privateOutputRoot },
     async cleanup() {
@@ -663,6 +740,90 @@ test('buildCoreProducerInvocationPlan uses the exact frozen parser flag names an
   }
 });
 
+test('buildCoreProducerInvocationPlan preserves the frozen selected source packet literal type after runtime path validation', async () => {
+  const harness = await createHarness();
+  try {
+    const plan = await buildCoreProducerInvocationPlan(harness.args);
+    const selectedSourcePacketPath = expectSelectedSourcePacketPathLiteral(plan.selectedReusableSourcePacketPath);
+    assert.equal(selectedSourcePacketPath, TASK10_AUTHORITY.selectedSourcePacketPath);
+  } finally {
+    await harness.cleanup();
+  }
+});
+
+test('validateSelectedReusableSourcePacketPath accepts only canonical POSIX repo-relative authority identifiers', async () => {
+  const harness = await createHarness();
+  try {
+    const selectedSourcePacketPath = expectSelectedSourcePacketPathLiteral(
+      await validateSelectedReusableSourcePacketPath(harness.args.coreRoot, TASK10_AUTHORITY.selectedSourcePacketPath),
+    );
+    assert.equal(selectedSourcePacketPath, TASK10_AUTHORITY.selectedSourcePacketPath);
+
+    await assert.rejects(
+      validateSelectedReusableSourcePacketPath(harness.args.coreRoot, '/absolute/path.json', 'selectedReusableSourcePacketPath'),
+      /canonical posix repo path/i,
+    );
+    await assert.rejects(
+      validateSelectedReusableSourcePacketPath(harness.args.coreRoot, 'C:\\absolute\\path.json', 'selectedReusableSourcePacketPath'),
+      /canonical posix repo path/i,
+    );
+    await assert.rejects(
+      validateSelectedReusableSourcePacketPath(harness.args.coreRoot, '.', 'selectedReusableSourcePacketPath'),
+      /canonical posix repo path|resolve within repo root/i,
+    );
+    await assert.rejects(
+      validateSelectedReusableSourcePacketPath(harness.args.coreRoot, '..', 'selectedReusableSourcePacketPath'),
+      /canonical posix repo path|resolve within repo root/i,
+    );
+    await assert.rejects(
+      validateSelectedReusableSourcePacketPath(harness.args.coreRoot, 'docs/../docs/org/review-records/artifacts/2026-07-15-cn-vn-industrial-chemical-approved-reusable-asset-packet.json', 'selectedReusableSourcePacketPath'),
+      /canonical posix repo path|resolve within repo root/i,
+    );
+    await assert.rejects(
+      validateSelectedReusableSourcePacketPath(harness.args.coreRoot, 'docs//org/review-records/artifacts/2026-07-15-cn-vn-industrial-chemical-approved-reusable-asset-packet.json', 'selectedReusableSourcePacketPath'),
+      /canonical posix repo path|resolve within repo root/i,
+    );
+    await assert.rejects(
+      validateSelectedReusableSourcePacketPath(harness.args.coreRoot, 'docs\\org\\review-records\\artifacts\\2026-07-15-cn-vn-industrial-chemical-approved-reusable-asset-packet.json', 'selectedReusableSourcePacketPath'),
+      /canonical posix repo path|resolve within repo root/i,
+    );
+  } finally {
+    await harness.cleanup();
+  }
+});
+
+test('validateSelectedReusableSourcePacketPath rejects selected packet symlink escapes before spawn', async () => {
+  const harness = await createHarness();
+  const selectedPacketPath = path.join(harness.args.coreRoot, ...TASK10_AUTHORITY.selectedSourcePacketPath.split('/'));
+  const externalPacketPath = path.join(path.dirname(harness.args.coreRoot), 'selected-packet-outside.json');
+  try {
+    await rm(selectedPacketPath, { force: true });
+    await writeFile(externalPacketPath, '{"selected":false}', 'utf8');
+    await symlink(externalPacketPath, selectedPacketPath);
+
+    await assert.rejects(
+      validateSelectedReusableSourcePacketPath(harness.args.coreRoot, TASK10_AUTHORITY.selectedSourcePacketPath),
+      /symlink|regular file/i,
+    );
+  } finally {
+    await rm(externalPacketPath, { force: true });
+    await harness.cleanup();
+  }
+});
+
+test('buildCoreProducerInvocationPlan keeps the selected packet as a regular non-symlink file inside the Core root', async () => {
+  const harness = await createHarness();
+  try {
+    const plan = await buildCoreProducerInvocationPlan(harness.args);
+    const selectedPacketPath = path.join(harness.args.coreRoot, ...plan.selectedReusableSourcePacketPath.split('/'));
+    const selectedPacketStat = await lstat(selectedPacketPath);
+    assert.equal(selectedPacketStat.isSymbolicLink(), false);
+    assert.equal(selectedPacketStat.isFile(), true);
+  } finally {
+    await harness.cleanup();
+  }
+});
+
 test('buildTask10PackageIdentity matches frozen Core missing-version normalization and preserves explicit versions', () => {
   assert.equal(
     buildTask10PackageIdentity({ name: 'bidvia-d2-ws6-t1-runtime' }),
@@ -719,28 +880,65 @@ test('buildCoreProducerInvocationPlan never exposes token or ambient env in publ
   }
 });
 
-test('runTask10CoreProducer preserves the reportable-blocked contract probe and exposes only opaque evidence handles', async () => {
+test('runTask10CoreProducer accepts valid external private roots, invokes the producer once, and preserves the frozen attempt-007 authority markers', async () => {
   const harness = await createHarness();
   const originalToken = process.env[TOKEN_ENV_NAME];
   process.env[TOKEN_ENV_NAME] = 'super-secret-token';
   try {
+    const graph = buildGraph();
+    const plans = [] as Awaited<ReturnType<typeof buildCoreProducerInvocationPlan>>[];
     const result = await runTask10CoreProducer(harness.args, {
       inspectCheckout: async (rootPath) => rootPath === harness.args.coreRoot ? buildInspection('core') : rootPath === harness.args.clientRoot ? buildInspection('client') : buildInspection('site'),
-      persistAndVerifyDiagnostic: createInMemoryDiagnosticPersistence('cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc'),
+      runProducer: async (plan) => {
+        plans.push(plan);
+        await writeGraph(harness.args.privateInputRoot, graph.inputFiles);
+        await writeGraph(harness.args.privateOutputRoot, graph.outputFiles);
+        return { exitCode: 0 };
+      },
     });
-    assert.equal(result.status, 'reportable-blocked');
-    assert.deepEqual(result.reasonCodes, ['core-producer-private-root-contract-unsatisfied']);
-    assert.ok(result.publicDiagnostic);
-    assert.deepEqual(result.evidence.groups, [{
-      sourceClass: 'producer-contract-probe',
-      handles: ['sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc'],
-      attestations: [{
-        handle: 'sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc',
-        sourceClass: 'producer-contract-probe',
-        verified: true,
-        verifiedAt: result.publicDiagnostic.timestamp,
-      }],
-    }]);
+    assert.equal(result.status, 'completed');
+    assert.equal(plans.length, 1);
+    assert.equal(plans[0]?.cwd, harness.args.coreRoot);
+    assert.equal(plans[0]?.selectedReusableSourcePacketPath, TASK10_AUTHORITY.selectedSourcePacketPath);
+    assert.equal(plans[0]?.selectedReusableSourcePacketSha256, TASK10_AUTHORITY.selectedSourcePacketSha256);
+    assert.ok(plans[0]);
+    assert.ok(!path.isAbsolute(plans[0].selectedReusableSourcePacketPath));
+    assert.doesNotMatch(plans[0].selectedReusableSourcePacketPath, /^\.\.(?:\/|$)/);
+    assert.deepEqual(parseRunnerStyleFlags(plans[0].args), [
+      ['--core-root', harness.args.coreRoot],
+      ['--core-sha', TASK10_AUTHORITY.coreRuntimeSha],
+      ['--core-branch', 'main'],
+      ['--core-upstream', 'origin/main'],
+      ['--core-lockfile-hash', TASK10_AUTHORITY.lockfileSha256.core],
+      ['--core-package-identity', TASK10_AUTHORITY.packageIdentities.core],
+      ['--client-root', harness.args.clientRoot],
+      ['--client-sha', TASK10_AUTHORITY.clientBaselineSha],
+      ['--client-branch', 'main'],
+      ['--client-upstream', 'origin/main'],
+      ['--client-lockfile-hash', TASK10_AUTHORITY.lockfileSha256.client],
+      ['--client-package-identity', TASK10_AUTHORITY.packageIdentities.client],
+      ['--site-root', harness.args.siteRoot],
+      ['--site-sha', TASK10_AUTHORITY.siteBaselineSha],
+      ['--site-branch', 'main'],
+      ['--site-upstream', 'origin/main'],
+      ['--site-lockfile-hash', TASK10_AUTHORITY.lockfileSha256.site],
+      ['--site-package-identity', TASK10_AUTHORITY.packageIdentities.site],
+      ['--attempt-id', TASK10_AUTHORITY.attemptId],
+      ['--input-evidence-root', harness.args.privateInputRoot],
+      ['--output-root', harness.args.privateOutputRoot],
+      ['--selected-reusable-source-packet', TASK10_AUTHORITY.selectedSourcePacketPath],
+      ['--selected-reusable-source-packet-sha256', TASK10_AUTHORITY.selectedSourcePacketSha256],
+      ['--source-main-commit-marker', TASK10_AUTHORITY.runtimeMarkers.sourceMainCommitMarker],
+      ['--runtime-reported-version-marker', TASK10_AUTHORITY.runtimeMarkers.runtimeReportedVersionMarker],
+      ['--bootstrap-package-version-marker', TASK10_AUTHORITY.runtimeMarkers.bootstrapPackageVersionMarker],
+      ['--scenario-package-version-marker', TASK10_AUTHORITY.runtimeMarkers.scenarioPackageVersionMarker],
+      ['--provider-protocol-version', TASK10_AUTHORITY.providerProtocolVersion],
+      ['--postgres-port', String(TASK10_AUTHORITY.ports.postgres)],
+      ['--runtime-port', String(TASK10_AUTHORITY.ports.runtime)],
+      ['--operator-port', String(TASK10_AUTHORITY.ports.operator)],
+      ['--fixture-port', String(TASK10_AUTHORITY.ports.fixture)],
+      ['--provider-fixture-identity', TASK10_AUTHORITY.providerFixtureIdentity],
+    ]);
   } finally {
     if (originalToken === undefined) {
       delete process.env[TOKEN_ENV_NAME];
@@ -751,17 +949,21 @@ test('runTask10CoreProducer preserves the reportable-blocked contract probe and 
   }
 });
 
-test('runTask10CoreProducer can still reach the reportable contract probe with token absent because default checkout inspection stays token-free', async () => {
+test('runTask10CoreProducer fails closed on missing token before producer invocation even when external private roots are otherwise accepted', async () => {
   const harness = await createHarness();
   const originalToken = process.env[TOKEN_ENV_NAME];
   delete process.env[TOKEN_ENV_NAME];
+  let runProducerCalls = 0;
   try {
     const result = await runTask10CoreProducer(harness.args, {
       inspectCheckout: async (rootPath) => rootPath === harness.args.coreRoot ? buildInspection('core') : rootPath === harness.args.clientRoot ? buildInspection('client') : buildInspection('site'),
-      persistAndVerifyDiagnostic: createInMemoryDiagnosticPersistence('cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc'),
+      runProducer: async () => {
+        runProducerCalls += 1;
+        return { exitCode: 0 };
+      },
     });
-    assert.equal(result.status, 'reportable-blocked');
-    assert.deepEqual(result.reasonCodes, ['core-producer-private-root-contract-unsatisfied']);
+    assert.deepEqual(result, { status: 'tooling-failure', errorCode: 'adapter-input-validation-failed' });
+    assert.equal(runProducerCalls, 0);
   } finally {
     if (originalToken !== undefined) {
       process.env[TOKEN_ENV_NAME] = originalToken;
@@ -778,7 +980,7 @@ test('runTask10CoreProducer returns completed with 13 whole-file handles and no 
     const graph = buildGraph();
     const result = await runTask10CoreProducer(harness.args, {
       inspectCheckout: async (rootPath) => rootPath === harness.args.coreRoot ? buildInspection('core') : rootPath === harness.args.clientRoot ? buildInspection('client') : buildInspection('site'),
-      probePrivateRootContract: async () => null,
+      probePrivateRootContract: async () => ({ status: 'accepted' }),
       runProducer: async () => {
         await writeGraph(harness.args.privateInputRoot, graph.inputFiles);
         await writeGraph(harness.args.privateOutputRoot, graph.outputFiles);
@@ -821,6 +1023,44 @@ test('runTask10CoreProducer returns completed with 13 whole-file handles and no 
   }
 });
 
+test('runTask10CoreProducer canonicalizes multi-file evidence groups by handle while keeping attestation alignment', async () => {
+  const harness = await createHarness();
+  const originalToken = process.env[TOKEN_ENV_NAME];
+  process.env[TOKEN_ENV_NAME] = 'super-secret-token';
+  try {
+    const successOverrides = buildDescendingSuccessGroupOverrides();
+    const graph = buildGraph({
+      successExecutionInput: successOverrides.successExecutionInput,
+      successMaterializedRun: successOverrides.successMaterializedRun,
+      successReadback: successOverrides.successReadback,
+    });
+    const result = await runTask10CoreProducer(harness.args, {
+      inspectCheckout: async (rootPath) => rootPath === harness.args.coreRoot ? buildInspection('core') : rootPath === harness.args.clientRoot ? buildInspection('client') : buildInspection('site'),
+      probePrivateRootContract: async () => ({ status: 'accepted' }),
+      runProducer: async () => {
+        await writeGraph(harness.args.privateInputRoot, graph.inputFiles);
+        await writeGraph(harness.args.privateOutputRoot, graph.outputFiles);
+        return { exitCode: 0 };
+      },
+    });
+
+    assert.equal(result.status, 'completed');
+    const successGroup = result.evidence.groups.find((group) => group.sourceClass === 'success-001');
+    assert.ok(successGroup);
+    assert.notDeepEqual(successOverrides.unsortedHandles, successOverrides.sortedHandles, 'precondition: synthesized handles must start unsorted');
+    assert.deepEqual(successGroup.handles, successOverrides.sortedHandles);
+    assert.deepEqual(successGroup.attestations.map((attestation) => attestation.handle), successGroup.handles);
+    assert.ok(successGroup.attestations.every((attestation) => attestation.sourceClass === 'success-001'));
+  } finally {
+    if (originalToken === undefined) {
+      delete process.env[TOKEN_ENV_NAME];
+    } else {
+      process.env[TOKEN_ENV_NAME] = originalToken;
+    }
+    await harness.cleanup();
+  }
+});
+
 test('runTask10CoreProducer rejects prior surrogate runtime/reset/proof/lock shapes as tooling failures', async () => {
   const originalToken = process.env[TOKEN_ENV_NAME];
   process.env[TOKEN_ENV_NAME] = 'super-secret-token';
@@ -839,8 +1079,8 @@ test('runTask10CoreProducer rejects prior surrogate runtime/reset/proof/lock sha
         graph: buildGraph({ reusablePacket: { ...buildReusablePacket(), proof_class: 'merged-main-reproducibility-reusable-packet' } }),
       },
       {
-        name: 'plain preflight lock hash',
-        graph: buildGraph({ preflightArtifact: { ...buildPreflightArtifact(), repo_identity: { ...buildPreflightArtifact().repo_identity as JsonRecord, core: { ...((buildPreflightArtifact().repo_identity as JsonRecord).core as JsonRecord), lockfile_hash: TASK10_AUTHORITY.lockfileSha256.core } } } }),
+        name: 'prefixed preflight lock hash',
+        graph: buildGraph({ preflightArtifact: { ...buildPreflightArtifact(), repo_identity: { ...buildPreflightArtifact().repo_identity as JsonRecord, core: { ...((buildPreflightArtifact().repo_identity as JsonRecord).core as JsonRecord), lockfile_hash: `sha256:${TASK10_AUTHORITY.lockfileSha256.core}` } } } }),
       },
     ];
     for (const entry of cases) {
@@ -848,7 +1088,7 @@ test('runTask10CoreProducer rejects prior surrogate runtime/reset/proof/lock sha
       try {
         const result = await runTask10CoreProducer(harness.args, {
           inspectCheckout: async (rootPath) => rootPath === harness.args.coreRoot ? buildInspection('core') : rootPath === harness.args.clientRoot ? buildInspection('client') : buildInspection('site'),
-          probePrivateRootContract: async () => null,
+          probePrivateRootContract: async () => ({ status: 'accepted' }),
           runProducer: async () => {
             await writeGraph(harness.args.privateInputRoot, entry.graph.inputFiles);
             await writeGraph(harness.args.privateOutputRoot, entry.graph.outputFiles);
@@ -895,7 +1135,7 @@ test('runTask10CoreProducer rejects coherently altered reusable refs even when d
     });
     const result = await runTask10CoreProducer(harness.args, {
       inspectCheckout: async (rootPath) => rootPath === harness.args.coreRoot ? buildInspection('core') : rootPath === harness.args.clientRoot ? buildInspection('client') : buildInspection('site'),
-      probePrivateRootContract: async () => null,
+      probePrivateRootContract: async () => ({ status: 'accepted' }),
       runProducer: async () => {
         await writeGraph(harness.args.privateInputRoot, graph.inputFiles);
         await writeGraph(harness.args.privateOutputRoot, graph.outputFiles);
@@ -923,7 +1163,7 @@ test('runTask10CoreProducer rejects altered reusable source provenance even with
     });
     const result = await runTask10CoreProducer(harness.args, {
       inspectCheckout: async (rootPath) => rootPath === harness.args.coreRoot ? buildInspection('core') : rootPath === harness.args.clientRoot ? buildInspection('client') : buildInspection('site'),
-      probePrivateRootContract: async () => null,
+      probePrivateRootContract: async () => ({ status: 'accepted' }),
       runProducer: async () => {
         await writeGraph(harness.args.privateInputRoot, graph.inputFiles);
         await writeGraph(harness.args.privateOutputRoot, graph.outputFiles);
@@ -955,7 +1195,7 @@ test('runTask10CoreProducer returns validated partial evidence for blocked prefl
     delete graph.outputFiles['success-002-reuse/readback.json'];
     const result = await runTask10CoreProducer(harness.args, {
       inspectCheckout: async (rootPath) => rootPath === harness.args.coreRoot ? buildInspection('core') : rootPath === harness.args.clientRoot ? buildInspection('client') : buildInspection('site'),
-      probePrivateRootContract: async () => null,
+      probePrivateRootContract: async () => ({ status: 'accepted' }),
       runProducer: async () => {
         await writeGraph(harness.args.privateInputRoot, graph.inputFiles);
         await writeGraph(harness.args.privateOutputRoot, graph.outputFiles);
@@ -992,7 +1232,7 @@ test('runTask10CoreProducer returns validated partial evidence for blocked succe
     delete graph.outputFiles['success-002-reuse/readback.json'];
     const result = await runTask10CoreProducer(harness.args, {
       inspectCheckout: async (rootPath) => rootPath === harness.args.coreRoot ? buildInspection('core') : rootPath === harness.args.clientRoot ? buildInspection('client') : buildInspection('site'),
-      probePrivateRootContract: async () => null,
+      probePrivateRootContract: async () => ({ status: 'accepted' }),
       runProducer: async () => {
         await writeGraph(harness.args.privateInputRoot, graph.inputFiles);
         await writeGraph(harness.args.privateOutputRoot, graph.outputFiles);
@@ -1022,7 +1262,7 @@ test('runTask10CoreProducer returns validated partial evidence for blocked recov
     delete graph.outputFiles['success-002-reuse/readback.json'];
     const result = await runTask10CoreProducer(harness.args, {
       inspectCheckout: async (rootPath) => rootPath === harness.args.coreRoot ? buildInspection('core') : rootPath === harness.args.clientRoot ? buildInspection('client') : buildInspection('site'),
-      probePrivateRootContract: async () => null,
+      probePrivateRootContract: async () => ({ status: 'accepted' }),
       runProducer: async () => {
         await writeGraph(harness.args.privateInputRoot, graph.inputFiles);
         await writeGraph(harness.args.privateOutputRoot, graph.outputFiles);
@@ -1050,7 +1290,7 @@ test('runTask10CoreProducer maps structurally valid recovery continuity violatio
     const graph = buildGraph({ recoveryMaterializedRun: buildRecoveryMaterializedRun({ predecessor_tenant_ref: 'tenant:other' }) });
     const result = await runTask10CoreProducer(harness.args, {
       inspectCheckout: async (rootPath) => rootPath === harness.args.coreRoot ? buildInspection('core') : rootPath === harness.args.clientRoot ? buildInspection('client') : buildInspection('site'),
-      probePrivateRootContract: async () => null,
+      probePrivateRootContract: async () => ({ status: 'accepted' }),
       persistAndVerifyDiagnostic: createInMemoryDiagnosticPersistence('dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd'),
       runProducer: async () => {
         await writeGraph(harness.args.privateInputRoot, graph.inputFiles);
@@ -1071,6 +1311,82 @@ test('runTask10CoreProducer maps structurally valid recovery continuity violatio
   }
 });
 
+test('runTask10CoreProducer canonicalizes blocked diagnostic augmentation when diagnostic handle sorts before or between existing handles', async () => {
+  const originalToken = process.env[TOKEN_ENV_NAME];
+  process.env[TOKEN_ENV_NAME] = 'super-secret-token';
+  const cases = [
+    {
+      name: 'diagnostic handle sorts before all existing handles',
+      digest: '0000000000000000000000000000000000000000000000000000000000000000',
+    },
+    {
+      name: 'diagnostic handle sorts between existing handles',
+      digest: 'dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd',
+    },
+  ] as const;
+
+  try {
+    for (const entry of cases) {
+      const harness = await createHarness();
+      try {
+        const graph = buildGraph({ recoveryMaterializedRun: buildRecoveryMaterializedRun({ predecessor_tenant_ref: 'tenant:other' }) });
+        const result = await runTask10CoreProducer(harness.args, {
+          inspectCheckout: async (rootPath) => rootPath === harness.args.coreRoot ? buildInspection('core') : rootPath === harness.args.clientRoot ? buildInspection('client') : buildInspection('site'),
+          probePrivateRootContract: async () => ({ status: 'accepted' }),
+          persistAndVerifyDiagnostic: createInMemoryDiagnosticPersistence(entry.digest),
+          runProducer: async () => {
+            await writeGraph(harness.args.privateInputRoot, graph.inputFiles);
+            await writeGraph(harness.args.privateOutputRoot, graph.outputFiles);
+            return { exitCode: 0 };
+          },
+        });
+        assert.equal(result.status, 'reportable-blocked', entry.name);
+        const recoveryGroup = groupForSourceClass(result, 'recovery-001');
+        assert.ok(recoveryGroup, entry.name);
+        assert.ok(isLexicallySorted(recoveryGroup.handles), entry.name);
+        assert.deepEqual(recoveryGroup.attestations.map((attestation) => attestation.handle), recoveryGroup.handles, entry.name);
+        assert.ok(recoveryGroup.attestations.every((attestation) => attestation.sourceClass === 'recovery-001'), entry.name);
+      } finally {
+        await harness.cleanup();
+      }
+    }
+  } finally {
+    if (originalToken === undefined) {
+      delete process.env[TOKEN_ENV_NAME];
+    } else {
+      process.env[TOKEN_ENV_NAME] = originalToken;
+    }
+  }
+});
+
+test('runTask10CoreProducer fails closed on duplicate blocked diagnostic handles in an existing group', async () => {
+  const harness = await createHarness();
+  const originalToken = process.env[TOKEN_ENV_NAME];
+  process.env[TOKEN_ENV_NAME] = 'super-secret-token';
+  try {
+    const graph = buildGraph({ recoveryMaterializedRun: buildRecoveryMaterializedRun({ predecessor_tenant_ref: 'tenant:other' }) });
+    const duplicateDigest = sha256(graph.outputFiles['recovery-001/materialize-output/materialized-run.json']!);
+    const result = await runTask10CoreProducer(harness.args, {
+      inspectCheckout: async (rootPath) => rootPath === harness.args.coreRoot ? buildInspection('core') : rootPath === harness.args.clientRoot ? buildInspection('client') : buildInspection('site'),
+      probePrivateRootContract: async () => ({ status: 'accepted' }),
+      persistAndVerifyDiagnostic: createInMemoryDiagnosticPersistence(duplicateDigest),
+      runProducer: async () => {
+        await writeGraph(harness.args.privateInputRoot, graph.inputFiles);
+        await writeGraph(harness.args.privateOutputRoot, graph.outputFiles);
+        return { exitCode: 0 };
+      },
+    });
+    assert.deepEqual(result, { status: 'tooling-failure', errorCode: 'private-diagnostic-verify-failed' });
+  } finally {
+    if (originalToken === undefined) {
+      delete process.env[TOKEN_ENV_NAME];
+    } else {
+      process.env[TOKEN_ENV_NAME] = originalToken;
+    }
+    await harness.cleanup();
+  }
+});
+
 test('runTask10CoreProducer maps structurally valid reuse distinction violations to reportable-blocked with artifact plus diagnostic evidence', async () => {
   const harness = await createHarness();
   const originalToken = process.env[TOKEN_ENV_NAME];
@@ -1079,7 +1395,7 @@ test('runTask10CoreProducer maps structurally valid reuse distinction violations
     const graph = buildGraph({ reuseMaterializedRun: buildReuseMaterializedRun({ request_ref: 'request:success-001' }) });
     const result = await runTask10CoreProducer(harness.args, {
       inspectCheckout: async (rootPath) => rootPath === harness.args.coreRoot ? buildInspection('core') : rootPath === harness.args.clientRoot ? buildInspection('client') : buildInspection('site'),
-      probePrivateRootContract: async () => null,
+      probePrivateRootContract: async () => ({ status: 'accepted' }),
       persistAndVerifyDiagnostic: createInMemoryDiagnosticPersistence('eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee'),
       runProducer: async () => {
         await writeGraph(harness.args.privateInputRoot, graph.inputFiles);
@@ -1097,6 +1413,192 @@ test('runTask10CoreProducer maps structurally valid reuse distinction violations
       process.env[TOKEN_ENV_NAME] = originalToken;
     }
     await harness.cleanup();
+  }
+});
+
+test('runTask10CoreProducer fails closed when readback identity drifts across modes for tenant company actor or authority', async () => {
+  const originalToken = process.env[TOKEN_ENV_NAME];
+  process.env[TOKEN_ENV_NAME] = 'super-secret-token';
+  const cases = [
+    {
+      name: 'tenant drift',
+      overrides: {
+        recoveryReadback: buildPassedReadback('recovery-001', RUN_IDS.recovery, { tenant_id: 'tenant:other' }),
+      },
+    },
+    {
+      name: 'company drift',
+      overrides: {
+        recoveryReadback: buildPassedReadback('recovery-001', RUN_IDS.recovery, { owner_company_id: 'company:other' }),
+      },
+    },
+    {
+      name: 'actor drift',
+      overrides: {
+        reuseReadback: buildPassedReadback('success-002-reuse', RUN_IDS.reuse, { operator_actor_id: 'actor:other' }),
+      },
+    },
+    {
+      name: 'authority drift',
+      overrides: {
+        reuseReadback: buildPassedReadback('success-002-reuse', RUN_IDS.reuse, { authority_ref: 'authority:other' }),
+      },
+    },
+  ] as const;
+
+  try {
+    for (const entry of cases) {
+      const harness = await createHarness();
+      try {
+        const graph = buildGraph(entry.overrides);
+        const result = await runTask10CoreProducer(harness.args, {
+          inspectCheckout: async (rootPath) => rootPath === harness.args.coreRoot ? buildInspection('core') : rootPath === harness.args.clientRoot ? buildInspection('client') : buildInspection('site'),
+          probePrivateRootContract: async () => ({ status: 'accepted' }),
+          runProducer: async () => {
+            await writeGraph(harness.args.privateInputRoot, graph.inputFiles);
+            await writeGraph(harness.args.privateOutputRoot, graph.outputFiles);
+            return { exitCode: 0 };
+          },
+        });
+        assert.deepEqual(result, { status: 'tooling-failure', errorCode: 'producer-artifact-invalid' }, entry.name);
+      } finally {
+        await harness.cleanup();
+      }
+    }
+  } finally {
+    if (originalToken === undefined) {
+      delete process.env[TOKEN_ENV_NAME];
+    } else {
+      process.env[TOKEN_ENV_NAME] = originalToken;
+    }
+  }
+});
+
+test('runTask10CoreProducer fails closed for obsolete hyphen run ids and cross-mode run ids', async () => {
+  const originalToken = process.env[TOKEN_ENV_NAME];
+  process.env[TOKEN_ENV_NAME] = 'super-secret-token';
+  const cases = [
+    {
+      name: 'obsolete hyphen success run id',
+      overrides: {
+        successMaterializedRun: buildSuccessMaterializedRun({ run_id: 'run-success-001' }),
+      },
+    },
+    {
+      name: 'cross-mode recovery run id',
+      overrides: {
+        recoveryReadback: buildPassedReadback('recovery-001', RUN_IDS.success),
+      },
+    },
+  ] as const;
+
+  try {
+    for (const entry of cases) {
+      const harness = await createHarness();
+      try {
+        const graph = buildGraph(entry.overrides);
+        const result = await runTask10CoreProducer(harness.args, {
+          inspectCheckout: async (rootPath) => rootPath === harness.args.coreRoot ? buildInspection('core') : rootPath === harness.args.clientRoot ? buildInspection('client') : buildInspection('site'),
+          probePrivateRootContract: async () => ({ status: 'accepted' }),
+          runProducer: async () => {
+            await writeGraph(harness.args.privateInputRoot, graph.inputFiles);
+            await writeGraph(harness.args.privateOutputRoot, graph.outputFiles);
+            return { exitCode: 0 };
+          },
+        });
+        assert.deepEqual(result, { status: 'tooling-failure', errorCode: 'producer-artifact-invalid' }, entry.name);
+      } finally {
+        await harness.cleanup();
+      }
+    }
+  } finally {
+    if (originalToken === undefined) {
+      delete process.env[TOKEN_ENV_NAME];
+    } else {
+      process.env[TOKEN_ENV_NAME] = originalToken;
+    }
+  }
+});
+
+test('runTask10CoreProducer fails closed for decorated or composite scenario run_identity_ref values', async () => {
+  const originalToken = process.env[TOKEN_ENV_NAME];
+  process.env[TOKEN_ENV_NAME] = 'super-secret-token';
+  const successExecutionResult = buildSuccessExecutionInput().execution_result as JsonRecord;
+  const recoveryExecutionResult = buildRecoveryExecutionInput().execution_result as JsonRecord;
+  const reuseExecutionResult = buildReuseExecutionInput().execution_result as JsonRecord;
+  const cases = [
+    {
+      name: 'suffix decorated run identity ref',
+      overrides: {
+        successExecutionInput: (() => {
+          const executionResult = {
+            ...successExecutionResult,
+            scenario_rows: [{ ...buildScenarioRow(RUN_IDS.success, 'success-001'), run_identity_ref: `run:${RUN_IDS.success}:1:extra` }],
+          };
+          return buildSuccessExecutionInput({
+            execution_result: executionResult,
+            artifact_hash: sha256(JSON.stringify({ mode: 'success-001', execution_result: executionResult })),
+          });
+        })(),
+      },
+    },
+    {
+      name: 'composite two-run-id identity ref',
+      overrides: {
+        recoveryExecutionInput: (() => {
+          const executionResult = {
+            ...recoveryExecutionResult,
+            scenario_rows: [{ ...buildScenarioRow(RUN_IDS.recovery, 'recovery-001'), run_identity_ref: `run:${RUN_IDS.recovery}:1|run:${RUN_IDS.success}:1` }],
+          };
+          return buildRecoveryExecutionInput({
+            execution_result: executionResult,
+            artifact_hash: sha256(JSON.stringify({ mode: 'recovery-001', execution_result: executionResult })),
+          });
+        })(),
+      },
+    },
+    {
+      name: 'unrelated prefix containing correct run id',
+      overrides: {
+        reuseExecutionInput: (() => {
+          const executionResult = {
+            ...reuseExecutionResult,
+            scenario_rows: [{ ...buildScenarioRow(RUN_IDS.reuse, 'success-002-reuse'), run_identity_ref: `other:${RUN_IDS.reuse}:1` }],
+          };
+          return buildReuseExecutionInput({
+            execution_result: executionResult,
+            artifact_hash: sha256(JSON.stringify({ mode: 'success-002-reuse', execution_result: executionResult })),
+          });
+        })(),
+      },
+    },
+  ] as const;
+
+  try {
+    for (const entry of cases) {
+      const harness = await createHarness();
+      try {
+        const graph = buildGraph(entry.overrides);
+        const result = await runTask10CoreProducer(harness.args, {
+          inspectCheckout: async (rootPath) => rootPath === harness.args.coreRoot ? buildInspection('core') : rootPath === harness.args.clientRoot ? buildInspection('client') : buildInspection('site'),
+          probePrivateRootContract: async () => ({ status: 'accepted' }),
+          runProducer: async () => {
+            await writeGraph(harness.args.privateInputRoot, graph.inputFiles);
+            await writeGraph(harness.args.privateOutputRoot, graph.outputFiles);
+            return { exitCode: 0 };
+          },
+        });
+        assert.deepEqual(result, { status: 'tooling-failure', errorCode: 'producer-artifact-invalid' }, entry.name);
+      } finally {
+        await harness.cleanup();
+      }
+    }
+  } finally {
+    if (originalToken === undefined) {
+      delete process.env[TOKEN_ENV_NAME];
+    } else {
+      process.env[TOKEN_ENV_NAME] = originalToken;
+    }
   }
 });
 
@@ -1120,7 +1622,7 @@ test('runTask10CoreProducer treats malformed blocked artifacts as tooling failur
     });
     const result = await runTask10CoreProducer(harness.args, {
       inspectCheckout: async (rootPath) => rootPath === harness.args.coreRoot ? buildInspection('core') : rootPath === harness.args.clientRoot ? buildInspection('client') : buildInspection('site'),
-      probePrivateRootContract: async () => null,
+      probePrivateRootContract: async () => ({ status: 'accepted' }),
       runProducer: async () => {
         await writeGraph(harness.args.privateInputRoot, graph.inputFiles);
         await writeGraph(harness.args.privateOutputRoot, graph.outputFiles);
@@ -1153,7 +1655,7 @@ test('runTask10CoreProducer returns reportable-blocked on nonzero exit only when
     delete blockedGraph.outputFiles['success-002-reuse/readback.json'];
     const blockedResult = await runTask10CoreProducer(blockedHarness.args, {
       inspectCheckout: async (rootPath) => rootPath === blockedHarness.args.coreRoot ? buildInspection('core') : rootPath === blockedHarness.args.clientRoot ? buildInspection('client') : buildInspection('site'),
-      probePrivateRootContract: async () => null,
+      probePrivateRootContract: async () => ({ status: 'accepted' }),
       runProducer: async () => {
         await writeGraph(blockedHarness.args.privateInputRoot, blockedGraph.inputFiles);
         await writeGraph(blockedHarness.args.privateOutputRoot, blockedGraph.outputFiles);
@@ -1165,7 +1667,7 @@ test('runTask10CoreProducer returns reportable-blocked on nonzero exit only when
 
     const noEvidenceResult = await runTask10CoreProducer(noEvidenceHarness.args, {
       inspectCheckout: async (rootPath) => rootPath === noEvidenceHarness.args.coreRoot ? buildInspection('core') : rootPath === noEvidenceHarness.args.clientRoot ? buildInspection('client') : buildInspection('site'),
-      probePrivateRootContract: async () => null,
+      probePrivateRootContract: async () => ({ status: 'accepted' }),
       runProducer: async () => ({ exitCode: 2 }),
     });
     assert.deepEqual(noEvidenceResult, { status: 'tooling-failure', errorCode: 'producer-exit-nonzero' });
@@ -1188,7 +1690,7 @@ test('runTask10CoreProducer keeps existing boundary failures unchanged', async (
   try {
     const result = await runTask10CoreProducer(harness.args, {
       inspectCheckout: async (rootPath) => rootPath === harness.args.coreRoot ? buildInspection('core') : rootPath === harness.args.clientRoot ? buildInspection('client') : buildInspection('site'),
-      probePrivateRootContract: async () => null,
+      probePrivateRootContract: async () => ({ status: 'accepted' }),
       runProducer: async () => ({ exitCode: 0 }),
     });
     assert.deepEqual(result, { status: 'tooling-failure', errorCode: 'input-precondition-failed' });
@@ -1210,7 +1712,7 @@ test('runTask10CoreProducer rejects permissive private roots before probe or spa
   try {
     const result = await runTask10CoreProducer(harness.args, {
       inspectCheckout: async () => buildInspection('core'),
-      probePrivateRootContract: async () => null,
+      probePrivateRootContract: async () => ({ status: 'accepted' }),
       runProducer: async () => ({ exitCode: 0 }),
     });
     assert.deepEqual(result, { status: 'tooling-failure', errorCode: 'input-precondition-failed' });
@@ -1232,7 +1734,7 @@ test('runTask10CoreProducer fails closed on missing token before default spawn-p
   try {
     const result = await runTask10CoreProducer(harness.args, {
       inspectCheckout: async (rootPath) => rootPath === harness.args.coreRoot ? buildInspection('core') : rootPath === harness.args.clientRoot ? buildInspection('client') : buildInspection('site'),
-      probePrivateRootContract: async () => null,
+      probePrivateRootContract: async () => ({ status: 'accepted' }),
       runProducer: async () => {
         spawnCalls += 1;
         return { exitCode: 0 };
@@ -1257,7 +1759,7 @@ test('runTask10CoreProducer default spawn helper times out a hung producer with 
     const child = createFakeSpawnedProcess();
     const result = await runTask10CoreProducer(harness.args, {
       inspectCheckout: async (rootPath) => rootPath === harness.args.coreRoot ? buildInspection('core') : rootPath === harness.args.clientRoot ? buildInspection('client') : buildInspection('site'),
-      probePrivateRootContract: async () => null,
+      probePrivateRootContract: async () => ({ status: 'accepted' }),
       spawnProcess() {
         return child;
       },
@@ -1297,7 +1799,7 @@ test('runTask10CoreProducer default spawn helper still resolves timeout 124 when
     };
     const result = await runTask10CoreProducer(harness.args, {
       inspectCheckout: async (rootPath) => rootPath === harness.args.coreRoot ? buildInspection('core') : rootPath === harness.args.clientRoot ? buildInspection('client') : buildInspection('site'),
-      probePrivateRootContract: async () => null,
+      probePrivateRootContract: async () => ({ status: 'accepted' }),
       spawnProcess() {
         return child;
       },
@@ -1328,7 +1830,7 @@ test('runTask10CoreProducer rejects oversized artifacts as tooling failures', as
     graph.inputFiles['runtime-evidence.json'] = `${' '.repeat(1_100_000)}`;
     const result = await runTask10CoreProducer(harness.args, {
       inspectCheckout: async (rootPath) => rootPath === harness.args.coreRoot ? buildInspection('core') : rootPath === harness.args.clientRoot ? buildInspection('client') : buildInspection('site'),
-      probePrivateRootContract: async () => null,
+      probePrivateRootContract: async () => ({ status: 'accepted' }),
       runProducer: async () => {
         await writeGraph(harness.args.privateInputRoot, graph.inputFiles);
         await writeGraph(harness.args.privateOutputRoot, graph.outputFiles);
@@ -1346,22 +1848,30 @@ test('runTask10CoreProducer rejects oversized artifacts as tooling failures', as
   }
 });
 
-test('runTask10CoreProducer default persistence keeps retained diagnostic files mode 0600', async () => {
+test('runTask10CoreProducer default persistence keeps retained diagnostic files mode 0600 for reportable semantic blocks after producer invocation', async () => {
   const harness = await createHarness();
   const originalToken = process.env[TOKEN_ENV_NAME];
   process.env[TOKEN_ENV_NAME] = 'super-secret-token';
   try {
+    const graph = buildGraph({ recoveryMaterializedRun: buildRecoveryMaterializedRun({ predecessor_tenant_ref: 'tenant:other' }) });
     const result = await runTask10CoreProducer(harness.args, {
       inspectCheckout: async (rootPath) => rootPath === harness.args.coreRoot ? buildInspection('core') : rootPath === harness.args.clientRoot ? buildInspection('client') : buildInspection('site'),
+      probePrivateRootContract: async () => ({ status: 'accepted' }),
+      runProducer: async () => {
+        await writeGraph(harness.args.privateInputRoot, graph.inputFiles);
+        await writeGraph(harness.args.privateOutputRoot, graph.outputFiles);
+        return { exitCode: 0 };
+      },
     });
     assert.equal(result.status, 'reportable-blocked');
     const entries = await readdir(harness.args.privateOutputRoot);
-    assert.equal(entries.length, 1);
-    const retained = path.join(harness.args.privateOutputRoot, entries[0]!);
+    const retainedEntry = entries.find((entry) => entry.endsWith('.private-diagnostic.json'));
+    assert.ok(retainedEntry);
+    const retained = path.join(harness.args.privateOutputRoot, retainedEntry);
     assert.equal((await stat(retained)).mode & 0o777, 0o600);
     const bytes = await readFile(retained);
     const expected = `sha256:${createHash('sha256').update(bytes).digest('hex')}`;
-    assert.equal(result.evidence.groups[0]?.handles[0], expected);
+    assert.equal(result.publicDiagnostic?.handle, expected);
   } finally {
     if (originalToken === undefined) {
       delete process.env[TOKEN_ENV_NAME];

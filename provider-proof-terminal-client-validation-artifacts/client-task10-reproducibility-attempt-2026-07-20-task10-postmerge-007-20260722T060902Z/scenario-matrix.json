@@ -1,0 +1,295 @@
+{
+  "schema_version": "bidvia-client-task10-scenario-matrix/v1",
+  "attempt_id": "attempt-2026-07-20-task10-postmerge-007",
+  "generated_at": "2026-07-22T06:09:02.807Z",
+  "required_families": [
+    "session-access",
+    "readiness",
+    "dispatch",
+    "replay-recovery",
+    "result-submission"
+  ],
+  "summary": {
+    "required_family_count": 5,
+    "row_count": 7,
+    "passed_count": 7,
+    "blocked_count": 0,
+    "missing_families": []
+  },
+  "scenarios": [
+    {
+      "scenario_family": "session-access",
+      "tenant": "tenant:task10-owner",
+      "actor": "actor:operator-admin",
+      "company": "company:owner",
+      "authority": "https://github.com/Bidvia/bidvia-main/blob/5ab02058491960c305162091316d65e1ffa97347/docs/org/review-records/artifacts/attempt-2026-07-20-task10-postmerge-007-output/preflight-artifact.json",
+      "request": "POST /runtime/admin/sessions/sign-in request:session-access:001",
+      "source_object": "admin-session-bootstrap",
+      "target_object": "rehearsal-run-identity",
+      "proof_class": "session-access-proof",
+      "evidence_refs": [
+        "https://github.com/Bidvia/bidvia-main/blob/5ab02058491960c305162091316d65e1ffa97347/docs/org/review-records/artifacts/attempt-2026-07-20-task10-postmerge-007-output/preflight-artifact.json",
+        "https://github.com/Bidvia/bidvia-main/blob/8957aaff35436621439f9a62a741c522e95423c8/docs/runbooks/merged-main-reproducibility-client-handoff.md"
+      ],
+      "private_evidence_handles": [
+        "sha256:425ea8b16e30c6a185e8baddecec0aa4fcaffcfa56cae8726db3824c83c9ff6e",
+        "sha256:ef678e70e8d2af427a39e75f95eb1eae94fff5d8f7ae65ae77eafeec1a7ece43"
+      ],
+      "private_handle_attestations": [
+        {
+          "handle": "sha256:425ea8b16e30c6a185e8baddecec0aa4fcaffcfa56cae8726db3824c83c9ff6e",
+          "source_class": "preflight",
+          "verified": true,
+          "verified_at": "2026-07-22T06:10:25.621Z"
+        },
+        {
+          "handle": "sha256:ef678e70e8d2af427a39e75f95eb1eae94fff5d8f7ae65ae77eafeec1a7ece43",
+          "source_class": "preflight",
+          "verified": true,
+          "verified_at": "2026-07-22T06:10:25.621Z"
+        }
+      ],
+      "result": "passed",
+      "timestamp": "2026-07-22T06:12:02.214Z",
+      "reason_codes": [
+        "authority-identity-match"
+      ]
+    },
+    {
+      "scenario_family": "readiness",
+      "tenant": "tenant:task10-owner",
+      "actor": "actor:operator-admin",
+      "company": "company:owner",
+      "authority": "https://github.com/Bidvia/bidvia-main/blob/5ab02058491960c305162091316d65e1ffa97347/docs/org/review-records/artifacts/attempt-2026-07-20-task10-postmerge-007-output/preflight-artifact.json",
+      "request": "GET /readyz request:readiness:001",
+      "source_object": "runtime-readyz",
+      "target_object": "runtime-identity-check",
+      "proof_class": "readiness-runtime-proof",
+      "evidence_refs": [
+        "https://github.com/Bidvia/bidvia-main/blob/5ab02058491960c305162091316d65e1ffa97347/docs/org/review-records/artifacts/attempt-2026-07-20-task10-postmerge-007-output/preflight-artifact.json"
+      ],
+      "private_evidence_handles": [
+        "sha256:8ea82dae65ded61086b13ca69249ea3ee6fa3f2dfdcb4a014604042ce3e1c8bd"
+      ],
+      "private_handle_attestations": [
+        {
+          "handle": "sha256:8ea82dae65ded61086b13ca69249ea3ee6fa3f2dfdcb4a014604042ce3e1c8bd",
+          "source_class": "runtime",
+          "verified": true,
+          "verified_at": "2026-07-22T06:10:25.621Z"
+        }
+      ],
+      "result": "passed",
+      "timestamp": "2026-07-22T06:12:02.205Z",
+      "reason_codes": [
+        "readyz-markers-match"
+      ]
+    },
+    {
+      "scenario_family": "readiness",
+      "tenant": "tenant:task10-owner",
+      "actor": "actor:operator-admin",
+      "company": "company:owner",
+      "authority": "https://github.com/Bidvia/bidvia-main/blob/5ab02058491960c305162091316d65e1ffa97347/docs/org/review-records/artifacts/attempt-2026-07-20-task10-postmerge-007-output/preflight-artifact.json",
+      "request": "POST /runtime/rehearsals/merged-main/reset request:readiness:002",
+      "source_object": "reset-freshness-inspection",
+      "target_object": "reset-proof",
+      "proof_class": "readiness-reset-proof",
+      "evidence_refs": [
+        "https://github.com/Bidvia/bidvia-main/blob/5ab02058491960c305162091316d65e1ffa97347/docs/org/review-records/artifacts/attempt-2026-07-20-task10-postmerge-007-output/preflight-artifact.json"
+      ],
+      "private_evidence_handles": [
+        "sha256:12a5719dbf15974555056c40ffcc0399c9bd69105becc6436a593b0c8af7c648"
+      ],
+      "private_handle_attestations": [
+        {
+          "handle": "sha256:12a5719dbf15974555056c40ffcc0399c9bd69105becc6436a593b0c8af7c648",
+          "source_class": "reset",
+          "verified": true,
+          "verified_at": "2026-07-22T06:10:25.621Z"
+        }
+      ],
+      "result": "passed",
+      "timestamp": "2026-07-22T06:12:02.211Z",
+      "reason_codes": [
+        "reset-schema-ready"
+      ]
+    },
+    {
+      "scenario_family": "dispatch",
+      "tenant": "tenant:task10-owner",
+      "actor": "actor:operator-admin",
+      "company": "company:owner",
+      "authority": "https://github.com/Bidvia/bidvia-main/blob/5ab02058491960c305162091316d65e1ffa97347/docs/org/review-records/artifacts/attempt-2026-07-20-task10-postmerge-007-output/core-execution-evidence.json",
+      "request": "POST /runtime/agents/:registrationId/task-dispatches request:dispatch:001",
+      "source_object": "registration-bound-dispatch",
+      "target_object": "persisted-dispatch-readback",
+      "proof_class": "dispatch-proof",
+      "evidence_refs": [
+        "https://github.com/Bidvia/bidvia-main/blob/5ab02058491960c305162091316d65e1ffa97347/docs/org/review-records/artifacts/attempt-2026-07-20-task10-postmerge-007-output/core-execution-evidence.json"
+      ],
+      "private_evidence_handles": [
+        "sha256:192a5345300bad753b0f1f0308c6293fea4ae10d51daf3f9ba911c832a73d95b",
+        "sha256:3fb27caea6962cc550585efa4b6952818946d7f3dbc295b6f366f0a281dc1948",
+        "sha256:7e32d6caf255e0656690690aa63ce42cabf1fe48d099dfb8f76670ea89a9b2d7"
+      ],
+      "private_handle_attestations": [
+        {
+          "handle": "sha256:192a5345300bad753b0f1f0308c6293fea4ae10d51daf3f9ba911c832a73d95b",
+          "source_class": "success-001",
+          "verified": true,
+          "verified_at": "2026-07-22T06:10:25.621Z"
+        },
+        {
+          "handle": "sha256:3fb27caea6962cc550585efa4b6952818946d7f3dbc295b6f366f0a281dc1948",
+          "source_class": "success-001",
+          "verified": true,
+          "verified_at": "2026-07-22T06:10:25.621Z"
+        },
+        {
+          "handle": "sha256:7e32d6caf255e0656690690aa63ce42cabf1fe48d099dfb8f76670ea89a9b2d7",
+          "source_class": "success-001",
+          "verified": true,
+          "verified_at": "2026-07-22T06:10:25.621Z"
+        }
+      ],
+      "result": "passed",
+      "timestamp": "2026-07-22T06:13:15.858Z",
+      "reason_codes": [
+        "dispatch-readback-persisted"
+      ]
+    },
+    {
+      "scenario_family": "replay-recovery",
+      "tenant": "tenant:task10-owner",
+      "actor": "actor:operator-admin",
+      "company": "company:owner",
+      "authority": "https://github.com/Bidvia/bidvia-main/blob/5ab02058491960c305162091316d65e1ffa97347/docs/org/review-records/artifacts/attempt-2026-07-20-task10-postmerge-007-output/core-execution-evidence.json",
+      "request": "POST /runtime/commercial-actions/:id/rollback request:replay-recovery:001",
+      "source_object": "rollback-request",
+      "target_object": "recovery-lineage",
+      "proof_class": "recovery-proof",
+      "evidence_refs": [
+        "https://github.com/Bidvia/bidvia-main/blob/5ab02058491960c305162091316d65e1ffa97347/docs/org/review-records/artifacts/attempt-2026-07-20-task10-postmerge-007-output/core-execution-evidence.json"
+      ],
+      "private_evidence_handles": [
+        "sha256:07010261c97fa839076adb616aebae3bcc75c1deb008bf3bed6ec7d98d43d932",
+        "sha256:6aacdc0cfc97ab8ac1167f7f3f2e240fbf9229e0e78278b28c6a3cd657cfc3f4",
+        "sha256:dc60382def4d3f7cb9fecca60086a1f5cabe9548ea5c034081d29b4fca06fea4"
+      ],
+      "private_handle_attestations": [
+        {
+          "handle": "sha256:07010261c97fa839076adb616aebae3bcc75c1deb008bf3bed6ec7d98d43d932",
+          "source_class": "recovery-001",
+          "verified": true,
+          "verified_at": "2026-07-22T06:10:25.621Z"
+        },
+        {
+          "handle": "sha256:6aacdc0cfc97ab8ac1167f7f3f2e240fbf9229e0e78278b28c6a3cd657cfc3f4",
+          "source_class": "recovery-001",
+          "verified": true,
+          "verified_at": "2026-07-22T06:10:25.621Z"
+        },
+        {
+          "handle": "sha256:dc60382def4d3f7cb9fecca60086a1f5cabe9548ea5c034081d29b4fca06fea4",
+          "source_class": "recovery-001",
+          "verified": true,
+          "verified_at": "2026-07-22T06:10:25.621Z"
+        }
+      ],
+      "result": "passed",
+      "timestamp": "2026-07-22T06:15:15.038Z",
+      "reason_codes": [
+        "recovery-lineage-present"
+      ]
+    },
+    {
+      "scenario_family": "replay-recovery",
+      "tenant": "tenant:task10-owner",
+      "actor": "actor:operator-admin",
+      "company": "company:owner",
+      "authority": "https://github.com/Bidvia/bidvia-main/blob/5ab02058491960c305162091316d65e1ffa97347/docs/org/review-records/artifacts/attempt-2026-07-20-task10-postmerge-007-output/core-execution-evidence.json",
+      "request": "POST /runtime/rehearsals/merged-main/readback/:runId request:replay-recovery:002",
+      "source_object": "reuse-readback",
+      "target_object": "distinct-current-execution-ids",
+      "proof_class": "reuse-proof",
+      "evidence_refs": [
+        "https://github.com/Bidvia/bidvia-main/blob/5ab02058491960c305162091316d65e1ffa97347/docs/org/review-records/artifacts/attempt-2026-07-20-task10-postmerge-007-output/core-execution-evidence.json"
+      ],
+      "private_evidence_handles": [
+        "sha256:9a9f937c46f67048e1a605b3b351270b70564fea5b70777c71d87b54fc2989d9",
+        "sha256:a4f0322371121bfdb4115c56cc72f692dc92663dbc0958bb571bdcb8b48f0006",
+        "sha256:a6cdc3a359aec1f9612244ffb4b5c8c635cca4a6f1b0ca29a687fdb845a349a6"
+      ],
+      "private_handle_attestations": [
+        {
+          "handle": "sha256:9a9f937c46f67048e1a605b3b351270b70564fea5b70777c71d87b54fc2989d9",
+          "source_class": "success-002-reuse",
+          "verified": true,
+          "verified_at": "2026-07-22T06:10:25.621Z"
+        },
+        {
+          "handle": "sha256:a4f0322371121bfdb4115c56cc72f692dc92663dbc0958bb571bdcb8b48f0006",
+          "source_class": "success-002-reuse",
+          "verified": true,
+          "verified_at": "2026-07-22T06:10:25.621Z"
+        },
+        {
+          "handle": "sha256:a6cdc3a359aec1f9612244ffb4b5c8c635cca4a6f1b0ca29a687fdb845a349a6",
+          "source_class": "success-002-reuse",
+          "verified": true,
+          "verified_at": "2026-07-22T06:10:25.621Z"
+        }
+      ],
+      "result": "passed",
+      "timestamp": "2026-07-22T06:16:45.144Z",
+      "reason_codes": [
+        "distinct-reuse-truth"
+      ]
+    },
+    {
+      "scenario_family": "result-submission",
+      "tenant": "tenant:task10-owner",
+      "actor": "actor:operator-admin",
+      "company": "company:owner",
+      "authority": "https://github.com/Bidvia/bidvia-main/blob/5ab02058491960c305162091316d65e1ffa97347/docs/org/review-records/artifacts/attempt-2026-07-20-task10-postmerge-007-output/core-execution-evidence.json",
+      "request": "POST /runtime/commercial-actions/:id/execute request:result-submission:001",
+      "source_object": "commercial-action-execution",
+      "target_object": "provider-receipt-evidence",
+      "proof_class": "result-submission-proof",
+      "evidence_refs": [
+        "https://github.com/Bidvia/bidvia-main/blob/5ab02058491960c305162091316d65e1ffa97347/docs/org/review-records/artifacts/attempt-2026-07-20-task10-postmerge-007-output/core-execution-evidence.json"
+      ],
+      "private_evidence_handles": [
+        "sha256:192a5345300bad753b0f1f0308c6293fea4ae10d51daf3f9ba911c832a73d95b",
+        "sha256:3fb27caea6962cc550585efa4b6952818946d7f3dbc295b6f366f0a281dc1948",
+        "sha256:7e32d6caf255e0656690690aa63ce42cabf1fe48d099dfb8f76670ea89a9b2d7"
+      ],
+      "private_handle_attestations": [
+        {
+          "handle": "sha256:192a5345300bad753b0f1f0308c6293fea4ae10d51daf3f9ba911c832a73d95b",
+          "source_class": "success-001",
+          "verified": true,
+          "verified_at": "2026-07-22T06:10:25.621Z"
+        },
+        {
+          "handle": "sha256:3fb27caea6962cc550585efa4b6952818946d7f3dbc295b6f366f0a281dc1948",
+          "source_class": "success-001",
+          "verified": true,
+          "verified_at": "2026-07-22T06:10:25.621Z"
+        },
+        {
+          "handle": "sha256:7e32d6caf255e0656690690aa63ce42cabf1fe48d099dfb8f76670ea89a9b2d7",
+          "source_class": "success-001",
+          "verified": true,
+          "verified_at": "2026-07-22T06:10:25.621Z"
+        }
+      ],
+      "result": "passed",
+      "timestamp": "2026-07-22T06:13:15.858Z",
+      "reason_codes": [
+        "provider-proof-and-receipt-present"
+      ]
+    }
+  ]
+}

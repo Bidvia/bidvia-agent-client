@@ -1,5 +1,7 @@
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
+import { lstatSync, readFileSync } from 'node:fs';
 import {
   chmod,
   cp,
@@ -17,6 +19,7 @@ import {
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
+import { fileURLToPath } from 'node:url';
 import ts from 'typescript';
 
 import {
@@ -50,8 +53,59 @@ import {
 
 const RUN_STARTED_AT = '2026-07-19T01:02:03.000Z';
 const GENERATED_AT = '2026-07-19T01:05:00.000Z';
-const EXPECTED_PACKAGE_NAME = 'client-task10-reproducibility-attempt-2026-07-18-task10-postmerge-002-20260719T010203Z';
+const EXPECTED_PACKAGE_NAME = buildTask10PackageName(RUN_STARTED_AT);
 const PUBLICATION_ROOT_BASENAME = 'provider-proof-terminal-client-validation-artifacts';
+const WORKTREE_ROOT = fileURLToPath(new URL('..', import.meta.url));
+const THIS_PUBLICATION_TEST_PATH = 'test/task10-publication.test.ts';
+const IMMUTABLE_ATTEMPT_002_PACKAGE_NAME = 'client-task10-reproducibility-attempt-2026-07-18-task10-postmerge-002-20260720T030347Z';
+const IMMUTABLE_ATTEMPT_002_RELATIVE_DIRECTORY = `provider-proof-terminal-client-validation-artifacts/${IMMUTABLE_ATTEMPT_002_PACKAGE_NAME}`;
+const IMMUTABLE_ATTEMPT_002_RELATIVE_ARCHIVE = `${IMMUTABLE_ATTEMPT_002_RELATIVE_DIRECTORY}.tar.gz`;
+const IMMUTABLE_ATTEMPT_002_RELATIVE_RECEIPT = `${IMMUTABLE_ATTEMPT_002_RELATIVE_DIRECTORY}.publication.json`;
+const IMMUTABLE_ATTEMPT_007_RELATIVE_ARCHIVE = 'provider-proof-terminal-client-validation-artifacts/client-task10-reproducibility-attempt-2026-07-20-task10-postmerge-007-20260722T060902Z.tar.gz';
+const ATTEMPT_002_SHORT_CORE_SHA = '97e2fbe';
+const ATTEMPT_002_FULL_CORE_SHA = '97e2fbe3934ea821daf654afa0adaef2c3e16077';
+const ATTEMPT_002_SHORT_EVIDENCE_SHA = '8d2692f';
+const ATTEMPT_002_FULL_EVIDENCE_SHA = '8d2692fea8a450225717c067628bbc0b372c7536';
+const ADAPTER_ALLOWED_COMPATIBILITY_GRAPH_LINE = '  \'core:97e2fbe3934ea821daf654afa0adaef2c3e16077:docs/org/review-records/artifacts/2026-07-15-cn-vn-industrial-chemical-approved-reusable-asset-packet.json:53f99c0f94f2ec7a388a124bf0bc0969d4cf3b054123b8c7f4693ea1dae67093\',';
+const SELF_ADAPTER_COMPATIBILITY_GRAPH_DECLARATION_LINE = `  const adapterCompatibilityGraphLine = ${JSON.stringify(ADAPTER_ALLOWED_COMPATIBILITY_GRAPH_LINE)};`;
+const IMMUTABLE_ATTEMPT_002_APPROVED_ARCHIVE_SHA256 = '3a6e8da1925bf8d3a2d9711d33edbf0cf0fd581c749c47c3299ace1f09a95aae';
+const IMMUTABLE_ATTEMPT_002_APPROVED_RECEIPT_SHA256 = '8f7479a890b86aa502ef231baffa0337cf55f416cc785f49514e193bba402cb6';
+const IMMUTABLE_ATTEMPT_002_APPROVED_PACKAGE_HASHES = Object.freeze({
+  'README.md': '865bb59b6cf126d3a959bd85e05c60d4d7fb52f0c64ea8856e4a22b29e700cc4',
+  'SHA256SUMS.txt': '4c3ceadd47c26a7bd52ff6feca4681a20c69796a470fcaa28309fb9d610b8591',
+  'client-conclusion.json': '605d9b0c1409451b3ce7b27a361b29e22c4a06f8644a0b2a75bf09e9a10fe112',
+  'client-fingerprint.json': 'b67609ff012b10cc7973e14990e834ba53b111f4844f38d26a5b00f60d5dabc4',
+  'command-log.json': '5ccdb3b5765b1f18373bfc51a43f389e6956ce0f4fbcd588686bef0cdbc9f351',
+  'scenario-matrix.json': 'e2af499f3dec35a1c395e778aa87da3bac4bc55ba596291e4f126efc89d002bd',
+  'secret-review.json': '1c788a24e3bae0b3e9456aedb5dbe6345dc569e449836c96ac039128c7d39200',
+});
+const IMMUTABLE_ATTEMPT_002_APPROVED_MANIFEST_HASHES = Object.freeze({
+  'README.md': '865bb59b6cf126d3a959bd85e05c60d4d7fb52f0c64ea8856e4a22b29e700cc4',
+  'client-conclusion.json': '605d9b0c1409451b3ce7b27a361b29e22c4a06f8644a0b2a75bf09e9a10fe112',
+  'client-fingerprint.json': 'b67609ff012b10cc7973e14990e834ba53b111f4844f38d26a5b00f60d5dabc4',
+  'command-log.json': '5ccdb3b5765b1f18373bfc51a43f389e6956ce0f4fbcd588686bef0cdbc9f351',
+  'scenario-matrix.json': 'e2af499f3dec35a1c395e778aa87da3bac4bc55ba596291e4f126efc89d002bd',
+  'secret-review.json': '1c788a24e3bae0b3e9456aedb5dbe6345dc569e449836c96ac039128c7d39200',
+});
+const ATTEMPT_002_HISTORICAL_LITERALS = Object.freeze([
+  'attempt-2026-07-18-task10-postmerge-002',
+  ATTEMPT_002_FULL_CORE_SHA,
+  ATTEMPT_002_SHORT_CORE_SHA,
+  ATTEMPT_002_FULL_EVIDENCE_SHA,
+  ATTEMPT_002_SHORT_EVIDENCE_SHA,
+  'task10-runtime-97e2fbe',
+  'task10-bootstrap-97e2fbe',
+  'task10-scenario-97e2fbe',
+  '58925',
+  '58926',
+  '58927',
+  '58928',
+  'bidvia-task10-attempt-2026-07-18-task10-postmerge-002',
+  'bidvia-task10-attempt-2026-07-18-task10-postmerge-002-runtime',
+  'bidvia-task10-attempt-2026-07-18-task10-postmerge-002-postgres',
+  'bidvia-task10-attempt-2026-07-18-task10-postmerge-002-fixture',
+  'bidvia-task10-attempt-2026-07-18-task10-postmerge-002-operator',
+]);
 const PACKAGE_MEMBER_NAMES = [
   'README.md',
   'SHA256SUMS.txt',
@@ -69,6 +123,419 @@ type PrivateSourceSeed = {
 
 function digestHex(bytes: Uint8Array): string {
   return createHash('sha256').update(bytes).digest('hex');
+}
+
+function escapeRegex(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function lineContainsHistoricalLiteral(lineText: string, literal: string): boolean {
+  if (/^[0-9a-f]+$/u.test(literal)) {
+    return new RegExp(`(^|[^0-9a-f])${escapeRegex(literal)}(?=$|[^0-9a-f])`, 'u').test(lineText);
+  }
+  return lineText.includes(literal);
+}
+
+function extractRequiredTextFromRuleDefinitionLine(lineText: string): string | null {
+  const match = lineText.match(/requiredText: (?:(?:'((?:\\.|[^'])*)')|(?:"((?:\\.|[^"])*)"))/u);
+  return match?.[1] ?? match?.[2] ?? null;
+}
+
+function decodeUtf8(bytes: Uint8Array): string {
+  return new TextDecoder('utf8', { fatal: true }).decode(bytes);
+}
+
+function isBinaryContent(bytes: Uint8Array): boolean {
+  if (bytes.includes(0)) {
+    return true;
+  }
+  try {
+    decodeUtf8(bytes);
+    return false;
+  } catch {
+    return true;
+  }
+}
+
+function listTrackedPathsFromGit(rootPath: string): readonly string[] {
+  const result = spawnSync('git', ['ls-files', '-z'], {
+    cwd: rootPath,
+    env: {
+      ...process.env,
+      GIT_MASTER: '1',
+    },
+    encoding: 'utf8',
+  });
+  if (result.status !== 0) {
+    throw new Error(`git ls-files failed: ${result.stderr || result.stdout}`);
+  }
+  return result.stdout.split('\0').filter(Boolean);
+}
+
+const EXPLICIT_BINARY_TRACKED_PATHS = new Set<string>([
+  'provider-proof-terminal-client-validation-artifacts/client-commercial-universe-4dfcf03-20260716T083123Z.tar.gz',
+  'provider-proof-terminal-client-validation-artifacts/client-commercial-universe-4dfcf03-20260717T012357Z.tar.gz',
+  'provider-proof-terminal-client-validation-artifacts/client-commercial-universe-917d18c-20260716T074615Z.tar.gz',
+  IMMUTABLE_ATTEMPT_002_RELATIVE_ARCHIVE,
+  IMMUTABLE_ATTEMPT_007_RELATIVE_ARCHIVE,
+]);
+
+// TASK10_SELF_ALLOW_BLOCK_START
+const SELF_ALLOWED_EXACT_LINES = new Set<string>([
+  "const IMMUTABLE_ATTEMPT_002_PACKAGE_NAME = 'client-task10-reproducibility-attempt-2026-07-18-task10-postmerge-002-20260720T030347Z';",
+  "const ATTEMPT_002_SHORT_CORE_SHA = '97e2fbe';",
+  "const ATTEMPT_002_FULL_CORE_SHA = '97e2fbe3934ea821daf654afa0adaef2c3e16077';",
+  "const ATTEMPT_002_SHORT_EVIDENCE_SHA = '8d2692f';",
+  "const ATTEMPT_002_FULL_EVIDENCE_SHA = '8d2692fea8a450225717c067628bbc0b372c7536';",
+  "const ADAPTER_ALLOWED_COMPATIBILITY_GRAPH_LINE = '  \'core:97e2fbe3934ea821daf654afa0adaef2c3e16077:docs/org/review-records/artifacts/2026-07-15-cn-vn-industrial-chemical-approved-reusable-asset-packet.json:53f99c0f94f2ec7a388a124bf0bc0969d4cf3b054123b8c7f4693ea1dae67093\',';",
+  "  'attempt-2026-07-18-task10-postmerge-002',",
+  "  'task10-runtime-97e2fbe',",
+  "  'task10-bootstrap-97e2fbe',",
+  "  'task10-scenario-97e2fbe',",
+  "  '58925',",
+  "  '58926',",
+  "  '58927',",
+  "  '58928',",
+  "  'bidvia-task10-attempt-2026-07-18-task10-postmerge-002',",
+  "  'bidvia-task10-attempt-2026-07-18-task10-postmerge-002-runtime',",
+  "  'bidvia-task10-attempt-2026-07-18-task10-postmerge-002-postgres',",
+  "  'bidvia-task10-attempt-2026-07-18-task10-postmerge-002-fixture',",
+  "  'bidvia-task10-attempt-2026-07-18-task10-postmerge-002-operator',",
+  "    lineText: 'The migration must search every Task 10 code, test, and runbook file for `attempt-2026-07-18-task10-postmerge-002`, `97e2fbe`, `8d2692f`, old markers, ports, Compose/network/container names, bundle/preflight paths, and old authority URLs. Every active tooling reference moves to attempt 007. The only allowed old-attempt references are the preserved package bytes and explicit historical/non-supersession assertions.',",
+  "    lineText: 'ACTIVE: The migration must search every Task 10 code, test, and runbook file for `attempt-2026-07-18-task10-postmerge-002`, `97e2fbe`, `8d2692f`, old markers, ports, Compose/network/container names, bundle/preflight paths, and old authority URLs. Every active tooling reference moves to attempt 007. The only allowed old-attempt references are the preserved package bytes and explicit historical/non-supersession assertions.',",
+  "    lineText: '- Core SHA: `97e2fbe3934ea821daf654afa0adaef2c3e16077`',",
+  "    lineText: '- Attempt id: `attempt-2026-07-18-task10-postmerge-002` 8d2692f',",
+  '  const adapterCompatibilityGraphLine = ADAPTER_ALLOWED_COMPATIBILITY_GRAPH_LINE;',
+  '    lineText: `${adapterCompatibilityGraphLine} attempt-2026-07-18-task10-postmerge-002`,',
+  '    lineText: `${adapterCompatibilityGraphLine} 97e2fbe`,',
+  '    lineText: `${adapterCompatibilityGraphLine} task10-runtime-97e2fbe`,',
+  '    lineText: `${adapterCompatibilityGraphLine} 58925`,',
+  "    && match.literal === '97e2fbe'",
+  "    && match.literal === '8d2692f'",
+  "    && match.lineText.includes('`97e2fbe`, `8d2692f`')), true);",
+  "    await writeFile(scriptPath, 'attempt-2026-07-18-task10-postmerge-002\\n', 'utf8');",
+  "    await writeFile(yamlPath, 'core_sha: 97e2fbe\\n', 'utf8');",
+  "    await writeFile(extensionlessPath, 'evidence_sha: 8d2692f\\n', 'utf8');",
+  "    assert.equal(scan.matches.some((match) => match.relativePath === 'scan-fixture.sh' && match.literal === 'attempt-2026-07-18-task10-postmerge-002'), true);",
+  "    assert.equal(scan.matches.some((match) => match.relativePath === 'scan-fixture.yaml' && match.literal === '97e2fbe'), true);",
+  "    assert.equal(scan.matches.some((match) => match.relativePath === 'scan-fixture' && match.literal === '8d2692f'), true);",
+  '  const adapterCompatibilityGraphLine = ADAPTER_ALLOWED_COMPATIBILITY_GRAPH_LINE;',
+  "    await writeFile(shortLinePath, 'markers: 97e2fbe 8d2692f\\n', 'utf8');",
+  '  const adapterCompatibilityGraphLine = ADAPTER_ALLOWED_COMPATIBILITY_GRAPH_LINE;',
+  "    literal: 'attempt-2026-07-18-task10-postmerge-002',",
+  "    lineText: '- Attempt id: `attempt-2026-07-18-task10-postmerge-002`',",
+  "    lineText: 'active stale attempt-2026-07-18-task10-postmerge-002 should not be allowed here',",
+  "    literal: '97e2fbe',",
+  "    literal: '8d2692f',",
+  "  const adapterCompatibilityGraphLine = '  \'core:97e2fbe3934ea821daf654afa0adaef2c3e16077:docs/org/review-records/artifacts/2026-07-15-cn-vn-industrial-chemical-approved-reusable-asset-packet.json:53f99c0f94f2ec7a388a124bf0bc0969d4cf3b054123b8c7f4693ea1dae67093\',';",
+  "    literal: 'task10-runtime-97e2fbe',",
+  "    literal: '58925',",
+  "  const adapterCompatibilityGraphLine = '  \'core:97e2fbe3934ea821daf654afa0adaef2c3e16077:docs/org/review-records/artifacts/2026-07-15-cn-vn-industrial-chemical-approved-reusable-asset-packet.json:53f99c0f94f2ec7a388a124bf0bc0969d4cf3b054123b8c7f4693ea1dae67093\',';",
+  "  const adapterCompatibilityGraphLine = '  \'core:97e2fbe3934ea821daf654afa0adaef2c3e16077:docs/org/review-records/artifacts/2026-07-15-cn-vn-industrial-chemical-approved-reusable-asset-packet.json:53f99c0f94f2ec7a388a124bf0bc0969d4cf3b054123b8c7f4693ea1dae67093\',';",
+  "  const adapterCompatibilityGraphLine = '  \'core:97e2fbe3934ea821daf654afa0adaef2c3e16077:docs/org/review-records/artifacts/2026-07-15-cn-vn-industrial-chemical-approved-reusable-asset-packet.json:53f99c0f94f2ec7a388a124bf0bc0969d4cf3b054123b8c7f4693ea1dae67093\',';",
+]);
+// TASK10_SELF_ALLOW_BLOCK_END
+
+const SELF_ALLOW_BLOCK_START_MARKER = '// TASK10_SELF_ALLOW_BLOCK_START';
+const SELF_ALLOW_BLOCK_END_MARKER = '// TASK10_SELF_ALLOW_BLOCK_END';
+const SELF_ALLOW_ADAPTER_TEST_START_MARKER = '// TASK10_SELF_ALLOW_ADAPTER_TEST_START';
+const SELF_ALLOW_ADAPTER_TEST_END_MARKER = '// TASK10_SELF_ALLOW_ADAPTER_TEST_END';
+
+function computeSelfAllowedExactBlockRanges(): ReadonlyArray<Readonly<{ startLine: number; endLine: number }>> {
+  const sourceLines = readFileSync(fileURLToPath(import.meta.url), 'utf8').split('\n');
+  const ranges: Array<{ startLine: number; endLine: number }> = [];
+  let openLine: number | null = null;
+  for (let index = 0; index < sourceLines.length; index += 1) {
+    const line = sourceLines[index] ?? '';
+    if (line === SELF_ALLOW_BLOCK_START_MARKER || line === SELF_ALLOW_ADAPTER_TEST_START_MARKER) {
+      openLine = index + 1;
+      continue;
+    }
+    if (line === SELF_ALLOW_BLOCK_END_MARKER || line === SELF_ALLOW_ADAPTER_TEST_END_MARKER) {
+      if (openLine === null) {
+        throw new Error('task10 self-allow marker end encountered before start');
+      }
+      ranges.push({ startLine: openLine, endLine: index + 1 });
+      openLine = null;
+    }
+  }
+  if (openLine !== null) {
+    throw new Error('task10 self-allow marker start missing end');
+  }
+  return Object.freeze(ranges.map((range) => Object.freeze(range)));
+}
+
+const SELF_ALLOWED_EXACT_BLOCK_RANGES = computeSelfAllowedExactBlockRanges();
+
+function ruleMatchesHistoricalLiteral(match: HistoricalLiteralMatch, rule: HistoricalLiteralContextRule): boolean {
+  if (rule.path !== match.relativePath) {
+    return false;
+  }
+  if (rule.exactLineText !== undefined) {
+    return match.lineText === rule.exactLineText && lineContainsHistoricalLiteral(rule.exactLineText, match.literal);
+  }
+  if (rule.exactRuleText !== undefined) {
+    return match.lineText === rule.exactRuleText && lineContainsHistoricalLiteral(rule.exactRuleText, match.literal);
+  }
+  if ((rule as { requiredText?: string }).requiredText !== undefined) {
+    const requiredText = (rule as { requiredText?: string }).requiredText!;
+    return match.lineText === requiredText && lineContainsHistoricalLiteral(requiredText, match.literal);
+  }
+  return false;
+}
+
+function createNodeTrackedRepositoryLiteralScanDependencies(): TrackedRepositoryLiteralScanDependencies {
+  return {
+    listTrackedPaths: listTrackedPathsFromGit,
+    readBytes: (absolutePath) => new Uint8Array(readFileSync(absolutePath)),
+    lstatEntry: (absolutePath) => lstatSync(absolutePath),
+  };
+}
+
+async function collectTrackedRepositoryHistoricalLiteralScan(
+  rootPath: string,
+  dependencies: TrackedRepositoryLiteralScanDependencies,
+): Promise<TrackedRepositoryLiteralScanResult> {
+  const entries: TrackedRepositoryEntry[] = [];
+  const matches: HistoricalLiteralMatch[] = [];
+  for (const relativePath of dependencies.listTrackedPaths(rootPath)) {
+    const absolutePath = path.join(rootPath, relativePath);
+    const entry = dependencies.lstatEntry(absolutePath);
+    if (entry.isSymbolicLink()) {
+      entries.push({ relativePath, kind: 'symlink' });
+      continue;
+    }
+    if (!entry.isFile()) {
+      throw new Error(`tracked entry must be a file or symlink: ${relativePath}`);
+    }
+    const bytes = dependencies.readBytes(absolutePath);
+    if (isBinaryContent(bytes)) {
+      if (!EXPLICIT_BINARY_TRACKED_PATHS.has(relativePath)) {
+        throw new Error(`unexpected binary tracked file: ${relativePath}`);
+      }
+      entries.push({ relativePath, kind: 'binary' });
+      continue;
+    }
+    entries.push({ relativePath, kind: 'text' });
+    const lines = decodeUtf8(bytes).split('\n');
+    for (let index = 0; index < lines.length; index += 1) {
+      const lineText = lines[index] ?? '';
+      for (const literal of ATTEMPT_002_HISTORICAL_LITERALS) {
+        if (!lineContainsHistoricalLiteral(lineText, literal)) {
+          continue;
+        }
+        matches.push({ relativePath, lineNumber: index + 1, literal, lineText });
+      }
+    }
+  }
+  return {
+    entries: Object.freeze(entries.map((entry) => Object.freeze({ ...entry }))),
+    matches: Object.freeze(matches.map((match) => Object.freeze({ ...match }))),
+  };
+}
+
+async function collectFileHashes(rootPath: string): Promise<Map<string, string>> {
+  const entryNames = (await readdir(rootPath)).sort();
+  const hashes = new Map<string, string>();
+  for (const entryName of entryNames) {
+    const entryPath = path.join(rootPath, entryName);
+    const entry = await lstat(entryPath);
+    if (entry.isDirectory()) {
+      const nestedHashes = await collectFileHashes(entryPath);
+      for (const [nestedPath, nestedHash] of nestedHashes) {
+        hashes.set(path.posix.join(entryName, nestedPath), nestedHash);
+      }
+      continue;
+    }
+    assert.equal(entry.isFile(), true, `expected regular file under ${rootPath}`);
+    hashes.set(entryName, digestHex(await readFile(entryPath)));
+  }
+  return hashes;
+}
+
+async function snapshotImmutableAttempt002Publication() {
+  return {
+    packageDirectoryHashes: await collectFileHashes(path.join(WORKTREE_ROOT, IMMUTABLE_ATTEMPT_002_RELATIVE_DIRECTORY)),
+    archiveSha256: digestHex(await readFile(path.join(WORKTREE_ROOT, IMMUTABLE_ATTEMPT_002_RELATIVE_ARCHIVE))),
+    receiptSha256: digestHex(await readFile(path.join(WORKTREE_ROOT, IMMUTABLE_ATTEMPT_002_RELATIVE_RECEIPT))),
+  };
+}
+
+async function readImmutableAttempt002ManifestHashes(): Promise<Record<string, string>> {
+  const manifestText = await readFile(path.join(WORKTREE_ROOT, IMMUTABLE_ATTEMPT_002_RELATIVE_DIRECTORY, 'SHA256SUMS.txt'), 'utf8');
+  const result: Record<string, string> = {};
+  for (const line of manifestText.trimEnd().split('\n')) {
+    const [hash, memberName] = line.split('  ');
+    assert.ok(hash && memberName, `invalid immutable manifest line: ${line}`);
+    result[memberName] = hash;
+  }
+  return result;
+}
+
+type HistoricalLiteralMatch = {
+  relativePath: string;
+  lineNumber: number;
+  literal: string;
+  lineText: string;
+};
+
+type HistoricalLiteralContextRule = {
+  path: string;
+  literal?: string;
+  exactLineText?: string;
+  exactRuleText?: string;
+  requiredText?: string;
+};
+
+type TrackedRepositoryEntryKind = 'text' | 'binary' | 'symlink';
+
+type TrackedRepositoryEntry = {
+  relativePath: string;
+  kind: TrackedRepositoryEntryKind;
+};
+
+type TrackedRepositoryLiteralScanResult = {
+  entries: readonly TrackedRepositoryEntry[];
+  matches: readonly HistoricalLiteralMatch[];
+};
+
+type TrackedRepositoryLiteralScanDependencies = {
+  listTrackedPaths(rootPath: string): readonly string[];
+  readBytes(absolutePath: string): Uint8Array;
+  lstatEntry(absolutePath: string): { isFile(): boolean; isSymbolicLink(): boolean };
+};
+
+// TASK10_SELF_ALLOW_BLOCK_START
+const HISTORICAL_LITERAL_CONTEXT_RULES: readonly HistoricalLiteralContextRule[] = Object.freeze([
+  { path: 'docs/TASK10_CLIENT_REPRODUCIBILITY.md', literal: ATTEMPT_002_FULL_CORE_SHA, exactLineText: '- Core SHA: `97e2fbe3934ea821daf654afa0adaef2c3e16077`' },
+  { path: 'docs/TASK10_CLIENT_REPRODUCIBILITY.md', literal: ATTEMPT_002_FULL_EVIDENCE_SHA, exactLineText: '- Core evidence publication commit: `8d2692fea8a450225717c067628bbc0b372c7536`' },
+  { path: 'docs/TASK10_CLIENT_REPRODUCIBILITY.md', literal: 'attempt-2026-07-18-task10-postmerge-002', exactLineText: '- Attempt id: `attempt-2026-07-18-task10-postmerge-002`' },
+  { path: 'docs/TASK10_CLIENT_REPRODUCIBILITY.md', literal: 'attempt-2026-07-18-task10-postmerge-002', exactLineText: 'The historical attempt-2026-07-18-task10-postmerge-002 package remains the preserved historical record and is not superseded by this attempt-007 runbook. This document does not rewrite, republish, or operationalize the old attempt-002 package.' },
+  { path: 'docs/TASK10_CLIENT_REPRODUCIBILITY.md', literal: 'attempt-2026-07-18-task10-postmerge-002', exactLineText: '- Bundle path: `docs/org/review-records/artifacts/attempt-2026-07-18-task10-postmerge-002-output/core-execution-evidence.json`' },
+  { path: 'docs/TASK10_CLIENT_REPRODUCIBILITY.md', literal: 'attempt-2026-07-18-task10-postmerge-002', exactLineText: '- Preflight path: `docs/org/review-records/artifacts/attempt-2026-07-18-task10-postmerge-002-output/preflight-artifact.json`' },
+  { path: 'docs/TASK10_CLIENT_REPRODUCIBILITY.md', literal: ATTEMPT_002_FULL_CORE_SHA, exactLineText: '- Core runtime root: HEAD `97e2fbe3934ea821daf654afa0adaef2c3e16077`, main branch, upstream `origin/main`, empty porcelain, lock hash `504007a7fb70616df1409eb2e003a3470ea6e23d990ea61d8eea195a0a1fce62`, package identity `bidvia-d2-ws6-t1-runtime@0.0.0`' },
+  { path: 'docs/TASK10_CLIENT_REPRODUCIBILITY.md', literal: ATTEMPT_002_FULL_EVIDENCE_SHA, exactLineText: '- Core evidence root: detached HEAD `8d2692fea8a450225717c067628bbc0b372c7536`, null upstream, empty porcelain, bundle SHA `e438232e982722fd4ec431260053eafe369723f93659070688f961a5c740b3db`, preflight SHA `1eee8a5d6de9a34486b287be425b6f747f155c8c83ef436c448e13baf08ad685`' },
+  { path: 'docs/TASK10_CLIENT_REPRODUCIBILITY.md', literal: 'attempt-2026-07-18-task10-postmerge-002', exactLineText: 'shasum -a 256 "docs/org/review-records/artifacts/attempt-2026-07-18-task10-postmerge-002-output/core-execution-evidence.json"' },
+  { path: 'docs/TASK10_CLIENT_REPRODUCIBILITY.md', literal: 'attempt-2026-07-18-task10-postmerge-002', exactLineText: 'shasum -a 256 "docs/org/review-records/artifacts/attempt-2026-07-18-task10-postmerge-002-output/preflight-artifact.json"' },
+  { path: 'docs/TASK10_CLIENT_REPRODUCIBILITY.md', literal: ATTEMPT_002_FULL_CORE_SHA, exactLineText: '  --core-sha "97e2fbe3934ea821daf654afa0adaef2c3e16077" \\' },
+  { path: 'docs/TASK10_CLIENT_REPRODUCIBILITY.md', literal: 'attempt-2026-07-18-task10-postmerge-002', exactLineText: '  --attempt-id "attempt-2026-07-18-task10-postmerge-002" \\' },
+  { path: 'docs/TASK10_CLIENT_REPRODUCIBILITY.md', literal: ATTEMPT_002_FULL_CORE_SHA, exactLineText: '  --source-main-commit-marker "97e2fbe3934ea821daf654afa0adaef2c3e16077" \\' },
+  { path: 'docs/TASK10_CLIENT_REPRODUCIBILITY.md', literal: 'task10-runtime-97e2fbe', exactLineText: '  --runtime-reported-version-marker "task10-runtime-97e2fbe" \\' },
+  { path: 'docs/TASK10_CLIENT_REPRODUCIBILITY.md', literal: 'task10-bootstrap-97e2fbe', exactLineText: '  --bootstrap-package-version-marker "task10-bootstrap-97e2fbe" \\' },
+  { path: 'docs/TASK10_CLIENT_REPRODUCIBILITY.md', literal: 'task10-scenario-97e2fbe', exactLineText: '  --scenario-package-version-marker "task10-scenario-97e2fbe" \\' },
+  { path: 'docs/TASK10_CLIENT_REPRODUCIBILITY.md', literal: '58925', exactLineText: '  --postgres-port "58925" \\' },
+  { path: 'docs/TASK10_CLIENT_REPRODUCIBILITY.md', literal: '58926', exactLineText: '  --runtime-port "58926" \\' },
+  { path: 'docs/TASK10_CLIENT_REPRODUCIBILITY.md', literal: '58927', exactLineText: '  --operator-port "58927" \\' },
+  { path: 'docs/TASK10_CLIENT_REPRODUCIBILITY.md', literal: '58928', exactLineText: '  --fixture-port "58928" \\' },
+  { path: 'docs/TASK10_CLIENT_REPRODUCIBILITY.md', literal: 'bidvia-task10-attempt-2026-07-18-task10-postmerge-002', exactLineText: '- Compose project: `bidvia-task10-attempt-2026-07-18-task10-postmerge-002`' },
+  { path: 'docs/TASK10_CLIENT_REPRODUCIBILITY.md', literal: 'bidvia-task10-attempt-2026-07-18-task10-postmerge-002-runtime', exactLineText: '- Containers: `bidvia-task10-attempt-2026-07-18-task10-postmerge-002-runtime`, `bidvia-task10-attempt-2026-07-18-task10-postmerge-002-postgres`, `bidvia-task10-attempt-2026-07-18-task10-postmerge-002-fixture`, `bidvia-task10-attempt-2026-07-18-task10-postmerge-002-operator`' },
+  { path: 'docs/TASK10_CLIENT_REPRODUCIBILITY.md', literal: 'bidvia-task10-attempt-2026-07-18-task10-postmerge-002-postgres', exactLineText: '- Containers: `bidvia-task10-attempt-2026-07-18-task10-postmerge-002-runtime`, `bidvia-task10-attempt-2026-07-18-task10-postmerge-002-postgres`, `bidvia-task10-attempt-2026-07-18-task10-postmerge-002-fixture`, `bidvia-task10-attempt-2026-07-18-task10-postmerge-002-operator`' },
+  { path: 'docs/TASK10_CLIENT_REPRODUCIBILITY.md', literal: 'bidvia-task10-attempt-2026-07-18-task10-postmerge-002-fixture', exactLineText: '- Containers: `bidvia-task10-attempt-2026-07-18-task10-postmerge-002-runtime`, `bidvia-task10-attempt-2026-07-18-task10-postmerge-002-postgres`, `bidvia-task10-attempt-2026-07-18-task10-postmerge-002-fixture`, `bidvia-task10-attempt-2026-07-18-task10-postmerge-002-operator`' },
+  { path: 'docs/TASK10_CLIENT_REPRODUCIBILITY.md', literal: 'bidvia-task10-attempt-2026-07-18-task10-postmerge-002-operator', exactLineText: '- Containers: `bidvia-task10-attempt-2026-07-18-task10-postmerge-002-runtime`, `bidvia-task10-attempt-2026-07-18-task10-postmerge-002-postgres`, `bidvia-task10-attempt-2026-07-18-task10-postmerge-002-fixture`, `bidvia-task10-attempt-2026-07-18-task10-postmerge-002-operator`' },
+  { path: 'docs/TASK10_CLIENT_REPRODUCIBILITY.md', literal: '58925', exactLineText: '- Ports: `58925`, `58926`, `58927`, `58928`' },
+  { path: 'docs/TASK10_CLIENT_REPRODUCIBILITY.md', literal: '58926', exactLineText: '- Ports: `58925`, `58926`, `58927`, `58928`' },
+  { path: 'docs/TASK10_CLIENT_REPRODUCIBILITY.md', literal: '58927', exactLineText: '- Ports: `58925`, `58926`, `58927`, `58928`' },
+  { path: 'docs/TASK10_CLIENT_REPRODUCIBILITY.md', literal: '58928', exactLineText: '- Ports: `58925`, `58926`, `58927`, `58928`' },
+  { path: 'docs/TASK10_CLIENT_REPRODUCIBILITY.md', literal: 'attempt-2026-07-18-task10-postmerge-002', exactLineText: '  --core-bundle "<absolute-detached-core-evidence-root>/docs/org/review-records/artifacts/attempt-2026-07-18-task10-postmerge-002-output/core-execution-evidence.json"' },
+  { path: 'docs/superpowers/specs/2026-07-20-task10-client-rerun-007-design.md', literal: 'attempt-2026-07-18-task10-postmerge-002', exactLineText: '- Preserve the existing `attempt-2026-07-18-task10-postmerge-002` package, archive, receipt, commit, and Issue comment byte-for-byte.' },
+  { path: 'docs/superpowers/specs/2026-07-20-task10-client-rerun-007-design.md', literal: ATTEMPT_002_SHORT_CORE_SHA, exactLineText: 'The migration must search every Task 10 code, test, and runbook file for `attempt-2026-07-18-task10-postmerge-002`, `97e2fbe`, `8d2692f`, old markers, ports, Compose/network/container names, bundle/preflight paths, and old authority URLs. Every active tooling reference moves to attempt 007. The only allowed old-attempt references are the preserved package bytes and explicit historical/non-supersession assertions.' },
+  { path: 'docs/superpowers/specs/2026-07-20-task10-client-rerun-007-design.md', literal: ATTEMPT_002_SHORT_EVIDENCE_SHA, exactLineText: 'The migration must search every Task 10 code, test, and runbook file for `attempt-2026-07-18-task10-postmerge-002`, `97e2fbe`, `8d2692f`, old markers, ports, Compose/network/container names, bundle/preflight paths, and old authority URLs. Every active tooling reference moves to attempt 007. The only allowed old-attempt references are the preserved package bytes and explicit historical/non-supersession assertions.' },
+  { path: 'test/task10-core-producer-adapter.test.ts', literal: ATTEMPT_002_FULL_CORE_SHA, exactLineText: "  'core:97e2fbe3934ea821daf654afa0adaef2c3e16077:docs/org/review-records/artifacts/2026-07-15-cn-vn-industrial-chemical-approved-reusable-asset-packet.json:53f99c0f94f2ec7a388a124bf0bc0969d4cf3b054123b8c7f4693ea1dae67093'," },
+  { path: 'test/task10-core-producer-adapter.test.ts', literal: ATTEMPT_002_FULL_CORE_SHA, exactLineText: "      reusablePacket: buildReusablePacket({ source_refs: ['core:97e2fbe3934ea821daf654afa0adaef2c3e16077:docs/org/review-records/artifacts/2026-07-15-cn-vn-industrial-chemical-approved-reusable-asset-packet.json:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff'] })," },
+  { path: 'test/verify-task10-client-reproducibility.test.ts', exactLineText: "  attemptId: 'attempt-2026-07-18-task10-postmerge-002'," },
+  { path: 'test/verify-task10-client-reproducibility.test.ts', exactLineText: "  bundlePath: 'docs/org/review-records/artifacts/attempt-2026-07-18-task10-postmerge-002-output/core-execution-evidence.json'," },
+  { path: 'test/verify-task10-client-reproducibility.test.ts', exactLineText: "  preflightPath: 'docs/org/review-records/artifacts/attempt-2026-07-18-task10-postmerge-002-output/preflight-artifact.json'," },
+  { path: 'test/verify-task10-client-reproducibility.test.ts', exactLineText: "  coreRuntimeSha: '97e2fbe3934ea821daf654afa0adaef2c3e16077'," },
+  { path: 'test/verify-task10-client-reproducibility.test.ts', exactLineText: "  coreEvidencePublicationCommit: '8d2692fea8a450225717c067628bbc0b372c7536'," },
+  { path: 'test/verify-task10-client-reproducibility.test.ts', exactLineText: "  sourceMainCommitMarker: '97e2fbe3934ea821daf654afa0adaef2c3e16077'," },
+  { path: 'test/verify-task10-client-reproducibility.test.ts', exactLineText: "  runtimeReportedVersionMarker: 'task10-runtime-97e2fbe'," },
+  { path: 'test/verify-task10-client-reproducibility.test.ts', exactLineText: "  bootstrapPackageVersionMarker: 'task10-bootstrap-97e2fbe'," },
+  { path: 'test/verify-task10-client-reproducibility.test.ts', exactLineText: "  scenarioPackageVersionMarker: 'task10-scenario-97e2fbe'," },
+  { path: 'test/verify-task10-client-reproducibility.test.ts', exactLineText: "    postgres: '58925'," },
+  { path: 'test/verify-task10-client-reproducibility.test.ts', exactLineText: "    runtime: '58926'," },
+  { path: 'test/verify-task10-client-reproducibility.test.ts', exactLineText: "    operator: '58927'," },
+  { path: 'test/verify-task10-client-reproducibility.test.ts', exactLineText: "    fixture: '58928'," },
+  { path: 'test/verify-task10-client-reproducibility.test.ts', exactLineText: "  composeProject: 'bidvia-task10-attempt-2026-07-18-task10-postmerge-002'," },
+  { path: 'test/verify-task10-client-reproducibility.test.ts', exactLineText: '  assert.match(markdown, /97e2fbe3934ea821daf654afa0adaef2c3e16077/);' },
+  { path: 'test/verify-task10-client-reproducibility.test.ts', exactLineText: '  assert.match(markdown, /historical attempt-2026-07-18-task10-postmerge-002 package remains the preserved historical record and is not superseded by this attempt-007 runbook/i);' },
+  { path: 'test/verify-task10-client-reproducibility.test.ts', exactLineText: '  assert.match(coordinatorBlock, /--core-bundle "<absolute-detached-core-evidence-root>\\/docs\\/org\\/review-records\\/artifacts\\/attempt-2026-07-18-task10-postmerge-002-output\\/core-execution-evidence\\.json"/);' },
+  { path: 'test/verify-task10-client-reproducibility.test.ts', exactLineText: "    'bidvia-task10-attempt-2026-07-18-task10-postmerge-002-runtime'," },
+  { path: 'test/verify-task10-client-reproducibility.test.ts', exactLineText: "    'bidvia-task10-attempt-2026-07-18-task10-postmerge-002-postgres'," },
+  { path: 'test/verify-task10-client-reproducibility.test.ts', exactLineText: "    'bidvia-task10-attempt-2026-07-18-task10-postmerge-002-fixture'," },
+  { path: 'test/verify-task10-client-reproducibility.test.ts', exactLineText: "    'bidvia-task10-attempt-2026-07-18-task10-postmerge-002-operator'," },
+  { path: THIS_PUBLICATION_TEST_PATH, requiredText: "const IMMUTABLE_ATTEMPT_002_PACKAGE_NAME = 'client-task10-reproducibility-attempt-2026-07-18-task10-postmerge-002-20260720T030347Z';" },
+  { path: THIS_PUBLICATION_TEST_PATH, requiredText: 'const IMMUTABLE_ATTEMPT_002_RELATIVE_DIRECTORY = `provider-proof-terminal-client-validation-artifacts/${IMMUTABLE_ATTEMPT_002_PACKAGE_NAME}`;' },
+  { path: THIS_PUBLICATION_TEST_PATH, requiredText: "const ATTEMPT_002_SHORT_CORE_SHA = '97e2fbe';" },
+  { path: THIS_PUBLICATION_TEST_PATH, requiredText: "const ATTEMPT_002_FULL_CORE_SHA = '97e2fbe3934ea821daf654afa0adaef2c3e16077';" },
+  { path: THIS_PUBLICATION_TEST_PATH, requiredText: "const ATTEMPT_002_SHORT_EVIDENCE_SHA = '8d2692f';" },
+  { path: THIS_PUBLICATION_TEST_PATH, requiredText: "const ATTEMPT_002_FULL_EVIDENCE_SHA = '8d2692fea8a450225717c067628bbc0b372c7536';" },
+  { path: THIS_PUBLICATION_TEST_PATH, requiredText: "const ADAPTER_ALLOWED_COMPATIBILITY_GRAPH_LINE = '  \\'core:97e2fbe3934ea821daf654afa0adaef2c3e16077:docs/org/review-records/artifacts/2026-07-15-cn-vn-industrial-chemical-approved-reusable-asset-packet.json:53f99c0f94f2ec7a388a124bf0bc0969d4cf3b054123b8c7f4693ea1dae67093\\',';" },
+  { path: THIS_PUBLICATION_TEST_PATH, requiredText: "'attempt-2026-07-18-task10-postmerge-002'," },
+  { path: THIS_PUBLICATION_TEST_PATH, requiredText: "'97e2fbe3934ea821daf654afa0adaef2c3e16077'," },
+  { path: THIS_PUBLICATION_TEST_PATH, requiredText: "'8d2692fea8a450225717c067628bbc0b372c7536'," },
+  { path: THIS_PUBLICATION_TEST_PATH, requiredText: "'task10-runtime-97e2fbe'," },
+  { path: THIS_PUBLICATION_TEST_PATH, requiredText: "'task10-bootstrap-97e2fbe'," },
+  { path: THIS_PUBLICATION_TEST_PATH, requiredText: "'task10-scenario-97e2fbe'," },
+  { path: THIS_PUBLICATION_TEST_PATH, requiredText: "'58925'," },
+  { path: THIS_PUBLICATION_TEST_PATH, requiredText: "'58926'," },
+  { path: THIS_PUBLICATION_TEST_PATH, requiredText: "'58927'," },
+  { path: THIS_PUBLICATION_TEST_PATH, requiredText: "'58928'," },
+  { path: THIS_PUBLICATION_TEST_PATH, requiredText: "'bidvia-task10-attempt-2026-07-18-task10-postmerge-002'," },
+  { path: THIS_PUBLICATION_TEST_PATH, requiredText: "'bidvia-task10-attempt-2026-07-18-task10-postmerge-002-runtime'," },
+  { path: THIS_PUBLICATION_TEST_PATH, requiredText: "'bidvia-task10-attempt-2026-07-18-task10-postmerge-002-postgres'," },
+  { path: THIS_PUBLICATION_TEST_PATH, requiredText: "'bidvia-task10-attempt-2026-07-18-task10-postmerge-002-fixture'," },
+  { path: THIS_PUBLICATION_TEST_PATH, requiredText: "'bidvia-task10-attempt-2026-07-18-task10-postmerge-002-operator'," },
+  { path: THIS_PUBLICATION_TEST_PATH, requiredText: "literal: 'attempt-2026-07-18-task10-postmerge-002'," },
+  { path: THIS_PUBLICATION_TEST_PATH, requiredText: "literal: '97e2fbe'," },
+  { path: THIS_PUBLICATION_TEST_PATH, requiredText: "literal: '8d2692f'," },
+  { path: THIS_PUBLICATION_TEST_PATH, requiredText: "lineText: '- Attempt id: `attempt-2026-07-18-task10-postmerge-002`'," },
+  { path: THIS_PUBLICATION_TEST_PATH, requiredText: "lineText: '- Core SHA: `97e2fbe3934ea821daf654afa0adaef2c3e16077`'," },
+  { path: THIS_PUBLICATION_TEST_PATH, requiredText: "lineText: 'active stale attempt-2026-07-18-task10-postmerge-002 should not be allowed here'," },
+  { path: THIS_PUBLICATION_TEST_PATH, requiredText: "lineText: '- Attempt id: `attempt-2026-07-18-task10-postmerge-002` 8d2692f'," },
+  { path: THIS_PUBLICATION_TEST_PATH, requiredText: "const adapterCompatibilityGraphLine = '  \\'core:97e2fbe3934ea821daf654afa0adaef2c3e16077:docs/org/review-records/artifacts/2026-07-15-cn-vn-industrial-chemical-approved-reusable-asset-packet.json:53f99c0f94f2ec7a388a124bf0bc0969d4cf3b054123b8c7f4693ea1dae67093\\',';" },
+  { path: THIS_PUBLICATION_TEST_PATH, requiredText: "lineText: `${adapterCompatibilityGraphLine} attempt-2026-07-18-task10-postmerge-002`," },
+  { path: THIS_PUBLICATION_TEST_PATH, requiredText: "lineText: `${adapterCompatibilityGraphLine} 97e2fbe`," },
+  { path: THIS_PUBLICATION_TEST_PATH, requiredText: "lineText: `${adapterCompatibilityGraphLine} task10-runtime-97e2fbe`," },
+  { path: THIS_PUBLICATION_TEST_PATH, requiredText: "lineText: `${adapterCompatibilityGraphLine} 58925`," },
+  { path: THIS_PUBLICATION_TEST_PATH, requiredText: "&& match.literal === '97e2fbe'" },
+  { path: THIS_PUBLICATION_TEST_PATH, requiredText: "&& match.literal === '8d2692f'" },
+  { path: THIS_PUBLICATION_TEST_PATH, requiredText: "&& match.lineText.includes('`97e2fbe`, `8d2692f`')), true);" },
+]);
+// TASK10_SELF_ALLOW_BLOCK_END
+
+const trackedRepositoryScanPromise = collectTrackedRepositoryHistoricalLiteralScan(WORKTREE_ROOT, {
+  ...createNodeTrackedRepositoryLiteralScanDependencies(),
+});
+
+function isAllowedHistoricalLiteralMatch(match: HistoricalLiteralMatch): boolean {
+  if (match.relativePath === 'scripts/task10/core-producer-adapter.ts') {
+    return match.literal === ATTEMPT_002_FULL_CORE_SHA
+      && match.lineText === ADAPTER_ALLOWED_COMPATIBILITY_GRAPH_LINE;
+  }
+  if (match.relativePath === IMMUTABLE_ATTEMPT_002_RELATIVE_RECEIPT || match.relativePath.startsWith(`${IMMUTABLE_ATTEMPT_002_RELATIVE_DIRECTORY}/`)) {
+    return true;
+  }
+  if (match.relativePath === THIS_PUBLICATION_TEST_PATH) {
+    if (match.lineText === '  const adapterCompatibilityGraphLine = ADAPTER_ALLOWED_COMPATIBILITY_GRAPH_LINE;') {
+      return match.literal === ATTEMPT_002_FULL_CORE_SHA;
+    }
+    if (match.lineText === SELF_ADAPTER_COMPATIBILITY_GRAPH_DECLARATION_LINE) {
+      return match.literal === ATTEMPT_002_FULL_CORE_SHA;
+    }
+    if (SELF_ALLOWED_EXACT_BLOCK_RANGES.some((range) => match.lineNumber >= range.startLine && match.lineNumber <= range.endLine)) {
+      return lineContainsHistoricalLiteral(match.lineText, match.literal);
+    }
+    const requiredText = extractRequiredTextFromRuleDefinitionLine(match.lineText);
+    if (requiredText !== null) {
+      return (SELF_ALLOWED_EXACT_LINES.has(requiredText)
+        || HISTORICAL_LITERAL_CONTEXT_RULES.some((rule) => rule.exactLineText === requiredText))
+        && lineContainsHistoricalLiteral(requiredText, match.literal);
+    }
+    if (SELF_ALLOWED_EXACT_LINES.has(match.lineText)) {
+      return lineContainsHistoricalLiteral(match.lineText, match.literal);
+    }
+  }
+  return HISTORICAL_LITERAL_CONTEXT_RULES.some((rule) => ruleMatchesHistoricalLiteral(match, rule));
 }
 
 function buildPrivateSourceMap(seeds?: Partial<Record<(typeof TASK10_PROHIBITED_VALUE_FAMILIES)[number], string>>) {
@@ -453,6 +920,258 @@ test('Task 10 publication assembly exports the required API, preserves evaluator
   const scan = sourceScanForForbiddenConclusionAssignments(publicationSource);
   assert.deepEqual(scan.forbiddenAssignments, []);
   assert.deepEqual(scan.forbiddenIdentifiers, []);
+});
+
+test('Task 10 publication isolates attempt-007 package naming, preserves checked-in attempt-002 bytes, and binds the new attempt across package outputs', async () => {
+  const immutableBefore = await snapshotImmutableAttempt002Publication();
+  const immutableManifestHashes = await readImmutableAttempt002ManifestHashes();
+  const fixture = buildFixture();
+  const root = await createPublicationRoot();
+
+  try {
+    assert.deepEqual([...immutableBefore.packageDirectoryHashes.keys()].sort(), PACKAGE_MEMBER_NAMES);
+    assert.deepEqual(Object.fromEntries(immutableBefore.packageDirectoryHashes), IMMUTABLE_ATTEMPT_002_APPROVED_PACKAGE_HASHES);
+    assert.deepEqual(immutableManifestHashes, IMMUTABLE_ATTEMPT_002_APPROVED_MANIFEST_HASHES);
+    assert.equal(immutableBefore.archiveSha256, IMMUTABLE_ATTEMPT_002_APPROVED_ARCHIVE_SHA256);
+    assert.equal(immutableBefore.receiptSha256, IMMUTABLE_ATTEMPT_002_APPROVED_RECEIPT_SHA256);
+
+    const publication = await materializeWithFakeArchive({
+      publicationRoot: root.publicationRoot,
+      candidate: fixture.candidate,
+      privateSources: fixture.privateSources,
+    });
+    const packageBytes = await readPackageBytes(publication.packageDirectoryPath);
+    const receiptWire = parseTask10PublicationReceiptWire(JSON.parse(await readFile(publication.receiptPath, 'utf8')) as unknown);
+    const secretReview = parseTask10SecretReviewWire(JSON.parse(new TextDecoder().decode(packageBytes.get('secret-review.json')!)) as unknown);
+
+    assert.equal(publication.packageName.startsWith(`client-task10-reproducibility-${TASK10_AUTHORITY.attemptId}-`), true);
+    assert.notEqual(publication.packageName, IMMUTABLE_ATTEMPT_002_PACKAGE_NAME);
+    assert.equal(await pathExists(path.join(root.publicationRoot, IMMUTABLE_ATTEMPT_002_PACKAGE_NAME)), false);
+    assert.equal(await pathExists(path.join(root.publicationRoot, `${IMMUTABLE_ATTEMPT_002_PACKAGE_NAME}.tar.gz`)), false);
+    assert.equal(await pathExists(path.join(root.publicationRoot, `${IMMUTABLE_ATTEMPT_002_PACKAGE_NAME}.publication.json`)), false);
+
+    assert.equal(new TextDecoder().decode(packageBytes.get('README.md')!).includes(TASK10_AUTHORITY.attemptId), true);
+    assert.equal(new TextDecoder().decode(packageBytes.get('client-conclusion.json')!).includes(TASK10_AUTHORITY.attemptId), true);
+    assert.equal(new TextDecoder().decode(packageBytes.get('client-fingerprint.json')!).includes(TASK10_AUTHORITY.attemptId), true);
+    assert.equal(new TextDecoder().decode(packageBytes.get('command-log.json')!).includes(TASK10_AUTHORITY.attemptId), true);
+    assert.equal(new TextDecoder().decode(packageBytes.get('scenario-matrix.json')!).includes(TASK10_AUTHORITY.attemptId), true);
+    assert.deepEqual(secretReview.scope.wrapper_files, [
+      'secret-review.json',
+      'SHA256SUMS.txt',
+      `${EXPECTED_PACKAGE_NAME}.tar.gz`,
+      `${EXPECTED_PACKAGE_NAME}.publication.json`,
+    ]);
+    assert.equal(receiptWire.attempt_id, TASK10_AUTHORITY.attemptId);
+    assert.equal(receiptWire.package_directory, `${PUBLICATION_ROOT_BASENAME}/${EXPECTED_PACKAGE_NAME}`);
+    assert.equal(receiptWire.archive_path, `${PUBLICATION_ROOT_BASENAME}/${EXPECTED_PACKAGE_NAME}.tar.gz`);
+    assert.equal(receiptWire.internal_hash_manifest, `${PUBLICATION_ROOT_BASENAME}/${EXPECTED_PACKAGE_NAME}/SHA256SUMS.txt`);
+
+    const immutableAfter = await snapshotImmutableAttempt002Publication();
+    assert.deepEqual(Object.fromEntries(immutableAfter.packageDirectoryHashes), IMMUTABLE_ATTEMPT_002_APPROVED_PACKAGE_HASHES);
+    assert.equal(immutableAfter.archiveSha256, IMMUTABLE_ATTEMPT_002_APPROVED_ARCHIVE_SHA256);
+    assert.equal(immutableAfter.receiptSha256, IMMUTABLE_ATTEMPT_002_APPROVED_RECEIPT_SHA256);
+  } finally {
+    await rm(root.tempParent, { recursive: true, force: true });
+  }
+});
+
+test('Task 10 publication historical literal allowlisting requires explicit context and does not allow entire files', () => {
+  assert.equal(isAllowedHistoricalLiteralMatch({
+    relativePath: 'docs/TASK10_CLIENT_REPRODUCIBILITY.md',
+    lineNumber: 25,
+    literal: 'attempt-2026-07-18-task10-postmerge-002',
+    lineText: '- Attempt id: `attempt-2026-07-18-task10-postmerge-002`',
+  }), true);
+
+  assert.equal(isAllowedHistoricalLiteralMatch({
+    relativePath: 'docs/TASK10_CLIENT_REPRODUCIBILITY.md',
+    lineNumber: 999,
+    literal: 'attempt-2026-07-18-task10-postmerge-002',
+    lineText: 'active stale attempt-2026-07-18-task10-postmerge-002 should not be allowed here',
+  }), false);
+
+  assert.equal(isAllowedHistoricalLiteralMatch({
+    relativePath: 'docs/superpowers/specs/2026-07-20-task10-client-rerun-007-design.md',
+    lineNumber: 76,
+    literal: '97e2fbe',
+    lineText: 'The migration must search every Task 10 code, test, and runbook file for `attempt-2026-07-18-task10-postmerge-002`, `97e2fbe`, `8d2692f`, old markers, ports, Compose/network/container names, bundle/preflight paths, and old authority URLs. Every active tooling reference moves to attempt 007. The only allowed old-attempt references are the preserved package bytes and explicit historical/non-supersession assertions.',
+  }), true);
+  assert.equal(isAllowedHistoricalLiteralMatch({
+    relativePath: 'docs/superpowers/specs/2026-07-20-task10-client-rerun-007-design.md',
+    lineNumber: 76,
+    literal: '97e2fbe',
+    lineText: 'ACTIVE: The migration must search every Task 10 code, test, and runbook file for `attempt-2026-07-18-task10-postmerge-002`, `97e2fbe`, `8d2692f`, old markers, ports, Compose/network/container names, bundle/preflight paths, and old authority URLs. Every active tooling reference moves to attempt 007. The only allowed old-attempt references are the preserved package bytes and explicit historical/non-supersession assertions.',
+  }), false);
+
+  assert.equal(isAllowedHistoricalLiteralMatch({
+    relativePath: 'docs/TASK10_CLIENT_REPRODUCIBILITY.md',
+    lineNumber: 21,
+    literal: '97e2fbe',
+    lineText: '- Core SHA: `97e2fbe3934ea821daf654afa0adaef2c3e16077`',
+  }), false);
+
+  assert.equal(isAllowedHistoricalLiteralMatch({
+    relativePath: 'docs/TASK10_CLIENT_REPRODUCIBILITY.md',
+    lineNumber: 25,
+    literal: '8d2692f',
+    lineText: '- Attempt id: `attempt-2026-07-18-task10-postmerge-002` 8d2692f',
+  }), false);
+
+  // TASK10_SELF_ALLOW_ADAPTER_TEST_START
+  const adapterCompatibilityGraphLine = ADAPTER_ALLOWED_COMPATIBILITY_GRAPH_LINE;
+  assert.equal(isAllowedHistoricalLiteralMatch({
+    relativePath: 'scripts/task10/core-producer-adapter.ts',
+    lineNumber: 59,
+    literal: ATTEMPT_002_FULL_CORE_SHA,
+    lineText: adapterCompatibilityGraphLine,
+  }), true);
+  assert.equal(isAllowedHistoricalLiteralMatch({
+    relativePath: 'scripts/task10/core-producer-adapter.ts',
+    lineNumber: 59,
+    literal: ATTEMPT_002_FULL_EVIDENCE_SHA,
+    lineText: `${adapterCompatibilityGraphLine} ${ATTEMPT_002_FULL_EVIDENCE_SHA}`,
+  }), false);
+  assert.equal(isAllowedHistoricalLiteralMatch({
+    relativePath: 'scripts/task10/core-producer-adapter.ts',
+    lineNumber: 59,
+    literal: 'attempt-2026-07-18-task10-postmerge-002',
+    lineText: `${adapterCompatibilityGraphLine} attempt-2026-07-18-task10-postmerge-002`,
+  }), false);
+  assert.equal(isAllowedHistoricalLiteralMatch({
+    relativePath: 'scripts/task10/core-producer-adapter.ts',
+    lineNumber: 59,
+    literal: ATTEMPT_002_SHORT_CORE_SHA,
+    lineText: `${adapterCompatibilityGraphLine} 97e2fbe`,
+  }), false);
+  assert.equal(isAllowedHistoricalLiteralMatch({
+    relativePath: 'scripts/task10/core-producer-adapter.ts',
+    lineNumber: 59,
+    literal: 'task10-runtime-97e2fbe',
+    lineText: `${adapterCompatibilityGraphLine} task10-runtime-97e2fbe`,
+  }), false);
+  assert.equal(isAllowedHistoricalLiteralMatch({
+    relativePath: 'scripts/task10/core-producer-adapter.ts',
+    lineNumber: 59,
+    literal: '58925',
+    lineText: `${adapterCompatibilityGraphLine} 58925`,
+  }), false);
+  // TASK10_SELF_ALLOW_ADAPTER_TEST_END
+});
+
+test('Task 10 publication helper scan records standalone abbreviated stale SHAs without matching them inside full SHAs', async () => {
+  const tempRoot = await mkdtemp(path.join(await realpath(os.tmpdir()), 'task10-publication-short-sha-'));
+
+  try {
+    const shortLinePath = path.join(tempRoot, 'short-sha.txt');
+    const fullLinePath = path.join(tempRoot, 'full-sha.txt');
+    await writeFile(shortLinePath, 'markers: 97e2fbe 8d2692f\n', 'utf8');
+    await writeFile(fullLinePath, `full: ${ATTEMPT_002_FULL_CORE_SHA} ${ATTEMPT_002_FULL_EVIDENCE_SHA}\n`, 'utf8');
+
+    const scan = await collectTrackedRepositoryHistoricalLiteralScan(tempRoot, {
+      listTrackedPaths: () => ['short-sha.txt', 'full-sha.txt'],
+      readBytes: (absolutePath) => new Uint8Array(readFileSync(absolutePath)),
+      lstatEntry: () => ({
+        isFile: () => true,
+        isSymbolicLink: () => false,
+      }),
+    });
+
+    assert.equal(scan.matches.some((match) => match.relativePath === 'short-sha.txt' && match.literal === ATTEMPT_002_SHORT_CORE_SHA), true);
+    assert.equal(scan.matches.some((match) => match.relativePath === 'short-sha.txt' && match.literal === ATTEMPT_002_SHORT_EVIDENCE_SHA), true);
+    assert.equal(scan.matches.some((match) => match.relativePath === 'full-sha.txt' && match.literal === ATTEMPT_002_SHORT_CORE_SHA), false);
+    assert.equal(scan.matches.some((match) => match.relativePath === 'full-sha.txt' && match.literal === ATTEMPT_002_SHORT_EVIDENCE_SHA), false);
+  } finally {
+    await rm(tempRoot, { recursive: true, force: true });
+  }
+});
+
+test('Task 10 publication tracked-file scan covers textual tracked files regardless of extension and explicitly handles symlinks', async () => {
+  const tempRoot = await mkdtemp(path.join(await realpath(os.tmpdir()), 'task10-publication-scan-'));
+
+  try {
+    const scriptPath = path.join(tempRoot, 'scan-fixture.sh');
+    const yamlPath = path.join(tempRoot, 'scan-fixture.yaml');
+    const extensionlessPath = path.join(tempRoot, 'scan-fixture');
+    const symlinkPath = path.join(tempRoot, 'scan-fixture.link');
+    await writeFile(scriptPath, 'attempt-2026-07-18-task10-postmerge-002\n', 'utf8');
+    await writeFile(yamlPath, 'core_sha: 97e2fbe\n', 'utf8');
+    await writeFile(extensionlessPath, 'evidence_sha: 8d2692f\n', 'utf8');
+    await symlink(scriptPath, symlinkPath);
+
+    const scan = await collectTrackedRepositoryHistoricalLiteralScan(tempRoot, {
+      listTrackedPaths: () => ['scan-fixture.sh', 'scan-fixture.yaml', 'scan-fixture', 'scan-fixture.link'],
+      readBytes: (absolutePath) => new Uint8Array(readFileSync(absolutePath)),
+      lstatEntry: (absolutePath) => absolutePath === symlinkPath ? {
+        isFile: () => false,
+        isSymbolicLink: () => true,
+      } : lstatSync(absolutePath),
+    });
+
+    assert.deepEqual(scan.entries, [
+      { relativePath: 'scan-fixture.sh', kind: 'text' },
+      { relativePath: 'scan-fixture.yaml', kind: 'text' },
+      { relativePath: 'scan-fixture', kind: 'text' },
+      { relativePath: 'scan-fixture.link', kind: 'symlink' },
+    ]);
+    assert.equal(scan.matches.some((match) => match.relativePath === 'scan-fixture.sh' && match.literal === 'attempt-2026-07-18-task10-postmerge-002'), true);
+    assert.equal(scan.matches.some((match) => match.relativePath === 'scan-fixture.yaml' && match.literal === '97e2fbe'), true);
+    assert.equal(scan.matches.some((match) => match.relativePath === 'scan-fixture' && match.literal === '8d2692f'), true);
+    assert.equal(scan.matches.some((match) => match.relativePath === 'scan-fixture.link'), false);
+  } finally {
+    await rm(tempRoot, { recursive: true, force: true });
+  }
+});
+
+test('Task 10 publication tracked-file scan rejects unexpected binary tracked files', async () => {
+  const tempRoot = await mkdtemp(path.join(await realpath(os.tmpdir()), 'task10-publication-binary-'));
+
+  try {
+    const binaryPath = path.join(tempRoot, 'unexpected.bin');
+    await writeFile(binaryPath, new Uint8Array([0, 1, 2, 3]));
+
+    await assert.rejects(
+      collectTrackedRepositoryHistoricalLiteralScan(tempRoot, {
+        listTrackedPaths: () => ['unexpected.bin'],
+        readBytes: (absolutePath) => new Uint8Array(readFileSync(absolutePath)),
+        lstatEntry: (absolutePath) => lstatSync(absolutePath),
+      }),
+      /unexpected binary tracked file/i,
+    );
+  } finally {
+    await rm(tempRoot, { recursive: true, force: true });
+  }
+});
+
+test('Task 10 publication tracked-file scan accepts the exact immutable attempt-007 archive', async () => {
+  const scan = await collectTrackedRepositoryHistoricalLiteralScan(WORKTREE_ROOT, {
+    listTrackedPaths: () => [IMMUTABLE_ATTEMPT_007_RELATIVE_ARCHIVE],
+    readBytes: () => new Uint8Array([0, 1, 2, 3]),
+    lstatEntry: () => ({
+      isFile: () => true,
+      isSymbolicLink: () => false,
+    }),
+  });
+
+  assert.deepEqual(scan.entries, [{
+    relativePath: IMMUTABLE_ATTEMPT_007_RELATIVE_ARCHIVE,
+    kind: 'binary',
+  }]);
+});
+
+test('Task 10 publication tracked-file scan implementation uses Node file APIs without python subprocess helpers', async () => {
+  const sourceText = await readFile(new URL('../test/task10-publication.test.ts', import.meta.url), 'utf8');
+  const pythonCommandName = ['py', 'thon3'].join('');
+
+  assert.equal(sourceText.includes(pythonCommandName), false);
+});
+
+test('Task 10 publication repository scan allows attempt-002 literals only in preserved immutable artifacts or explicit historical assertions', async () => {
+  const scan = await trackedRepositoryScanPromise;
+  const disallowed = scan.matches.filter((match) => !isAllowedHistoricalLiteralMatch(match));
+
+  assert.deepEqual(disallowed, []);
+  assert.equal(scan.entries.some((entry) => entry.relativePath === IMMUTABLE_ATTEMPT_002_RELATIVE_ARCHIVE && entry.kind === 'binary'), true);
+  assert.equal(scan.entries.some((entry) => entry.kind === 'symlink'), false);
 });
 
 test('Task 10 candidate assessment rejects forged, cloned, or mutated path-bearing candidates before publicationRoot side effects', async () => {
