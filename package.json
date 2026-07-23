@@ -52,6 +52,7 @@
     "validate": "tsx scripts/validate-contract.ts",
     "validate:release-readiness": "tsx scripts/validate-release-readiness.ts",
     "validate:release-gate": "tsx scripts/validate-release-gate.ts",
+    "validate:task10-client-reproducibility": "tsx scripts/verify-task10-client-reproducibility.ts",
     "example": "tsx examples/basic-agent.ts",
     "example:internal": "tsx examples/internal-team-agent.ts",
     "example:seed": "tsx examples/seed-user-agent.ts"

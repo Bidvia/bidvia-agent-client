@@ -1,0 +1,245 @@
+{
+  "schema_version": "bidvia-client-task10-scenario-matrix/v1",
+  "attempt_id": "attempt-2026-07-18-task10-postmerge-002",
+  "generated_at": "2026-07-20T03:03:47.943Z",
+  "required_families": [
+    "session-access",
+    "readiness",
+    "dispatch",
+    "replay-recovery",
+    "result-submission"
+  ],
+  "summary": {
+    "required_family_count": 5,
+    "row_count": 7,
+    "passed_count": 0,
+    "blocked_count": 7,
+    "missing_families": []
+  },
+  "scenarios": [
+    {
+      "scenario_family": "session-access",
+      "tenant": "tenant:task10-owner",
+      "actor": "actor:operator-admin",
+      "company": "company:owner",
+      "authority": "https://github.com/Bidvia/bidvia-main/blob/8d2692fea8a450225717c067628bbc0b372c7536/docs/org/review-records/artifacts/attempt-2026-07-18-task10-postmerge-002-output/preflight-artifact.json",
+      "request": "POST /runtime/admin/sessions/sign-in request:session-access:001",
+      "source_object": "admin-session-bootstrap",
+      "target_object": "rehearsal-run-identity",
+      "proof_class": "session-access-proof",
+      "evidence_refs": [
+        "https://github.com/Bidvia/bidvia-main/blob/8d2692fea8a450225717c067628bbc0b372c7536/docs/org/review-records/artifacts/attempt-2026-07-18-task10-postmerge-002-output/preflight-artifact.json"
+      ],
+      "private_evidence_handles": [
+        "sha256:b4240d31b9af399601883746aeae8c6170651d5f590c42be9cfdf657bfd4388c"
+      ],
+      "private_handle_attestations": [
+        {
+          "handle": "sha256:b4240d31b9af399601883746aeae8c6170651d5f590c42be9cfdf657bfd4388c",
+          "source_class": "producer-contract-probe",
+          "verified": true,
+          "verified_at": "2026-07-20T03:04:57.698Z"
+        }
+      ],
+      "result": "blocked",
+      "timestamp": "2026-07-20T03:03:47.943Z",
+      "reason_codes": [
+        "core-producer-private-root-contract-unsatisfied",
+        "unexecuted-preflight-evidence",
+        "unexecuted-session-access"
+      ]
+    },
+    {
+      "scenario_family": "readiness",
+      "tenant": "tenant:task10-owner",
+      "actor": "actor:operator-admin",
+      "company": "company:owner",
+      "authority": "https://github.com/Bidvia/bidvia-main/blob/8d2692fea8a450225717c067628bbc0b372c7536/docs/org/review-records/artifacts/attempt-2026-07-18-task10-postmerge-002-output/preflight-artifact.json",
+      "request": "GET /readyz request:readiness:001",
+      "source_object": "runtime-readyz",
+      "target_object": "runtime-identity-check",
+      "proof_class": "readiness-runtime-proof",
+      "evidence_refs": [
+        "https://github.com/Bidvia/bidvia-main/blob/8d2692fea8a450225717c067628bbc0b372c7536/docs/org/review-records/artifacts/attempt-2026-07-18-task10-postmerge-002-output/preflight-artifact.json"
+      ],
+      "private_evidence_handles": [
+        "sha256:b4240d31b9af399601883746aeae8c6170651d5f590c42be9cfdf657bfd4388c"
+      ],
+      "private_handle_attestations": [
+        {
+          "handle": "sha256:b4240d31b9af399601883746aeae8c6170651d5f590c42be9cfdf657bfd4388c",
+          "source_class": "producer-contract-probe",
+          "verified": true,
+          "verified_at": "2026-07-20T03:04:57.698Z"
+        }
+      ],
+      "result": "blocked",
+      "timestamp": "2026-07-20T03:03:47.943Z",
+      "reason_codes": [
+        "core-producer-private-root-contract-unsatisfied",
+        "unexecuted-runtime-evidence",
+        "unexecuted-runtime-readiness"
+      ]
+    },
+    {
+      "scenario_family": "readiness",
+      "tenant": "tenant:task10-owner",
+      "actor": "actor:operator-admin",
+      "company": "company:owner",
+      "authority": "https://github.com/Bidvia/bidvia-main/blob/8d2692fea8a450225717c067628bbc0b372c7536/docs/org/review-records/artifacts/attempt-2026-07-18-task10-postmerge-002-output/preflight-artifact.json",
+      "request": "POST /runtime/rehearsals/merged-main/reset request:readiness:002",
+      "source_object": "reset-freshness-inspection",
+      "target_object": "reset-proof",
+      "proof_class": "readiness-reset-proof",
+      "evidence_refs": [
+        "https://github.com/Bidvia/bidvia-main/blob/8d2692fea8a450225717c067628bbc0b372c7536/docs/org/review-records/artifacts/attempt-2026-07-18-task10-postmerge-002-output/preflight-artifact.json"
+      ],
+      "private_evidence_handles": [
+        "sha256:b4240d31b9af399601883746aeae8c6170651d5f590c42be9cfdf657bfd4388c"
+      ],
+      "private_handle_attestations": [
+        {
+          "handle": "sha256:b4240d31b9af399601883746aeae8c6170651d5f590c42be9cfdf657bfd4388c",
+          "source_class": "producer-contract-probe",
+          "verified": true,
+          "verified_at": "2026-07-20T03:04:57.698Z"
+        }
+      ],
+      "result": "blocked",
+      "timestamp": "2026-07-20T03:03:47.943Z",
+      "reason_codes": [
+        "core-producer-private-root-contract-unsatisfied",
+        "unexecuted-reset-evidence",
+        "unexecuted-reset-readiness"
+      ]
+    },
+    {
+      "scenario_family": "dispatch",
+      "tenant": "tenant:task10-owner",
+      "actor": "actor:operator-admin",
+      "company": "company:owner",
+      "authority": "https://github.com/Bidvia/bidvia-main/blob/8d2692fea8a450225717c067628bbc0b372c7536/docs/org/review-records/artifacts/attempt-2026-07-18-task10-postmerge-002-output/core-execution-evidence.json",
+      "request": "POST /runtime/agents/:registrationId/task-dispatches request:dispatch:001",
+      "source_object": "registration-bound-dispatch",
+      "target_object": "persisted-dispatch-readback",
+      "proof_class": "dispatch-proof",
+      "evidence_refs": [
+        "https://github.com/Bidvia/bidvia-main/blob/8d2692fea8a450225717c067628bbc0b372c7536/docs/org/review-records/artifacts/attempt-2026-07-18-task10-postmerge-002-output/core-execution-evidence.json"
+      ],
+      "private_evidence_handles": [
+        "sha256:b4240d31b9af399601883746aeae8c6170651d5f590c42be9cfdf657bfd4388c"
+      ],
+      "private_handle_attestations": [
+        {
+          "handle": "sha256:b4240d31b9af399601883746aeae8c6170651d5f590c42be9cfdf657bfd4388c",
+          "source_class": "producer-contract-probe",
+          "verified": true,
+          "verified_at": "2026-07-20T03:04:57.698Z"
+        }
+      ],
+      "result": "blocked",
+      "timestamp": "2026-07-20T03:03:47.943Z",
+      "reason_codes": [
+        "core-producer-private-root-contract-unsatisfied",
+        "unexecuted-success-001",
+        "unexecuted-success-001-evidence"
+      ]
+    },
+    {
+      "scenario_family": "replay-recovery",
+      "tenant": "tenant:task10-owner",
+      "actor": "actor:operator-admin",
+      "company": "company:owner",
+      "authority": "https://github.com/Bidvia/bidvia-main/blob/8d2692fea8a450225717c067628bbc0b372c7536/docs/org/review-records/artifacts/attempt-2026-07-18-task10-postmerge-002-output/core-execution-evidence.json",
+      "request": "POST /runtime/commercial-actions/:id/rollback request:replay-recovery:001",
+      "source_object": "rollback-request",
+      "target_object": "recovery-lineage",
+      "proof_class": "recovery-proof",
+      "evidence_refs": [
+        "https://github.com/Bidvia/bidvia-main/blob/8d2692fea8a450225717c067628bbc0b372c7536/docs/org/review-records/artifacts/attempt-2026-07-18-task10-postmerge-002-output/core-execution-evidence.json"
+      ],
+      "private_evidence_handles": [
+        "sha256:b4240d31b9af399601883746aeae8c6170651d5f590c42be9cfdf657bfd4388c"
+      ],
+      "private_handle_attestations": [
+        {
+          "handle": "sha256:b4240d31b9af399601883746aeae8c6170651d5f590c42be9cfdf657bfd4388c",
+          "source_class": "producer-contract-probe",
+          "verified": true,
+          "verified_at": "2026-07-20T03:04:57.698Z"
+        }
+      ],
+      "result": "blocked",
+      "timestamp": "2026-07-20T03:03:47.943Z",
+      "reason_codes": [
+        "core-producer-private-root-contract-unsatisfied",
+        "unexecuted-recovery-001",
+        "unexecuted-recovery-001-evidence"
+      ]
+    },
+    {
+      "scenario_family": "replay-recovery",
+      "tenant": "tenant:task10-owner",
+      "actor": "actor:operator-admin",
+      "company": "company:owner",
+      "authority": "https://github.com/Bidvia/bidvia-main/blob/8d2692fea8a450225717c067628bbc0b372c7536/docs/org/review-records/artifacts/attempt-2026-07-18-task10-postmerge-002-output/core-execution-evidence.json",
+      "request": "POST /runtime/rehearsals/merged-main/readback/:runId request:replay-recovery:002",
+      "source_object": "reuse-readback",
+      "target_object": "distinct-current-execution-ids",
+      "proof_class": "reuse-proof",
+      "evidence_refs": [
+        "https://github.com/Bidvia/bidvia-main/blob/8d2692fea8a450225717c067628bbc0b372c7536/docs/org/review-records/artifacts/attempt-2026-07-18-task10-postmerge-002-output/core-execution-evidence.json"
+      ],
+      "private_evidence_handles": [
+        "sha256:b4240d31b9af399601883746aeae8c6170651d5f590c42be9cfdf657bfd4388c"
+      ],
+      "private_handle_attestations": [
+        {
+          "handle": "sha256:b4240d31b9af399601883746aeae8c6170651d5f590c42be9cfdf657bfd4388c",
+          "source_class": "producer-contract-probe",
+          "verified": true,
+          "verified_at": "2026-07-20T03:04:57.698Z"
+        }
+      ],
+      "result": "blocked",
+      "timestamp": "2026-07-20T03:03:47.943Z",
+      "reason_codes": [
+        "core-producer-private-root-contract-unsatisfied",
+        "unexecuted-success-002-reuse",
+        "unexecuted-success-002-reuse-evidence"
+      ]
+    },
+    {
+      "scenario_family": "result-submission",
+      "tenant": "tenant:task10-owner",
+      "actor": "actor:operator-admin",
+      "company": "company:owner",
+      "authority": "https://github.com/Bidvia/bidvia-main/blob/8d2692fea8a450225717c067628bbc0b372c7536/docs/org/review-records/artifacts/attempt-2026-07-18-task10-postmerge-002-output/core-execution-evidence.json",
+      "request": "POST /runtime/commercial-actions/:id/execute request:result-submission:001",
+      "source_object": "commercial-action-execution",
+      "target_object": "provider-receipt-evidence",
+      "proof_class": "result-submission-proof",
+      "evidence_refs": [
+        "https://github.com/Bidvia/bidvia-main/blob/8d2692fea8a450225717c067628bbc0b372c7536/docs/org/review-records/artifacts/attempt-2026-07-18-task10-postmerge-002-output/core-execution-evidence.json"
+      ],
+      "private_evidence_handles": [
+        "sha256:b4240d31b9af399601883746aeae8c6170651d5f590c42be9cfdf657bfd4388c"
+      ],
+      "private_handle_attestations": [
+        {
+          "handle": "sha256:b4240d31b9af399601883746aeae8c6170651d5f590c42be9cfdf657bfd4388c",
+          "source_class": "producer-contract-probe",
+          "verified": true,
+          "verified_at": "2026-07-20T03:04:57.698Z"
+        }
+      ],
+      "result": "blocked",
+      "timestamp": "2026-07-20T03:03:47.943Z",
+      "reason_codes": [
+        "core-producer-private-root-contract-unsatisfied",
+        "unexecuted-result-submission",
+        "unexecuted-success-001-evidence"
+      ]
+    }
+  ]
+}

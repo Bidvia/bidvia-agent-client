@@ -1,0 +1,39 @@
+{
+  "schema_version": "bidvia-client-task10-publication/v1",
+  "publication_state": "published_for_review",
+  "attempt_id": "attempt-2026-07-18-task10-postmerge-002",
+  "client_owned_conclusion": "blocked",
+  "issue_url": "https://github.com/Bidvia/bidvia-agent-client/issues/8",
+  "package_directory": "provider-proof-terminal-client-validation-artifacts/client-task10-reproducibility-attempt-2026-07-18-task10-postmerge-002-20260720T030347Z",
+  "conclusion_path": "provider-proof-terminal-client-validation-artifacts/client-task10-reproducibility-attempt-2026-07-18-task10-postmerge-002-20260720T030347Z/client-conclusion.json",
+  "conclusion_sha256": "605d9b0c1409451b3ce7b27a361b29e22c4a06f8644a0b2a75bf09e9a10fe112",
+  "archive_path": "provider-proof-terminal-client-validation-artifacts/client-task10-reproducibility-attempt-2026-07-18-task10-postmerge-002-20260720T030347Z.tar.gz",
+  "archive_sha256": "3a6e8da1925bf8d3a2d9711d33edbf0cf0fd581c749c47c3299ace1f09a95aae",
+  "archive_size_bytes": 4663,
+  "internal_hash_manifest": "provider-proof-terminal-client-validation-artifacts/client-task10-reproducibility-attempt-2026-07-18-task10-postmerge-002-20260720T030347Z/SHA256SUMS.txt",
+  "internal_hash_manifest_sha256": "4c3ceadd47c26a7bd52ff6feca4681a20c69796a470fcaa28309fb9d610b8591",
+  "validation": {
+    "authority_verified": true,
+    "commands_verified": true,
+    "scenarios_verified": true,
+    "private_handle_attestations_verified": true,
+    "secret_review_verified": true,
+    "package_membership_verified": true,
+    "internal_hashes_verified": true,
+    "archive_verified": true,
+    "receipt_bindings_verified": true
+  },
+  "non_claims": [
+    "not production readiness",
+    "not governed release acceptance",
+    "not prd promotion",
+    "not contract acceptance",
+    "not purchase-order truth",
+    "not payment or settlement finality",
+    "not fulfillment or after-sales completion",
+    "not dispute or arbitration completion",
+    "not provider execution completion",
+    "not human commercial acceptance",
+    "not a Core-authored conclusion"
+  ]
+}
