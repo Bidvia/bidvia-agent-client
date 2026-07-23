@@ -237,9 +237,14 @@ export interface Task10AuthorityEvidenceIdentityStat {
   ino: number;
 }
 
+export interface Task10AuthorityEvidenceLstat {
+  isSymbolicLink(): boolean;
+}
+
 export type Task10AuthorityEvidenceOpenFn = (filePath: string, flags: number) => number;
 export type Task10AuthorityEvidenceCloseFn = (descriptor: number) => void;
 export type Task10AuthorityEvidenceFstatFn = (descriptor: number) => Task10AuthorityEvidenceFileStat;
+export type Task10AuthorityEvidenceLstatFn = (filePath: string) => Task10AuthorityEvidenceLstat;
 export type Task10AuthorityEvidenceRealpathFn = (filePath: string) => string;
 export type Task10AuthorityEvidenceStatFn = (filePath: string) => Task10AuthorityEvidenceIdentityStat;
 export type Task10AuthorityEvidenceReadFn = (descriptor: number) => Uint8Array;
@@ -248,6 +253,7 @@ export interface ReadTask10AuthorityEvidenceFileDependencies {
   openSync?: Task10AuthorityEvidenceOpenFn;
   closeSync?: Task10AuthorityEvidenceCloseFn;
   fstatSync?: Task10AuthorityEvidenceFstatFn;
+  lstatSync?: Task10AuthorityEvidenceLstatFn;
   realpathSync?: Task10AuthorityEvidenceRealpathFn;
   statSync?: Task10AuthorityEvidenceStatFn;
   readFileSync?: Task10AuthorityEvidenceReadFn;
@@ -601,7 +607,7 @@ export async function collectTask10PrivateSources(
     if (scannedFiles > maxFiles) {
       throw new Error('private source file count exceeds bound');
     }
-    const handle = await readFileHandle(filePath, entry.size);
+    const handle = await readFileHandle(filePath, maxFileBytes);
     totalBytes += handle.bytes.byteLength;
     if (totalBytes > maxTotalBytes) {
       throw new Error('private source bytes exceed bound');
@@ -995,6 +1001,23 @@ function readBoundedRegularFileSync(filePath: string, maxBytes: number): Uint8Ar
   }
 }
 
+function rejectTask10SymlinkPathSegments(
+  filePath: string,
+  lstatSyncDependency: Task10AuthorityEvidenceLstatFn,
+): void {
+  const resolvedPath = path.resolve(filePath);
+  const parsedPath = path.parse(resolvedPath);
+  const segments = resolvedPath.slice(parsedPath.root.length).split(path.sep).filter(Boolean);
+  let currentPath = parsedPath.root;
+
+  for (const segment of segments) {
+    currentPath = path.join(currentPath, segment);
+    if (lstatSyncDependency(currentPath).isSymbolicLink()) {
+      throw new Task10ExpectedEvidenceAccessError('unreadable');
+    }
+  }
+}
+
 export function readTask10AuthorityEvidenceFile(
   filePath: string,
   dependencies: ReadTask10AuthorityEvidenceFileDependencies = {},
@@ -1004,11 +1027,13 @@ export function readTask10AuthorityEvidenceFile(
   const openSyncDependency = dependencies.openSync ?? openSync;
   const closeSyncDependency = dependencies.closeSync ?? closeSync;
   const fstatSyncDependency = dependencies.fstatSync ?? fstatSync;
+  const lstatSyncDependency = dependencies.lstatSync ?? lstatSync;
   const realpathSyncDependency = dependencies.realpathSync ?? realpathSync;
   const statSyncDependency = dependencies.statSync ?? statSync;
   const readFileSyncDependency = dependencies.readFileSync ?? readFileSync;
 
   try {
+    rejectTask10SymlinkPathSegments(resolvedPath, lstatSyncDependency);
     descriptor = openSyncDependency(resolvedPath, fsConstants.O_RDONLY | fsConstants.O_NOFOLLOW);
     const initialStats = fstatSyncDependency(descriptor);
     if (!initialStats.isFile() || initialStats.size > MAX_AUTHORITY_FILE_BYTES) {
@@ -1160,8 +1185,13 @@ function buildExpectedHandleMap(
   return expected;
 }
 
-async function readFileHandle(filePath: string, expectedSize: number): Promise<{ handle: `sha256:${string}`; bytes: Uint8Array }> {
-  if (expectedSize > DEFAULT_PRIVATE_SOURCE_MAX_FILE_BYTES) {
+export async function readFileHandle(
+  filePath: string,
+  maxFileBytes = DEFAULT_PRIVATE_SOURCE_MAX_FILE_BYTES,
+): Promise<{ handle: `sha256:${string}`; bytes: Uint8Array }> {
+  rejectTask10SymlinkPathSegments(filePath, lstatSync);
+  const expectedSize = (await lstat(filePath)).size;
+  if (expectedSize > maxFileBytes) {
     throw new Error('private source oversize file');
   }
   const fileDescriptor = await open(filePath, fsConstants.O_RDONLY | fsConstants.O_NOFOLLOW | fsConstants.O_NONBLOCK);
@@ -1365,8 +1395,8 @@ async function buildGateBlockedScenarioRowsFromFilesystem(
   commandRows: readonly Task10CommandRow[],
   roots: ResolvedPaths,
 ): Promise<Task10ScenarioRow[]> {
-  const bundleBytes = await readFileHandle(roots.coreBundle, (await lstat(roots.coreBundle)).size);
-  const preflightBytes = await readFileHandle(roots.corePreflight, (await lstat(roots.corePreflight)).size);
+  const bundleBytes = await readFileHandle(roots.coreBundle);
+  const preflightBytes = await readFileHandle(roots.corePreflight);
   const reasonCodes = buildGateBlockedReasonCodes(commandRows);
   return [
     buildBlockedScenarioRow('session-access', TASK10_AUTHORITY.corePreflightUrl, 'POST /runtime/admin/sessions/sign-in request:session-access:001', 'admin-session-bootstrap', 'rehearsal-run-identity', 'session-access-proof', preflightBytes.handle, 'preflight', runStartedAt, reasonCodes),
@@ -1401,8 +1431,8 @@ async function buildAuthorityBlockedScenarioRowsFromFilesystem(
   reasons: readonly string[],
   roots: ResolvedPaths,
 ): Promise<Task10ScenarioRow[]> {
-  const bundleBytes = await readFileHandle(roots.coreBundle, (await lstat(roots.coreBundle)).size);
-  const preflightBytes = await readFileHandle(roots.corePreflight, (await lstat(roots.corePreflight)).size);
+  const bundleBytes = await readFileHandle(roots.coreBundle);
+  const preflightBytes = await readFileHandle(roots.corePreflight);
   const reasonCodes = sortUniqueStrings([
     'authority-verification-blocked',
     ...reasons
