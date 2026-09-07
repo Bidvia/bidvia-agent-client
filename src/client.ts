@@ -757,6 +757,7 @@ export class BidviaClient implements BidviaTaskRuntimeClientPort {
         headers: this.requireSessionHeaders(context),
         body: {
           listing_id: input.listingId,
+          ...(input.chemicalSpecification === undefined ? {} : { chemical_specification: input.chemicalSpecification }),
           listing_type: input.listingType,
           category: input.category,
           sku: input.sku,
@@ -910,6 +911,7 @@ export class BidviaClient implements BidviaTaskRuntimeClientPort {
       headers: this.requireAdminSessionHeaders(context),
       body: {
         listing_id: input.listingId,
+        ...(input.chemicalSpecification === undefined ? {} : { chemical_specification: input.chemicalSpecification }),
         listing_type: input.listingType,
         company_id: input.companyId,
         actor_id: input.actorId,
@@ -2666,9 +2668,10 @@ export class BidviaClient implements BidviaTaskRuntimeClientPort {
     return this.request(`/runtime/listings?tenant_id=${encodeURIComponent(tenantId)}`, {
       context,
       method: 'POST',
-      headers: this.requireOperatorActionHeaders(context),
+      headers: context.adminSessionId ? this.requireAdminSessionHeaders(context) : this.requireOperatorActionHeaders(context),
       body: {
         listing_id: input.listingId,
+        ...(input.chemicalSpecification === undefined ? {} : { chemical_specification: input.chemicalSpecification }),
         listing_type: input.listingType,
         company_id: this.requireCompanyId(context),
         actor_id: this.requirePrincipalId(context),
@@ -2687,6 +2690,26 @@ export class BidviaClient implements BidviaTaskRuntimeClientPort {
     });
   }
 
+  /** Version-bound, nonpersistent indicative test quote/contract. Admin workspace only. */
+  async previewChemicalQuotation(input: import('./contracts.js').BidviaChemicalQuotationPreviewInput, requestPolicy?: BidviaClientRequestPolicy) {
+    const context = this.resolveRequestContext(requestPolicy);
+    return this.request(`/runtime/listings/${encodeURIComponent(input.listingId)}/chemical-quotation-preview?tenant_id=${encodeURIComponent(this.requireTenantId(context))}`, {
+      context, method: 'POST', headers: this.requireAdminSessionHeaders(context), requestPolicy,
+      body: { expected_listing_version: input.expectedListingVersion, commercial_terms: input.commercialTerms },
+    });
+  }
+
+  async updateListing(input: import('./contracts.js').BidviaUpdateListingInput, requestPolicy?: BidviaClientRequestPolicy) {
+    const context = this.resolveRequestContext(requestPolicy);
+    return this.request(`/runtime/listings/${encodeURIComponent(input.listingId)}?tenant_id=${encodeURIComponent(this.requireTenantId(context))}`, {
+      context, method: 'POST', headers: this.requireAdminSessionHeaders(context), requestPolicy,
+      body: { company_id: this.requireCompanyId(context), actor_id: this.requirePrincipalId(context),
+        ...(input.quantityValue === undefined ? {} : { quantity_value: input.quantityValue }),
+        ...(input.chemicalSpecification === undefined ? {} : { chemical_specification: input.chemicalSpecification }),
+        idempotency_key: input.idempotencyKey, now: input.now },
+    });
+  }
+
   async activateListing(
     input: BidviaActivateListingInput,
     requestPolicy?: BidviaClientRequestPolicy,
@@ -2696,7 +2719,7 @@ export class BidviaClient implements BidviaTaskRuntimeClientPort {
     return this.request(`/runtime/listings/${encodeURIComponent(input.listingId)}/activate?tenant_id=${encodeURIComponent(tenantId)}`, {
       context,
       method: 'POST',
-      headers: this.requireOperatorActionHeaders(context),
+      headers: context.adminSessionId ? this.requireAdminSessionHeaders(context) : this.requireOperatorActionHeaders(context),
       body: {
         company_id: this.requireCompanyId(context),
         actor_id: this.requirePrincipalId(context),
@@ -2715,7 +2738,7 @@ export class BidviaClient implements BidviaTaskRuntimeClientPort {
     return this.request(`/runtime/listings/${encodeURIComponent(input.listingId)}/match-candidates?tenant_id=${encodeURIComponent(tenantId)}`, {
       context,
       method: 'POST',
-      headers: this.requireOperatorActionHeaders(context),
+      headers: context.adminSessionId ? this.requireAdminSessionHeaders(context) : this.requireOperatorActionHeaders(context),
       body: {
         upstream_decision: input.upstreamDecision,
         required_evidence_level: input.requiredEvidenceLevel,

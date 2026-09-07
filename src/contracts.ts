@@ -694,6 +694,7 @@ export interface BidviaCommercialActionScenarioPlan {
 }
 
 export interface BidviaCreateListingInput {
+  chemicalSpecification?: BidviaChemicalListingSpecification;
   listingId: string;
   listingType: string;
   category: string;
@@ -710,6 +711,42 @@ export interface BidviaCreateListingInput {
 
 export interface BidviaActivateListingInput {
   listingId: string;
+  now: string;
+}
+
+export interface BidviaChemicalListingSpecification {
+  schema_version: 1;
+  profile: 'CN_VN_SODA_ASH_RESEARCH_V1';
+  export_country: 'CN';
+  import_country: 'VN';
+  cas: '497-19-8';
+  grade: 'INDUSTRIAL';
+  form: 'DENSE' | 'LIGHT';
+  package_net_kg: number;
+  dry_alkali_min_pct: number;
+  documents: { kind: 'TDS' | 'COA' | 'SDS'; reference: string; declared_sha256: string }[];
+}
+
+export interface BidviaChemicalQuotationPreviewInput {
+  listingId: string;
+  expectedListingVersion: number;
+  commercialTerms: {
+    indicative_usd_cents_per_mt: number | null;
+    seller_legal_name: string | null;
+    buyer_legal_name: string | null;
+    named_delivery_point: string | null;
+    payment_terms: string | null;
+    shipment_window: string | null;
+    governing_law_and_cisg: string | null;
+    dispute_resolution: string | null;
+  };
+}
+
+export interface BidviaUpdateListingInput {
+  listingId: string;
+  quantityValue?: string;
+  chemicalSpecification?: BidviaChemicalListingSpecification;
+  idempotencyKey: string;
   now: string;
 }
 

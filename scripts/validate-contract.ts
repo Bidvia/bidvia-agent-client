@@ -523,7 +523,9 @@ async function main() {
   assert.equal(claimHeaders['x-bidvia-session-id'], 'sess-validate-1');
   assert.equal(heartbeatHeaders['x-authorized-tenant-id'], 'tenant-a');
   assert.equal(heartbeatHeaders['x-bidvia-principal-id'], 'actor-1');
-  assert.equal(listingHeaders['x-authorized-company-id'], 'company-a');
+  assert.equal(listingHeaders['x-bidvia-admin-session-id'], 'admin-sess-validate-1');
+  assert.equal(listingHeaders['x-authorized-company-id'], undefined);
+  assert.equal(listingHeaders['x-bidvia-principal-id'], undefined);
   assert.equal(createCommercialActionHeaders['x-authorized-tenant-id'], 'tenant-a');
   assert.equal(createCommercialActionHeaders['x-bidvia-principal-id'], 'actor-1');
   assert.equal(createCommercialActionHeaders['x-authorized-company-id'], 'company-a');
