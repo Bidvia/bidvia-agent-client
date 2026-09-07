@@ -94,6 +94,47 @@ test('CLI start and status use only the selected profile and return canonical HT
   assert.deepEqual(logs, [receipt, status]);
 }));
 
+test('CLI role work, challenge, explicit disposition and retrieval use isolated machine transport with no local decisions', async () => fixture(async directory => {
+  const file = await profile(directory);
+  const input = path.join(directory, 'role-input.json');
+  const calls: string[] = [];
+  const dependencies = { env: { BIDVIA_ADMIN_SESSION_ID: 'unrelated-admin' }, print: () => undefined,
+    createClient: (options: ConstructorParameters<typeof BidviaClient>[0]) => new BidviaClient({ ...options,
+      fetchImpl: async (url, init) => {
+        const pathname = new URL(String(url)).pathname; calls.push(pathname);
+        assert.equal(new Headers(init?.headers).get('x-bidvia-admin-session-id'), null);
+        assert.equal(new Headers(init?.headers).get('authorization'), 'Bearer ' + secret);
+        if (pathname.endsWith('/work/resolve')) { assert.equal(init?.method, 'GET'); return response({ role: 'resolve', items: [] }); }
+        const sent = JSON.parse(String(init?.body));
+        for (const key of ['tenant_id','resolver_candidates','resolver_assignment_token','principal_id','authority_ref']) assert.equal(key in sent, false);
+        if (pathname.endsWith('/challenge')) {
+          assert.equal(sent.run_id, 'run/role');
+          return response({ challenge_id: 'challenge-role', run_id: 'run/role', resolver_registration_id: 'independent-resolver', status: 'OPEN' });
+        }
+        if (pathname.endsWith('/resolve')) {
+          assert.equal(sent.decision, 'REQUIRE_REVISION');
+          return response({ challenge_id: 'challenge-role', disposition_id: 'decision-role', decision: sent.decision, resolution_version: 1 });
+        }
+        assert.equal(sent.dispatch_id, 'dispatch-role');
+        return response({ authority_contract_version: 1, resolution_status: 'NO_ELIGIBLE_RESULT', intent: { task_ref: 'task-role' },
+          result_set: { retrieval_result_set_id: 'retrieval-role' }, evidence_bundle: {} });
+      } }) };
+  assert.equal(await runMachineCli(['work','--profile',file,'--role','resolve'],dependencies), 0);
+  for (const [action, body] of [
+    ['challenge', { runId: 'run/role', summary: 'Review this content', ...evidence }],
+    ['resolve', { challengeId: 'challenge-role', decision: 'REQUIRE_REVISION', rationale: 'Missing independent evidence', ...evidence }],
+    ['retrieve', { dispatchId: 'dispatch-role', queryText: 'chemical match', idempotencyKey: 'role-retrieval' }],
+  ] as const) {
+    await writeFile(input,JSON.stringify(body));
+    assert.equal(await runMachineCli([action,'--profile',file,'--input',input],dependencies),0);
+  }
+  assert.equal(calls.length,4);
+  await writeFile(input,JSON.stringify({ challengeId: 'challenge-role', rationale: 'No decision supplied', ...evidence }));
+  assert.equal(await runMachineCli(['resolve','--profile',file,'--input',input],dependencies),1);
+  assert.equal(await runMachineCli(['work','--profile',file,'--role','operator_admin'],dependencies),1);
+  assert.equal(calls.length,4);
+}));
+
 test('CLI rejects readable secrets, symlinks, malformed options and unsafe Core origins before sending', async () => fixture(async directory => {
   const file = await profile(directory);
   const dependencies = { env: {}, print: () => undefined, createClient: () => assert.fail('must not create client') };

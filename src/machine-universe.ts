@@ -130,6 +130,28 @@ export interface BidviaUniverseStartInput extends BidviaUniverseEvidence {
   body: string;
 }
 
+export type BidviaUniverseWorkRole = 'review' | 'resolve' | 'confirm' | 'approve';
+export interface BidviaUniverseWork {
+  role: BidviaUniverseWorkRole;
+  items: Record<string, unknown>[];
+}
+export interface BidviaUniverseChallengeInput extends BidviaUniverseEvidence { runId: string; summary: string; }
+export interface BidviaUniverseDispositionInput extends BidviaUniverseEvidence {
+  challengeId: string;
+  decision: 'SUSTAIN' | 'DISMISS' | 'REQUIRE_REVISION';
+  rationale: string;
+}
+export interface BidviaUniverseChallengeReceipt { challenge_id: string; run_id: string; resolver_registration_id: string; status: 'OPEN'; }
+export interface BidviaUniverseDispositionReceipt { challenge_id: string; disposition_id: string; decision: BidviaUniverseDispositionInput['decision']; resolution_version: 1; }
+export interface BidviaUniverseRetrievalInput { dispatchId: string; queryText: string; idempotencyKey: string; }
+export interface BidviaUniverseRetrievalReceipt {
+  authority_contract_version: 1;
+  resolution_status: 'SELECTED' | 'NO_ELIGIBLE_RESULT';
+  intent: Record<string, unknown> & { task_ref: string };
+  result_set: Record<string, unknown> & { retrieval_result_set_id: string };
+  evidence_bundle: Record<string, unknown>;
+}
+
 export interface BidviaUniverseEntryReceipt {
   entry: {
     universe_evolution_run_id: string;
@@ -150,6 +172,8 @@ export interface BidviaUniverseRunStatus {
   target_asset_publication_version_id: string | null;
   failure_code: string | null;
   updated_at: string;
+  task_state?: string | null;
+  feedback?: { reported_outcome_id: string; outcome_status: string; gateway_delivery_state: string | null; contribution_admission_id: string | null } | null;
 }
 
 export type BidviaMachineUniverseTransport = (
@@ -173,6 +197,37 @@ function evidence(input: BidviaUniverseEvidence): Record<string, unknown> {
 /** One instance per independently authenticated role; no auto-confirm or credential escalation. */
 export function createBidviaMachineUniverseFacade(transport: BidviaMachineUniverseTransport) {
   return {
+    async listWork(role: BidviaUniverseWorkRole, policy?: BidviaClientRequestPolicy): Promise<BidviaUniverseWork> {
+      if (!['review','resolve','confirm','approve'].includes(role)) throw new TypeError('Invalid work role');
+      const result = record(await transport({ suffix: `/universe/work/${role}`, method: 'GET' }, policy));
+      if (result.role !== role || !Array.isArray(result.items)) throw new TypeError('Invalid participant work response');
+      result.items.forEach(record);
+      return result as unknown as BidviaUniverseWork;
+    },
+    async challenge(input: BidviaUniverseChallengeInput, policy?: BidviaClientRequestPolicy): Promise<BidviaUniverseChallengeReceipt> {
+      const result = record(await transport({ suffix: '/universe/challenge', body: { schema_version: 1,
+        run_id: input.runId, summary: input.summary, ...evidence(input) } }, policy));
+      text(result.challenge_id); text(result.resolver_registration_id);
+      if (result.run_id !== input.runId || result.status !== 'OPEN') throw new TypeError('Challenge receipt does not match request');
+      return result as unknown as BidviaUniverseChallengeReceipt;
+    },
+    async resolveChallenge(input: BidviaUniverseDispositionInput, policy?: BidviaClientRequestPolicy): Promise<BidviaUniverseDispositionReceipt> {
+      const result = record(await transport({ suffix: '/universe/resolve', body: { schema_version: 1,
+        challenge_id: input.challengeId, decision: input.decision, rationale: input.rationale, ...evidence(input) } }, policy));
+      text(result.disposition_id);
+      if (result.challenge_id !== input.challengeId || result.decision !== input.decision || result.resolution_version !== 1) {
+        throw new TypeError('Disposition receipt does not match request');
+      }
+      return result as unknown as BidviaUniverseDispositionReceipt;
+    },
+    async retrieve(input: BidviaUniverseRetrievalInput, policy?: BidviaClientRequestPolicy): Promise<BidviaUniverseRetrievalReceipt> {
+      const result = record(await transport({ suffix: '/universe/retrieve', body: { schema_version: 1,
+        dispatch_id: input.dispatchId, query_text: input.queryText, idempotency_key: input.idempotencyKey } }, policy));
+      const intent = record(result.intent); const resultSet = record(result.result_set); record(result.evidence_bundle);
+      text(intent.task_ref); text(resultSet.retrieval_result_set_id);
+      if (result.authority_contract_version !== 1 || !['SELECTED','NO_ELIGIBLE_RESULT'].includes(String(result.resolution_status))) throw new TypeError('Invalid retrieval receipt');
+      return result as unknown as BidviaUniverseRetrievalReceipt;
+    },
     async startRun(input: BidviaUniverseStartInput, policy?: BidviaClientRequestPolicy): Promise<BidviaUniverseEntryReceipt> {
       const receipt = record(await transport({ suffix: '/universe/runs', body: { schema_version: 1,
         dispatch_id: input.dispatchId, title: input.title, summary: input.summary, body: input.body, ...evidence(input) } }, policy));
@@ -188,6 +243,12 @@ export function createBidviaMachineUniverseFacade(transport: BidviaMachineUniver
       }
       for (const key of ['run_state', 'current_checkpoint', 'updated_at']) text(result[key]);
       for (const key of ['failure_code', 'target_asset_publication_version_id']) if (result[key] !== null) text(result[key]);
+      if (result.task_state !== undefined && result.task_state !== null) text(result.task_state);
+      if (result.feedback !== undefined && result.feedback !== null) {
+        const feedback = record(result.feedback);
+        text(feedback.reported_outcome_id); text(feedback.outcome_status);
+        for (const key of ['gateway_delivery_state','contribution_admission_id']) if (feedback[key] !== null) text(feedback[key]);
+      }
       return result as unknown as BidviaUniverseRunStatus;
     },
     async consume(input: BidviaUniverseConsumptionInput, policy?: BidviaClientRequestPolicy): Promise<BidviaUniverseConsumptionReceipt> {

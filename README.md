@@ -1,5 +1,7 @@
 # Bidvia Agent Client
 
+Feature-branch multi-role participant entry: `bidvia machine work --profile <private.json> --role review|resolve|confirm|approve`, `machine challenge`, `machine resolve`, and `machine retrieve` now use the existing isolated machine transport. Each write takes `--input <JSON file>`. Challenge input: `runId`, `summary`, evidence fields. Disposition input: `challengeId`, explicit `SUSTAIN|DISMISS|REQUIRE_REVISION`, `rationale`, evidence fields. Retrieval input: `dispatchId`, `queryText`, `idempotencyKey`. Evidence fields are `evidenceRefs`, `evidenceDigests`, `idempotencyKey`. Core selects the independently owned validator; Client never supplies its authority or secret. `machine status` additionally reads task/outcome/gateway/contribution truth; `machine dispatches` remains the online Host delivery queue, not completed task history. Account task-plane writes now send session-only authentication, retaining existing local context preconditions. See the paired Core `docs/runbooks/universe-role-client-walkthrough.md`; this is an initial A-cycle workflow, not production release, npm publication, an automatic reviewer, or a complete B/final-replay user path.
+
 This README is the customer-facing V1 entrypoint for the current `1.0.0` package state.
 
 ## Feature branch: real machine participant entry

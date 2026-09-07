@@ -95,7 +95,7 @@ async function loadProfile(file: string): Promise<MachineProfile> {
   return result;
 }
 
-const commands = ['issue-enrollment', 'enroll', 'credential', 'rotate', 'dispatches', 'start', 'status', 'consume', 'report', 'confirm', 'approve', 'propose'] as const;
+const commands = ['issue-enrollment', 'enroll', 'credential', 'rotate', 'dispatches', 'start', 'status', 'work', 'challenge', 'resolve', 'retrieve', 'consume', 'report', 'confirm', 'approve', 'propose'] as const;
 const help = {
   usage: 'bidvia machine <command> --profile /absolute/private/profile.json [--input request.json] [--run-id ID]',
   commands,
@@ -122,11 +122,11 @@ export async function runMachineCli(argv: string[], dependencies: MachineCliDepe
     for (let index = 1; index < argv.length; index += 2) {
       const key = argv[index];
       const value = argv[index + 1];
-      if (!['--profile', '--input', '--output', '--run-id'].includes(key) || !value || value.startsWith('--') || flags[key]) invalid('Invalid, duplicate or missing command option.');
+      if (!['--profile', '--input', '--output', '--run-id', '--role'].includes(key) || !value || value.startsWith('--') || flags[key]) invalid('Invalid, duplicate or missing command option.');
       flags[key] = value;
     }
     const allowed = action === 'issue-enrollment' ? ['--input', '--output'] : action === 'enroll' ? ['--input', '--profile']
-      : action === 'status' ? ['--profile', '--run-id'] : ['credential', 'dispatches'].includes(action) ? ['--profile'] : ['--profile', '--input'];
+      : action === 'status' ? ['--profile', '--run-id'] : action === 'work' ? ['--profile', '--role'] : ['credential', 'dispatches'].includes(action) ? ['--profile'] : ['--profile', '--input'];
     if (Object.keys(flags).some(key => !allowed.includes(key))) invalid('Unsupported option for this machine command.');
     const requiredFlag = (key: string): string => flags[key] || invalid(`Missing ${key}.`);
     const createClient = dependencies.createClient ?? (options => new BidviaClient(options));
@@ -174,6 +174,20 @@ export async function runMachineCli(argv: string[], dependencies: MachineCliDepe
       machineIdentity: profile.machineIdentity, auth: { bearerToken: profile.bearerToken }, requestPolicy: { timeoutMs: 30_000 } });
     let result: unknown;
     switch (action) {
+      case 'work': {
+        const role = requiredFlag('--role');
+        if (role !== 'review' && role !== 'resolve' && role !== 'confirm' && role !== 'approve') invalid('role must be review, resolve, confirm or approve.');
+        result = await client.machineUniverse.listWork(role); break;
+      }
+      case 'challenge': result = await client.machineUniverse.challenge({ runId: text(input, 'runId'), summary: text(input, 'summary'), ...evidence(input) }); break;
+      case 'resolve': {
+        const decision = text(input, 'decision');
+        if (decision !== 'SUSTAIN' && decision !== 'DISMISS' && decision !== 'REQUIRE_REVISION') invalid('decision must be SUSTAIN, DISMISS or REQUIRE_REVISION.');
+        result = await client.machineUniverse.resolveChallenge({ challengeId: text(input, 'challengeId'), decision,
+          rationale: text(input, 'rationale'), ...evidence(input) }); break;
+      }
+      case 'retrieve': result = await client.machineUniverse.retrieve({ dispatchId: text(input, 'dispatchId'),
+        queryText: text(input, 'queryText'), idempotencyKey: text(input, 'idempotencyKey') }); break;
       case 'credential': result = await client.machine.credentialStatus(); break;
       case 'dispatches': result = await client.machine.listDispatches(); break;
       case 'status': result = await client.machineUniverse.getRun(requiredFlag('--run-id')); break;
@@ -233,7 +247,10 @@ export async function runMachineCli(argv: string[], dependencies: MachineCliDepe
     // stack traces into user logs, even if a remote endpoint reflects secrets.
     print({ error: { code: error instanceof MachineCliInputError ? 'invalid_input' : error instanceof BidviaClientTransportError ? error.kind : 'machine_command_failed',
       status, coreCode, message: error instanceof MachineCliInputError ? error.message : 'Machine command failed; check Core availability, credential/file permissions and the required role.',
-      nextStep: coreCode === 'universe_evolution_task_required' ? 'Use an accepted UNIVERSE_GROWTH_TRACK dispatch assigned to this registration and materialize its governed task through the account task entry.'
+      nextStep: status === 429 ? 'Wait for the Core rate-limit window before retrying with the same input and idempotency key; do not change identity to evade the limit.'
+        : coreCode === 'universe_evolution_initial_already_exists' ? 'This tenant/template scenario already has an initial root. Read its status and use governed continuation; a new dispatch cannot create a second root.'
+        : coreCode === 'participant_work_blocked' ? 'Read work/status and check the pending role, qualified evidence and existing decision. Do not auto-approve or replace committed input.'
+        : coreCode === 'universe_evolution_task_required' ? 'Use an accepted UNIVERSE_GROWTH_TRACK dispatch assigned to this registration and materialize its governed task through the account task entry.'
         : ['universe_evolution_initial_input_invalid', 'universe_evolution_evidence_invalid'].includes(coreCode ?? '') ? 'Check current proposal authority, task expiry and qualified evidence references/digests; do not replace missing evidence with invented IDs.'
         : status === 409 ? 'Read canonical status and retry only the same operation with the same idempotency key.'
         : status === 403 ? 'Check the current credential, workspace or assigned task. Do not switch authority implicitly.'

@@ -2909,10 +2909,11 @@ export class BidviaClient implements BidviaTaskRuntimeClientPort {
   }
 
   private requireAccountTaskPlaneWriteHeaders(context: BidviaClientContext) {
-    return {
-      ...this.requireOperatorActionHeaders(context),
-      ...this.requireSessionHeaders(context),
-    };
+    // Retain the existing local context preconditions, but account routes derive
+    // authority from the session alone. Sending principal headers as well is
+    // rejected by Core as auth_source_conflict (not an additional permission).
+    this.requireOperatorActionHeaders(context);
+    return this.requireSessionHeaders(context);
   }
 
   private appendOptionalPrincipalContextHeaders(

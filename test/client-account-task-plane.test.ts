@@ -16,7 +16,7 @@ function createFetchStub() {
   return { calls, fetchStub };
 }
 
-test('BidviaClient account task-plane claim writes include claimant session and account scope headers', async () => {
+test('BidviaClient account task-plane writes use the claimant session without conflicting operator authority headers', async () => {
   const { calls, fetchStub } = createFetchStub();
   const client = new BidviaClient({
     baseUrl: 'http://127.0.0.1:8787',
@@ -40,9 +40,9 @@ test('BidviaClient account task-plane claim writes include claimant session and 
   assert.equal(calls.length, 1);
   assert.equal(String(calls[0]?.input), 'http://127.0.0.1:8787/runtime/account/agents/areg-1/claims?tenant_id=tenant-a');
   assert.equal(calls[0]?.init?.method, 'POST');
-  assert.equal((calls[0]?.init?.headers as Record<string, string>)['x-authorized-tenant-id'], 'tenant-a');
-  assert.equal((calls[0]?.init?.headers as Record<string, string>)['x-bidvia-principal-id'], 'principal-1');
-  assert.equal((calls[0]?.init?.headers as Record<string, string>)['x-authorized-company-id'], 'company-a');
+  assert.equal((calls[0]?.init?.headers as Record<string, string>)['x-authorized-tenant-id'], undefined);
+  assert.equal((calls[0]?.init?.headers as Record<string, string>)['x-bidvia-principal-id'], undefined);
+  assert.equal((calls[0]?.init?.headers as Record<string, string>)['x-authorized-company-id'], undefined);
   assert.equal((calls[0]?.init?.headers as Record<string, string>)['x-bidvia-session-id'], 'sess-1');
   assert.deepEqual(JSON.parse(String(calls[0]?.init?.body)), {
     claim_kind: 'manual_probe',
