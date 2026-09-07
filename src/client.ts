@@ -99,6 +99,8 @@ import { createBidviaOperatorFacade } from './business-universe/operator.js';
 import { createBidviaPlatformManagedFacade } from './business-universe/platform-managed.js';
 import { createBidviaUniverseFacade } from './business-universe/orchestrator.js';
 import { createBidviaMachineUniverseFacade, type BidviaMachineIdentity, type BidviaMachineUniverseRequest } from './machine-universe.js';
+import { createBidviaMachineCredentialFacade } from './machine-credentials.js';
+import type { BidviaMachineEnrollmentInput, BidviaOperatorMachineEnrollmentInput, BidviaOperatorMachineEnrollmentReceipt } from './machine-credentials.js';
 
 export interface BidviaClientOptions {
   baseUrl: string;
@@ -146,6 +148,8 @@ export class BidviaClient implements BidviaTaskRuntimeClientPort {
   readonly platformManaged = createBidviaPlatformManagedFacade(this);
   readonly universe = createBidviaUniverseFacade(this);
   readonly machineUniverse = createBidviaMachineUniverseFacade((request, policy) => this.requestMachineUniverse(request, policy));
+  readonly machine = createBidviaMachineCredentialFacade((request, policy) => this.requestMachineUniverse(request, policy),
+    () => this.options.machineIdentity, (input, policy) => this.exchangeMachineEnrollment(input, policy));
 
   constructor(private readonly options: BidviaClientOptions) {
     this.fetchImpl = options.fetchImpl ?? fetch;
@@ -2954,8 +2958,38 @@ export class BidviaClient implements BidviaTaskRuntimeClientPort {
       throw new Error('Machine universe operations cannot mix human or different-tenant authority');
     }
     return this.request(`/machine/agents/${encodeURIComponent(identity.agentRegistrationId)}${request.suffix}`, {
-      context, method: 'POST', body: request.body, requestPolicy, machineIdentity: { ...identity },
+      context, method: request.method ?? 'POST', body: request.body, requestPolicy, machineIdentity: { ...identity },
     });
+  }
+
+  private async exchangeMachineEnrollment(input: BidviaMachineEnrollmentInput, requestPolicy?: BidviaClientRequestPolicy): Promise<unknown> {
+    const context = this.resolveRequestContext(requestPolicy);
+    if (this.options.machineIdentity || context.tenantId !== input.tenantId
+      || Object.entries(context).some(([key,value]) => key !== 'tenantId' && value !== undefined && value !== null && value !== '')) {
+      throw new Error('Enrollment requires a separate client without existing identity context');
+    }
+    return this.request('/machine/enrollment/exchange', { context: { tenantId: input.tenantId }, method: 'POST', requestPolicy, enrollment: true, body: {
+      tenant_id: input.tenantId, machine_principal_id: input.machinePrincipalId, agent_registration_id: input.agentRegistrationId,
+      enrollment_token: input.enrollmentToken, evidence_refs: [...input.evidenceRefs], evidence_digests: [...input.evidenceDigests],
+      idempotency_key: input.idempotencyKey,
+    } });
+  }
+
+  async issueMachineEnrollment(input: BidviaOperatorMachineEnrollmentInput, requestPolicy?: BidviaClientRequestPolicy): Promise<BidviaOperatorMachineEnrollmentReceipt> {
+    const context = this.resolveRequestContext(requestPolicy);
+    if (!context.adminSessionId || !context.tenantId || context.sessionId || this.options.machineIdentity) {
+      throw new Error('Issuing enrollment requires a separate operator admin session and workspace');
+    }
+    const result: unknown = await this.request(`/operator/agents/${encodeURIComponent(input.agentRegistrationId)}/machine-enrollment?tenant_id=${encodeURIComponent(context.tenantId)}`,
+      { context, method: 'POST', requestPolicy, headers: { 'x-bidvia-admin-session-id': context.adminSessionId }, body: { requested_scopes: [...input.requestedScopes],
+        evidence_refs: [...input.evidenceRefs], evidence_digests: [...input.evidenceDigests], idempotency_key: input.idempotencyKey } });
+    if (!result || typeof result !== 'object' || Reflect.get(result, 'tenant_id') !== context.tenantId
+      || Reflect.get(result, 'agent_registration_id') !== input.agentRegistrationId
+      || typeof Reflect.get(result, 'enrollment_token') !== 'string' || typeof Reflect.get(result, 'machine_principal_id') !== 'string'
+      || typeof Reflect.get(result, 'expires_at') !== 'string' || !Array.isArray(Reflect.get(result, 'allowed_scopes'))) {
+      throw new TypeError('Invalid operator machine enrollment receipt');
+    }
+    return result as BidviaOperatorMachineEnrollmentReceipt;
   }
 
   private async request(path: string, params: {
@@ -2965,6 +2999,7 @@ export class BidviaClient implements BidviaTaskRuntimeClientPort {
     body?: unknown;
     requestPolicy?: BidviaClientRequestPolicy;
     machineIdentity?: BidviaMachineIdentity;
+    enrollment?: boolean;
   }) {
     const url = new URL(path, this.options.baseUrl).toString();
     const transport = this.createRequestTransport(params.requestPolicy);
@@ -2980,6 +3015,13 @@ export class BidviaClient implements BidviaTaskRuntimeClientPort {
         body: params.body,
       });
 
+      if (params.enrollment) {
+        for (const name of new Headers(headers).keys()) {
+          if (name === 'authorization' || name === 'cookie' || name.startsWith('x-bidvia-') || name.startsWith('x-authorized-')) {
+            throw new Error('Enrollment cannot mix existing authentication headers');
+          }
+        }
+      }
       if (params.machineIdentity) {
         // Case-insensitive validation also covers asynchronously supplied headers.
         const carrier = new Headers(headers);

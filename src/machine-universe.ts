@@ -119,7 +119,37 @@ export interface BidviaUniverseContributionReceipt {
 export interface BidviaMachineUniverseRequest {
   /** Suffix under the credential's own /machine/agents/:registration route. */
   suffix: string;
-  body: Record<string, unknown>;
+  body?: Record<string, unknown>;
+  method?: 'GET' | 'POST';
+}
+
+export interface BidviaUniverseStartInput extends BidviaUniverseEvidence {
+  dispatchId: string;
+  title: string;
+  summary: string;
+  body: string;
+}
+
+export interface BidviaUniverseEntryReceipt {
+  entry: {
+    universe_evolution_run_id: string;
+    asset_proposal_id: string;
+    template_proposal_id: string;
+    governed_asset_id: string;
+    task_ref: string;
+    dispatch_id: string;
+    created_at: string;
+  };
+}
+
+export interface BidviaUniverseRunStatus {
+  universe_evolution_run_id: string;
+  run_state: string;
+  run_version: number;
+  current_checkpoint: string;
+  target_asset_publication_version_id: string | null;
+  failure_code: string | null;
+  updated_at: string;
 }
 
 export type BidviaMachineUniverseTransport = (
@@ -143,6 +173,23 @@ function evidence(input: BidviaUniverseEvidence): Record<string, unknown> {
 /** One instance per independently authenticated role; no auto-confirm or credential escalation. */
 export function createBidviaMachineUniverseFacade(transport: BidviaMachineUniverseTransport) {
   return {
+    async startRun(input: BidviaUniverseStartInput, policy?: BidviaClientRequestPolicy): Promise<BidviaUniverseEntryReceipt> {
+      const receipt = record(await transport({ suffix: '/universe/runs', body: { schema_version: 1,
+        dispatch_id: input.dispatchId, title: input.title, summary: input.summary, body: input.body, ...evidence(input) } }, policy));
+      const entry = record(receipt.entry);
+      for (const key of ['universe_evolution_run_id', 'asset_proposal_id', 'template_proposal_id', 'governed_asset_id', 'task_ref', 'dispatch_id', 'created_at']) text(entry[key]);
+      if (entry.dispatch_id !== input.dispatchId) throw new TypeError('Initial run receipt does not match dispatch');
+      return receipt as unknown as BidviaUniverseEntryReceipt;
+    },
+    async getRun(runId: string, policy?: BidviaClientRequestPolicy): Promise<BidviaUniverseRunStatus> {
+      const result = record(await transport({ suffix: `/universe/runs/${encodeURIComponent(text(runId))}`, method: 'GET' }, policy));
+      if (result.universe_evolution_run_id !== runId || !Number.isSafeInteger(result.run_version) || Number(result.run_version) < 0) {
+        throw new TypeError('Invalid universe run status');
+      }
+      for (const key of ['run_state', 'current_checkpoint', 'updated_at']) text(result[key]);
+      for (const key of ['failure_code', 'target_asset_publication_version_id']) if (result[key] !== null) text(result[key]);
+      return result as unknown as BidviaUniverseRunStatus;
+    },
     async consume(input: BidviaUniverseConsumptionInput, policy?: BidviaClientRequestPolicy): Promise<BidviaUniverseConsumptionReceipt> {
       const receipt = record(await transport({ suffix: '/universe/retrieval/consumptions', body: {
         schema_version: 1, retrieval_result_set_ref: input.retrievalResultSetRef,

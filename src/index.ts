@@ -1,5 +1,6 @@
 export * from './client.js';
 export * from './machine-universe.js';
+export * from './machine-credentials.js';
 export * from './adapters.js';
 export * from './agent-state.js';
 export * from './capabilities.js';

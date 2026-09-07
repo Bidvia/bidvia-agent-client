@@ -36,6 +36,7 @@ test('runCli prints grouped help output for the learn, create-claim, run, diagno
   assert.equal(exitCode, 0);
   assert.deepEqual(lines, [
     'bidvia',
+    'Machine participant entry: bidvia machine --help (enrollment, assigned-task start, status and feedback).',
     'OpenClaw primary path: export stdio MCP config first, then add the companion bundle when you want bundle/bootstrap packaging.',
     'OpenClaw scope for this version: local-first, Core-truth-consuming, stdio MCP primary.',
     'Stage 1 client runtime is complete locally: CLI and MCP execution share one runtime core and local accumulation layer.',

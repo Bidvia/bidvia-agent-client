@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import packageJson from '../package.json' with { type: 'json' };
 
 import { BidviaClient, BidviaClientTransportError } from './client.js';
+import { runMachineCli } from './machine-cli.js';
 import type {
   BidviaClientContext,
   BidviaCorePlaneAdoptionStatus,
@@ -3178,6 +3179,7 @@ function createDefaultCliDependencies(): BidviaCliDependencies {
 
 function printHelp(printLine: (value: string) => void): void {
   printLine('bidvia');
+  printLine('Machine participant entry: bidvia machine --help (enrollment, assigned-task start, status and feedback).');
   printLine('OpenClaw primary path: export stdio MCP config first, then add the companion bundle when you want bundle/bootstrap packaging.');
   printLine('OpenClaw scope for this version: local-first, Core-truth-consuming, stdio MCP primary.');
   printLine('Stage 1 client runtime is complete locally: CLI and MCP execution share one runtime core and local accumulation layer.');
@@ -3325,6 +3327,10 @@ export async function runCli(
   argv: string[] = process.argv.slice(2),
   overrides: Partial<BidviaCliDependencies> = {},
 ): Promise<number> {
+  if (argv[0] === 'machine') {
+    return runMachineCli(argv.slice(1), { env: overrides.resolveProcessEnv?.() ?? process.env,
+      print: overrides.printJson ?? printJson });
+  }
   const dependencies = {
     ...createDefaultCliDependencies(),
     ...overrides,

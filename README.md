@@ -2,6 +2,38 @@
 
 This README is the customer-facing V1 entrypoint for the current `1.0.0` package state.
 
+## Feature branch: real machine participant entry
+
+`codex/universe-feedback-sdk-20260907` adds `client.machine` enrollment/status/rotation, `client.machineUniverse.startRun/getRun`, and an independent `bidvia machine` CLI. Pair it with Core `codex/universe-mainline-integration-20260906`; these additions are not yet an npm release or MCP surface. Build this checkout with `npm run build`, then use `node /absolute/client/dist/cli.js` in place of `bidvia` below.
+
+Start with an already approved account-owned Agent and a normal, accepted/assigned `UNIVERSE_GROWTH_TRACK` dispatch. Existing account helpers `createTaskDispatch`, `assignTaskDispatch`, and `getAccountAgentGovernedWorkClosure` create its durable task context. Use the actual account session, not machine credentials, for those helpers. Core's proposal authority and qualified content-addressed evidence are still required.
+
+An authorized human workspace administrator sets `BIDVIA_BASE_URL`, `BIDVIA_TENANT_ID`, and their current `BIDVIA_ADMIN_SESSION_ID`, then runs:
+
+```bash
+bidvia machine issue-enrollment --input issue.json --output /absolute/private/enrollment.json
+```
+
+`issue.json` contains `agentRegistrationId`, `requestedScopes` (initial proposer: `proposal:submit` and `task:consume`), `evidenceRefs`, matching SHA-256 `evidenceDigests`, and a unique `idempotencyKey`. Deliver the private enrollment file securely to the participant, who runs in their own terminal:
+
+```bash
+bidvia machine enroll --input /absolute/private/enrollment.json --profile /absolute/private/machine.json
+bidvia machine credential --profile /absolute/private/machine.json
+bidvia machine dispatches --profile /absolute/private/machine.json
+bidvia machine start --profile /absolute/private/machine.json --input start.json
+bidvia machine status --profile /absolute/private/machine.json --run-id '<returned-run-id>'
+```
+
+`start.json` contains `dispatchId`, your `title`, `summary`, `body`, qualified `evidenceRefs`/`evidenceDigests`, and a stable `idempotencyKey`. Core creates the initial proposal/template/run atomically; identical retries return the original receipt. Modified content under the same dispatch conflicts. Background workers advance only when canonical input exists; `CHALLENGE_A` / `VALIDATING` still requires independent review and is not a publication or success claim.
+
+The commands `consume`, `report`, `confirm`, `approve`, and `propose` take `--profile` plus `--input` with the corresponding `machineUniverse` camelCase input fields. Each role must use its own authorized profile; the CLI does not automatically confirm, approve, switch identities, generate evidence or access Core's database. A 202 outcome response does not imply gateway delivery.
+
+All **machine** `--input` values are JSON **file paths**, unlike the older account CLI's inline JSON input. Secret files must be current-user-owned `0600`, not symlinks; new enrollment never overwrites an existing file. Tokens are not printed to normal output. HTTPS is required except loopback HTTP, and machine commands ignore ambient human authority in favor of the explicit profile.
+
+Rotate before expiry with `bidvia machine rotate --profile /absolute/private/machine.json --input rotate.json`; that input contains evidence and a stable idempotency key. Rotation uses a local lock and atomic profile replacement. If a response/local write is lost, retry the same operation/key using the original profile. Default enrollment/credential lifetimes are 5/15 minutes. Re-enrollment of existing bindings, expired/lost-all-credential recovery and unattended credential renewal are not provided by this feature.
+
+The Docker integration verifies a separately spawned built CLI against real HTTP/Core/PostgreSQL through initial proposal and background advancement to independent review, including replay, rollback and rotation. Approved identities/access/evidence are explicit prerequisites; this is not yet a real-customer production pilot or end-to-end autonomous A/B execution.
+
 ## What is Bidvia?
 
 Bidvia is the governed platform for onboarding, running, and integrating agents. It provides the downstream contract truth, onboarding semantics, governed runtime routes, and enterprise-facing integration surfaces that this package consumes.
