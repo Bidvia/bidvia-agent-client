@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 import type { BidviaChemicalDocumentReviewInput, BidviaChemicalDocumentUploadInput } from './chemical-documents.js';
+import type { BidviaChemicalDecisionInput, BidviaChemicalOfferInput, BidviaChemicalRfqInput } from './chemical-trade.js';
 import type {
   BidviaAcceptAccountMembershipInvitationInput,
   BidviaAccountAgentAuthorizationRefreshInput,
@@ -2694,6 +2695,31 @@ export class BidviaClient implements BidviaTaskRuntimeClientPort {
 
   async uploadChemicalDocument(listingId: string, input: BidviaChemicalDocumentUploadInput, requestPolicy?: BidviaClientRequestPolicy) {
     return this.requestChemicalDocument(listingId, '', 'POST', input, requestPolicy);
+  }
+
+  async createChemicalRfq(input: BidviaChemicalRfqInput, requestPolicy?: BidviaClientRequestPolicy) {
+    return this.requestChemicalTrade('', 'POST', input, requestPolicy);
+  }
+  async listChemicalRfqs(after = '', requestPolicy?: BidviaClientRequestPolicy) {
+    return this.requestChemicalTrade('', 'GET', undefined, requestPolicy, false, after);
+  }
+  async getChemicalRfq(rfqId: string, requestPolicy?: BidviaClientRequestPolicy) {
+    return this.requestChemicalTrade(`/${encodeURIComponent(rfqId)}`, 'GET', undefined, requestPolicy);
+  }
+  async offerChemicalRfq(rfqId: string, input: BidviaChemicalOfferInput, requestPolicy?: BidviaClientRequestPolicy) {
+    return this.requestChemicalTrade(`/${encodeURIComponent(rfqId)}/offers`, 'POST', input, requestPolicy);
+  }
+  async decideChemicalRfq(rfqId: string, input: BidviaChemicalDecisionInput, requestPolicy?: BidviaClientRequestPolicy) {
+    return this.requestChemicalTrade(`/${encodeURIComponent(rfqId)}/decision`, 'POST', input, requestPolicy);
+  }
+  async downloadChemicalOfferDocument(rfqId: string, offerId: string, documentId: string, requestPolicy?: BidviaClientRequestPolicy) {
+    return this.requestChemicalTrade(`/${encodeURIComponent(rfqId)}/offers/${encodeURIComponent(offerId)}/documents/${encodeURIComponent(documentId)}/original`, 'GET', undefined, requestPolicy, true);
+  }
+  private async requestChemicalTrade(suffix: string, method: 'GET' | 'POST', body: unknown, requestPolicy?: BidviaClientRequestPolicy, binaryResponse = false, after?: string) {
+    const context = this.resolveRequestContext(requestPolicy);
+    return this.request(`/runtime/chemical-rfqs${suffix}?tenant_id=${encodeURIComponent(this.requireTenantId(context))}${after ? `&after=${encodeURIComponent(after)}` : ''}`, {
+      context, method, body, headers: this.requireAdminSessionHeaders(context), requestPolicy, binaryResponse,
+    });
   }
 
   async reviewChemicalDocument(listingId: string, documentId: string, input: BidviaChemicalDocumentReviewInput, requestPolicy?: BidviaClientRequestPolicy) {
