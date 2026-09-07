@@ -98,6 +98,7 @@ import { createBidviaClaimantFacade } from './business-universe/claimant.js';
 import { createBidviaOperatorFacade } from './business-universe/operator.js';
 import { createBidviaPlatformManagedFacade } from './business-universe/platform-managed.js';
 import { createBidviaUniverseFacade } from './business-universe/orchestrator.js';
+import { createBidviaMachineUniverseFacade, type BidviaMachineIdentity, type BidviaMachineUniverseRequest } from './machine-universe.js';
 
 export interface BidviaClientOptions {
   baseUrl: string;
@@ -106,6 +107,7 @@ export interface BidviaClientOptions {
   headers?: BidviaClientHeadersInput;
   fetchImpl?: typeof fetch;
   requestPolicy?: BidviaClientRequestPolicy;
+  machineIdentity?: BidviaMachineIdentity;
 }
 
 export class BidviaClientTransportError extends Error {
@@ -143,6 +145,7 @@ export class BidviaClient implements BidviaTaskRuntimeClientPort {
   readonly operator = createBidviaOperatorFacade(this);
   readonly platformManaged = createBidviaPlatformManagedFacade(this);
   readonly universe = createBidviaUniverseFacade(this);
+  readonly machineUniverse = createBidviaMachineUniverseFacade((request, policy) => this.requestMachineUniverse(request, policy));
 
   constructor(private readonly options: BidviaClientOptions) {
     this.fetchImpl = options.fetchImpl ?? fetch;
@@ -2939,12 +2942,29 @@ export class BidviaClient implements BidviaTaskRuntimeClientPort {
     return companyId;
   }
 
+  private async requestMachineUniverse(request: BidviaMachineUniverseRequest, requestPolicy?: BidviaClientRequestPolicy): Promise<unknown> {
+    const identity = this.options.machineIdentity;
+    if (!identity || !identity.tenantId.trim() || !identity.machinePrincipalId.trim() || !identity.agentRegistrationId.trim()
+      || !Number.isSafeInteger(identity.credentialVersion) || identity.credentialVersion < 1) {
+      throw new Error('Machine universe operations require a complete machineIdentity');
+    }
+    const context = this.resolveRequestContext(requestPolicy);
+    if (context.tenantId !== identity.tenantId || (context.registrationId && context.registrationId !== identity.agentRegistrationId)
+      || context.sessionId || context.adminSessionId || context.authorizedRole || context.principalId || context.principalType) {
+      throw new Error('Machine universe operations cannot mix human or different-tenant authority');
+    }
+    return this.request(`/machine/agents/${encodeURIComponent(identity.agentRegistrationId)}${request.suffix}`, {
+      context, method: 'POST', body: request.body, requestPolicy, machineIdentity: { ...identity },
+    });
+  }
+
   private async request(path: string, params: {
     context: BidviaClientContext;
     method: 'GET' | 'POST' | 'PATCH';
     headers?: Record<string, string>;
     body?: unknown;
     requestPolicy?: BidviaClientRequestPolicy;
+    machineIdentity?: BidviaMachineIdentity;
   }) {
     const url = new URL(path, this.options.baseUrl).toString();
     const transport = this.createRequestTransport(params.requestPolicy);
@@ -2959,6 +2979,24 @@ export class BidviaClient implements BidviaTaskRuntimeClientPort {
         headers: params.headers,
         body: params.body,
       });
+
+      if (params.machineIdentity) {
+        // Case-insensitive validation also covers asynchronously supplied headers.
+        const carrier = new Headers(headers);
+        for (const name of carrier.keys()) {
+          if (name.startsWith('x-bidvia-') || name.startsWith('x-authorized-')) {
+            throw new Error('Machine identity headers must be provided through machineIdentity');
+          }
+        }
+        if (!/^Bearer \S+$/u.test(carrier.get('authorization') ?? '')) throw new Error('Machine universe operations require bearer authentication');
+        const identity = params.machineIdentity;
+        Object.assign(headers, {
+          'x-bidvia-machine-tenant-id': identity.tenantId,
+          'x-bidvia-machine-principal-id': identity.machinePrincipalId,
+          'x-bidvia-agent-registration-id': identity.agentRegistrationId,
+          'x-bidvia-machine-credential-version': String(identity.credentialVersion),
+        });
+      }
 
       this.throwIfRequestAborted(transport);
 

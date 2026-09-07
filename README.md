@@ -169,6 +169,46 @@ bidvia diagnostic-bundle-export --output ./bidvia-diagnostic-bundle
 
 When the current lane genuinely needs shipped bounded task-plane writes from CLI, the current surface now also includes `create-lease`, `create-task-dispatch`, `assign-task-dispatch`, `suspend-task-dispatch`, `resume-task-dispatch`, `complete-task-dispatch`, `fail-task-dispatch`, `create-claim`, `accept-claim`, and `reject-claim`. Those commands stay bounded to already-shipped helper semantics only, remain fail-closed, and do not imply deeper operator-owned continuation or full business closure.
 
+## Machine-universe SDK integration (unpublished feature branch)
+
+The `codex/universe-feedback-sdk-20260907` branch adds `client.machineUniverse` for five existing Core machine-plane operations: `consume`, `reportOutcome`, `confirmOutcome`, `approveContribution` and `submitSuccessorProposal`. Build this branch locally to use them. They are SDK additions only: this does not claim an npm release or new CLI/MCP commands, and it does not change the existing `client.universe` surface.
+
+Use an explicitly enrolled machine identity and its current bearer credential. Choose the intended Core runtime explicitly; do not reuse an account/operator client or human session. For example, after Core has issued an eligible retrieval result:
+
+```ts
+import { BidviaClient } from '@bidvia/client';
+
+function required(name: string): string {
+  const value = process.env[name];
+  if (!value) throw new Error(`Missing ${name}`);
+  return value;
+}
+
+const reporter = new BidviaClient({
+  baseUrl: required('BIDVIA_CORE_BASE_URL'),
+  context: { tenantId: required('BIDVIA_TENANT_ID') },
+  machineIdentity: {
+    tenantId: required('BIDVIA_TENANT_ID'),
+    machinePrincipalId: required('BIDVIA_MACHINE_PRINCIPAL_ID'),
+    agentRegistrationId: required('BIDVIA_AGENT_REGISTRATION_ID'),
+    credentialVersion: Number(required('BIDVIA_MACHINE_CREDENTIAL_VERSION')),
+  },
+  auth: { bearerToken: required('BIDVIA_MACHINE_BEARER_TOKEN') },
+});
+
+const consumption = await reporter.machineUniverse.consume({
+  retrievalResultSetRef: required('BIDVIA_RETRIEVAL_RESULT_SET_REF'),
+  consumptionPurpose: 'Execute the assigned task using the selected publication',
+  idempotencyKey: required('BIDVIA_CONSUMPTION_IDEMPOTENCY_KEY'),
+});
+```
+
+Use the returned canonical references when reporting the actual task outcome; do not invent task, publication or evidence identities. Make independent confirmer and contribution-approver clients with their own current credentials and role scopes. A successor proposal additionally requires Core's fresh continuation/assignment acceptance. This SDK neither enrolls credentials nor creates those prerequisite business inputs.
+
+Machine identity is supplied only through `machineIdentity`. Mixed human authority, cross-tenant context and provider-supplied `x-bidvia-*` / `x-authorized-*` headers are rejected. The existing request policy supports abort/timeout and transport errors. Preserve the same idempotency key for retries of the same operation, inspect canonical admission and gateway delivery, and never interpret HTTP 202 as completed delivery or independent confirmation. Core remains authoritative for 403/409 conflicts and current eligibility; the SDK maintains no parallel workflow state.
+
+The Core connected Docker proof imports this actual built SDK in four fresh proof processes and uses real HTTP for all five operations. It covers A/B feedback and successor submission with three PostgreSQL restarts and stable terminal replay. Initial business roots, test credential provisioning, operator decisions and the final replay driver remain explicit proof inputs; this is not a separately deployed autonomous agent or production-readiness certification. See Core's `docs/runbooks/local-development-handoff.md` for the dedicated-database command and `BIDVIA_FEEDBACK_LOOP_CLIENT_ROOT` binding.
+
 ## SDK quick start
 
 Use the SDK when you want the same governed client surface in code.
