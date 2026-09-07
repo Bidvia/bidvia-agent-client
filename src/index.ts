@@ -1,4 +1,5 @@
 export * from './client.js';
+export * from './chemical-documents.js';
 export * from './machine-universe.js';
 export * from './machine-credentials.js';
 export * from './adapters.js';

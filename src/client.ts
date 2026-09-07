@@ -1,3 +1,5 @@
+import { createHash } from 'node:crypto';
+import type { BidviaChemicalDocumentReviewInput, BidviaChemicalDocumentUploadInput } from './chemical-documents.js';
 import type {
   BidviaAcceptAccountMembershipInvitationInput,
   BidviaAccountAgentAuthorizationRefreshInput,
@@ -2690,6 +2692,34 @@ export class BidviaClient implements BidviaTaskRuntimeClientPort {
     });
   }
 
+  async uploadChemicalDocument(listingId: string, input: BidviaChemicalDocumentUploadInput, requestPolicy?: BidviaClientRequestPolicy) {
+    return this.requestChemicalDocument(listingId, '', 'POST', input, requestPolicy);
+  }
+
+  async reviewChemicalDocument(listingId: string, documentId: string, input: BidviaChemicalDocumentReviewInput, requestPolicy?: BidviaClientRequestPolicy) {
+    return this.requestChemicalDocument(listingId, `/${encodeURIComponent(documentId)}/review`, 'POST', input, requestPolicy);
+  }
+
+  async getChemicalDocumentDossier(listingId: string, requestPolicy?: BidviaClientRequestPolicy) {
+    return this.requestChemicalDocument(listingId, '', 'GET', undefined, requestPolicy);
+  }
+
+  async getChemicalDocument(listingId: string, documentId: string, requestPolicy?: BidviaClientRequestPolicy) {
+    return this.requestChemicalDocument(listingId, `/${encodeURIComponent(documentId)}`, 'GET', undefined, requestPolicy);
+  }
+
+  async downloadChemicalDocument(listingId: string, documentId: string, requestPolicy?: BidviaClientRequestPolicy) {
+    return this.requestChemicalDocument(listingId, `/${encodeURIComponent(documentId)}/original`, 'GET', undefined, requestPolicy, true);
+  }
+
+  private async requestChemicalDocument(listingId: string, suffix: string, method: 'GET' | 'POST', body: unknown,
+    requestPolicy?: BidviaClientRequestPolicy, binaryResponse = false) {
+    const context = this.resolveRequestContext(requestPolicy);
+    return this.request(`/runtime/listings/${encodeURIComponent(listingId)}/chemical-documents${suffix}?tenant_id=${encodeURIComponent(this.requireTenantId(context))}`, {
+      context, method, headers: this.requireAdminSessionHeaders(context), body, requestPolicy, binaryResponse,
+    });
+  }
+
   /** Version-bound, nonpersistent indicative test quote/contract. Admin workspace only. */
   async previewChemicalQuotation(input: import('./contracts.js').BidviaChemicalQuotationPreviewInput, requestPolicy?: BidviaClientRequestPolicy) {
     const context = this.resolveRequestContext(requestPolicy);
@@ -3024,6 +3054,7 @@ export class BidviaClient implements BidviaTaskRuntimeClientPort {
     requestPolicy?: BidviaClientRequestPolicy;
     machineIdentity?: BidviaMachineIdentity;
     enrollment?: boolean;
+    binaryResponse?: boolean;
   }) {
     const url = new URL(path, this.options.baseUrl).toString();
     const transport = this.createRequestTransport(params.requestPolicy);
@@ -3073,6 +3104,14 @@ export class BidviaClient implements BidviaTaskRuntimeClientPort {
         signal: transport.signal,
       });
 
+      if (params.binaryResponse && response.ok) {
+        const bytes = Buffer.from(await response.arrayBuffer());
+        const digest = createHash('sha256').update(bytes).digest('hex');
+        if (!bytes.length || bytes.length > 524288 || response.headers.get('x-bidvia-content-sha256') !== digest) {
+          throw new Error('Chemical document download failed original-byte integrity check');
+        }
+        return { content_base64: bytes.toString('base64'), content_sha256: digest };
+      }
       return await this.parseResponse(response);
     } catch (error) {
       throw this.normalizeTransportError(error, transport);
